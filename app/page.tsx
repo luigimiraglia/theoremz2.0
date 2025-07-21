@@ -1,9 +1,13 @@
 import Hero from "./components/Hero";
+import Index from "./components/Index";
+import SocialProof from "./components/SocialProof";
 
 export default function Home() {
   return (
     <>
       <Hero />
+      <SocialProof />
+      <Index />
       <article className="prose max-w-none p-6">
         <h2>Sezione di Esempio</h2>
         <p>

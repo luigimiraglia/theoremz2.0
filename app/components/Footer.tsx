@@ -15,6 +15,7 @@ export default function Footer() {
               fisica per superiori e medie. Ideata da studenti, per studenti.
             </p>
           </div>
+          <hr className="border-gray-700 opacity-50 border-1 mt-2" />
 
           {/* Links e pulsante */}
           <div className="mt-4 flex">
@@ -48,8 +49,6 @@ export default function Footer() {
             </div>
           </div>
         </div>
-
-        <hr className="border-gray-700 opacity-50" />
 
         <div className="md:flex md:justify-between md:items-center">
           {/* Social Icons */}

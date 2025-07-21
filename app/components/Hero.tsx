@@ -40,7 +40,8 @@ export default function Hero() {
     <div className="flex flex-col-reverse md:flex-row max-w-screen-xl sm:mx-6 xl:mx-auto">
       <div className="md:w-1/2 flex flex-col py-10 px-6 sm:px-4 space-y-3 sm:space-y-5 justify-center">
         <h1 className=" text-3xl sm:text-4xl font-bold opacity-90">
-          Theoremz, scopri la matematica{" "}
+          Theoremz, scopri
+          <br /> la matematica{" "}
           <span className="text-blue-600/90">{displayed}</span>
         </h1>
         <p className="text-md font-medium">
