@@ -46,7 +46,7 @@ export default function SocialProof() {
       </div>
       <hr className="w-[90%] h-0.5  bg-gray-500 border-0 rounded-full opacity-80 mx-auto sm:w-0.5 sm:h-40 sm:mx-0 sm:my-4" />
       <div className="sm:w-3/10 sm:mx-4 sm:my-auto">
-        <p>"Theoremz mi ha salvato la vita, grazie ragazzi"</p>
+        <p>&quot;Theoremz mi ha salvato la vita, grazie ragazzi&quot;</p>
         <Image
           className="w-32 mx-auto mt-1"
           alt="recensione"
