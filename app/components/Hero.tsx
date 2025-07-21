@@ -9,7 +9,7 @@ export default function Hero() {
   const [wordIndex, setWordIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
   const [mode, setMode] = useState<"typing" | "deleting">("typing");
-  const timeout = useRef<number>();
+  const timeout = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const word = HERO_WORDS[wordIndex];
