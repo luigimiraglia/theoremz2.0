@@ -21,23 +21,30 @@ export default function LoginPage() {
     return () => unsub();
   }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     try {
       await login(email, password);
-      // il listener onAuthStateChanged esegue il redirect
-    } catch (err: any) {
-      setError(err.message || "Errore durante il login");
+    } catch (err: unknown) {
+      // Type‑guard per Error
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Errore sconosciuto");
+      }
     }
   };
 
   const handleGoogle = async () => {
     try {
       await loginWithGoogle();
-      // il listener onAuthStateChanged esegue il redirect
-    } catch (err: any) {
-      setError(err.message || "Errore con Google Sign‑In");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Errore sconosciuto");
+      }
     }
   };
 
