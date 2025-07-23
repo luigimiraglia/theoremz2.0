@@ -40,7 +40,12 @@ export const latex = defineType({
   title: "LaTeX",
   type: "object",
   fields: [
-    defineField({ name: "code", type: "text", rows: 3, title: "Codice" }),
+    defineField({
+      name: "code",
+      title: "Codice",
+      type: "string",
+      validation: (Rule) => Rule.required(),
+    }),
     defineField({
       name: "display",
       type: "boolean",

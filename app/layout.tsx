@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import { AuthProvider } from "@/lib/AuthContext";
 import "./globals.css";
+import "katex/dist/katex.min.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
