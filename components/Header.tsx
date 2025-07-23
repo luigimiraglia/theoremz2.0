@@ -1,10 +1,8 @@
-"use client";
 import Image from "next/image";
 import Link from "next/link";
-import { useAuth } from "@/lib/AuthContext";
+import AccountButton from "./AccountButton";
 
 export default function Header() {
-  const { user } = useAuth();
   return (
     <header className="sticky px-4 top-3 max-w-screen-xl mx-4  xl:mx-auto mb-6 z-50 rounded-3xl bg-gray-100/60 backdrop-blur-xl border border-neutral-100/60">
       <div className="relative mx-auto flex max-w-screen-xl flex-col py-4 md:flex-row md:items-center md:justify-between">
@@ -78,12 +76,7 @@ export default function Header() {
               </Link>
             </li>
             <li className="mt-2 sm:mt-0">
-              <Link
-                href="/"
-                className="rounded-xl border-2 border-blue-500 px-6 py-2 font-bold text-blue-500 hover:bg-blue-500 hover:text-white transition-colors duration-250 ease-in-out delay-50"
-              >
-                {user ? "Il mio account" : "Unisciti"}
-              </Link>
+              <AccountButton />
             </li>
           </ul>
         </nav>
