@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { sanityFetch } from "@/lib/sanityFetch"; // wrapper su createClient().fetch
 import { ptComponents } from "@/lib/ptComponents"; // componenti custom (h2, LaTeX, ecc.)
+import { PortableTextBlock } from "sanity";
 
 /* --------------------  GROQ -------------------- */
 const lessonBySlugQuery = groq`
@@ -34,7 +35,7 @@ interface PageProps {
 interface Lesson {
   _id: string;
   title: string;
-  content: any[]; // oppure PortableTextBlock[]
+  content: PortableTextBlock[];
 }
 
 export default async function LessonPage({ params }: PageProps) {
