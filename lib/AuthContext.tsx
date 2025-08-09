@@ -13,18 +13,24 @@ import {
   signOut,
   User as FirebaseUser,
 } from "firebase/auth";
-import { auth } from "./firebase";
+import { auth, db } from "./firebase";
 import { useRouter } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
 
-type AppUser = {
+export type AppUser = {
   uid: string;
-  email: string;
+  email: string | null;
+  displayName?: string | null;
+  username?: string | null; // preso da Firestore se presente
+  createdAt?: number;
 };
 
 type AuthContextType = {
   user: AppUser | null;
   loading: boolean;
   isSubscribed: boolean | null;
+  savedLessons: string[];
+  refreshSavedLessons: () => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -32,6 +38,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   isSubscribed: null,
+  savedLessons: [],
+  refreshSavedLessons: async () => {},
   logout: async () => {},
 });
 
@@ -39,19 +47,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
+  const [savedLessons, setSavedLessons] = useState<string[]>([]);
   const router = useRouter();
+
+  // 🔄 Carica lezioni salvate da Firestore
+  const refreshSavedLessons = async () => {
+    if (!user) return;
+    try {
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        setSavedLessons(userDoc.data().savedLessons || []);
+      } else {
+        setSavedLessons([]);
+      }
+    } catch (err) {
+      console.error("Errore caricamento lezioni salvate:", err);
+      setSavedLessons([]);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       auth,
       async (fbUser: FirebaseUser | null) => {
         if (fbUser) {
+          const userRef = doc(db, "users", fbUser.uid);
+          let username: string | null = null;
+
+          // recupera username da Firestore
+          try {
+            const snap = await getDoc(userRef);
+            if (snap.exists()) {
+              username = snap.data().username || null;
+              setSavedLessons(snap.data().savedLessons || []);
+            }
+          } catch (err) {
+            console.error("Errore recupero username/savedLessons", err);
+          }
+
           const appUser: AppUser = {
             uid: fbUser.uid,
-            email: fbUser.email!,
+            email: fbUser.email ?? null,
+            displayName: fbUser.displayName ?? null,
+            username,
+            createdAt: fbUser.metadata?.creationTime
+              ? Date.parse(fbUser.metadata.creationTime)
+              : undefined,
           };
+
           setUser(appUser);
 
+          // stato abbonamento
           try {
             const resp = await fetch(
               "/api/stripe/subscription-status-by-email",
@@ -70,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setUser(null);
           setIsSubscribed(false);
+          setSavedLessons([]);
         }
         setLoading(false);
       }
@@ -82,11 +129,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
     setUser(null);
     setIsSubscribed(false);
+    setSavedLessons([]);
     router.push("/");
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isSubscribed, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        isSubscribed,
+        savedLessons,
+        refreshSavedLessons,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

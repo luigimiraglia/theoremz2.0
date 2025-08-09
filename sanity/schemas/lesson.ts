@@ -3,7 +3,7 @@ import { defineType, defineField } from "sanity";
 
 /* ─────────── Oggetti custom ─────────── */
 
-/*  Horizontal Rule  */
+/*  Horizontal Rule  */
 export const horizontalRule = defineType({
   name: "horizontalRule",
   title: "Horizontal rule",
@@ -13,13 +13,13 @@ export const horizontalRule = defineType({
       name: "hidden",
       type: "string",
       hidden: true,
-      initialValue: "hr", // puro segnaposto
+      initialValue: "hr",
     },
   ],
   preview: { prepare: () => ({ title: "────────" }) },
 });
 
-/*  Line Break  */
+/*  Line Break  */
 export const lineBreak = defineType({
   name: "lineBreak",
   title: "Line break",
@@ -49,13 +49,45 @@ export const latex = defineType({
     defineField({
       name: "display",
       type: "boolean",
-      title: "Display mode (\\displaystyle)",
+      title: "Display mode (\\displaystyle)",
       initialValue: false,
     }),
   ],
   preview: {
     select: { title: "code" },
     prepare: ({ title }) => ({ title: `\\(${title?.slice(0, 20)}…\\)` }),
+  },
+});
+
+export const sectionTitle = defineType({
+  name: "section",
+  title: "Sezione (con indice)",
+  type: "object",
+  fields: [
+    defineField({
+      name: "heading",
+      title: "Titolo visibile",
+      type: "string",
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: "shortTitle",
+      title: "Titolo per l’indice (breve)",
+      type: "string",
+      validation: (Rule) => Rule.required().max(40),
+    }),
+  ],
+  preview: {
+    select: {
+      title: "heading",
+      subtitle: "shortTitle",
+    },
+    prepare({ title, subtitle }) {
+      return {
+        title,
+        subtitle: `Indice: ${subtitle}`,
+      };
+    },
   },
 });
 
@@ -73,6 +105,31 @@ export default defineType({
       validation: (R) => R.required(),
     }),
     defineField({
+      name: "subtitle",
+      title: "Sottotitolo",
+      type: "string",
+      validation: (R) => R.required(),
+    }),
+    defineField({
+      name: "nomeAbbreviato",
+      title: "Nome abbreviato pagina indice",
+      type: "string",
+      description: "Titolo breve per la pagina di ricerca",
+    }),
+    defineField({
+      name: "materia",
+      title: "Materia",
+      type: "string",
+      validation: (Rule) => Rule.required(),
+      options: {
+        list: [
+          { title: "Fisica", value: "fisica" },
+          { title: "Matematica", value: "matematica" },
+        ],
+        layout: "radio",
+      },
+    }),
+    defineField({
       name: "slug",
       title: "Slug",
       type: "slug",
@@ -84,17 +141,21 @@ export default defineType({
       title: "Contenuto",
       type: "array",
       of: [
-        /* block rich‑text */
         {
           type: "block",
           styles: [
             { title: "Normal", value: "normal" },
-            { title: "Heading 2", value: "h2" },
+            { title: "Heading 2", value: "h2" },
+          ],
+          lists: [
+            { title: "Bullet", value: "bullet" },
+            { title: "Numbered", value: "number" },
           ],
           marks: {
             decorators: [
-              { title: "Bold", value: "strong" },
-              { title: "Underline", value: "underline" },
+              { title: "Grassetto", value: "strong" },
+              { title: "Corsivo", value: "em" },
+              { title: "Blue Bold", value: "blueBold" },
             ],
             annotations: [
               {
@@ -111,13 +172,124 @@ export default defineType({
                   },
                 ],
               },
+              {
+                name: "inlineLatex",
+                type: "object",
+                title: "Formula LaTeX inline",
+                fields: [
+                  {
+                    name: "code",
+                    type: "string",
+                    title: "Codice LaTeX",
+                    validation: (Rule) => Rule.required(),
+                  },
+                ],
+              },
             ],
           },
         },
-        { type: "horizontalRule" }, // nostro oggetto custom
-        { type: "lineBreak" }, // nostro oggetto custom
-        { type: "latex" }, // LaTeX
+        { type: "horizontalRule" },
+        { type: "lineBreak" },
+        { type: "latex" },
+        { type: "imageExternal" },
+        { type: "section" },
       ],
+    }),
+
+    defineField({
+      name: "resources",
+      title: "Risorse",
+      type: "object",
+      fields: [
+        { name: "formulario", title: "Link al formulario (PDF)", type: "url" },
+        { name: "appunti", title: "Link agli appunti", type: "url" },
+        { name: "videolezione", title: "Link alla videolezione", type: "url" },
+      ],
+    }),
+    defineField({
+      name: "lezioniPropedeuticheObbligatorie",
+      title: "Lezioni obbligatorie da conoscere prima",
+      type: "array",
+      of: [{ type: "reference", to: [{ type: "lesson" }] }],
+    }),
+    defineField({
+      name: "lezioniPropedeuticheOpzionali",
+      title: "Lezioni consigliate (opzionali)",
+      type: "array",
+      of: [{ type: "reference", to: [{ type: "lesson" }] }],
+    }),
+    defineField({
+      name: "thumbnailUrl",
+      title: "Thumbnail link",
+      type: "string",
+    }),
+    defineField({
+      name: "difficolta",
+      title: "Difficoltà",
+      type: "string",
+      validation: (Rule) => Rule.required(),
+      options: {
+        list: [
+          { title: "Facile", value: "facile" },
+          { title: "Intermedia", value: "intermedia" },
+          { title: "Difficile", value: "difficile" },
+        ],
+        layout: "radio",
+      },
+    }),
+    defineField({
+      name: "categoria",
+      title: "Categoria",
+      type: "array",
+      of: [{ type: "string" }],
+      validation: (Rule) => Rule.required().min(1),
+      options: {
+        list: [
+          { title: "Analisi", value: "Analisi" },
+          { title: "Algebra", value: "Algebra" },
+          { title: "Geometria", value: "Geometria" },
+          { title: "Logica", value: "Logica" },
+          { title: "Probabilità", value: "Probabilita" },
+          { title: "Informatica", value: "Informatica" },
+        ],
+        layout: "list",
+      },
+    }),
+    defineField({
+      name: "classe",
+      title: "Classi",
+      type: "array",
+      of: [{ type: "string" }],
+      validation: (Rule) => Rule.required().min(1),
+      options: {
+        list: [
+          { title: "1º Scientifico", value: "1º Scientifico" },
+          { title: "2º Scientifico", value: "2º Scientifico" },
+          { title: "3º Scientifico", value: "3º Scientifico" },
+          { title: "4º Scientifico", value: "4º Scientifico" },
+          { title: "5º Scientifico", value: "5º Scientifico" },
+          { title: "1º Classico", value: "1º Classico" },
+          { title: "2º Classico", value: "2º Classico" },
+          { title: "3º Classico", value: "3º Classico" },
+          { title: "4º Classico", value: "4º Classico" },
+          { title: "5º Classico", value: "5º Classico" },
+          { title: "1º Linguistico", value: "1º Linguistico" },
+          { title: "2º Linguistico", value: "2º Linguistico" },
+          { title: "3º Linguistico", value: "3º Linguistico" },
+          { title: "4º Linguistico", value: "4º Linguistico" },
+          { title: "5º Linguistico", value: "5º Linguistico" },
+          { title: "1º Media", value: "1º Media" },
+          { title: "2º Media", value: "2º Media" },
+          { title: "3º Media", value: "3º Media" },
+        ],
+        layout: "list",
+      },
+    }),
+    defineField({
+      name: "esercizi",
+      title: "Esercizi collegati",
+      type: "array",
+      of: [{ type: "reference", to: [{ type: "exercise" }] }],
     }),
   ],
 });

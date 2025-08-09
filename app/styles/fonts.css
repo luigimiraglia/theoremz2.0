@@ -1,0 +1,27 @@
+/* app/styles/fonts.css */
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat/Montserrat-Italic-VariableFont_wght")
+    format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat/Montserrat-Italic-VariableFont_wght")
+    format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* (facoltativo) Outfit */
+@font-face {
+  font-family: "Outfit";
+  src: url("/fonts/Outfit/Outfit-VariableFont_wgth") format("ttf");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}

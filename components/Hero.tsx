@@ -37,14 +37,14 @@ export default function Hero() {
     return () => clearTimeout(timeout.current);
   }, [charIndex, mode, wordIndex]);
   return (
-    <div className="flex flex-col-reverse md:flex-row max-w-screen-xl sm:mx-6 xl:mx-auto">
+    <div className="flex text-[var(--fg)] flex-col-reverse md:flex-row max-w-screen-xl sm:mx-6 xl:mx-auto">
       <div className="md:w-1/2 flex flex-col py-10 px-6 sm:px-4 space-y-3 sm:space-y-5 justify-center">
         <h1 className=" text-3xl sm:text-4xl font-bold opacity-90">
           Theoremz, scopri
           <br /> la matematica{" "}
           <span className="text-blue-600/90">{displayed}</span>
         </h1>
-        <p className="text-md font-medium">
+        <p className="text-md text-[var(--fg)] font-medium">
           Benvenuto nella piattaforma definitiva per lo studio di matematica e
           fisica! Abbiamo trattato tutti gli argomenti in modo semplice ma
           preciso, con schemi, grafici, esercizi e appunti per guidarti nello
@@ -58,7 +58,7 @@ export default function Hero() {
         <Image
           className="w-fit"
           alt="welcome image"
-          src="/wimage.svg"
+          src="/images/wimage.svg"
           height={400}
           width={400}
         />

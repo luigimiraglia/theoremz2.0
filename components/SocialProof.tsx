@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export default function SocialProof() {
   return (
-    <div className="flex flex-col sm:flex-row bg-gray-100/60 rounded-2xl mx-6 py-8 sm:py-4 px-3 justify-center text-center text-black/75 text-lg font-bold sm:text-xl xl:text-2xl space-y-4 xl:mx-auto max-w-screen-xl">
+    <div className="flex flex-col sm:flex-row bg-gray-100/60 [.dark_&]:bg-slate-800 rounded-2xl mx-6 py-8 sm:py-4 px-3 justify-center text-center text-black/75 [.dark_&]:text-white  text-lg font-bold sm:text-xl xl:text-2xl space-y-4 xl:mx-auto max-w-screen-xl">
       <div className="sm:w-3/10 sm:mx-4 sm:my-auto">
         <p>
           <span className="text-blue-500">35K+</span> studenti iscritti
@@ -11,21 +11,21 @@ export default function SocialProof() {
           <Image
             className="h-8 w-8"
             alt="studenti iscritti"
-            src="/user.webp"
+            src="/images/user.webp"
             width={512}
             height={512}
           />
           <Image
             className="h-8 w-8"
             alt="studenti iscritti"
-            src="/user.webp"
+            src="/images/user.webp"
             width={512}
             height={512}
           />
           <Image
             className="h-8 w-8"
             alt="studenti iscritti"
-            src="/user.webp"
+            src="/images/user.webp"
             width={512}
             height={512}
           />
@@ -39,7 +39,7 @@ export default function SocialProof() {
         <Image
           className="h-11 w-11 mx-auto mt-1"
           alt="like e commenti"
-          src="/chat.webp"
+          src="/images/chat.webp"
           width={512}
           height={512}
         />
@@ -50,7 +50,7 @@ export default function SocialProof() {
         <Image
           className="w-32 mx-auto mt-1"
           alt="recensione"
-          src="/rating.webp"
+          src="/images/rating.webp"
           width={96}
           height={512}
         />
