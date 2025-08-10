@@ -443,17 +443,17 @@ function formatDate(d: Date) {
   }
 }
 
-function formatRelative(iso: string) {
-  const d = new Date(iso);
-  if (isNaN(+d)) return "";
-  const diff = Date.now() - d.getTime();
-  const mins = Math.round(diff / 60000);
-  if (mins < 60) return `${mins} min fa`;
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `${hrs} h fa`;
-  const days = Math.round(hrs / 24);
-  return `${days} g fa`;
-}
+// function formatRelative(iso: string) {
+//   const d = new Date(iso);
+//   if (isNaN(+d)) return "";
+//   const diff = Date.now() - d.getTime();
+//   const mins = Math.round(diff / 60000);
+//   if (mins < 60) return `${mins} min fa`;
+//   const hrs = Math.round(mins / 60);
+//   if (hrs < 24) return `${hrs} h fa`;
+//   const days = Math.round(hrs / 24);
+//   return `${days} g fa`;
+// }
 
 /* ────────────────────── icons ────────────────────── */
 

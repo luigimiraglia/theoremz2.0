@@ -3,7 +3,17 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 
-export default function MessageBubble({ role, content, createdAt }) {
+type MessageBubbleProps = {
+  role: "user" | "assistant"; // o string se è generico
+  content: string;
+  createdAt: Date | string | number;
+};
+
+export default function MessageBubble({
+  role,
+  content,
+  createdAt,
+}: MessageBubbleProps) {
   const isUser = role === "user";
   const time = new Date(createdAt).toLocaleTimeString([], {
     hour: "2-digit",

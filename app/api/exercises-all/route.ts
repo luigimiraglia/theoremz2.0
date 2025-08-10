@@ -26,9 +26,17 @@ export async function GET() {
   try {
     const items = await client.fetch(QUERY, {}, { cache: "no-store" });
     return NextResponse.json({ ok: true, items });
-  } catch (e: any) {
+  } catch (e: unknown) {
+    let errorMessage: string;
+
+    if (e instanceof Error) {
+      errorMessage = e.message;
+    } else {
+      errorMessage = String(e);
+    }
+
     return NextResponse.json(
-      { ok: false, error: String(e?.message || e) },
+      { ok: false, error: errorMessage },
       { status: 500 }
     );
   }

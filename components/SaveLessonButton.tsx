@@ -10,6 +10,13 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/AuthContext";
+import type { User as FirebaseUser } from "firebase/auth";
+
+type AuthReturn = {
+  user: (FirebaseUser & { uid: string }) | null;
+  savedLessons: string[];
+  refreshSavedLessons: () => Promise<void>;
+};
 
 export default function SaveLessonButton({
   lessonSlug,
@@ -18,7 +25,7 @@ export default function SaveLessonButton({
   lessonSlug: string | undefined;
   className?: string;
 }) {
-  const { user, savedLessons, refreshSavedLessons } = useAuth() as any;
+  const { user, savedLessons, refreshSavedLessons } = useAuth() as AuthReturn;
   const [busy, setBusy] = useState(false);
 
   const slug = useMemo(

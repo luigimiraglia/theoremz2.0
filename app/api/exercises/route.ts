@@ -35,8 +35,16 @@ export async function GET(req: Request) {
     );
     return NextResponse.json({ ok: true, items });
   } catch (e: unknown) {
+    let errorMessage: string;
+
+    if (e instanceof Error) {
+      errorMessage = e.message;
+    } else {
+      errorMessage = String(e);
+    }
+
     return NextResponse.json(
-      { ok: false, error: String(e?.message || e) },
+      { ok: false, error: errorMessage },
       { status: 500 }
     );
   }
