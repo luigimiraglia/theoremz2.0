@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 /** ---------------------- Data ---------------------- */
@@ -67,8 +68,8 @@ export default function BlackPromo() {
 
           {/* CTA */}
           <div className="mt-6">
-            <a
-              href="#"
+            <Link
+              href="/black"
               className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-6 py-4 text-[18px] font-extrabold text-white shadow-[0_6px_0_#0f172a] transition active:translate-y-[1px] active:shadow-[0_5px_0_#0f172a] [.dark_&]:bg-white [.dark_&]:text-slate-900 [.dark_&]:shadow-[0_6px_0_#e5e7eb]"
             >
               Passa a black!
@@ -84,7 +85,7 @@ export default function BlackPromo() {
                 <path d="M5 12h14" />
                 <path d="m12 5 7 7-7 7" />
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
 

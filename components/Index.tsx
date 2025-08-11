@@ -47,7 +47,7 @@ export default function Index() {
             </div>
           </div>
         </Link>
-        <Link href="/matematica" className="w-full">
+        <Link href="/mentor" className="w-full">
           <div className="rounded-2xl h-fit bg-gray-50/95 [.dark_&]:bg-slate-800 py-5 px-auto w-full  border-[2.5px] border-slate-800 transition-all duration-100 ease-in-out shadow-none translate-x-0 translate-y-0 hover:shadow-[-7px_8px_0_0_#2b7fff,0_0_0_0_#2b7fff] hover:translate-x-1 hover:-translate-y-1">
             <div className="h-40 sm:h-30 md:h-40 lg:h-50 mx-auto w-fit py-2 sm:py-1 lg:py-3">
               <Image

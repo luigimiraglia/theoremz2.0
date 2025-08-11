@@ -2,6 +2,8 @@
 
 import { useRef } from "react";
 import Lottie, { LottieRefCurrentProps } from "lottie-react";
+import Link from "next/link";
+import sendingPlaneAnimation from "@/public/animations/sending-plane.json";
 
 export default function RisoluzioneEserciziCard() {
   return (
@@ -26,8 +28,8 @@ export default function RisoluzioneEserciziCard() {
 
           {/* CTA */}
           <div className="mt-4">
-            <a
-              href="#"
+            <Link
+              href="/risoluzione-esercizi"
               className="inline-flex items-center justify-center rounded-2xl w-full md:w-fit bg-blue-600 px-7 py-4 text-[18px] font-extrabold text-white shadow-[0_6px_0_#1d4ed8] transition active:translate-y-[1px] active:shadow-[0_5px_0_#1d4ed8]"
             >
               Scopri di più
@@ -43,7 +45,7 @@ export default function RisoluzioneEserciziCard() {
                 <path d="M5 12h14" />
                 <path d="m12 5 7 7-7 7" />
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -76,7 +78,7 @@ function LottieEnvelope() {
         autoplay
         className="h-[220px] sm:h-[280px] w-full"
         // Sostituisci con il path corretto del tuo JSON
-        animationData={require("@/public/animations/sending-plane.json")}
+        animationData={sendingPlaneAnimation}
       />
     </div>
   );

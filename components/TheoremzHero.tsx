@@ -7,6 +7,16 @@ import { LuSigma } from "react-icons/lu";
 import { BsGraphUp } from "react-icons/bs";
 import Image from "next/image";
 
+type MarqueeItem = {
+  label: string;
+  icon: React.ReactNode; // oppure React.ReactElement
+};
+
+type MarqueeProps = {
+  items: MarqueeItem[];
+  ariaHidden?: boolean;
+};
+
 export default function TheoremzHero() {
   const items = [
     { label: "Limiti", icon: <FaInfinity /> },
@@ -82,8 +92,9 @@ export default function TheoremzHero() {
   );
 }
 
-function Marquee({ items, ariaHidden = false }) {
-  const row = [...items, ...items, ...items];
+function Marquee({ items, ariaHidden = false }: MarqueeProps) {
+  const row: MarqueeItem[] = [...items, ...items, ...items];
+
   return (
     <ul
       className="marquee-track flex shrink-0 items-center gap-2 sm:gap-4 pr-4 will-change-transform"

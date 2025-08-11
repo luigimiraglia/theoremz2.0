@@ -2,7 +2,154 @@
 export default function BlackPage() {
   return (
     <main className="bg-black text-white">
-      {/* ... HERO / INTRO / INCLUDE identici alla versione precedente ... */}
+      {/* ============ HERO (2 colonne da md+) ============ */}
+      <section className="mx-auto max-w-6xl px-5 pt-12 pb-8 sm:px-8 lg:px-12">
+        <div className="grid gap-10 md:grid-cols-2 md:items-center">
+          {/* Testo */}
+          <div>
+            <h1 className="font-black leading-tight text-[36px] sm:text-[42px] lg:text-[52px]">
+              Theoremz
+              <span className="ml-1 align-[-0.18em] italic font-extrabold text-[30px] sm:text-[34px] lg:text-[40px]">
+                Black
+              </span>
+              , sblocca tutte le{" "}
+              <span className="bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent font-semibold">
+                risorse
+              </span>{" "}
+              per il tuo successo!
+            </h1>
+
+            <p className="mt-5 max-w-2xl text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/85">
+              Il primo servizio per lo studio che ti mette a disposizione{" "}
+              <span className="font-semibold">
+                tutto quello di cui hai bisogno
+              </span>{" "}
+              per eccellere.
+            </p>
+
+            <div className="mt-8 flex items-center gap-4">
+              <a
+                href="#pricing"
+                className="inline-flex items-center gap-2 rounded-2xl bg-sky-500 px-6 py-3 text-[16px] font-extrabold text-black transition hover:bg-sky-400"
+              >
+                Scopri le offerte
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M5 12h14" />
+                  <path d="m12 5 7 7-7 7" />
+                </svg>
+              </a>
+              <span className="-scale-x-100 text-white/90 text-3xl select-none md:hidden">
+                ↩︎
+              </span>
+            </div>
+          </div>
+
+          {/* Illustrazione (solo da md+) */}
+          <div className="hidden md:block">
+            <HeroIllo />
+          </div>
+        </div>
+      </section>
+
+      {/* ============ INTRO ============ */}
+      <section className="mx-auto max-w-6xl px-5 pb-8 sm:px-8 lg:px-12">
+        <h2 className="text-[26px] sm:text-[28px] lg:text-[32px] font-extrabold">
+          Di cosa si tratta?
+        </h2>
+        <p className="mt-3 max-w-3xl text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/85">
+          <a className="text-sky-400 underline-offset-2 hover:underline">
+            Theoremz Black
+          </a>{" "}
+          ti fornisce un&apos;esperienza di apprendimento unica, con un team di{" "}
+          <u>insegnanti</u> pronti ad assisterti ogni giorno via chat. Avrai
+          accesso completo a tutte le risorse di Theoremz: esercizi, quiz,
+          appunti e videolezioni per ogni lezione, oltre a tutto quello che ti
+          serve per studiare come si deve.
+        </p>
+      </section>
+
+      {/* ============ COSA INCLUDE (grid 2 colonne da lg) ============ */}
+      <section className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-12">
+        <h2 className="text-[26px] sm:text-[28px] lg:text-[32px] font-extrabold">
+          Cosa include?
+        </h2>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <IncludeCard
+            title="Assistenza Costante via Chat"
+            items={[
+              [
+                "Supporto Giornaliero",
+                "Lo studente ha sempre a disposizione un insegnante a cui porre domande o chiedere materiale aggiuntivo.",
+              ],
+              [
+                "Aiuto compiti",
+                "In caso di difficoltà con gli esercizi, lo studente viene seguito passo passo nella risoluzione.",
+              ],
+            ]}
+          />
+
+          <IncludeCard
+            title="Tutti gli Esercizi che vuoi"
+            items={[
+              [
+                "Catalogo Illimitato di Esercizi",
+                "Accesso a centinaia di esercizi già presenti; è possibile richiederne ulteriori se non bastassero.",
+              ],
+              [
+                "Già Risolti e Spiegati",
+                "Spiegazioni passo passo, con immagini; possibilità di rispiegazione privata su richiesta.",
+              ],
+            ]}
+          />
+
+          <IncludeCard
+            title="Appunti, Formulari e Lezioni"
+            items={[
+              [
+                "Tutti gli argomenti coperti",
+                "Formulario e videolezione per ogni argomento + molti appunti in PDF.",
+              ],
+              [
+                "Mai senza materiale",
+                "Si può richiedere materiale aggiuntivo in ogni momento.",
+              ],
+            ]}
+          />
+
+          {/* Bonus & claim affiancati su desktop */}
+          <div className="flex flex-col gap-6 lg:col-span-2 lg:flex-row">
+            <div className="flex-1">
+              <IncludeCard
+                title="Bonus e Premi per gli Iscritti"
+                items={[
+                  [
+                    "Sempre al primo posto",
+                    "Accesso prioritario alle nuove funzionalità e alle offerte esclusive.",
+                  ],
+                  [
+                    "La tua opinione conta",
+                    "Puoi richiedere funzionalità o argomenti non ancora presenti sul sito.",
+                  ],
+                ]}
+              />
+            </div>
+            <div className="flex-1">
+              <div className="h-full rounded-2xl bg-gradient-to-r from-sky-500 to-sky-400 px-6 py-8 text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold text-black">
+                +100% Soddisfatti o Rimborsati
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ============ PRICING (3 card da lg) ============ */}
       <section
@@ -99,12 +246,72 @@ export default function BlackPage() {
         </div>
       </section>
 
-      {/* ... FAQ / REVIEWS identici alla versione precedente ... */}
+      {/* ============ FAQ (2 colonne da lg) ============ */}
+      <section className="mx-auto mt-10 max-w-6xl px-5 pb-12 sm:px-8 lg:px-12">
+        <h3 className="text-center text-[26px] sm:text-[28px] lg:text-[32px] font-extrabold">
+          Domande frequenti
+        </h3>
+
+        <div className="mt-6 grid gap-3 lg:grid-cols-2">
+          {FAQS.map((q) => (
+            <details
+              key={q}
+              className="group rounded-xl bg-white text-slate-900 open:shadow-sm transition"
+            >
+              <summary className="cursor-pointer px-4 py-3 text-[16px] font-semibold">
+                ▶ {q}
+              </summary>
+              <div className="px-4 pb-4 text-[15px] text-slate-700">
+                Risposta sintetica: sì, ricevi supporto rapido con materiali
+                verificati.
+              </div>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* ============ REVIEWS (box centrato) ============ */}
+      <section className="mx-auto mb-16 max-w-6xl px-5 sm:px-8 lg:px-12">
+        <h3 className="text-center text-[26px] sm:text-[28px] lg:text-[32px] font-extrabold">
+          Cosa Dicono di Noi
+        </h3>
+        <div className="mx-auto mt-6 max-w-4xl rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/80">
+          {/* Inserisci qui il tuo widget recensioni (Senja/altro) */}
+          <p className="text-[15px]">Widget recensioni</p>
+        </div>
+      </section>
     </main>
   );
 }
 
-/* ---------- components ---------- */
+/* ---------- Mini components ---------- */
+function IncludeCard({
+  title,
+  items,
+}: {
+  title: string;
+  items: [string, string][];
+}) {
+  return (
+    <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-6 lg:p-7">
+      <h3 className="text-[20px] lg:text-[22px] font-extrabold text-sky-400">
+        {title}
+      </h3>
+      <ul className="mt-3 space-y-3">
+        {items.map(([h, p]) => (
+          <li key={h} className="flex gap-3">
+            <span className="select-none text-white/90">✦</span>
+            <div>
+              <p className="font-semibold">{h}</p>
+              <p className="text-white/85 text-[15px] leading-relaxed">{p}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function PriceCard({
   price,
   unit,
@@ -168,4 +375,90 @@ function PriceCard({
   );
 }
 
-/* ---------- (resto: IncludeCard, HeroIllo, FAQS) rimangono invariati ---------- */
+/* ---------- Decorative hero illustration (solo desktop) ---------- */
+function HeroIllo() {
+  return (
+    <svg
+      viewBox="0 0 560 340"
+      className="h-[220px] sm:h-[260px] lg:h-[300px] w-full"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="b" x1="0" x2="1">
+          <stop offset="0%" stopColor="#60a5fa" />
+          <stop offset="100%" stopColor="#22d3ee" />
+        </linearGradient>
+      </defs>
+      <rect
+        x="20"
+        y="20"
+        width="520"
+        height="220"
+        rx="16"
+        fill="#0d0f12"
+        stroke="#1f2937"
+      />
+      <circle cx="60" cy="50" r="6" fill="#374151" />
+      <circle cx="82" cy="50" r="6" fill="#374151" />
+      <circle cx="104" cy="50" r="6" fill="#374151" />
+      <rect x="60" y="90" width="200" height="100" rx="12" fill="#111827" />
+      <path
+        d="M80 160 C120 110, 160 140, 200 110 S250 190, 260 160"
+        fill="none"
+        stroke="url(#b)"
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <rect
+        x="290"
+        y="90"
+        width="210"
+        height="120"
+        rx="14"
+        fill="url(#b)"
+        opacity=".25"
+      />
+      <rect
+        x="310"
+        y="110"
+        width="170"
+        height="16"
+        rx="8"
+        fill="#fff"
+        opacity=".85"
+      />
+      <rect
+        x="310"
+        y="138"
+        width="130"
+        height="16"
+        rx="8"
+        fill="#fff"
+        opacity=".85"
+      />
+      <rect
+        x="310"
+        y="166"
+        width="150"
+        height="16"
+        rx="8"
+        fill="#fff"
+        opacity=".85"
+      />
+    </svg>
+  );
+}
+
+/* ---------- FAQ data ---------- */
+const FAQS = [
+  "L'assistenza è illimitata?",
+  "L'assistenza è attiva il weekend?",
+  "A che ora si può contattare l'assistenza?",
+  "Tutto questo vale per matematica e fisica?",
+  "È anche per studenti delle medie?",
+  "Vorrei abbonarmi con un amico, è possibile avere uno sconto?",
+  "Che qualifiche hanno gli insegnanti?",
+  "In cosa consiste l'aiuto compiti?",
+  "E se provo e non sono convinto?",
+  "Posso cancellare l'abbonamento in qualsiasi momento?",
+];
