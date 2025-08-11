@@ -24,7 +24,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky px-4 top-3 max-w-screen-xl mx-4 xl:mx-auto mb-6 z-50 rounded-3xl bg-gray-100/60 backdrop-blur-xl border border-neutral-100/60">
+    <header className="sticky px-4 top-3 max-w-screen-xl mx-4 xl:mx-auto mb-6 z-50 rounded-3xl [.dark_&]:bg-slate-800/60 bg-gray-100/60 backdrop-blur-xl border border-neutral-100/60">
       <div className="relative mx-auto flex max-w-screen-xl flex-col py-4 md:flex-row md:items-center md:justify-between">
         <Link
           href="/"
@@ -39,7 +39,7 @@ export default function Header() {
             className="rounded-lg h-10 w-10"
           />
           <span className="ml-2 ">
-            <p className="text-slate-900">Theoremz</p>
+            <p className="text-slate-900 [.dark_&]:text-white">Theoremz</p>
           </span>
         </Link>
 
@@ -51,6 +51,7 @@ export default function Header() {
         >
           <span className="sr-only">Toggle Navigation</span>
           <svg
+            className="[.dark_&]:fill-white"
             xmlns="http://www.w3.org/2000/svg"
             width="0.88em"
             height="1em"
@@ -70,7 +71,7 @@ export default function Header() {
               <Link
                 href="/"
                 onClick={handleLinkClick}
-                className="text-gray-800 hover:text-blue-500 transition-colors duration-250 ease-in-out delay-50"
+                className="text-gray-800 [.dark_&]:text-white hover:text-blue-500 transition-colors duration-250 ease-in-out delay-50"
               >
                 Home
               </Link>
@@ -79,7 +80,7 @@ export default function Header() {
               <Link
                 href="/matematica"
                 onClick={handleLinkClick}
-                className="text-gray-800 hover:text-blue-500 transition-colors duration-250 ease-in-out delay-50"
+                className="text-gray-800 [.dark_&]:text-white hover:text-blue-500 transition-colors duration-250 ease-in-out delay-50"
               >
                 Matematica
               </Link>
@@ -88,7 +89,7 @@ export default function Header() {
               <Link
                 href="/fisica"
                 onClick={handleLinkClick}
-                className="text-gray-800 hover:text-blue-500 transition-colors duration-250 ease-in-out delay-50"
+                className="text-gray-800 [.dark_&]:text-white hover:text-blue-500 transition-colors duration-250 ease-in-out delay-50"
               >
                 Fisica
               </Link>
@@ -97,7 +98,7 @@ export default function Header() {
               <Link
                 href="/esercizi"
                 onClick={handleLinkClick}
-                className="text-gray-800 hover:text-blue-500 transition-colors duration-250 ease-in-out delay-50"
+                className="text-gray-800 [.dark_&]:text-white hover:text-blue-500 transition-colors duration-250 ease-in-out delay-50"
               >
                 Esercizi
               </Link>

@@ -59,7 +59,7 @@ export default function Register() {
   return (
     <div className="flex items-center justify-center h-[70vh]">
       <div className="w-full max-w-md space-y-6 rounded-2xl bg-white p-8 drop-shadow-2xl">
-        <h1 className="mb-4 text-center text-3xl font-bold">
+        <h1 className="mb-4 text-center text-3xl font-bold text-slate-800">
           {isLogin ? "Accedi" : "Crea il tuo account"}
         </h1>
 
@@ -77,7 +77,7 @@ export default function Register() {
           <input
             type="email"
             placeholder="Email"
-            className="w-full rounded border p-2"
+            className="w-full rounded border p-2 text-slate-800"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -86,7 +86,7 @@ export default function Register() {
           <input
             type="password"
             placeholder="Password"
-            className="w-full rounded border p-2"
+            className="w-full rounded border p-2 text-slate-800"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -100,12 +100,12 @@ export default function Register() {
                 checked={acceptTerms}
                 onChange={(e) => setAcceptTerms(e.target.checked)}
               />
-              <span>
+              <span className="text-slate-800 ">
                 Accetto i{" "}
                 <a
                   href="/termini-e-condizioni"
                   target="_blank"
-                  className="text-blue-600 underline"
+                  className="text-blue-600 underline "
                 >
                   Termini e Condizioni
                 </a>
@@ -128,7 +128,7 @@ export default function Register() {
           </button>
         </form>
 
-        <p className="text-center text-sm">
+        <p className="text-center text-sm text-slate-800">
           {isLogin ? "Non hai un account?" : "Hai già un account?"}{" "}
           <button
             type="button"
