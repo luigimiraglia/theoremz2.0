@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
+import { Montserrat } from "next/font/google";
 import { AuthProvider } from "@/lib/AuthContext";
 import "./globals.css";
 import Providers from "./providers";
@@ -39,54 +39,12 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const montserrat = localFont({
-  src: [
-    {
-      path: "../public/fonts/Montserrat/Montserrat-Regular.woff2",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../public/fonts/Montserrat/Montserrat-Medium.woff2",
-      weight: "500",
-      style: "normal",
-    },
-    {
-      path: "../public/fonts/Montserrat/Montserrat-SemiBold.woff2",
-      weight: "600",
-      style: "normal",
-    },
-    {
-      path: "../public/fonts/Montserrat/Montserrat-Bold.woff2",
-      weight: "700",
-      style: "normal",
-    },
-    {
-      path: "../public/fonts/Montserrat/Montserrat-ExtraBold.woff2",
-      weight: "800",
-      style: "normal",
-    },
-    {
-      path: "../public/fonts/Montserrat/Montserrat-Black.woff2",
-      weight: "900",
-      style: "normal",
-    },
-    {
-      path: "../public/fonts/Montserrat/Montserrat-Italic.woff2",
-      weight: "400",
-      style: "italic",
-    },
-  ],
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"], // solo i pesi che usi davvero
   display: "swap",
-  variable: "--font-montserrat",
-  fallback: [
-    "system-ui",
-    "-apple-system",
-    "Segoe UI",
-    "Roboto",
-    "Arial",
-    "sans-serif",
-  ],
+  adjustFontFallback: true,
+  preload: true,
 });
 
 export const viewport: Viewport = {
@@ -103,6 +61,7 @@ export default function RootLayout({
   return (
     <html lang="it" suppressHydrationWarning>
       <head>
+        {/* Preconnect Firebase per Auth (non tocca LCP) */}
         <link
           rel="preconnect"
           href="https://theoremz-login.firebaseapp.com"
@@ -121,8 +80,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://apis.google.com" crossOrigin="" />
       </head>
       <body
-        className={`${montserrat.variable} antialiased min-h-dvh bg-background text-foreground`}
-        style={{ fontFamily: "var(--font-montserrat)" }}
+        className={`${montserrat.className} antialiased min-h-dvh bg-background text-foreground`}
       >
         <AuthProvider>
           <Providers>

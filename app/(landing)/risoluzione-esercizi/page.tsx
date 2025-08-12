@@ -423,7 +423,7 @@ function PlanCard({
           <h4 className="text-[16px] sm:text-[20px] font-bold text-slate-900">
             {title}
           </h4>
-          <div className="mt-1 text-[24px] sm:text-[28px] font-black text-sky-600">
+          <div className="mt-1 text-[24px] sm:text-[28px] font-black text-blue-600">
             {price}{" "}
             <span className="align-middle text-[12.5px] sm:text-[14px] font-semibold text-slate-500">
               una tantum

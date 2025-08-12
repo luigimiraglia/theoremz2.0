@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import ThemeToggle from "./ThemeToggle";
 
 export default function Index() {
   return (
@@ -12,7 +11,6 @@ export default function Index() {
         <p className="text-slate-800 [.dark_&]:text-white text-md md:text-lg font-medium">
           Scopri tutti i nostri contenuti
         </p>
-        <ThemeToggle />
       </div>
 
       <div

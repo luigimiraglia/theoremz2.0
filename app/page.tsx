@@ -5,6 +5,7 @@ import SocialProof from "../components/SocialProof";
 import RisoluzioneEserciziCard from "@/components/RisoluzioneEserciziCard";
 import TutorHero from "@/components/TutorHero";
 import BlackPromo from "@/components/BlackPromo";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Home() {
   return (
@@ -16,6 +17,7 @@ export default function Home() {
       <TutorHero />
       <BlackPromo />
       <RisoluzioneEserciziCard />
+      <ThemeToggle />
     </>
   );
 }

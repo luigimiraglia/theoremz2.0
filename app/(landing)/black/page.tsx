@@ -65,9 +65,9 @@ export default function BlackPage() {
           Di cosa si tratta?
         </h2>
         <p className="mt-3 max-w-3xl text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/85">
-          <a className="text-sky-400 underline-offset-2 hover:underline">
+          <span className="text-sky-400 underline-offset-2 hover:underline">
             Theoremz Black
-          </a>{" "}
+          </span>{" "}
           ti fornisce un&apos;esperienza di apprendimento unica, con un team di{" "}
           <u>insegnanti</u> pronti ad assisterti ogni giorno via chat. Avrai
           accesso completo a tutte le risorse di Theoremz: esercizi, quiz,

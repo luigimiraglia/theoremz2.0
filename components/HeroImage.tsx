@@ -5,7 +5,10 @@ export default function HeroImage() {
   return (
     <div className="w-full">
       {/* mantiene la ratio e riserva spazio */}
-      <div className="relative w-full" style={{ aspectRatio: "1 / 1" }}>
+      <div
+        className="relative w-full p-10 sm:p-5"
+        style={{ aspectRatio: "1 / 1" }}
+      >
         <Image
           src="/images/wimage.webp"
           alt="welcome image"
