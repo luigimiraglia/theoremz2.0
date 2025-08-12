@@ -1,4 +1,3 @@
-// lib/AuthContext.tsx
 "use client";
 
 import React, {
@@ -8,20 +7,13 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import {
-  onAuthStateChanged,
-  signOut,
-  User as FirebaseUser,
-} from "firebase/auth";
-import { auth, db } from "./firebase";
-import { useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
+import type { User as FirebaseUser } from "firebase/auth";
 
 export type AppUser = {
   uid: string;
   email: string | null;
   displayName?: string | null;
-  username?: string | null; // preso da Firestore se presente
+  username?: string | null;
   createdAt?: number;
 };
 
@@ -36,30 +28,38 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  loading: true,
+  loading: false, // ⬅️ non bloccare l’UI iniziale
   isSubscribed: null,
   savedLessons: [],
   refreshSavedLessons: async () => {},
   logout: async () => {},
 });
 
+const runWhenIdle = (cb: () => void) => {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    (window as any).requestIdleCallback(cb);
+  } else {
+    setTimeout(cb, 0);
+  }
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
   const [savedLessons, setSavedLessons] = useState<string[]>([]);
-  const router = useRouter();
 
-  // 🔄 Carica lezioni salvate da Firestore
   const refreshSavedLessons = async () => {
     if (!user) return;
     try {
+      const [{ getDoc, doc }, { db }] = await Promise.all([
+        import("firebase/firestore"),
+        import("./firebase"),
+      ]);
       const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        setSavedLessons(userDoc.data().savedLessons || []);
-      } else {
-        setSavedLessons([]);
-      }
+      setSavedLessons(
+        userDoc.exists() ? userDoc.data().savedLessons || [] : []
+      );
     } catch (err) {
       console.error("Errore caricamento lezioni salvate:", err);
       setSavedLessons([]);
@@ -67,70 +67,107 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (fbUser: FirebaseUser | null) => {
-        if (fbUser) {
-          const userRef = doc(db, "users", fbUser.uid);
-          let username: string | null = null;
+    let unsubscribe: (() => void) | undefined;
 
-          // recupera username da Firestore
-          try {
-            const snap = await getDoc(userRef);
-            if (snap.exists()) {
-              username = snap.data().username || null;
-              setSavedLessons(snap.data().savedLessons || []);
-            }
-          } catch (err) {
-            console.error("Errore recupero username/savedLessons", err);
+    runWhenIdle(async () => {
+      const [{ auth }, { onAuthStateChanged }] = await Promise.all([
+        import("./firebase"),
+        import("firebase/auth"),
+      ]);
+
+      unsubscribe = onAuthStateChanged(
+        auth,
+        async (fbUser: FirebaseUser | null) => {
+          if (!fbUser) {
+            setUser(null);
+            setIsSubscribed(false);
+            setSavedLessons([]);
+            return;
           }
 
           const appUser: AppUser = {
             uid: fbUser.uid,
             email: fbUser.email ?? null,
             displayName: fbUser.displayName ?? null,
-            username,
             createdAt: fbUser.metadata?.creationTime
               ? Date.parse(fbUser.metadata.creationTime)
               : undefined,
           };
-
           setUser(appUser);
 
-          // stato abbonamento
-          try {
-            const resp = await fetch(
-              "/api/stripe/subscription-status-by-email",
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: appUser.email }),
+          // Firestore & Stripe dopo un piccolo idle per non contendere il main thread
+          runWhenIdle(async () => {
+            try {
+              const [{ getDoc, doc }, { db }] = await Promise.all([
+                import("firebase/firestore"),
+                import("./firebase"),
+              ]);
+              const snap = await getDoc(doc(db, "users", fbUser.uid));
+              if (snap.exists()) {
+                appUser.username = snap.data().username || null;
+                setSavedLessons(snap.data().savedLessons || []);
               }
-            );
-            const data = await resp.json();
-            setIsSubscribed(!!data.isSubscribed);
-          } catch (err) {
-            console.error("Stripe status fetch error", err);
-            setIsSubscribed(false);
-          }
-        } else {
-          setUser(null);
-          setIsSubscribed(false);
-          setSavedLessons([]);
-        }
-        setLoading(false);
-      }
-    );
+            } catch (err) {
+              console.error("Errore Firestore", err);
+            }
 
-    return () => unsubscribe();
-  }, [router]);
+            try {
+              if (appUser.email) {
+                // cache 10 min
+                const key = `sub:${appUser.email}`;
+                const cached = sessionStorage.getItem(key);
+                if (cached) {
+                  const { v, t } = JSON.parse(cached) as {
+                    v: boolean;
+                    t: number;
+                  };
+                  if (Date.now() - t < 10 * 60 * 1000) {
+                    setIsSubscribed(v);
+                    return;
+                  }
+                }
+                const resp = await fetch(
+                  "/api/stripe/subscription-status-by-email",
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: appUser.email }),
+                    keepalive: false,
+                  }
+                );
+                const data = await resp.json();
+                const v = !!data.isSubscribed;
+                setIsSubscribed(v);
+                sessionStorage.setItem(
+                  key,
+                  JSON.stringify({ v, t: Date.now() })
+                );
+              } else {
+                setIsSubscribed(false);
+              }
+            } catch (err) {
+              console.error("Stripe status fetch error", err);
+              setIsSubscribed(false);
+            }
+          });
+        }
+      );
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
   const logout = async () => {
+    const [{ auth }, { signOut }] = await Promise.all([
+      import("./firebase"),
+      import("firebase/auth"),
+    ]);
     await signOut(auth);
     setUser(null);
     setIsSubscribed(false);
     setSavedLessons([]);
-    router.push("/");
   };
 
   return (

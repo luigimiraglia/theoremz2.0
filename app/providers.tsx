@@ -1,16 +1,23 @@
-// app/providers.tsx
 "use client";
-
 import { ThemeProvider } from "next-themes";
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Prima del mount renderizza direttamente i children, così non blocca il paint
+  if (!mounted) return <>{children}</>;
+
   return (
     <ThemeProvider
-      attribute="class" // <- importantissimo: mette/rimuove .dark su <html>
-      defaultTheme="system" // usa il tema di sistema alla prima visita
-      enableSystem // abilita auto tema
-      storageKey="theme" // chiave in localStorage (coerente col toggle)
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      storageKey="theme"
     >
       {children}
     </ThemeProvider>
