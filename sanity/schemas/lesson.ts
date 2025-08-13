@@ -259,6 +259,7 @@ export default defineType({
           { title: "Moti", value: "Moti" },
           { title: "Dinamica", value: "Dinamica" },
           { title: "Dinamica rotazionale", value: "Dinamica rotazionale" },
+          { title: "Fluidi", value: "Fluidi" },
           { title: "Gravitazione", value: "Gravitazione" },
           { title: "Termodinamica", value: "Termodinamica" },
           { title: "Onde", value: "Onde" },
