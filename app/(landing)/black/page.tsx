@@ -143,7 +143,7 @@ export default function BlackPage() {
               />
             </div>
             <div className="flex-1">
-              <div className="h-full rounded-2xl bg-gradient-to-r from-sky-500 to-sky-400 px-6 py-8 text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold text-black">
+              <div className="h-full rounded-2xl bg-gradient-to-br from-blue-700 to-cyan-400 px-6 py-8 text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white">
                 +100% Soddisfatti o Rimborsati
               </div>
             </div>
@@ -159,7 +159,7 @@ export default function BlackPage() {
         <div className="mx-auto grid max-w-2xl gap-8 lg:max-w-none lg:grid-cols-3">
           {/* Colonna 1 – Essential */}
           <div>
-            <div className="rounded-xl bg-emerald-500 py-2 text-center font-bold text-black">
+            <div className="rounded-xl bg-gradient-to-r from-green-500 to-cyan-400 py-2 text-center font-bold text-white">
               Il più economico 👇
             </div>
             <div className="mt-2 rounded-xl bg-white py-2 text-center font-bold text-slate-900">
@@ -168,7 +168,7 @@ export default function BlackPage() {
 
             <PriceCard
               price="3,90€"
-              unit="/mese"
+              unit=" /mese"
               features={[
                 ["ok", "Studia sempre senza pubblicità"],
                 ["ok", "Centinaia di esercizi risolti"],
@@ -188,7 +188,7 @@ export default function BlackPage() {
 
           {/* Colonna 2 – Base mensile */}
           <div>
-            <div className="rounded-xl bg-fuchsia-500 py-2 text-center font-bold text-black">
+            <div className="rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 py-2 text-center font-bold text-white">
               Il più venduto 👇
             </div>
             <div className="mt-2 rounded-xl bg-white py-2 text-center font-bold text-slate-900">
@@ -197,7 +197,7 @@ export default function BlackPage() {
 
             <PriceCard
               price="6,90€"
-              unit="/mese"
+              unit=" /mese"
               features={[
                 ["pink", "Assistenza via chat illimitata"],
                 ["pink", "Aiuto compiti giornaliero"],
@@ -217,7 +217,7 @@ export default function BlackPage() {
 
           {/* Colonna 3 – Annuale */}
           <div>
-            <div className="rounded-xl bg-gradient-to-r from-sky-500 to-cyan-500 py-2 text-center font-bold text-black">
+            <div className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-400 py-2 text-center font-bold text-white">
               Il più conveniente 👇
             </div>
             <div className="mt-2 rounded-xl bg-white py-2 text-center font-bold text-slate-900">
@@ -226,7 +226,7 @@ export default function BlackPage() {
 
             <PriceCard
               price="64,90€"
-              unit="/anno"
+              unit=" /anno"
               features={[
                 ["pink", "Assistenza via chat illimitata"],
                 ["pink", "Aiuto compiti giornaliero"],
@@ -259,7 +259,7 @@ export default function BlackPage() {
               className="group rounded-xl bg-white text-slate-900 open:shadow-sm transition"
             >
               <summary className="cursor-pointer px-4 py-3 text-[16px] font-semibold">
-                ▶ {q}
+                {q}
               </summary>
               <div className="px-4 pb-4 text-[15px] text-slate-700">
                 Risposta sintetica: sì, ricevi supporto rapido con materiali
@@ -324,30 +324,33 @@ function PriceCard({
   return (
     <div className="mt-3 rounded-2xl bg-white text-slate-900 shadow-sm ring-1 ring-slate-200">
       <div className="px-6 py-6 lg:px-8 lg:py-8">
-        <div className="text-[40px] lg:text-[44px] font-extrabold text-sky-500">
+        <div className="text-[41px] lg:text-[46px] font-semibold bg-gradient-to-r text-transparent from-blue-600 to-cyan-400 bg-clip-text ">
           {price}
-          <span className="ml-2 align-middle text-[24px] lg:text-[26px] font-bold text-slate-700">
-            {unit}
-          </span>
+          {unit}
         </div>
 
-        <ul className="mt-5 grid gap-3 text-[15px] lg:text-[15.5px]">
+        <ul className="mt-5 grid gap-2 text-[16px] font-semibold lg:text-[15.5px]">
           {features.map(([variant, text], i) => {
             const color =
               variant === "no"
                 ? "text-rose-500"
                 : variant === "pink"
-                  ? "text-fuchsia-500"
-                  : "text-emerald-600";
+                  ? "bg-clip-text bg-gradient-to-r text-transparent from-purple-500 to-pink-500"
+                  : "text-black";
             const strike = variant === "no";
+            const pink = variant === "pink";
 
             return (
-              <li key={i} className="flex items-start gap-2">
-                <span className={`mt-0.5 ${color}`}>
+              <li key={i} className="flex items-start  gap-2">
+                <span className={`${color} text-2xl`}>
                   {variant === "no" ? "✗" : "✓"}
                 </span>
                 <span
-                  className={`${strike ? "line-through text-slate-400" : "text-slate-800"}`}
+                  className={`${
+                    pink
+                      ? "bg-clip-text bg-gradient-to-r text-transparent from-purple-500 font-bold to-pink-500"
+                      : "text-black"
+                  } ${strike ? "line-through text-slate-400" : ""} mt-1`}
                 >
                   {text}
                 </span>
@@ -365,7 +368,7 @@ function PriceCard({
           </a>
           <a
             href="#"
-            className="rounded-xl bg-gradient-to-r from-sky-600 to-sky-500 px-4 py-3 text-center font-extrabold text-black transition hover:from-sky-500 hover:to-sky-400"
+            className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-400 px-4 py-3 text-center font-extrabold text-white transition hover:from-sky-500 hover:to-sky-400"
           >
             Acquista ora 👉
           </a>

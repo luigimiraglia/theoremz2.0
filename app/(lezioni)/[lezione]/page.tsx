@@ -1,11 +1,14 @@
+import type { Metadata } from "next";
 import { groq } from "next-sanity";
 import { notFound } from "next/navigation";
 import { sanityFetch } from "@/lib/sanityFetch";
 import type { PortableTextBlock } from "sanity";
-import LessonClient from "./LessonClient";
+import LessonClient from "./ClientIslands"; // <-- wrapper client che carica il tuo LessonClient
+import SeoJsonLd from "./SeoJsonLd"; // <-- JSON-LD Article + Breadcrumbs
 
-export const dynamic = "force-dynamic"; // evita prerender
+export const dynamic = "force-dynamic"; // mantieni il tuo comportamento attuale
 
+/* -------------------- Tipi -------------------- */
 type LessonResources = {
   formulario?: string | null;
   appunti?: string | null;
@@ -19,6 +22,9 @@ type LessonDoc = {
   thumbnailUrl?: string | null;
   resources?: LessonResources;
   content: PortableTextBlock[];
+  _createdAt?: string;
+  _updatedAt?: string;
+  tags?: string[];
 };
 type SectionBlock = PortableTextBlock & {
   _type: "section";
@@ -26,19 +32,150 @@ type SectionBlock = PortableTextBlock & {
   shortTitle?: string;
 };
 
-const lessonBySlugQuery = groq`
+/* -------------------- Query -------------------- */
+const seoLessonQuery = groq`
+  *[_type=="lesson" && slug.current==$slug][0]{
+    _id, title, subtitle, slug, thumbnailUrl,
+    content[0..2], _createdAt, _updatedAt, tags
+  }
+`;
+const fullLessonQuery = groq`
   *[_type == "lesson" && slug.current == $slug][0]{
-    _id, title, subtitle, slug, thumbnailUrl, resources, content
+    _id, title, subtitle, slug, thumbnailUrl, resources, content,
+    _createdAt, _updatedAt, tags
   }
 `;
 const allLessonSlugsQuery = groq`
   *[_type == "lesson" && defined(slug.current)].slug.current
 `;
+
 export async function generateStaticParams(): Promise<{ lezione: string }[]> {
   const slugs = await sanityFetch<string[]>(allLessonSlugsQuery);
-  return slugs.map((slug) => ({ lezione: slug }));
+  return (slugs ?? []).map((slug) => ({ lezione: slug }));
 }
 
+/* -------------------- Helpers SEO -------------------- */
+function limitForSerp(s: string, max = 62) {
+  if (!s) return "";
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max - 1).trimEnd();
+  return /[.,:;–-]$/.test(cut) ? cut + "…" : cut + "…";
+}
+function buildSeoTitle(raw: string): string {
+  const t = (raw ?? "").trim();
+
+  const rules: Array<{ test: RegExp; suffix: string }> = [
+    { test: /apotema|poligoni?/i, suffix: "Definizione, Formule e Tabella" },
+    {
+      test: /cerchio|circonferenza|archi|corde/i,
+      suffix: "Formule, Esempi e Disegni",
+    },
+    {
+      test: /derivat|studio.*funzion/i,
+      suffix: "Regole, Trucchi ed Esercizi Svolti",
+    },
+    { test: /integral/i, suffix: "Metodi, Tabelle ed Esempi" },
+    {
+      test: /vettor|moto|cinematic|dinamic/i,
+      suffix: "Spiegazione Semplice + Esempi",
+    },
+    {
+      test: /probabil|combinatori/i,
+      suffix: "Formule, Esempi ed Errori Tipici",
+    },
+  ];
+
+  // ✅ FIX: usa la RegExp dentro all’oggetto
+  const match = rules.find((r) => r.test.test(t));
+
+  const base =
+    t.length <= 30
+      ? `${t} – Guida Completa, Esempi e Formulari`
+      : match
+        ? `${t} – ${match.suffix}`
+        : `${t} – Spiegazione, Formule ed Esempi`;
+
+  return limitForSerp(`${base} | Theoremz`);
+}
+function ptToPlain(blocks: PortableTextBlock[] | undefined): string {
+  if (!blocks) return "";
+  const out: string[] = [];
+  for (const b of blocks) {
+    if (b._type === "block" && Array.isArray(b.children)) {
+      out.push(b.children.map((c: any) => c.text ?? "").join(""));
+    }
+    if (out.join(" ").length > 400) break;
+  }
+  return out.join(" ").replace(/\s+/g, " ").trim();
+}
+function trimDesc(s: string, max = 160) {
+  if (!s) return "";
+  return s.length > max ? s.slice(0, max - 1).trimEnd() + "…" : s;
+}
+
+/* -------------------- generateMetadata -------------------- */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lezione: string }>;
+}): Promise<Metadata> {
+  const { lezione } = await params;
+  const lesson = await sanityFetch<LessonDoc>(seoLessonQuery, {
+    slug: lezione,
+  });
+  if (!lesson) {
+    return {
+      title: "Lezione non trovata | Theoremz",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const title = buildSeoTitle(lesson.title);
+  const plain = trimDesc(ptToPlain(lesson.content) || lesson.subtitle || "");
+  const description =
+    plain || "Lezione completa con spiegazione, formule ed esempi su Theoremz.";
+
+  const baseUrl = "https://theoremz.com";
+  const canonical = `${baseUrl}/lezione/${lesson.slug.current}`;
+  const ogImage = lesson.thumbnailUrl ?? "/metadata.png";
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    robots: { index: true, follow: true, "max-image-preview": "large" },
+    openGraph: {
+      type: "article",
+      title,
+      description,
+      url: canonical,
+      siteName: "Theoremz",
+      images: [{ url: ogImage }],
+      locale: "it_IT",
+      publishedTime: lesson._createdAt,
+      modifiedTime: lesson._updatedAt,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+      site: "@theoremz_",
+    },
+    keywords: [
+      lesson.title,
+      ...(lesson.tags ?? []),
+      "formule",
+      "esempi",
+      "esercizi",
+      "appunti",
+      "theoremz",
+      "lezione",
+    ],
+  };
+}
+
+/* -------------------- Page UI (INVARIATA) -------------------- */
 export default async function Page({
   params,
 }: {
@@ -46,7 +183,7 @@ export default async function Page({
 }) {
   const { lezione } = await params;
 
-  const lesson = await sanityFetch<LessonDoc>(lessonBySlugQuery, {
+  const lesson = await sanityFetch<LessonDoc>(fullLessonQuery, {
     slug: lezione,
   });
   if (!lesson) notFound();
@@ -55,7 +192,7 @@ export default async function Page({
     (b): b is SectionBlock => (b as { _type?: string })._type === "section"
   );
   const sectionItems = sections
-    .map((s, i) => {
+    .map((s) => {
       const heading = s.heading ?? s.shortTitle;
       if (!heading) return null;
       return {
@@ -70,18 +207,39 @@ export default async function Page({
     );
 
   return (
-    <LessonClient
-      lezione={lezione}
-      lesson={{
-        id: lesson._id,
-        title: lesson.title,
-        subtitle: lesson.subtitle ?? null,
-        slug: lesson.slug.current,
-        thumbnailUrl: lesson.thumbnailUrl ?? null,
-        resources: lesson.resources ?? {},
-        content: lesson.content,
-      }}
-      sectionItems={sectionItems}
-    />
+    <>
+      {/* JSON-LD strutturato (Article + Breadcrumbs) */}
+      <SeoJsonLd
+        title={lesson.title}
+        subtitle={lesson.subtitle ?? undefined}
+        slug={lesson.slug.current}
+        thumbnailUrl={lesson.thumbnailUrl ?? undefined}
+        createdAt={lesson._createdAt}
+        updatedAt={lesson._updatedAt}
+        breadcrumbs={[
+          { name: "Theoremz", item: "https://theoremz.com/" },
+          { name: "Lezioni", item: "https://theoremz.com/lezione" },
+          {
+            name: lesson.title,
+            item: `https://theoremz.com/lezione/${lesson.slug.current}`,
+          },
+        ]}
+      />
+
+      {/* La tua UI client (ordine identico al tuo LessonClient) */}
+      <LessonClient
+        lezione={lezione}
+        lesson={{
+          id: lesson._id,
+          title: lesson.title,
+          subtitle: lesson.subtitle ?? null,
+          slug: lesson.slug.current,
+          thumbnailUrl: lesson.thumbnailUrl ?? null,
+          resources: lesson.resources ?? {},
+          content: lesson.content,
+        }}
+        sectionItems={sectionItems}
+      />
+    </>
   );
 }

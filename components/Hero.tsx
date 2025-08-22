@@ -13,7 +13,7 @@ export default function Hero() {
           <br />
           la matematica{" "}
           <span
-            className="text-blue-600/90 inline-block"
+            className="text-blue-600 inline-block"
             style={{ minWidth: `${MIN_CH}ch` }}
           >
             <TypingWord words={HERO_WORDS} />

@@ -190,8 +190,7 @@ export default function MatematicaClient({
                     <div className="h-36 overflow-hidden rounded-t-2xl bg-white">
                       <Image
                         src={
-                          lesson.thumbnailUrl ||
-                          "https://theoremz.com/images/thumb/in-arrivo.webp"
+                          lesson.thumbnailUrl || "/images/thumb/in-arrivo.webp"
                         }
                         alt={lesson.title}
                         width={320}
@@ -231,7 +230,7 @@ export default function MatematicaClient({
                           <Image
                             src={
                               lesson.thumbnailUrl ||
-                              "https://theoremz.com/images/thumb/in-arrivo.webp"
+                              "/images/thumb/in-arrivo.webp"
                             }
                             alt={lesson.title}
                             width={320}

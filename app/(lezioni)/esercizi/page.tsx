@@ -36,11 +36,11 @@ type ApiResponse = {
 
 function SkeletonCard() {
   return (
-    <div className="rounded-xl border-4 border-[#2b7fff]/30 bg-white shadow-sm min-w-[340px]">
-      <div className="h-2 w-full bg-gradient-to-r from-[#2b7fff]/40 via-[#559dff]/40 to-[#2b7fff]/40" />
+    <div className="rounded-2xl bg-white [.dark_&]:bg-slate-800 shadow-sm min-w-[340px]">
+      <div className="h-3 w-full rounded-t-2xl bg-gradient-to-r to-sky-500/40 from-blue-500/40" />
       <div className="p-4">
-        <div className="h-5 w-2/3 bg-slate-200 rounded mb-3" />
-        <div className="h-16 w-full bg-slate-100 rounded" />
+        <div className="h-5 w-2/3 bg-slate-200 [.dark_&]:bg-slate-700 rounded mb-3" />
+        <div className="h-16 w-full bg-slate-100 [.dark_&]:bg-slate-700 rounded" />
       </div>
     </div>
   );
@@ -135,8 +135,8 @@ export default function EserciziPage() {
   return (
     <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 mb-10">
       {/* Barra di ricerca / hero */}
-      <div className="rounded-2xl border-4 border-[#2b7fff] bg-white shadow-lg py-4 px-4 sm:px-6 flex flex-col md:flex-row md:items-center gap-3">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1a5fd6] tracking-tight">
+      <div className="rounded-2xl bg-gray-100/60 [.dark_&]:bg-slate-800 py-4 px-4 sm:px-6 flex flex-col text-slate-800 [.dark_&]:text-white md:flex-row md:items-center gap-3">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
           Esercizi
         </h1>
         <div className="flex-1" />
@@ -148,11 +148,11 @@ export default function EserciziPage() {
             setQuery(e.target.value);
             setVisibleCount(12);
           }}
-          className="w-full md:w-[520px] rounded-xl border-2 border-[#2b7fff] bg-white px-4 py-2 text-[15px] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2b7fff]"
+          className="w-full md:w-[520px] rounded-xl border-2 border-[#2b7fff] bg-white [.dark_&]:bg-slate-800 px-4 py-2 text-[15px] shadow-sm focus:outline-none"
         />
         <button
           onClick={reshuffle}
-          className="rounded-xl border-2 border-[#2b7fff] bg-gradient-to-r from-[#2b7fff]/15 to-[#559dff]/25 px-3 py-2 text-sm font-semibold text-[#1a5fd6] hover:from-[#2b7fff]/25 hover:to-[#559dff]/35"
+          className="rounded-xl border-2 border-[#2b7fff] [.dark_&]:text-white bg-gradient-to-r from-[#2b7fff]/15 to-[#559dff]/25 px-3 py-2 text-sm font-semibold text-[#1a5fd6] hover:from-[#2b7fff]/25 hover:to-[#559dff]/35"
           title="Mescola casualmente"
         >
           Mescola

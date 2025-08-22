@@ -61,9 +61,9 @@ function RequestForm() {
   };
 
   return (
-    <section className="rounded-2xl border-2 border-slate-500 bg-white p-5">
+    <section className="rounded-2xl border-2 border-slate-500 bg-white [.dark_&]:bg-slate-800 p-5">
       <h1 className="text-xl font-semibold">Reimposta password</h1>
-      <p className="text-sm text-slate-600 mt-1">
+      <p className="text-sm text-slate-600 [.dark_&]:text-slate-400 mt-1">
         Inserisci la tua email: ti invieremo un link per creare una nuova
         password.
       </p>
@@ -79,7 +79,7 @@ function RequestForm() {
         />
         <button
           disabled={sending || !email}
-          className="w-full rounded-lg bg-blue-600 text-white py-2 text-sm hover:bg-blue-700 disabled:opacity-50"
+          className="w-full rounded-lg bg-blue-600  [.dark_&]: py-2 text-sm hover:bg-blue-700 disabled:opacity-50"
         >
           {sending ? "Invio in corso…" : "Invia link di reset"}
         </button>

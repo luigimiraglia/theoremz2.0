@@ -28,7 +28,7 @@ export default function WhatsappButton() {
           alt="whatsapp button"
           width={30}
           height={30}
-          src="https://theoremz.com/images/wa.svg"
+          src="/images/wa.svg"
         />
       </button>
 

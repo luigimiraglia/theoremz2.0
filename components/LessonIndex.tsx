@@ -19,7 +19,7 @@ export default function LessonIndex({ sections }: { sections: SectionItem[] }) {
               <li key={anchor}>
                 <a
                   href={`#${anchor}`}
-                  className="text-nowrap text-sm [.dark_&]:text-white [.dark_&]:border-white text-blue-950 px-4 border rounded-full"
+                  className="text-nowrap border-2 text-sm py-1 [.dark_&]:text-white [.dark_&]:border-white text-blue-950 px-3 font-semibold rounded-lg"
                 >
                   {section.shortTitle}
                 </a>

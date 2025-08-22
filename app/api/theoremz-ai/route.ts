@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     if (!true) {
       return NextResponse.json({
         reply:
-          "🔒 Per usare Theoremz AI devi abbonarti. [Abbonati qui](https://theoremz.com/abbonati)",
+          "🔒 Per usare Theoremz AI devi abbonarti. [Abbonati qui](https://theoremz.com/black)",
       });
     }
 

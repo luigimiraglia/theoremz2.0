@@ -93,6 +93,7 @@ export default function LessonClient({
       <WhatsappButton />
       <TheoremzAIAssistant lessonId={lesson.id} lessonTitle={lesson.title} />
 
+      {/* ESERCIZI ALLA FINE */}
       <LessonExercises
         lessonId={lesson.id}
         lessonTitle={lesson.title}

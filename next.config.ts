@@ -1,8 +1,26 @@
 import type { NextConfig } from "next";
 
-const nextConfig = {
+const nextConfig: NextConfig = {
   images: {
     domains: ["cdn.sanity.io", "theoremz.com"],
   },
+  async redirects() {
+    return [
+      // Rimuove .html alla fine dell'URL
+      {
+        source: "/:slug*.html",
+        destination: "/:slug*",
+        permanent: true,
+      },
+      // Redirect www -> non-www
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.theoremz.com" }],
+        destination: "https://theoremz.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
+
 export default nextConfig;

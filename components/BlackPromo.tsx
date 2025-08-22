@@ -1,10 +1,143 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import Image from "next/image";
+import { useMemo, useState, useEffect, useRef } from "react";
 
 /** ---------------------- Data ---------------------- */
 type BenefitKey = "ads" | "quiz" | "tutor" | "dark";
+
+const IMG_BY_BENEFIT: Record<
+  Exclude<BenefitKey, "ads">,
+  { src: string; alt: string; width: number; height: number }
+> = {
+  quiz: {
+    src: "/images/resources.webp",
+    alt: "Esercizi e quiz su Theoremz",
+    width: 520,
+    height: 240,
+  },
+  tutor: {
+    src: "/images/aiutocompiti.webp",
+    alt: "Tutor dedicato Theoremz",
+    width: 520,
+    height: 240,
+  },
+  dark: {
+    src: "/images/dark-mode.webp",
+    alt: "Interfaccia Theoremz",
+    width: 520,
+    height: 240,
+  },
+};
+
+/** Hook: reduced motion */
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const m = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
+    setReduced(m.matches);
+    m.addEventListener?.("change", onChange);
+    return () => m.removeEventListener?.("change", onChange);
+  }, []);
+  return reduced;
+}
+
+/** Lottie per “No pubblicità” con lazy mount + pause */
+function AdsLottie({ play }: { play: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const animRef = useRef<any>(null);
+  const [visible, setVisible] = useState(false);
+  const reduced = useReducedMotion();
+
+  // Track viewport
+  useEffect(() => {
+    if (!ref.current) return;
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), {
+      threshold: 0.2,
+    });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, []);
+
+  // Load / control animation
+  useEffect(() => {
+    let mounted = true;
+
+    async function ensureAnim() {
+      if (!ref.current || !play || !visible || reduced) return;
+      if (animRef.current) {
+        animRef.current.play();
+        return;
+      }
+      const lottie = (await import("lottie-web")).default;
+      if (!mounted || !ref.current) return;
+      animRef.current = lottie.loadAnimation({
+        container: ref.current,
+        renderer: "svg",
+        loop: true,
+        autoplay: true,
+        path: "/animations/no-ads.json",
+        rendererSettings: { progressiveLoad: true },
+      });
+    }
+
+    ensureAnim();
+
+    // Pause if not playing/visible/reduced
+    if (!play || !visible || reduced) {
+      animRef.current?.pause?.();
+    }
+
+    return () => {
+      mounted = false;
+      // Se esci dalla pill, distruggi (libera memoria/CPU)
+      if (!play && animRef.current) {
+        animRef.current.destroy();
+        animRef.current = null;
+      }
+    };
+  }, [play, visible, reduced]);
+
+  // Pause in background tab
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) animRef.current?.pause?.();
+      else if (play && visible && !reduced) animRef.current?.play?.();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [play, visible, reduced]);
+
+  return (
+    <div
+      ref={ref}
+      className="h-[240px] w-full"
+      role="img"
+      aria-label="Animazione: zero pubblicità su Theoremz"
+    />
+  );
+}
+
+function ImgIllo({ kind }: { kind: Exclude<BenefitKey, "ads"> }) {
+  const { src, alt, width, height } = IMG_BY_BENEFIT[kind];
+  return (
+    <div className="relative h-[240px] w-full">
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        className="h-[240px] w-full object-contain"
+        // niente priority => lascia decidere al browser
+      />
+    </div>
+  );
+}
+
+type IlloProps = { play?: boolean };
 
 const BENEFITS: Record<
   BenefitKey,
@@ -12,8 +145,8 @@ const BENEFITS: Record<
     title: string;
     lead: string;
     desc: string;
-    icon: string; // emoji nella pill
-    Illustration: React.FC;
+    icon: string;
+    Illustration: React.FC<IlloProps>;
   }
 > = {
   ads: {
@@ -21,28 +154,28 @@ const BENEFITS: Record<
     lead: "Studia senza distrazioni",
     desc: "Con Black navighi Theoremz senza annunci né interruzioni. Focus totale su spiegazioni, indici e appunti.",
     icon: "🚫",
-    Illustration: AdsIllo,
+    Illustration: ({ play }) => <AdsLottie play={!!play} />,
   },
   quiz: {
     title: "Esercizi e quiz 🍒",
     lead: "Allenati e verifica subito",
     desc: "Collezioni di esercizi, spiegazioni passo-passo e quiz a risposta immediata per fissare i concetti.",
     icon: "🧮",
-    Illustration: QuizIllo,
+    Illustration: () => <ImgIllo kind="quiz" />,
   },
   tutor: {
     title: "Aiuto compiti 💬",
     lead: "Un boost quando serve",
     desc: "Invia l’esercizio: lo risolviamo e ti diamo una spiegazione chiara, pronta per essere ricordata.",
     icon: "📨",
-    Illustration: TutorIllo,
+    Illustration: () => <ImgIllo kind="tutor" />,
   },
   dark: {
     title: "Dark Mode 🌙",
     lead: "Occhi riposati, batteria felice",
     desc: "Tema scuro su tutto il sito, perfetto per lo studio serale e i monitor OLED. Cambi con un tap.",
     icon: "🌙",
-    Illustration: DarkIllo,
+    Illustration: () => <ImgIllo kind="dark" />,
   },
 };
 
@@ -92,7 +225,8 @@ export default function BlackPromo() {
         {/* Illustrazione dinamica */}
         <div className="mx-auto w-full max-w-[520px] md:mx-0">
           <div className="rounded-2xl bg-white/80 p-6 ring-1 ring-black/5 transition-colors [.dark_&]:bg-slate-900/50 [.dark_&]:ring-white/10">
-            <data.Illustration />
+            {/* play solo se la pill attiva è "ads" */}
+            <data.Illustration play={active === "ads"} />
           </div>
         </div>
       </div>
@@ -150,196 +284,5 @@ export default function BlackPromo() {
         {data.lead}
       </p>
     </section>
-  );
-}
-
-/** ---------------------- Illustrations ---------------------- */
-/* Le illustrazioni sono SVG “brand-like”, con micro animazioni e zero CLS.
-   Sostituiscile con immagini reali se vuoi: mantenendo la firma del componente. */
-
-function AdsIllo() {
-  return (
-    <svg viewBox="0 0 560 300" className="h-[240px] w-full">
-      <defs>
-        <linearGradient id="g1" x1="0" x2="1">
-          <stop offset="0%" stopColor="#60a5fa" />
-          <stop offset="100%" stopColor="#2563eb" />
-        </linearGradient>
-      </defs>
-
-      <rect
-        x="20"
-        y="30"
-        width="520"
-        height="200"
-        rx="16"
-        fill="#fff"
-        stroke="#0f172a"
-        strokeWidth="4"
-      />
-      <circle cx="48" cy="54" r="5" fill="#e5e7eb" />
-      <circle cx="66" cy="54" r="5" fill="#e5e7eb" />
-      <circle cx="84" cy="54" r="5" fill="#e5e7eb" />
-
-      {/* banner bloccato */}
-      <rect
-        x="56"
-        y="90"
-        width="300"
-        height="60"
-        rx="10"
-        fill="#fde68a"
-        stroke="#0f172a"
-        strokeWidth="3"
-      />
-      <line
-        x1="56"
-        y1="90"
-        x2="356"
-        y2="150"
-        stroke="#ef4444"
-        strokeWidth="6"
-      />
-      <line
-        x1="356"
-        y1="90"
-        x2="56"
-        y2="150"
-        stroke="#ef4444"
-        strokeWidth="6"
-      />
-
-      {/* contenuto pulito a destra */}
-      <rect x="380" y="90" width="130" height="100" rx="12" fill="url(#g1)" />
-      <circle cx="445" cy="140" r="26" fill="#fff" />
-      <path
-        d="M435 140 h20 M445 130 v20"
-        stroke="#2563eb"
-        strokeWidth="6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function QuizIllo() {
-  return (
-    <svg viewBox="0 0 560 300" className="h-[240px] w-full">
-      <defs>
-        <linearGradient id="g2" x1="0" x2="1">
-          <stop offset="0%" stopColor="#34d399" />
-          <stop offset="100%" stopColor="#10b981" />
-        </linearGradient>
-      </defs>
-      <rect
-        x="40"
-        y="50"
-        width="480"
-        height="200"
-        rx="16"
-        fill="#fff"
-        stroke="#0f172a"
-        strokeWidth="4"
-      />
-      <rect x="70" y="90" width="180" height="30" rx="8" fill="#e5e7eb" />
-      <rect x="70" y="130" width="180" height="30" rx="8" fill="#e5e7eb" />
-      <rect x="70" y="170" width="180" height="30" rx="8" fill="#e5e7eb" />
-
-      {/* card risultato */}
-      <rect x="300" y="90" width="180" height="140" rx="14" fill="url(#g2)" />
-      <g fill="#fff">
-        <circle cx="330" cy="120" r="10" />
-        <rect x="350" y="112" width="100" height="16" rx="8" />
-        <rect x="350" y="138" width="90" height="16" rx="8" />
-        <rect x="350" y="164" width="70" height="16" rx="8" />
-      </g>
-      <polyline
-        points="330,120 336,126 346,112"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function TutorIllo() {
-  return (
-    <svg viewBox="0 0 560 300" className="h-[240px] w-full">
-      <rect
-        x="40"
-        y="60"
-        width="220"
-        height="140"
-        rx="14"
-        fill="#f1f5f9"
-        stroke="#0f172a"
-        strokeWidth="3"
-      />
-      <path
-        d="M60 160 C90 100, 140 160, 180 110"
-        fill="none"
-        stroke="#60a5fa"
-        strokeWidth="6"
-        strokeLinecap="round"
-      />
-      {/* avatar/tutor */}
-      <g transform="translate(360,150)">
-        <circle
-          cx="0"
-          cy="-40"
-          r="22"
-          fill="#fde68a"
-          stroke="#0f172a"
-          strokeWidth="3"
-        />
-        <rect
-          x="-26"
-          y="-22"
-          width="52"
-          height="52"
-          rx="12"
-          fill="#93c5fd"
-          stroke="#0f172a"
-          strokeWidth="3"
-        />
-        <path
-          d="M-6 -12 L-40 -52"
-          stroke="#0f172a"
-          strokeWidth="3"
-          strokeLinecap="round"
-        >
-          <animate
-            attributeName="d"
-            dur="2.2s"
-            repeatCount="indefinite"
-            values="M-6 -12 L-40 -52; M-6 -12 L-46 -48; M-6 -12 L-40 -52"
-          />
-        </path>
-      </g>
-    </svg>
-  );
-}
-
-function DarkIllo() {
-  return (
-    <svg viewBox="0 0 560 300" className="h-[240px] w-full">
-      <rect
-        x="40"
-        y="60"
-        width="480"
-        height="180"
-        rx="16"
-        fill="#0f172a"
-        stroke="#0f172a"
-        strokeWidth="4"
-      />
-      <circle cx="110" cy="110" r="28" fill="#fde68a" />
-      <circle cx="110" cy="110" r="18" fill="#0f172a" />
-      <rect x="170" y="100" width="280" height="20" rx="6" fill="#1f2937" />
-      <rect x="170" y="140" width="220" height="20" rx="6" fill="#1f2937" />
-      <rect x="170" y="180" width="260" height="20" rx="6" fill="#1f2937" />
-    </svg>
   );
 }

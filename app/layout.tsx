@@ -1,5 +1,7 @@
+// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
+import { Suspense } from "react";
 import { AuthProvider } from "@/lib/AuthContext";
 import "./globals.css";
 import Providers from "./providers";
@@ -41,10 +43,11 @@ export const metadata: Metadata = {
 
 const montserrat = Montserrat({
   subsets: ["latin"],
-  weight: ["400", "600", "700"], // solo i pesi che usi davvero
-  display: "swap",
+  weight: ["400", "600", "700"],
+  display: "swap", // niente FOIT: il testo dipinge subito
   adjustFontFallback: true,
   preload: true,
+  fallback: ["system-ui", "Segoe UI", "Helvetica", "Arial", "sans-serif"],
 });
 
 export const viewport: Viewport = {
@@ -59,9 +62,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="it" suppressHydrationWarning>
+    <html lang="it" className={montserrat.className} suppressHydrationWarning>
       <head>
-        {/* Preconnect Firebase per Auth (non tocca LCP) */}
+        {/* Preconnect essenziali: Auth + Sanity CDN (immagini) */}
         <link
           rel="preconnect"
           href="https://theoremz-login.firebaseapp.com"
@@ -78,16 +81,26 @@ export default function RootLayout({
           crossOrigin=""
         />
         <link rel="preconnect" href="https://apis.google.com" crossOrigin="" />
+        <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="" />
+        {/* facoltativo: se usi immagini/asset dal tuo dominio statico separato, aggiungi qui */}
       </head>
-      <body
-        className={`${montserrat.className} antialiased min-h-dvh bg-background text-foreground`}
-      >
+
+      <body className="antialiased min-h-dvh bg-background text-foreground">
         <AuthProvider>
-          <Providers>
-            <Header />
-            {children}
-            <Footer />
-          </Providers>
+          {/* Non bloccare il paint del contenuto server-rendered */}
+          <Suspense fallback={null}>
+            <Providers>
+              <Suspense fallback={null}>
+                <Header />
+              </Suspense>
+
+              {children}
+
+              <Suspense fallback={null}>
+                <Footer />
+              </Suspense>
+            </Providers>
+          </Suspense>
         </AuthProvider>
       </body>
     </html>

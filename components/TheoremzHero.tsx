@@ -69,7 +69,7 @@ export default function TheoremzHero() {
         <div className="relative mx-auto max-w-full">
           <Image
             alt="Carousel Theoremz"
-            src="https://theoremz.com/images/carousel.svg"
+            src="/images/carousel.svg"
             id="icon"
             width={400}
             height={300}

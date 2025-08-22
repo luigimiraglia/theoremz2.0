@@ -196,7 +196,7 @@ export default function Fisica() {
                       />
                     ) : (
                       <Image
-                        src="https://theoremz.com/images/thumb/in-arrivo.webp"
+                        src="/images/thumb/in-arrivo.webp"
                         alt={lesson.title}
                         width={320}
                         height={180}
@@ -239,7 +239,7 @@ export default function Fisica() {
                           />
                         ) : (
                           <Image
-                            src="https://theoremz.com/images/thumb/in-arrivo.webp"
+                            src="/images/thumb/in-arrivo.webp"
                             alt={lesson.title}
                             width={320}
                             height={180}

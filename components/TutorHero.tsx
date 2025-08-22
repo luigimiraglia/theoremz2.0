@@ -53,7 +53,7 @@ export default function TutorHero() {
             <div className="mx-auto max-w-[520px]">
               <Image
                 alt="tutor"
-                src="https://theoremz.com/images/rip-img.svg"
+                src="/images/rip-img.svg"
                 height={300}
                 width={400}
               />
