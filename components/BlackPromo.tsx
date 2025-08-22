@@ -185,7 +185,7 @@ export default function BlackPromo() {
   const data = useMemo(() => BENEFITS[active], [active]);
 
   return (
-    <section className="mx-4 my-6 max-w-screen-xl xl:mx-auto rounded-[24px] bg-gray-100/60 px-4 py-6  [.dark_&]:bg-slate-800 sm:mx-6 sm:px-8 sm:py-8">
+    <section className="mx-6 my-6 max-w-screen-xl xl:mx-auto rounded-[24px] bg-gray-100/60 px-4 py-6  [.dark_&]:bg-slate-800 sm:mx-6 sm:px-8 sm:py-8">
       {/* Header */}
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="max-w-2xl">

@@ -1,5 +1,6 @@
 import TypingWord from "./TypingWord";
 import HeroImage from "./HeroImage";
+import SmartCta from "./SmartCta";
 
 const HERO_WORDS = ["semplice", "chiara", "completa", "guidata"];
 const MIN_CH = Math.max(...HERO_WORDS.map((w) => w.length)); // spazio stabile
@@ -27,9 +28,8 @@ export default function Hero() {
           studio. Inizia ora!
         </p>
 
-        <button className="bg-blue-500 text-white rounded-xl px-10 py-3 font-bold sm:w-fit w-full text-2xl">
-          Unisciti
-        </button>
+        {/* CTA smart: Unisciti / Passa a Black / Il mio account */}
+        <SmartCta className="bg-blue-500 text-white rounded-2xl text-center px-10 py-3 font-bold sm:w-fit w-full text-2xl min-w-[12ch]" />
       </div>
 
       {/* padding identico a prima */}

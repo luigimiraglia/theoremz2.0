@@ -1,4 +1,6 @@
-// app/black/page.tsx
+import Link from "next/link";
+import SenjaEmbed from "@/components/SenjaEmbed";
+
 export default function BlackPage() {
   return (
     <main className="bg-black text-white">
@@ -169,6 +171,8 @@ export default function BlackPage() {
             <PriceCard
               price="3,90€"
               unit=" /mese"
+              infoHref="https://wa.link/mkxv41"
+              buyHref="https://buy.stripe.com/7sIaIa5f5b21dOgcNo"
               features={[
                 ["ok", "Studia sempre senza pubblicità"],
                 ["ok", "Centinaia di esercizi risolti"],
@@ -198,6 +202,8 @@ export default function BlackPage() {
             <PriceCard
               price="6,90€"
               unit=" /mese"
+              infoHref="https://wa.link/4ogl5q"
+              buyHref="https://buy.stripe.com/cN29E66j97PPbG84gT"
               features={[
                 ["pink", "Assistenza via chat illimitata"],
                 ["pink", "Aiuto compiti giornaliero"],
@@ -227,6 +233,8 @@ export default function BlackPage() {
             <PriceCard
               price="64,90€"
               unit=" /anno"
+              infoHref="https://wa.link/rwbkqd"
+              buyHref="https://buy.stripe.com/6oE3fIfTJ6LL11u9Be"
               features={[
                 ["pink", "Assistenza via chat illimitata"],
                 ["pink", "Aiuto compiti giornaliero"],
@@ -270,14 +278,17 @@ export default function BlackPage() {
         </div>
       </section>
 
-      {/* ============ REVIEWS (box centrato) ============ */}
+      {/* ============ REVIEWS (Senja embed) ============ */}
       <section className="mx-auto mb-16 max-w-6xl px-5 sm:px-8 lg:px-12">
         <h3 className="text-center text-[26px] sm:text-[28px] lg:text-[32px] font-extrabold">
           Cosa Dicono di Noi
         </h3>
-        <div className="mx-auto mt-6 max-w-4xl rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/80">
-          {/* Inserisci qui il tuo widget recensioni (Senja/altro) */}
-          <p className="text-[15px]">Widget recensioni</p>
+        <div className="mx-auto mt-6 max-w-4xl rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6">
+          <SenjaEmbed
+            id="60864db2-2740-4bf3-89f2-cba20c5c9c70"
+            // mode="wall" // opzionale: "wall" | "carousel" | "grid"
+            className="w-full"
+          />
         </div>
       </section>
     </main>
@@ -316,10 +327,14 @@ function PriceCard({
   price,
   unit,
   features,
+  infoHref,
+  buyHref,
 }: {
   price: string;
   unit: string;
   features: [variant: "ok" | "no" | "pink", text: string][];
+  infoHref: string;
+  buyHref: string;
 }) {
   return (
     <div className="mt-3 rounded-2xl bg-white text-slate-900 shadow-sm ring-1 ring-slate-200">
@@ -360,18 +375,20 @@ function PriceCard({
         </ul>
 
         <div className="mt-7 grid gap-3 sm:grid-cols-2">
-          <a
-            href="#"
+          <Link
+            href={infoHref}
+            aria-label={`Chiedi informazioni sul piano ${unit.includes("anno") ? "Annuale" : unit.includes("mese") ? "Mensile" : ""}`}
             className="rounded-xl bg-black px-4 py-3 text-center font-bold text-white transition hover:bg-slate-800"
           >
             Chiedi informazioni 💬
-          </a>
-          <a
-            href="#"
+          </Link>
+          <Link
+            href={buyHref}
+            aria-label={`Acquista il piano ${unit.includes("anno") ? "Annuale" : unit.includes("mese") ? "Mensile" : ""}`}
             className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-400 px-4 py-3 text-center font-extrabold text-white transition hover:from-sky-500 hover:to-sky-400"
           >
             Acquista ora 👉
-          </a>
+          </Link>
         </div>
       </div>
     </div>

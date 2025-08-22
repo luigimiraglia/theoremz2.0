@@ -43,7 +43,7 @@ function SkeletonCard() {
   );
 }
 
-export default function MatematicaClient({
+export default function FisicaClient({
   initialLessons,
 }: {
   initialLessons: Lesson[];
@@ -187,10 +187,10 @@ export default function MatematicaClient({
 
       {/* Barra di ricerca */}
       <div className="[.dark_&]:bg-slate-800/80 bg-gray-50 rounded-2xl py-8 px-6 flex flex-col sm:flex-row justify-center items-center gap-4">
-        <h1 className="text-2xl font-bold">Matematica</h1>
+        <h1 className="text-2xl font-bold">Fisica</h1>
         <input
           type="text"
-          placeholder="🔍 Cerca lezione..."
+          placeholder="🔍 Cerca lezione di fisica..."
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -204,7 +204,7 @@ export default function MatematicaClient({
       {/* Risultati */}
       <div className="mt-2 space-y-6">
         {dq || selectedClasse ? (
-          // Vista ricerca/filtri: lasciamo tutto com'è (nessun gate mobile qui)
+          // Vista ricerca/filtri: tutte visibili
           <div className="flex flex-wrap justify-center gap-4 pt-2">
             {filteredByInterface.map((lesson) => {
               const lcp = lesson.slug.current === firstVisibleSlug;
@@ -253,8 +253,6 @@ export default function MatematicaClient({
                     const lcp = lesson.slug.current === firstVisibleSlug;
 
                     // MOBILE COLLAPSE:
-                    // - se non expanded e idx > 0 => hidden su mobile, visibile su >= sm
-                    // - su desktop (>=sm) mostriamo sempre tutto
                     const mobileHidden =
                       !expanded && idx > 0 ? "hidden sm:block" : "";
 

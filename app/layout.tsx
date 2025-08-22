@@ -7,6 +7,7 @@ import "./globals.css";
 import Providers from "./providers";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import BlackPromoBanner from "@/components/BlackPromoBanner"; // ⬅️ NEW
 
 export const metadata: Metadata = {
   title: {
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
 const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["400", "600", "700"],
-  display: "swap", // niente FOIT: il testo dipinge subito
+  display: "swap",
   adjustFontFallback: true,
   preload: true,
   fallback: ["system-ui", "Segoe UI", "Helvetica", "Arial", "sans-serif"],
@@ -82,7 +83,6 @@ export default function RootLayout({
         />
         <link rel="preconnect" href="https://apis.google.com" crossOrigin="" />
         <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="" />
-        {/* facoltativo: se usi immagini/asset dal tuo dominio statico separato, aggiungi qui */}
       </head>
 
       <body className="antialiased min-h-dvh bg-background text-foreground">
@@ -92,6 +92,11 @@ export default function RootLayout({
             <Providers>
               <Suspense fallback={null}>
                 <Header />
+              </Suspense>
+
+              {/* Banner Black (client) — mostra solo se non abbonato, escluso /black e /mentor */}
+              <Suspense fallback={null}>
+                <BlackPromoBanner />
               </Suspense>
 
               {children}
