@@ -28,7 +28,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  loading: false, // ⬅️ non bloccare l’UI iniziale
+  loading: false, // non bloccare l’UI iniziale
   isSubscribed: null,
   savedLessons: [],
   refreshSavedLessons: async () => {},
@@ -42,6 +42,30 @@ const runWhenIdle = (cb: () => void) => {
     setTimeout(cb, 0);
   }
 };
+
+/* ─────────────────────────────
+   SUBSCRIPTION OVERRIDES
+   - Configurabili via env (NEXT_PUBLIC_SUB_OVERRIDES="a@b.com,c@d.com")
+   - Oppure con array locale (solo dev)
+   ATTENZIONE: essendo client-side, le email sono visibili nel bundle.
+   Se ti serve privacy totale, sposta la logica server-side in un endpoint.
+────────────────────────────── */
+const LOCAL_SUB_OVERRIDES = [
+  "luigi.miraglia006@gmail.com",
+  "ermatto@gmail.com",
+];
+
+const ENV_SUB_OVERRIDES = (process.env.NEXT_PUBLIC_SUB_OVERRIDES || "")
+  .split(",")
+  .map((x) => x.trim().toLowerCase())
+  .filter(Boolean);
+
+const ALL_OVERRIDES = new Set(
+  [...LOCAL_SUB_OVERRIDES, ...ENV_SUB_OVERRIDES].map((e) => e.toLowerCase())
+);
+
+const isEmailOverridden = (email?: string | null) =>
+  !!email && ALL_OVERRIDES.has(email.toLowerCase());
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -112,10 +136,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             try {
+              // --- SUBSCRIPTION STATUS (con override e cache 10 min) ---
               if (appUser.email) {
-                // cache 10 min
-                const key = `sub:${appUser.email}`;
-                const cached = sessionStorage.getItem(key);
+                const email = appUser.email.toLowerCase();
+                const cacheKey = `sub:${email}`;
+
+                // 1) Override: se in whitelist, set true e cache
+                if (isEmailOverridden(email)) {
+                  setIsSubscribed(true);
+                  sessionStorage.setItem(
+                    cacheKey,
+                    JSON.stringify({ v: true, t: Date.now(), src: "override" })
+                  );
+                  return;
+                }
+
+                // 2) Cache
+                const cached = sessionStorage.getItem(cacheKey);
                 if (cached) {
                   const { v, t } = JSON.parse(cached) as {
                     v: boolean;
@@ -126,12 +163,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     return;
                   }
                 }
+
+                // 3) Stripe (fallback)
                 const resp = await fetch(
                   "/api/stripe/subscription-status-by-email",
                   {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email: appUser.email }),
+                    body: JSON.stringify({ email }),
                     keepalive: false,
                   }
                 );
@@ -139,8 +178,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const v = !!data.isSubscribed;
                 setIsSubscribed(v);
                 sessionStorage.setItem(
-                  key,
-                  JSON.stringify({ v, t: Date.now() })
+                  cacheKey,
+                  JSON.stringify({ v, t: Date.now(), src: "stripe" })
                 );
               } else {
                 setIsSubscribed(false);
@@ -168,6 +207,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setIsSubscribed(false);
     setSavedLessons([]);
+
+    // opzionale: pulisci la cache di sub dell'utente appena uscito
+    try {
+      const email = auth.currentUser?.email?.toLowerCase();
+      if (email) sessionStorage.removeItem(`sub:${email}`);
+    } catch {}
   };
 
   return (

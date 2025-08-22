@@ -91,7 +91,7 @@ export default function AccountPage() {
 
   const handleManageSubscription = async () => {
     try {
-      const res = await fetch("/api/billing/portal");
+      const res = await fetch("https://wa.me/+393519523641");
       const data = await res.json();
       if (data?.url) window.location.href = data.url;
     } catch {}
@@ -137,7 +137,7 @@ export default function AccountPage() {
               {isSubscribed ? (
                 <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-white/20 px-2.5 py-1 rounded-full">
                   <Sparkles className="h-3.5 w-3.5" />
-                  Premium
+                  Black
                   {daysSubscribed ? (
                     <span className="opacity-90">• da {daysSubscribed}g</span>
                   ) : null}
@@ -157,10 +157,17 @@ export default function AccountPage() {
                 onClick={handleManageSubscription}
                 className="rounded-lg bg-white/15  hover:bg-white/25 px-3 py-1.5 text-sm"
               >
-                {isSubscribed ? "Gestisci abbonamento" : "Passa a Premium"}
+                {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
               </button>
               <button
-                onClick={doLogout}
+                onClick={async () => {
+                  try {
+                    await doLogout();
+                    router.push("/"); // redirect alla home
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }}
                 className="rounded-lg bg-black/20 hover:bg-black/30 px-3 py-1.5 text-sm"
               >
                 Esci
@@ -287,7 +294,7 @@ export default function AccountPage() {
                 Livello
               </span>
               <span className="text-sm font-medium">
-                {isSubscribed ? "Premium" : "Free"}
+                {isSubscribed ? "Black" : "Free"}
               </span>
             </div>
             <div className="flex items-center justify-between mt-2">

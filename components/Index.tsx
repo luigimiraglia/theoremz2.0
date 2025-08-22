@@ -13,10 +13,7 @@ export default function Index() {
         </p>
       </div>
 
-      <div
-        className="flex flex-col sm:flex-row sm:space-x-3 mt-3 mx-6 xl:mx-auto max-w-screen-xl justify-center space-y-2"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "520px" }} // opzionale se sotto la piega
-      >
+      <div className="flex flex-col sm:flex-row sm:space-x-3 mt-3 mx-6 xl:mx-auto max-w-screen-xl justify-center space-y-2">
         <Link href="/matematica" className="w-full">
           <div className="rounded-2xl h-fit [.dark_&]:bg-slate-800 bg-gray-50/95 py-5 w-full border-[2.5px] border-slate-800 transition-all duration-100 ease-in-out shadow-none translate-x-0 translate-y-0 hover:shadow-[-7px_8px_0_0_#2b7fff,0_0_0_0_#2b7fff] hover:translate-x-1 hover:-translate-y-1">
             <div className="h-40 mx-auto w-fit">

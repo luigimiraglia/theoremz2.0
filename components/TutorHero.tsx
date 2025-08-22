@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 
 export default function TutorHero() {
   return (
@@ -26,8 +27,8 @@ export default function TutorHero() {
 
           {/* CTA */}
           <div className="mt-4">
-            <a
-              href="#"
+            <Link
+              href="/mentor"
               className="inline-flex items-center justify-center rounded-2xl w-full md:w-fit bg-blue-600 px-7 py-4 text-[18px] font-extrabold text-white shadow-[0_6px_0_#1d4ed8] transition active:translate-y-[1px] active:shadow-[0_5px_0_#1d4ed8]"
             >
               Scopri di più
@@ -43,7 +44,7 @@ export default function TutorHero() {
                 <path d="M5 12h14" />
                 <path d="m12 5 7 7-7 7" />
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
 
