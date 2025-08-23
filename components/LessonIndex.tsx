@@ -1,33 +1,43 @@
 type SectionItem = {
   _type: "section";
-  heading: string; // titolo visibile
-  shortTitle: string; // titolo breve per l’indice
+  heading: string;
+  shortTitle: string;
 };
 
 export default function LessonIndex({ sections }: { sections: SectionItem[] }) {
-  return (
-    <>
-      {sections.length > 0 && (
-        <ul className="flex flex-wrap gap-2 my-3">
-          {sections.map((section: SectionItem) => {
-            const anchor = section.shortTitle
-              .toLowerCase()
-              .replace(/[^\w]+/g, "-")
-              .replace(/^-+|–+$|_+$/g, "");
+  if (!sections?.length) return null;
 
-            return (
-              <li key={anchor}>
-                <a
-                  href={`#${anchor}`}
-                  className="text-nowrap border-2 text-sm py-1 [.dark_&]:text-white [.dark_&]:border-white text-blue-950 px-3 font-semibold rounded-lg"
-                >
-                  {section.shortTitle}
-                </a>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </>
+  return (
+    <nav aria-label="Indice della lezione" className="my-3">
+      <ul
+        className="
+          flex flex-row flex-nowrap gap-2
+          overflow-x-auto overscroll-x-contain scroll-smooth
+           py-1
+        "
+      >
+        {sections.map((section) => {
+          const anchor = section.shortTitle
+            .toLowerCase()
+            .replace(/[^\w]+/g, "-")
+            .replace(/^-+|-+$/g, ""); // trim - agli estremi
+
+          return (
+            <li key={anchor} className="shrink-0">
+              <a
+                href={`#${anchor}`}
+                className="
+                  whitespace-nowrap
+                  border-2 px-3 py-1 text-sm font-semibold rounded-lg
+                  text-blue-950 [.dark_&]:text-white [.dark_&]:border-white
+                "
+              >
+                {section.shortTitle}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }
