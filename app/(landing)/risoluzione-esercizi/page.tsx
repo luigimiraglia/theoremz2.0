@@ -124,6 +124,7 @@ export default function RisoluzioneEserciziPage() {
             title="Pacchetto Singolo"
             price="€5"
             cta="Acquista per €5"
+            buyHref="https://buy.stripe.com/bIY9E69vl2vv7pS7sG" // <--- sostituisci col tuo link
             highlights={[
               "1 esercizio",
               "Risoluzione entro 2 ore",
@@ -136,6 +137,7 @@ export default function RisoluzioneEserciziPage() {
             title="Pacchetto Standard"
             price="€10"
             cta="Acquista per €10"
+            buyHref="https://buy.stripe.com/5kA2bE7ndc6511u6oB" // <--- sostituisci col tuo link
             subtitle="Più scelto"
             highlights={[
               "5 esercizi",
@@ -148,6 +150,7 @@ export default function RisoluzioneEserciziPage() {
             title="Pacchetto Plus"
             price="€15"
             cta="Acquista per €15"
+            buyHref="https://buy.stripe.com/aEU03w6j91rr4dG5kw" // <--- sostituisci col tuo link
             highlights={[
               "10 esercizi",
               "Risoluzione entro 2 ore",
@@ -169,7 +172,7 @@ export default function RisoluzioneEserciziPage() {
           </p>
           <div className="mt-3">
             <a
-              href="#checkout-immediata"
+              href="https://buy.stripe.com/aEUg2ugXN6LL11u6oD"
               className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-rose-500 to-rose-400 px-5 py-3 text-[14.5px] font-extrabold text-white shadow-[0_7px_0_#be123c] active:translate-y-[1px] active:shadow-[0_6px_0_#be123c]"
             >
               Compra Ora per €10
@@ -398,6 +401,7 @@ function PlanCard({
   highlights,
   popular,
   subtitle,
+  buyHref,
 }: {
   title: string;
   price: string;
@@ -405,7 +409,10 @@ function PlanCard({
   highlights: string[];
   popular?: boolean;
   subtitle?: string;
+  buyHref: string; // link di acquisto specifico del piano
 }) {
+  const isExternalBuy = /^https?:\/\//i.test(buyHref);
+
   return (
     <div
       className={`relative rounded-2xl bg-white p-5 ring-1 ring-slate-200 ${
@@ -414,7 +421,7 @@ function PlanCard({
     >
       {popular && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-sky-600 px-3 py-1 text-[11px] sm:text-[12px] font-bold text-white shadow">
-          🔥 Il {subtitle ? ` ${subtitle}` : ""}
+          🔥 {subtitle || "Più scelto"}
         </div>
       )}
 
@@ -449,7 +456,10 @@ function PlanCard({
 
       <div className="mt-5">
         <a
-          href="#checkout"
+          href={buyHref}
+          {...(isExternalBuy
+            ? { target: "_blank", rel: "noopener noreferrer" }
+            : {})}
           className={`inline-flex w-full items-center justify-center rounded-xl px-5 py-3 text-[13.5px] sm:text-[14.5px] font-extrabold ${
             popular
               ? "bg-gradient-to-r from-sky-600 to-sky-500 text-white shadow-[0_7px_0_#1d4ed8] active:translate-y-[1px] active:shadow-[0_6px_0_#1d4ed8]"
