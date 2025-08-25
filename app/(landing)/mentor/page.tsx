@@ -109,12 +109,14 @@ function AboutAndTeachers() {
               <TeacherCard
                 name="Flavio"
                 subtitle="Master in Ingegneria Biomedica"
-                img="https://randomuser.me/api/portraits/men/45.jpg"
+                img="/images/flavio.webp"
+                link="https://wa.link/d6nlzv"
               />
               <TeacherCard
                 name="Ilaria"
                 subtitle="Dottoressa in Ingegneria Gestionale"
-                img="https://randomuser.me/api/portraits/women/65.jpg"
+                img="images/ilaria.webp"
+                link="https://wa.link/a0ywj4"
               />
             </div>
           </div>
@@ -128,10 +130,12 @@ function TeacherCard({
   name,
   subtitle,
   img,
+  link,
 }: {
   name: string;
   subtitle: string;
   img: string;
+  link: string;
 }) {
   return (
     <div className="flex items-center gap-4 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
@@ -145,7 +149,7 @@ function TeacherCard({
         <div className="text-[13px] text-slate-600">{subtitle}</div>
       </div>
       <a
-        href="#contattaci"
+        href={link}
         className="rounded-xl bg-emerald-500 px-3 py-2 text-[13px] font-bold text-white hover:bg-emerald-600"
       >
         Prenota ora
@@ -285,6 +289,8 @@ function Pricing() {
           "Piano di studio personalizzato",
           "100% soddisfatti o rimborsati",
         ]}
+        stripeLink={"https://buy.stripe.com/4gweYq5f5da925y00x"}
+        waLink={"https://wa.link/yofiy8"}
       />
 
       <TierTag> Piano Accelerato 👇 </TierTag>
@@ -301,6 +307,8 @@ function Pricing() {
           "Piano di studio personalizzato",
           "100% soddisfatti o rimborsati",
         ]}
+        stripeLink={"https://buy.stripe.com/eVa3fIbDt9XXcKc00B"}
+        waLink={"https://wa.link/1nnh4k"}
       />
 
       <TierTag> Intero Quadrimestre 👇 </TierTag>
@@ -317,6 +325,8 @@ function Pricing() {
           "Piano di studio personalizzato",
           "100% soddisfatti o rimborsati",
         ]}
+        stripeLink={"https://buy.stripe.com/6oEeYq6j9fih11ubJg"}
+        waLink={"https://wa.link/tzu43l"}
       />
     </section>
   );
@@ -330,7 +340,17 @@ function TierTag({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Plan({ price, bullets }: { price: string; bullets: string[] }) {
+function Plan({
+  price,
+  bullets,
+  stripeLink,
+  waLink,
+}: {
+  price: string;
+  bullets: string[];
+  waLink: string;
+  stripeLink: string;
+}) {
   return (
     <div className="mb-6 rounded-3xl bg-white p-6 ring-1 ring-slate-200 shadow-sm">
       <div className="text-[36px] sm:text-[44px] font-black leading-none bg-gradient-to-r from-sky-600 to-cyan-500 bg-clip-text text-transparent">
@@ -347,13 +367,13 @@ function Plan({ price, bullets }: { price: string; bullets: string[] }) {
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <a
-          href="#info"
+          href={waLink}
           className="inline-flex w-full items-center justify-center rounded-2xl bg-black px-6 py-3 text-[15px] font-extrabold text-white hover:bg-slate-800"
         >
           Chiedi informazioni 💬
         </a>
         <a
-          href="#checkout"
+          href={stripeLink}
           className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-sky-600 to-cyan-500 px-6 py-3 text-[15px] font-extrabold text-white shadow-[0_8px_0_#1d4ed8] active:translate-y-[1px] active:shadow-[0_7px_0_#1d4ed8]"
         >
           Acquista ora 👉
@@ -401,12 +421,13 @@ function Reviews() {
               key={r.name}
               className="rounded-2xl bg-white p-5 ring-1 ring-slate-200"
             >
-              <div className="flex items-center gap-4">
-                <img
+              <div className="flex items-center  gap-4">
+                {/* <img
                   src={r.img}
                   alt={r.name}
                   className="h-12 w-12 rounded-full object-cover ring-1 ring-slate-200"
-                />
+                /> */}
+                <div className="h-12 w-12 bg-blue-500 rounded-full"></div>
                 <div>
                   <div className="font-bold">{r.name}</div>
                   <div className="text-xs text-slate-500">{r.class}</div>
@@ -442,7 +463,7 @@ function FAQ() {
               className="group rounded-2xl bg-white ring-1 ring-slate-200"
             >
               <summary className="cursor-pointer px-4 py-3 text-[15.5px] font-bold text-slate-800">
-                ▼ {f.q}
+                {f.q}
               </summary>
               <div className="px-4 pb-4 text-[15px] text-slate-700">{f.a}</div>
             </details>
