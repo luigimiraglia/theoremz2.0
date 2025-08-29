@@ -66,7 +66,7 @@ export default function LessonExercises({
         <button
           onClick={handleClick}
           disabled={loading}
-          className="inline-flex items-center justify-center rounded-2xl border-4 border-[#2b7fff] bg-gradient-to-r from-[#2b7fff] to-[#559dff] px-8 sm:px-12 py-4 text-base sm:text-lg font-extrabold text-white shadow-lg hover:from-[#1a5fd6] hover:to-[#3d85ff] disabled:opacity-60"
+          className="inline-flex items-center justify-center rounded-2xl  bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] px-8 sm:px-10 py-3 text-xl sm:text-2xl font-bold text-white hover:from-[#1a5fd6] hover:to-[#3d85ff] disabled:opacity-60"
         >
           {loading
             ? "Carico gli esercizi…"

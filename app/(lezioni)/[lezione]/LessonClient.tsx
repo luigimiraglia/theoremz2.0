@@ -26,6 +26,12 @@ const TheoremzAIAssistant = dynamic(
 const LessonExercises = dynamic(() => import("@/components/LessonExercises"), {
   ssr: false,
 });
+const EserciziSmallButton = dynamic(
+  () => import("@/components/EserciziSmallButton"),
+  {
+    ssr: false,
+  }
+);
 // PortableText + ptComponents spostati in un renderer separato, lazy
 const PortableRenderer = dynamic(() => import("./PortableRenderer"), {
   ssr: false,
@@ -58,7 +64,8 @@ export default function LessonClient({
     <article className="mx-auto max-w-6xl px-6 pb-12 prose prose-slate dark:prose-invert">
       {/* Header */}
       <header className="rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 text-center pt-3 pb-4">
-        <div className="flex justify-end mr-3">
+        <div className="flex justify-between mr-3">
+          <EserciziSmallButton />
           <SaveLessonButton lessonSlug={lezione} />
         </div>
         <h1 className="text-[27px] px-3 sm:text-4xl font-bold opacity-95 leading-tight">
