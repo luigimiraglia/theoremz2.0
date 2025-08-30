@@ -18,9 +18,13 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-    maxSnippet: -1,
-    maxImagePreview: "large",
-    maxVideoPreview: -1,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1, // -1 = nessun limite
+      "max-image-preview": "large", // anteprime grandi
+      "max-video-preview": -1, // nessun limite
+    },
   },
   keywords: [
     "ripetizioni",
