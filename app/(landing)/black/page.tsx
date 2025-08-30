@@ -1,9 +1,148 @@
+// app/(landing)/black/page.tsx
+import type { Metadata } from "next";
 import Link from "next/link";
 import SenjaEmbed from "@/components/SenjaEmbed";
 
+// ---------- METADATA SEO ----------
+const TITLE =
+  "Theoremz Black — Assistenza via chat, esercizi illimitati e videolezioni";
+const DESC =
+  "Sblocca tutto Theoremz: assistenza via chat, esercizi risolti, formulari, appunti e videolezioni. Piani da 3,90€/mese. Soddisfatti o rimborsati.";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
+const CANONICAL = `${SITE}/black`;
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESC,
+  alternates: { canonical: "/black" },
+  robots: {
+    index: true,
+    follow: true,
+    maxSnippet: -1,
+    maxImagePreview: "large",
+    maxVideoPreview: -1,
+  },
+  keywords: [
+    "ripetizioni",
+    "esercizi risolti",
+    "videolezioni",
+    "matematica",
+    "fisica",
+    "aiuto compiti",
+    "formulario",
+    "quiz",
+    "studio",
+  ],
+  openGraph: {
+    title: TITLE,
+    description: DESC,
+    url: CANONICAL,
+    siteName: "Theoremz",
+    images: [{ url: "/metadata.png" }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESC,
+    site: "@theoremz_",
+    images: ["/metadata.png"],
+  },
+};
+
+// ---------- PAGINA ----------
 export default function BlackPage() {
+  // JSON-LD: Breadcrumb, Prodotto (con 3 offerte), FAQ
+  const productLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "Theoremz Black",
+    brand: { "@type": "Brand", name: "Theoremz" },
+    description: DESC,
+    image: [`${SITE}/metadata.png`],
+    offers: {
+      "@type": "AggregateOffer",
+      offerCount: 3,
+      lowPrice: "3.90",
+      highPrice: "64.90",
+      priceCurrency: "EUR",
+      offers: [
+        {
+          "@type": "Offer",
+          name: "Piano Essential",
+          price: "3.90",
+          priceCurrency: "EUR",
+          availability: "https://schema.org/InStock",
+          url: "https://buy.stripe.com/7sIaIa5f5b21dOgcNo",
+        },
+        {
+          "@type": "Offer",
+          name: "Piano Base",
+          price: "6.90",
+          priceCurrency: "EUR",
+          availability: "https://schema.org/InStock",
+          url: "https://buy.stripe.com/cN29E66j97PPbG84gT",
+        },
+        {
+          "@type": "Offer",
+          name: "Annuale",
+          price: "64.90",
+          priceCurrency: "EUR",
+          availability: "https://schema.org/InStock",
+          url: "https://buy.stripe.com/6oE3fIfTJ6LL11u9Be",
+        },
+      ],
+    },
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: SITE,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Theoremz Black",
+        item: CANONICAL,
+      },
+    ],
+  };
+
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((q) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Sì: assistenza rapida, materiali verificati e rimborso 100% se non soddisfatti.",
+      },
+    })),
+  };
+
   return (
     <main className="bg-black text-white">
+      {/* JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+      />
+
       {/* ============ HERO (2 colonne da md+) ============ */}
       <section className="mx-auto max-w-6xl px-5 pt-12 pb-8 sm:px-8 lg:px-12">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
@@ -286,7 +425,6 @@ export default function BlackPage() {
         <div className="mx-auto mt-6 max-w-4xl rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6">
           <SenjaEmbed
             id="60864db2-2740-4bf3-89f2-cba20c5c9c70"
-            // mode="wall" // opzionale: "wall" | "carousel" | "grid"
             className="w-full"
           />
         </div>
@@ -377,14 +515,26 @@ function PriceCard({
         <div className="mt-7 grid gap-3 sm:grid-cols-2">
           <Link
             href={infoHref}
-            aria-label={`Chiedi informazioni sul piano ${unit.includes("anno") ? "Annuale" : unit.includes("mese") ? "Mensile" : ""}`}
+            aria-label={`Chiedi informazioni sul piano ${
+              unit.includes("anno")
+                ? "Annuale"
+                : unit.includes("mese")
+                  ? "Mensile"
+                  : ""
+            }`}
             className="rounded-xl bg-black px-4 py-3 text-center font-bold text-white transition hover:bg-slate-800"
           >
             Chiedi informazioni 💬
           </Link>
           <Link
             href={buyHref}
-            aria-label={`Acquista il piano ${unit.includes("anno") ? "Annuale" : unit.includes("mese") ? "Mensile" : ""}`}
+            aria-label={`Acquista il piano ${
+              unit.includes("anno")
+                ? "Annuale"
+                : unit.includes("mese")
+                  ? "Mensile"
+                  : ""
+            }`}
             className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-400 px-4 py-3 text-center font-extrabold text-white transition hover:from-sky-500 hover:to-sky-400"
           >
             Acquista ora 👉
