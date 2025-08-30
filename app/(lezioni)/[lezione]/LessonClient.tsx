@@ -61,10 +61,10 @@ export default function LessonClient({
   sectionItems,
 }: LessonClientProps) {
   return (
-    <article className="mx-auto max-w-6xl px-6 pb-12 prose prose-slate dark:prose-invert">
+    <article className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert">
       {/* Header */}
-      <header className="rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 text-center pt-3 pb-4">
-        <div className="flex justify-between mr-3">
+      <header className="rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 text-center pt-3 pb-3">
+        <div className="flex justify-between mx-3">
           <EserciziSmallButton />
           <SaveLessonButton lessonSlug={lezione} />
         </div>
@@ -77,7 +77,7 @@ export default function LessonClient({
           </h2>
         )}
 
-        <div className="mt-3 ml-3 flex items-center justify-end gap-1">
+        <div className="mt-5 ml-2 flex items-center justify-end gap-0.5">
           <FormularioSection url={lesson.resources?.formulario ?? ""} />
           <LessonNotes lessonTitle={lesson.title} lessonSlug={lesson.slug} />
         </div>

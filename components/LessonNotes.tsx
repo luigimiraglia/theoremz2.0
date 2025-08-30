@@ -190,13 +190,10 @@ export default function LessonNotes({
       {/* Floating button */}
       <button
         onClick={handleOpen}
-        className="py-0.5 px-3 rounded-md bg-gray-100  mr-4 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-sky-500  active:scale-95 transition-all flex items-center gap-2"
+        className=" font-semibold shadow-md px-2 mr-3 text-[14px] sm:text-base rounded-md [.dark_&]:text-white [.dark_&]:bg-slate-800 bg-gray-100 border-2 "
         aria-label="Apri Appunti"
       >
-        <NotebookIcon className="h-5 w-5" />
-        <span className="font-semibold tracking-wide text-sm sm:text-base">
-          Appunti
-        </span>
+        Appunti
       </button>
 
       {/* Viewer */}
@@ -474,14 +471,6 @@ function CloseIcon(props: React.SVGProps<SVGSVGElement>) {
         strokeWidth="2"
         strokeLinecap="round"
       />
-    </svg>
-  );
-}
-
-function NotebookIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M6 2h9a3 3 0 0 1 3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 4h10V5a1 1 0 0 0-1-1H6v2zm0 2v11h10V8H6zm2 2h6v2H8v-2zm0 4h6v2H8v-2z" />
     </svg>
   );
 }

@@ -62,7 +62,7 @@ export default function SaveLessonButton({
     <button
       onClick={toggle}
       disabled={!user || !isValid || busy}
-      className={`inline-flex items-center font-semibold gap-1 px-2 py-1 text-sm rounded-lg transition-all duration-300 border 
+      className={`inline-flex shadow-md items-center font-semibold gap-1 px-2 py-1 text-sm rounded-lg transition-all duration-300 border 
         ${
           isSaved
             ? "bg-yellow-400 border-yellow-500 text-black hover:bg-yellow-300"

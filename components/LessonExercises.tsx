@@ -64,6 +64,7 @@ export default function LessonExercises({
     <section className="mt-12">
       <div className="flex justify-center">
         <button
+          id="lesson-exercises-cta"
           onClick={handleClick}
           disabled={loading}
           className="inline-flex items-center justify-center rounded-2xl  bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] px-8 sm:px-10 py-3 text-xl sm:text-2xl font-bold text-white hover:from-[#1a5fd6] hover:to-[#3d85ff] disabled:opacity-60"

@@ -2,7 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    domains: ["cdn.sanity.io", "theoremz.com"],
+    domains: [
+      "cdn.sanity.io",
+      "theoremz.com",
+      "i.ytimg.com",
+      "img.youtube.com",
+    ],
   },
   async redirects() {
     return [
@@ -10,6 +15,7 @@ const nextConfig: NextConfig = {
       {
         source: "/:slug*.html",
         destination: "/:slug*",
+
         permanent: true,
       },
       // Redirect www -> non-www

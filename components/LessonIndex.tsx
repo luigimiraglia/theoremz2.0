@@ -8,7 +8,7 @@ export default function LessonIndex({ sections }: { sections: SectionItem[] }) {
   if (!sections?.length) return null;
 
   return (
-    <nav aria-label="Indice della lezione" className="my-3">
+    <nav aria-label="Indice della lezione" className="my-1">
       <ul
         className="
           flex flex-row flex-nowrap gap-2
