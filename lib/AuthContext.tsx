@@ -50,11 +50,7 @@ const runWhenIdle = (cb: () => void) => {
    ATTENZIONE: essendo client-side, le email sono visibili nel bundle.
    Se ti serve privacy totale, sposta la logica server-side in un endpoint.
 ────────────────────────────── */
-const LOCAL_SUB_OVERRIDES = [
-  "luigi.miraglia006@gmail.com",
-  "ermatto@gmail.com",
-  "quartasimona1@gmail.com",
-];
+const LOCAL_SUB_OVERRIDES = ["ermatto@gmail.com", "quartasimona1@gmail.com"];
 
 const ENV_SUB_OVERRIDES = (process.env.NEXT_PUBLIC_SUB_OVERRIDES || "")
   .split(",")
