@@ -1,3 +1,4 @@
+// lib/AuthContext.tsx
 "use client";
 
 import React, {
@@ -9,6 +10,9 @@ import React, {
 } from "react";
 import type { User as FirebaseUser } from "firebase/auth";
 
+/* =========================
+   Tipi
+========================= */
 export type AppUser = {
   uid: string;
   email: string | null;
@@ -19,38 +23,36 @@ export type AppUser = {
 
 type AuthContextType = {
   user: AppUser | null;
-  loading: boolean;
-  isSubscribed: boolean | null;
+  loading: boolean; // lasciamo false per non bloccare l'UI
+  isSubscribed: boolean | null; // null = non ancora determinato
   savedLessons: string[];
   refreshSavedLessons: () => Promise<void>;
+  forceRefreshSubscription: () => Promise<void>;
   logout: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: false, // non bloccare l’UI iniziale
-  isSubscribed: null,
-  savedLessons: [],
-  refreshSavedLessons: async () => {},
-  logout: async () => {},
-});
-
+/* =========================
+   Utils
+========================= */
 const runWhenIdle = (cb: () => void) => {
-  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-    (window as any).requestIdleCallback(cb);
-  } else {
+  try {
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(cb);
+    } else {
+      setTimeout(cb, 0);
+    }
+  } catch {
     setTimeout(cb, 0);
   }
 };
 
-/* ─────────────────────────────
-   SUBSCRIPTION OVERRIDES
-   - Configurabili via env (NEXT_PUBLIC_SUB_OVERRIDES="a@b.com,c@d.com")
-   - Oppure con array locale (solo dev)
-   ATTENZIONE: essendo client-side, le email sono visibili nel bundle.
-   Se ti serve privacy totale, sposta la logica server-side in un endpoint.
-────────────────────────────── */
-const LOCAL_SUB_OVERRIDES = ["ermatto@gmail.com", "quartasimona1@gmail.com"];
+/* =========================
+   Subscription overrides
+   - Nessun hard-code in production!
+   - Env: NEXT_PUBLIC_SUB_OVERRIDES="a@b.com,c@d.com"
+========================= */
+const LOCAL_SUB_OVERRIDES =
+  process.env.NODE_ENV === "development" ? ["ermatto@gmail.com"] : [];
 
 const ENV_SUB_OVERRIDES = (process.env.NEXT_PUBLIC_SUB_OVERRIDES || "")
   .split(",")
@@ -64,12 +66,33 @@ const ALL_OVERRIDES = new Set(
 const isEmailOverridden = (email?: string | null) =>
   !!email && ALL_OVERRIDES.has(email.toLowerCase());
 
+/* =========================
+   Cache versionata
+   - Bump NEXT_PUBLIC_CACHE_VERSION per invalidare le cache client
+========================= */
+const CACHE_NS = process.env.NEXT_PUBLIC_CACHE_VERSION || "v1";
+const subKey = (email: string) => `sub:${email}:${CACHE_NS}`;
+
+/* =========================
+   Context
+========================= */
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: false,
+  isSubscribed: null,
+  savedLessons: [],
+  refreshSavedLessons: async () => {},
+  forceRefreshSubscription: async () => {},
+  logout: async () => {},
+});
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [loading] = useState(false);
+  const [loading] = useState(false); // niente spinner globale
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
   const [savedLessons, setSavedLessons] = useState<string[]>([]);
 
+  /* ---------- Preferiti ---------- */
   const refreshSavedLessons = async () => {
     if (!user) return;
     try {
@@ -77,16 +100,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         import("firebase/firestore"),
         import("./firebase"),
       ]);
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      setSavedLessons(
-        userDoc.exists() ? userDoc.data().savedLessons || [] : []
-      );
+      const snap = await getDoc(doc(db, "users", user.uid));
+      setSavedLessons(snap.exists() ? snap.data().savedLessons || [] : []);
     } catch (err) {
       console.error("Errore caricamento lezioni salvate:", err);
       setSavedLessons([]);
     }
   };
 
+  /* ---------- Auth & profilo ---------- */
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
@@ -116,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
           setUser(appUser);
 
-          // Firestore & Stripe dopo un piccolo idle per non contendere il main thread
+          // Carica profilo/username/salvati quando inattivo
           runWhenIdle(async () => {
             try {
               const [{ getDoc, doc }, { db }] = await Promise.all([
@@ -132,83 +154,127 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.error("Errore Firestore", err);
             }
 
-            try {
-              // --- SUBSCRIPTION STATUS (con override e cache 10 min) ---
-              if (appUser.email) {
-                const email = appUser.email.toLowerCase();
-                const cacheKey = `sub:${email}`;
-
-                // 1) Override: se in whitelist, set true e cache
-                if (isEmailOverridden(email)) {
-                  setIsSubscribed(true);
-                  sessionStorage.setItem(
-                    cacheKey,
-                    JSON.stringify({ v: true, t: Date.now(), src: "override" })
-                  );
-                  return;
-                }
-
-                // 2) Cache
-                const cached = sessionStorage.getItem(cacheKey);
-                if (cached) {
-                  const { v, t } = JSON.parse(cached) as {
-                    v: boolean;
-                    t: number;
-                  };
-                  if (Date.now() - t < 10 * 60 * 1000) {
-                    setIsSubscribed(v);
-                    return;
-                  }
-                }
-
-                // 3) Stripe (fallback)
-                const resp = await fetch(
-                  "/api/stripe/subscription-status-by-email",
-                  {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email }),
-                    keepalive: false,
-                  }
-                );
-                const data = await resp.json();
-                const v = !!data.isSubscribed;
-                setIsSubscribed(v);
-                sessionStorage.setItem(
-                  cacheKey,
-                  JSON.stringify({ v, t: Date.now(), src: "stripe" })
-                );
-              } else {
-                setIsSubscribed(false);
-              }
-            } catch (err) {
-              console.error("Stripe status fetch error", err);
-              setIsSubscribed(false);
-            }
+            // Stato abbonamento
+            await computeSubscription(appUser.email);
           });
         }
       );
     });
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      try {
+        unsubscribe?.();
+      } catch {}
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ---------- Calcolo stato abbonamento (con cache/override) ---------- */
+  const computeSubscription = async (emailNullable: string | null) => {
+    try {
+      if (!emailNullable) {
+        setIsSubscribed(false);
+        return;
+      }
+
+      const email = emailNullable.toLowerCase();
+      const key = subKey(email);
+
+      // Se la cache era nata da override ma ora non è più override → invalida
+      const raw = sessionStorage.getItem(key);
+      if (raw) {
+        try {
+          const cached = JSON.parse(raw) as {
+            v: boolean;
+            t: number;
+            src?: string;
+          };
+          if (cached.src === "override" && !isEmailOverridden(email)) {
+            sessionStorage.removeItem(key);
+          }
+        } catch {}
+      }
+
+      // Override attivo → true immediato + cache
+      if (isEmailOverridden(email)) {
+        setIsSubscribed(true);
+        sessionStorage.setItem(
+          key,
+          JSON.stringify({ v: true, t: Date.now(), src: "override" })
+        );
+        return;
+      }
+
+      // Cache valida (10 min)
+      const cachedRaw = sessionStorage.getItem(key);
+      if (cachedRaw) {
+        try {
+          const { v, t } = JSON.parse(cachedRaw) as { v: boolean; t: number };
+          if (Date.now() - t < 10 * 60 * 1000) {
+            setIsSubscribed(v);
+            return;
+          }
+        } catch {}
+      }
+
+      // Fallback Stripe (endpoint App Router)
+      const resp = await fetch("/api/stripe/subscription-status-by-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        cache: "no-store",
+        keepalive: false,
+      });
+
+      // Evita parse error su 4xx/5xx
+      if (!resp.ok) {
+        console.error("Stripe endpoint error", resp.status);
+        setIsSubscribed(false);
+        return;
+      }
+
+      const data = await resp.json();
+      const v = !!data.isSubscribed;
+      setIsSubscribed(v);
+      sessionStorage.setItem(
+        key,
+        JSON.stringify({ v, t: Date.now(), src: "stripe" })
+      );
+    } catch (err) {
+      console.error("Stripe status fetch error", err);
+      setIsSubscribed(false);
+    }
+  };
+
+  /* ---------- Refresh manuale (pannello utente) ---------- */
+  const forceRefreshSubscription = async () => {
+    try {
+      const email = user?.email?.toLowerCase();
+      if (!email) return;
+      sessionStorage.removeItem(subKey(email));
+      await computeSubscription(email);
+    } catch {
+      // no-op
+    }
+  };
+
+  /* ---------- Logout ---------- */
   const logout = async () => {
     const [{ auth }, { signOut }] = await Promise.all([
       import("./firebase"),
       import("firebase/auth"),
     ]);
+
+    // salva email per ripulire la cache dopo il signOut
+    const emailLower = auth.currentUser?.email?.toLowerCase();
+
     await signOut(auth);
     setUser(null);
     setIsSubscribed(false);
     setSavedLessons([]);
 
-    // opzionale: pulisci la cache di sub dell'utente appena uscito
     try {
-      const email = auth.currentUser?.email?.toLowerCase();
-      if (email) sessionStorage.removeItem(`sub:${email}`);
+      if (emailLower) sessionStorage.removeItem(subKey(emailLower));
     } catch {}
   };
 
@@ -220,6 +286,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isSubscribed,
         savedLessons,
         refreshSavedLessons,
+        forceRefreshSubscription,
         logout,
       }}
     >
@@ -228,6 +295,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/* =========================
+   Hook
+========================= */
 export function useAuth() {
   return useContext(AuthContext);
 }

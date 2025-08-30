@@ -6,6 +6,24 @@ import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { getAuth } from "firebase/auth";
 
+/* ───────────────── helpers data ───────────────── */
+// Normalizza in millisecondi: accetta Date | string ISO | number (ms/sec) | Firestore Timestamp
+function toMs(x: any): number | null {
+  if (!x) return null;
+  if (x instanceof Date) return x.getTime();
+  if (typeof x === "string") {
+    const ms = Date.parse(x);
+    return Number.isNaN(ms) ? null : ms;
+  }
+  if (typeof x === "number") {
+    // se è in secondi (tipico di alcuni backend), portalo a ms
+    return x < 1e12 ? x * 1000 : x;
+  }
+  // Firestore Timestamp
+  if (typeof x.toDate === "function") return x.toDate().getTime();
+  return null;
+}
+
 /* ───────────────── Account Page (Blue theme) ───────────────── */
 
 export default function AccountPage() {
@@ -37,17 +55,26 @@ export default function AccountPage() {
     return u.username || u.displayName || u.email?.split?.("@")[0] || "utente";
   }, [user]);
 
-  const subscriptionSince = useMemo(() => {
-    return typeof user?.createdAt === "number"
-      ? new Date(user.createdAt)
-      : null;
-  }, [user]);
+  /* ------------ FIX robusto per subscriptionSince / daysSubscribed ------------ */
+  // 1) Normalizza qualsiasi cosa tu abbia in user.createdAt
+  const subscriptionSinceMs = useMemo(
+    () => toMs(user?.createdAt),
+    [user?.createdAt]
+  );
+
+  // 2) Deriva Date (se serve per il rendering) e giorni
+  const subscriptionSince = useMemo(
+    () => (subscriptionSinceMs ? new Date(subscriptionSinceMs) : null),
+    [subscriptionSinceMs]
+  );
 
   const daysSubscribed = useMemo(() => {
-    if (!subscriptionSince || !isSubscribed) return null;
-    const diffMs = Date.now() - subscriptionSince.getTime();
-    return Math.max(1, Math.round(diffMs / 86_400_000));
-  }, [subscriptionSince, isSubscribed]);
+    if (!isSubscribed || !subscriptionSinceMs) return null;
+    const diffDays =
+      Math.floor((Date.now() - subscriptionSinceMs) / 86_400_000) + 1; // inclusivo del primo giorno
+    return Math.max(1, diffDays);
+  }, [isSubscribed, subscriptionSinceMs]);
+  /* --------------------------------------------------------------------------- */
 
   const handleSaveUsername = async () => {
     const clean = username.trim().toLowerCase();
@@ -89,12 +116,8 @@ export default function AccountPage() {
     }
   };
 
-  const handleManageSubscription = async () => {
-    try {
-      const res = await fetch("https://wa.me/+393519523641");
-      const data = await res.json();
-      if (data?.url) window.location.href = data.url;
-    } catch {}
+  const handleUpgrade = async () => {
+    window.location.href = "/black";
   };
 
   // Skeleton
@@ -137,9 +160,9 @@ export default function AccountPage() {
               {isSubscribed ? (
                 <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-white/20 px-2.5 py-1 rounded-full">
                   <Sparkles className="h-3.5 w-3.5" />
-                  Black
+                  Attivo
                   {daysSubscribed ? (
-                    <span className="opacity-90">• da {daysSubscribed}g</span>
+                    <span className="opacity-90">da {daysSubscribed}g</span>
                   ) : null}
                 </span>
               ) : (
@@ -154,7 +177,7 @@ export default function AccountPage() {
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
-                onClick={handleManageSubscription}
+                onClick={handleUpgrade}
                 className="rounded-lg bg-white/15  hover:bg-white/25 px-3 py-1.5 text-sm"
               >
                 {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
@@ -163,7 +186,7 @@ export default function AccountPage() {
                 onClick={async () => {
                   try {
                     await doLogout();
-                    router.push("/"); // redirect alla home
+                    router.push("/");
                   } catch (e) {
                     console.error(e);
                   }
@@ -233,7 +256,7 @@ export default function AccountPage() {
             subtitle="Riprendi da dove avevi lasciato."
             right={
               <button
-                onClick={() => router.push("/lezioni")}
+                onClick={() => router.push("/matematica")}
                 className="text-sm text-blue-700 hover:underline"
               >
                 Vai al catalogo →
@@ -308,10 +331,10 @@ export default function AccountPage() {
               </span>
             </div>
             <button
-              onClick={handleManageSubscription}
+              onClick={handleUpgrade}
               className="mt-4 w-full rounded-lg bg-blue-600 text-white py-2 text-sm hover:bg-blue-700"
             >
-              {isSubscribed ? "Gestisci abbonamento" : "Passa a Premium"}
+              {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
             </button>
           </Card>
 
@@ -449,18 +472,6 @@ function formatDate(d: Date) {
     return "—";
   }
 }
-
-// function formatRelative(iso: string) {
-//   const d = new Date(iso);
-//   if (isNaN(+d)) return "";
-//   const diff = Date.now() - d.getTime();
-//   const mins = Math.round(diff / 60000);
-//   if (mins < 60) return `${mins} min fa`;
-//   const hrs = Math.round(mins / 60);
-//   if (hrs < 24) return `${hrs} h fa`;
-//   const days = Math.round(hrs / 24);
-//   return `${days} g fa`;
-// }
 
 /* ────────────────────── icons ────────────────────── */
 
