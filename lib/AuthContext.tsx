@@ -53,6 +53,7 @@ const runWhenIdle = (cb: () => void) => {
 const LOCAL_SUB_OVERRIDES = [
   "luigi.miraglia006@gmail.com",
   "ermatto@gmail.com",
+  "quartasimona1@gmail.com",
 ];
 
 const ENV_SUB_OVERRIDES = (process.env.NEXT_PUBLIC_SUB_OVERRIDES || "")
