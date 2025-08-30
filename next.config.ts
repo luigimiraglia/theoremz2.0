@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    unoptimized: true, // ⛔ disattiva l'optimizer di Next/Vercel
+    // (facoltativo: puoi anche rimuovere "domains" quando unoptimized è true)
     domains: [
       "cdn.sanity.io",
       "theoremz.com",
@@ -11,14 +13,11 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      // Rimuove .html alla fine dell'URL
       {
         source: "/:slug*.html",
         destination: "/:slug*",
-
         permanent: true,
       },
-      // Redirect www -> non-www
       {
         source: "/:path*",
         has: [{ type: "host", value: "www.theoremz.com" }],
