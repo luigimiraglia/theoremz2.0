@@ -193,6 +193,7 @@ export default defineType({
         { type: "latex" },
         { type: "imageExternal" },
         { type: "section" },
+        { type: "table" }, // ⬅️ abilitata la tabella (richiede plugin @sanity/table in sanity.config.ts)
       ],
     }),
 
@@ -253,8 +254,14 @@ export default defineType({
           { title: "Esponenziali", value: "Esponenziali" },
           { title: "Numeri complessi", value: "Numeri complessi" },
           { title: "Trigonometria", value: "Trigonometria" },
-          { title: "Equazioni e disequazioni", value: "Equazioni e disequazioni" },
-          { title: "Probabilità e statistica", value: "Probabilità e statistica" },
+          {
+            title: "Equazioni e disequazioni",
+            value: "Equazioni e disequazioni",
+          },
+          {
+            title: "Probabilità e statistica",
+            value: "Probabilità e statistica",
+          },
           { title: "Notazioni", value: "Notazioni" },
           { title: "Moti", value: "Moti" },
           { title: "Dinamica", value: "Dinamica" },

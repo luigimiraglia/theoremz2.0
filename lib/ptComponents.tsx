@@ -4,6 +4,29 @@ import { InlineMath, BlockMath } from "react-katex";
 import "katex/dist/katex.min.css";
 import { LucideQuote as BlockquoteIcon } from "lucide-react";
 
+/* ---------------- Helpers per le tabelle ---------------- */
+
+// matcha una cella che è SOLO una formula $...$ (non inline-pezzo)
+const isWholeMathCell = (s: string) =>
+  /^\$[\s\S]*\$$/.test(s) && !s.slice(1, -1).includes("$");
+
+// render cella: se è $...$ => KaTeX, altrimenti testo semplice
+const renderCell = (raw: unknown) => {
+  const s = String(raw ?? "");
+  if (!s) return "";
+  if (isWholeMathCell(s)) {
+    const inner = s.slice(1, -1);
+    return <InlineMath errorColor="#cc0000">{inner}</InlineMath>;
+  }
+  return s;
+};
+
+// normalizza le celle alla stessa lunghezza
+const normalize = (cells: Array<unknown> | undefined, len: number) =>
+  Array.from({ length: len }, (_, i) => cells?.[i] ?? "");
+
+/* -------------------------------------------------------- */
+
 export const ptComponents: PortableTextComponents = {
   /* ----------   BLOCKS   ---------- */
   block: {
@@ -66,6 +89,63 @@ export const ptComponents: PortableTextComponents = {
         >
           {value.heading}
         </h2>
+      );
+    },
+
+    /* ----------   TABLE (@sanity/table)   ---------- */
+    table: ({ value }) => {
+      const rows = (value?.rows || []).filter(Boolean);
+      if (!rows.length) return null;
+
+      // euristico per header (copre varianti del plugin)
+      const headerLikely =
+        !!rows[0]?.isHeader ||
+        rows[0]?.style === "header" ||
+        (value?.header && (value.header as any).rows === 1) ||
+        false;
+
+      const colCount = Math.max(
+        0,
+        ...rows.map((r: any) => r?.cells?.length ?? 0)
+      );
+      const headerCells = headerLikely ? (rows[0]?.cells ?? []) : [];
+      const bodyRows = headerLikely ? rows.slice(1) : rows;
+
+      return (
+        <div className="my-8 flex justify-center">
+          <div className="w-full max-w-[860px] overflow-x-auto rounded-2xl shadow-sm ring-2 ring-blue-700 bg-blue-600">
+            <table className="w-full border-collapse text-sm md:text-base">
+              {headerLikely && (
+                <thead>
+                  <tr className="bg-blue-900/60">
+                    {normalize(headerCells, colCount).map((c, i) => (
+                      <th
+                        key={i}
+                        className="px-4 py-3 text-left font-semibold text-blue-100 border-b border-blue-700"
+                      >
+                        {renderCell(c)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+              )}
+              <tbody>
+                {bodyRows.map((r: any, ri: number) => (
+                  <tr key={ri} className={ri % 2 ? "bg-blue-900/30" : ""}>
+                    {normalize(r?.cells, colCount).map((c, ci) => (
+                      <td
+                        key={ci}
+                        className="px-4 py-3 text-white/90 font-semibold border-b-2 border-l-2 border-blue-900/50 align-top"
+                      >
+                        {renderCell(c)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       );
     },
   },

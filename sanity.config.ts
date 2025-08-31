@@ -19,6 +19,7 @@ import { schema } from "./sanity/schemaTypes";
 import { structure } from "./sanity/structure";
 import imageExternal from "./sanity/schemas/imageExternal";
 import exercise from "./sanity/schemas/exercise";
+import { table } from "@sanity/table";
 
 export default defineConfig({
   basePath: "/studio",
@@ -38,6 +39,7 @@ export default defineConfig({
   },
   plugins: [
     structureTool({ structure }),
+    table(),
     // Vision is for querying with GROQ from inside the Studio
     // https://www.sanity.io/docs/the-vision-plugin
     visionTool({ defaultApiVersion: apiVersion }),
