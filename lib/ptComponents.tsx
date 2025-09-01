@@ -3,6 +3,16 @@ import type { PortableTextComponents } from "@portabletext/react";
 import { InlineMath, BlockMath } from "react-katex";
 import "katex/dist/katex.min.css";
 import { LucideQuote as BlockquoteIcon } from "lucide-react";
+import MathText from "@/components/MathText"; // ⬅️ NEW
+
+/* ---- helper: applica MathText solo ai nodi stringa dei children ---- */
+const MathInChildren = ({ children }: { children: React.ReactNode }) => (
+  <>
+    {React.Children.map(children, (child, i) =>
+      typeof child === "string" ? <MathText key={i} text={child} /> : child
+    )}
+  </>
+);
 
 /* ---------------- Helpers per le tabelle ---------------- */
 
@@ -32,7 +42,8 @@ export const ptComponents: PortableTextComponents = {
   block: {
     h2: ({ children }) => (
       <h2 className="mt-8 mb-4 text-2xl text-blue-500 font-extrabold">
-        {children}
+        {/* ⬇️ latex + testo dentro gli h2 */}
+        <MathInChildren>{children}</MathInChildren>
       </h2>
     ),
     normal: ({ children }) => (
@@ -87,7 +98,8 @@ export const ptComponents: PortableTextComponents = {
           id={anchor}
           className="mt-4 text-2xl font-bold text-blue-500 scroll-mt-24"
         >
-          {value.heading}
+          {/* ⬇️ latex anche nel titolo di sezione */}
+          <MathText text={value.heading} />
         </h2>
       );
     },
@@ -97,7 +109,6 @@ export const ptComponents: PortableTextComponents = {
       const rows = (value?.rows || []).filter(Boolean);
       if (!rows.length) return null;
 
-      // euristico per header (copre varianti del plugin)
       const headerLikely =
         !!rows[0]?.isHeader ||
         rows[0]?.style === "header" ||

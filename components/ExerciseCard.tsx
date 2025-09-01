@@ -6,6 +6,7 @@ import { ptComponents } from "@/lib/ptComponents";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, ListTree, BookOpen } from "lucide-react";
 import Link from "next/link";
+import MathText from "@/components/MathText"; // ⬅️ ADD
 
 export type Exercise = {
   _id: string;
@@ -33,8 +34,10 @@ export default function ExerciseCard({ ex }: { ex: Exercise }) {
       <div className="p-4">
         <div className="flex-1 min-w-0">
           <h3 className="text-xl md:text-2xl font-bold tracking-tight leading-snug text-slate-900 [.dark_&]:text-white">
-            {ex.titolo}
+            {/* ⬇️ Rende testo + latex nel titolo */}
+            <MathText text={ex.titolo} /* allowBlock={false} */ />
           </h3>
+
           {ex.lesson?.title && (
             <Link
               href={`/${ex.lesson.slug}`}
