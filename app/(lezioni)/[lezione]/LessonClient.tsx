@@ -35,7 +35,11 @@ const PortableRenderer = dynamic(() => import("./PortableRenderer"), {
 });
 
 /* ---------- Tipi ---------- */
-type LinkedLesson = { title: string; slug: { current: string } };
+type UnknownSlug = string | { current?: string | null } | null | undefined;
+type LinkedLessonRaw =
+  | { title?: string | null; slug?: UnknownSlug }
+  | null
+  | undefined;
 
 type LessonClientProps = {
   lezione: string;
@@ -43,7 +47,7 @@ type LessonClientProps = {
     id: string;
     title: string;
     subtitle: string | null;
-    slug: string;
+    slug: string; // slug della lezione corrente
     thumbnailUrl: string | null;
     resources: {
       formulario?: string | null;
@@ -51,11 +55,37 @@ type LessonClientProps = {
       videolezione?: string | null;
     };
     content: PortableTextBlock[];
-    lezioniPropedeuticheObbligatorie?: LinkedLesson[];
-    lezioniPropedeuticheOpzionali?: LinkedLesson[];
+    lezioniPropedeuticheObbligatorie?: LinkedLessonRaw[];
+    lezioniPropedeuticheOpzionali?: LinkedLessonRaw[];
   };
   sectionItems: { _type: "section"; heading: string; shortTitle: string }[];
 };
+
+/* ---------- helpers robusti ---------- */
+function getSlugValue(s: UnknownSlug): string | null {
+  if (typeof s === "string") return s || null;
+  if (s && typeof s === "object") return s.current ?? null;
+  return null;
+}
+
+function sanitizeList(
+  items: LinkedLessonRaw[] | undefined,
+  currentSlug: string
+): { title: string; slug?: string }[] {
+  const out: { title: string; slug?: string }[] = [];
+  const seen = new Set<string>();
+  for (const it of items ?? []) {
+    const title = (it as any)?.title?.toString().trim();
+    if (!title) continue;
+    const slug = getSlugValue((it as any)?.slug) || undefined;
+    if (slug === currentSlug) continue; // niente self-link
+    const key = slug ? `s:${slug}` : `t:${title}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(slug ? { title, slug } : { title });
+  }
+  return out;
+}
 
 /* ---------- Sub-component: lista con animazioni ---------- */
 function PrereqList({
@@ -63,7 +93,7 @@ function PrereqList({
   items,
 }: {
   title: string;
-  items: LinkedLesson[];
+  items: { title: string; slug?: string }[];
 }) {
   if (!items?.length) return null;
   return (
@@ -72,7 +102,7 @@ function PrereqList({
       <ul className="space-y-1">
         {items.map((l, i) => (
           <li
-            key={l.slug.current}
+            key={(l.slug ?? l.title) + "-" + i}
             className="opacity-0 translate-y-1"
             style={{
               animation: "fadeSlide .36s ease-out forwards",
@@ -96,12 +126,19 @@ function PrereqList({
                   strokeLinejoin="round"
                 />
               </svg>
-              <a
-                href={`/${l.slug.current}`}
-                className="text-blue-500 -ml-1.5 hover:text-blue-600 transition-all duration-300 font-semibold"
-              >
-                {l.title}
-              </a>
+
+              {l.slug ? (
+                <a
+                  href={`/${l.slug}`} // ⬅️ path coerente col resto del sito
+                  className="text-blue-500 -ml-1.5 hover:text-blue-600 transition-all duration-300 font-semibold"
+                >
+                  {l.title}
+                </a>
+              ) : (
+                <span className="text-blue-500 -ml-1.5 font-semibold opacity-80">
+                  {l.title}
+                </span>
+              )}
             </div>
           </li>
         ))}
@@ -128,8 +165,11 @@ export default function LessonClient({
   lesson,
   sectionItems,
 }: LessonClientProps) {
-  const obb = lesson.lezioniPropedeuticheObbligatorie ?? [];
-  const opt = lesson.lezioniPropedeuticheOpzionali ?? [];
+  const obb = sanitizeList(
+    lesson.lezioniPropedeuticheObbligatorie,
+    lesson.slug
+  );
+  const opt = sanitizeList(lesson.lezioniPropedeuticheOpzionali, lesson.slug);
   const hasPrereq = obb.length > 0 || opt.length > 0;
 
   return (
@@ -167,7 +207,7 @@ export default function LessonClient({
 
       {/* Prerequisiti con animazione */}
       {hasPrereq && (
-        <details className="group mt-2 rounded-xl  bg-gray-100 [.dark_&]:bg-slate-800/8">
+        <details className="group mt-2 rounded-xl bg-gray-100 [.dark_&]:bg-slate-800/8">
           <summary className="flex cursor-pointer list-none items-center justify-between p-3">
             <span className="text-semibold font-semibold [.dark_&]:text-white [.dark_&]:bg-slate-800/80">
               Cosa devo già sapere?
