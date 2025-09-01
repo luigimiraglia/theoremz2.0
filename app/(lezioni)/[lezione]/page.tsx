@@ -14,6 +14,8 @@ type LessonResources = {
   appunti?: string | null;
   videolezione?: string | null;
 };
+type LinkedLesson = { title: string; slug: { current: string } };
+
 type LessonDoc = {
   _id: string;
   title: string;
@@ -25,6 +27,9 @@ type LessonDoc = {
   _createdAt?: string;
   _updatedAt?: string;
   tags?: string[];
+  // ⬇️ nuovi
+  lezioniPropedeuticheObbligatorie?: LinkedLesson[];
+  lezioniPropedeuticheOpzionali?: LinkedLesson[];
 };
 type SectionBlock = PortableTextBlock & {
   _type: "section";
@@ -42,9 +47,13 @@ const seoLessonQuery = groq`
 const fullLessonQuery = groq`
   *[_type == "lesson" && slug.current == $slug][0]{
     _id, title, subtitle, slug, thumbnailUrl, resources, content,
-    _createdAt, _updatedAt, tags
+    _createdAt, _updatedAt, tags,
+    // ⬇️ prerequisiti risolti
+    lezioniPropedeuticheObbligatorie[]->{ title, "slug": slug },
+    lezioniPropedeuticheOpzionali[]->{ title, "slug": slug }
   }
 `;
+
 const allLessonSlugsQuery = groq`
   *[_type == "lesson" && defined(slug.current)].slug.current
 `;
@@ -237,6 +246,11 @@ export default async function Page({
           thumbnailUrl: lesson.thumbnailUrl ?? null,
           resources: lesson.resources ?? {},
           content: lesson.content,
+          // ⬇️ passa i prerequisiti
+          lezioniPropedeuticheObbligatorie:
+            lesson.lezioniPropedeuticheObbligatorie ?? [],
+          lezioniPropedeuticheOpzionali:
+            lesson.lezioniPropedeuticheOpzionali ?? [],
         }}
         sectionItems={sectionItems}
       />

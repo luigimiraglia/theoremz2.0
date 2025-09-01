@@ -9,6 +9,7 @@ const LessonClient = dynamic(() => import("./LessonClient"), {
 });
 
 type SectionItem = { _type: "section"; heading: string; shortTitle: string };
+type LinkedLesson = { title: string; slug: { current: string } };
 
 export default function ClientIslands(props: {
   lezione: string;
@@ -24,6 +25,9 @@ export default function ClientIslands(props: {
       videolezione?: string | null;
     };
     content: PortableTextBlock[];
+    // ⬇️ aggiunti i prerequisiti
+    lezioniPropedeuticheObbligatorie?: LinkedLesson[];
+    lezioniPropedeuticheOpzionali?: LinkedLesson[];
   };
   sectionItems: SectionItem[];
 }) {
