@@ -3,7 +3,7 @@ import type { PortableTextComponents } from "@portabletext/react";
 import { InlineMath, BlockMath } from "react-katex";
 import "katex/dist/katex.min.css";
 import { LucideQuote as BlockquoteIcon } from "lucide-react";
-import MathText from "@/components/MathText"; // ⬅️ NEW
+import MathText from "@/components/MathText";
 
 /* ---- helper: applica MathText solo ai nodi stringa dei children ---- */
 const MathInChildren = ({ children }: { children: React.ReactNode }) => (
@@ -20,7 +20,7 @@ const MathInChildren = ({ children }: { children: React.ReactNode }) => (
 const isWholeMathCell = (s: string) =>
   /^\$[\s\S]*\$$/.test(s) && !s.slice(1, -1).includes("$");
 
-// render cella: se è $...$ => KaTeX, altrimenti testo semplice
+// render cella: se è $...$ => KaTeX; altrimenti testo con parsing inline di MathText
 const renderCell = (raw: unknown) => {
   const s = String(raw ?? "");
   if (!s) return "";
@@ -28,12 +28,25 @@ const renderCell = (raw: unknown) => {
     const inner = s.slice(1, -1);
     return <InlineMath errorColor="#cc0000">{inner}</InlineMath>;
   }
-  return s;
+  return <MathText text={s} />;
 };
 
 // normalizza le celle alla stessa lunghezza
 const normalize = (cells: Array<unknown> | undefined, len: number) =>
   Array.from({ length: len }, (_, i) => cells?.[i] ?? "");
+
+/* ---------------- Helpers per block-math puro ---------------- */
+
+// $$...$$ oppure \[...\] come UNICO contenuto del blocco
+const PURE_BLOCK_MATH_RE = /^\s*(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\])\s*$/;
+
+// estrae il testo "piatto" del block PT
+const blockPlainText = (value: any): string =>
+  (value?.children ?? []).map((c: any) => c?.text ?? "").join("");
+
+// decide se un block è “solo” math
+const isPureBlockMath = (value: any) =>
+  PURE_BLOCK_MATH_RE.test(blockPlainText(value));
 
 /* -------------------------------------------------------- */
 
@@ -42,17 +55,25 @@ export const ptComponents: PortableTextComponents = {
   block: {
     h2: ({ children }) => (
       <h2 className="mt-8 mb-4 text-2xl text-blue-500 font-extrabold">
-        {/* ⬇️ latex + testo dentro gli h2 */}
         <MathInChildren>{children}</MathInChildren>
       </h2>
     ),
-    normal: ({ children }) => (
-      <p className="my-4 leading-7 font-medium">{children}</p>
-    ),
+
+    normal: ({ children, value }) => {
+      if (isPureBlockMath(value)) {
+        return <MathText text={blockPlainText(value)} allowBlock />;
+      }
+      return (
+        <p className="my-4 leading-7 font-medium">
+          <MathInChildren>{children}</MathInChildren>
+        </p>
+      );
+    },
+
     blockquote: ({ children }) => (
       <blockquote className="my-6 rounded-lg border-l-4 border-blue-500 bg-blue-50 p-4 italic">
         <BlockquoteIcon size={18} className="mr-1 inline" />
-        {children}
+        <MathInChildren>{children}</MathInChildren>
       </blockquote>
     ),
   },
@@ -67,18 +88,34 @@ export const ptComponents: PortableTextComponents = {
     ),
   },
 
+  listItem: {
+    bullet: ({ children }) => (
+      <li>
+        <MathInChildren>{children}</MathInChildren>
+      </li>
+    ),
+    number: ({ children }) => (
+      <li>
+        <MathInChildren>{children}</MathInChildren>
+      </li>
+    ),
+  },
+
   /* ----------   CUSTOM OBJECTS   ---------- */
   types: {
     horizontalRule: () => (
       <hr className="mt-1 border-t-2 border-blue-950 rounded-full mx-1" />
     ),
     lineBreak: () => <br />,
+
+    // retro-compatibilità oggetto "latex"
     latex: ({ value }) =>
       value.display ? (
         <BlockMath errorColor="#cc0000">{value.code}</BlockMath>
       ) : (
         <InlineMath errorColor="#cc0000">{value.code}</InlineMath>
       ),
+
     imageExternal: ({ value }) => (
       <div className="my-6 flex justify-center">
         <img
@@ -88,6 +125,7 @@ export const ptComponents: PortableTextComponents = {
         />
       </div>
     ),
+
     section: ({ value }) => {
       const anchor = value.shortTitle
         ?.toLowerCase()
@@ -98,7 +136,6 @@ export const ptComponents: PortableTextComponents = {
           id={anchor}
           className="mt-4 text-2xl font-bold text-blue-500 scroll-mt-24"
         >
-          {/* ⬇️ latex anche nel titolo di sezione */}
           <MathText text={value.heading} />
         </h2>
       );
@@ -163,12 +200,20 @@ export const ptComponents: PortableTextComponents = {
 
   /* ----------   MARKS (inline) ---------- */
   marks: {
+    /* nuovi decorator custom (schema v4: value "italic" e "bold") */
+    italic: ({ children }) => <em className="italic">{children}</em>,
+    bold: ({ children }) => <strong className="font-bold">{children}</strong>,
+
+    /* retro-compatibilità per contenuti già salvati con em/strong */
     em: ({ children }) => <em className="italic">{children}</em>,
     strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+
     underline: ({ children }) => <span className="underline">{children}</span>,
     blueBold: ({ children }) => (
       <strong className="font-bold text-blue-500">{children}</strong>
     ),
+
+    // link: niente MathText dentro
     link: ({ children, value }) => (
       <a
         href={value.href}
@@ -183,6 +228,13 @@ export const ptComponents: PortableTextComponents = {
         {children}
       </a>
     ),
+
+    // code: mantieni letterale
+    code: ({ children }) => (
+      <code className="px-1 py-0.5 rounded bg-zinc-100">{children}</code>
+    ),
+
+    // retro-compatibilità: mark "inlineLatex"
     inlineLatex: ({ value }) => (
       <InlineMath errorColor="#cc0000">{value.code}</InlineMath>
     ),

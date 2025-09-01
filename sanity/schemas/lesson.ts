@@ -1,4 +1,5 @@
 // /sanity/schemas/lesson.ts
+import React from "react";
 import { defineType, defineField } from "sanity";
 
 /* ─────────── Oggetti custom ─────────── */
@@ -153,9 +154,39 @@ export default defineType({
           ],
           marks: {
             decorators: [
-              { title: "Grassetto", value: "strong" },
-              { title: "Corsivo", value: "em" },
-              { title: "Blue Bold", value: "blueBold" },
+              {
+                title: "Corsivo",
+                value: "italic",
+                icon: () => React.createElement("span", null, "I"),
+                component: (props: { children: React.ReactNode }) =>
+                  React.createElement(
+                    "em",
+                    { style: { fontStyle: "italic" } },
+                    props.children
+                  ),
+              },
+              {
+                title: "Grassetto",
+                value: "bold",
+                icon: () => React.createElement("span", null, "B"),
+                component: (props: { children: React.ReactNode }) =>
+                  React.createElement(
+                    "strong",
+                    { style: { fontWeight: 700 } },
+                    props.children
+                  ),
+              },
+              {
+                title: "Blue Bold",
+                value: "blueBold",
+                icon: () => React.createElement("span", null, "BB"),
+                component: (props: { children: React.ReactNode }) =>
+                  React.createElement(
+                    "strong",
+                    { style: { fontWeight: 700, color: "#3b82f6" } },
+                    props.children
+                  ),
+              },
             ],
             annotations: [
               {
