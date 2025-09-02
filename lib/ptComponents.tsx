@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import React from "react";
 import type { PortableTextComponents } from "@portabletext/react";
 import { InlineMath, BlockMath } from "react-katex";

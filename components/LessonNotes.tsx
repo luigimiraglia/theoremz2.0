@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAuth } from "@/lib/AuthContext";
 import BlackPopup from "./BlackPopup";
-import { Document, Page, pdfjs } from "react-pdf";
 
-// Worker ESM su CDN, versione sempre allineata a quella usata da react-pdf
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+// Defer heavy react-pdf imports until viewer opens
+const ReactPdf: {
+  Document?: any;
+  Page?: any;
+  pdfjs?: any;
+} = {};
 
 type PdfEntry = { name: string; url: string };
 
@@ -33,10 +35,9 @@ export default function LessonNotes({
   lessonTitle: string;
   lessonSlug: string;
 }) {
-  const { isSubscribed } = useAuth();
-
   const [showPopup, setShowPopup] = useState(false);
   const [open, setOpen] = useState(false);
+  const [pdfReady, setPdfReady] = useState(false);
 
   const [pdfList, setPdfList] = useState<PdfEntry[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -67,8 +68,21 @@ export default function LessonNotes({
     }
   }, [currentPdf]);
 
-  const handleOpen = () => {
+  const handleOpen = async () => {
     if (!true) return setShowPopup(true);
+    // Lazy import react-pdf only when opening the viewer
+    if (!pdfReady) {
+      try {
+        const mod = await import("react-pdf");
+        ReactPdf.Document = mod.Document;
+        ReactPdf.Page = mod.Page;
+        ReactPdf.pdfjs = mod.pdfjs;
+        ReactPdf.pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${ReactPdf.pdfjs.version}/pdf.worker.min.mjs`;
+        setPdfReady(true);
+      } catch {
+        // ignore; rendering will fail gracefully
+      }
+    }
     setOpen(true);
   };
 
@@ -313,9 +327,9 @@ export default function LessonNotes({
                   ref={viewerRef}
                   className="h-full w-full flex flex-col items-center justify-center p-2 sm:p-4"
                 >
-                  {absUrl ? (
+                  {absUrl && pdfReady ? (
                     <>
-                      <Document
+                      <ReactPdf.Document
                         file={absUrl}
                         onLoadSuccess={({ numPages }) => {
                           setNumPages(numPages);
@@ -326,14 +340,14 @@ export default function LessonNotes({
                           <div className="text-gray-500">Caricamento…</div>
                         }
                       >
-                        <Page
+                        <ReactPdf.Page
                           pageNumber={pageNumber}
                           width={baseWidth}
                           scale={zoom} // 👈 zoom vero
                           renderTextLayer={false}
                           renderAnnotationLayer={false}
                         />
-                      </Document>
+                      </ReactPdf.Document>
 
                       {/* Controls (sticky in basso su mobile) */}
                       <div className="sm:mt-4 sm:static fixed inset-x-0 bottom-0 sm:inset-auto bg-white sm:bg-transparent border-t sm:border-0 p-2 sm:p-0 flex items-center justify-center gap-2">
@@ -433,7 +447,9 @@ export default function LessonNotes({
                     </>
                   ) : (
                     <div className="text-gray-500">
-                      Seleziona un PDF dalla lista.
+                      {pdfReady
+                        ? "Seleziona un PDF dalla lista."
+                        : "Preparazione viewer…"}
                     </div>
                   )}
                 </div>

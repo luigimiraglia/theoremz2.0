@@ -6,10 +6,11 @@ export default function LessonSkeleton({
 }: {
   variant?: "page" | "inline";
 }) {
-  const Wrapper: React.ElementType = variant === "page" ? "div" : React.Fragment;
+  const Wrapper: React.ElementType =
+    variant === "page" ? "div" : React.Fragment;
   const wrapperProps =
     variant === "page"
-      ? { className: "mx-auto max-w-6xl px-4 pb-12" }
+      ? { className: "mx-auto max-w-6xl px-4 pb-12 mt-3 sm:mx-4" }
       : ({} as any);
 
   return (

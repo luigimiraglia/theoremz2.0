@@ -1,6 +1,4 @@
 "use client";
-
-import { useEffect, useRef } from "react";
 import { FaInfinity, FaSquareRootAlt } from "react-icons/fa";
 import { PiCubeFocusFill } from "react-icons/pi";
 import { LuSigma } from "react-icons/lu";

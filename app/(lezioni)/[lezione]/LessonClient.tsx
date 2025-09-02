@@ -1,39 +1,13 @@
-"use client";
-
-import dynamic from "next/dynamic";
+import SaveLessonButton from "@/components/SaveLessonButton";
 import FormularioSection from "@/components/FormularioSection";
 import LessonNotesClient from "@/components/LessonNotesClient";
 import PortableRenderer from "./PortableRenderer"; // critical content: no code-split to avoid flicker
 import type { PortableTextBlock } from "sanity";
-
-// 🔸 lazy-load TUTTO ciò che può toccare il DOM
-const SaveLessonButton = dynamic(
-  () => import("@/components/SaveLessonButton"),
-  { ssr: false }
-);
-const LessonIndex = dynamic(() => import("@/components/LessonIndex"), {
-  ssr: false,
-});
-const VideoSection = dynamic(() => import("@/components/VideoSection"), {
-  ssr: false,
-});
-const WhatsappButton = dynamic(() => import("@/components/WhatsappButton"), {
-  ssr: false,
-});
-const TheoremzAIAssistant = dynamic(
-  () => import("@/components/TheoremzAiAssistant"),
-  { ssr: false }
-);
-const LessonExercises = dynamic(() => import("@/components/LessonExercises"), {
-  ssr: false,
-});
-const EserciziSmallButton = dynamic(
-  () => import("@/components/EserciziSmallButton"),
-  { ssr: false }
-);
-import ClientVisible from "@/components/ClientVisible";
-import HydrationGate from "@/components/HydrationGate";
-import LessonSkeleton from "@/components/LessonSkeleton";
+import LazyOnVisible from "@/components/LazyOnVisible";
+// Note: heavy widgets are loaded dynamically when visible to reduce JS
+import WhatsappButton from "@/components/WhatsappButton";
+import AiChatLauncher from "@/components/AiChatLauncher";
+import EserciziSmallButton from "@/components/EserciziSmallButton";
 
 /* ---------- Tipi ---------- */
 type UnknownSlug = string | { current?: string | null } | null | undefined;
@@ -144,18 +118,6 @@ function PrereqList({
           </li>
         ))}
       </ul>
-      <style jsx>{`
-        @keyframes fadeSlide {
-          0% {
-            opacity: 0;
-            transform: translateY(4px);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }
@@ -174,12 +136,7 @@ export default function LessonClient({
   const hasPrereq = obb.length > 0 || opt.length > 0;
 
   return (
-    <HydrationGate
-      minDelayMs={300}
-      className="mx-auto max-w-6xl px-4 pb-12"
-      skeleton={<LessonSkeleton variant="inline" />}
-    >
-      <article className="prose prose-slate dark:prose-invert">
+    <article className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert">
       {/* Header */}
       <header className="rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 text-center pt-3 pb-3">
         <div className="flex justify-between mx-3">
@@ -206,18 +163,24 @@ export default function LessonClient({
 
       {/* Indice sezioni (defer visibile) */}
       {!!sectionItems.length && (
-        <ClientVisible rootMargin="0px 0px 200px 0px" minHeight={48}>
-          <LessonIndex sections={sectionItems} />
-        </ClientVisible>
+        <LazyOnVisible
+          loader={() => import("@/components/LessonIndex")}
+          props={{ sections: sectionItems }}
+          rootMargin="200px"
+          minHeight={48}
+        />
       )}
 
       <hr className="border-t-2 [.dark_&]:border-white border-blue-950 rounded-full mx-1" />
 
       {/* Videolezione */}
       {lesson.resources?.videolezione && (
-        <ClientVisible rootMargin="100px" minHeight={56}>
-          <VideoSection url={lesson.resources.videolezione} />
-        </ClientVisible>
+        <LazyOnVisible
+          loader={() => import("@/components/VideoSection")}
+          props={{ url: lesson.resources.videolezione }}
+          rootMargin="150px"
+          minHeight={56}
+        />
       )}
 
       {/* Prerequisiti con animazione */}
@@ -263,17 +226,19 @@ export default function LessonClient({
 
       {/* Azioni/Widget vari */}
       <WhatsappButton />
-      <TheoremzAIAssistant lessonId={lesson.id} lessonTitle={lesson.title} />
+      <AiChatLauncher lessonId={lesson.id} lessonTitle={lesson.title} />
 
       {/* ESERCIZI ALLA FINE */}
-      <ClientVisible rootMargin="400px" minHeight={200}>
-        <LessonExercises
-          lessonId={lesson.id}
-          lessonTitle={lesson.title}
-          lessonSlug={lesson.slug}
-        />
-      </ClientVisible>
-      </article>
-    </HydrationGate>
+      <LazyOnVisible
+        loader={() => import("@/components/LessonExercises")}
+        props={{
+          lessonId: lesson.id,
+          lessonTitle: lesson.title,
+          lessonSlug: lesson.slug,
+        }}
+        rootMargin="400px"
+        minHeight={200}
+      />
+    </article>
   );
 }

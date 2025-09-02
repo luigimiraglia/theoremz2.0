@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 // components/Footer.tsx  (SERVER)
 export default function Footer() {
   return (

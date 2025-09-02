@@ -1,15 +1,24 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Reduce bundle size by optimizing common package imports
+    optimizePackageImports: [
+      "@portabletext/react",
+      "react-katex",
+      "lucide-react",
+    ],
+  },
   images: {
-    unoptimized: true, // ⛔ disattiva l'optimizer di Next/Vercel
-    // (facoltativo: puoi anche rimuovere "domains" quando unoptimized è true)
+    // Usa l'optimizer di Next per AVIF/WebP e dimensioni adeguate
+    unoptimized: false,
     domains: [
       "cdn.sanity.io",
       "theoremz.com",
       "i.ytimg.com",
       "img.youtube.com",
     ],
+    formats: ["image/avif", "image/webp"],
   },
   async headers() {
     return [

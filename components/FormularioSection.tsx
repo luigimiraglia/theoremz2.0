@@ -1,15 +1,22 @@
 "use client";
 import { useAuth } from "@/lib/AuthContext";
 import { useState } from "react";
-import BlackPopup from "@/components/BlackPopup";
 
 export default function FormularioSection({ url }: { url: string }) {
   const { isSubscribed } = useAuth();
   const [state, setState] = useState<"idle" | "popup">("idle");
+  const [Popup, setPopup] = useState<null | ((props: any) => JSX.Element)>(null);
 
-  const handleClick = () => {
-    if (isSubscribed) window.location.assign(url);
-    else setState("popup");
+  const handleClick = async () => {
+    if (isSubscribed) {
+      window.location.assign(url);
+      return;
+    }
+    if (!Popup) {
+      const mod = await import("@/components/BlackPopup");
+      setPopup(() => mod.default ?? mod);
+    }
+    setState("popup");
   };
 
   const closePopup = () => setState("idle");
@@ -31,7 +38,7 @@ export default function FormularioSection({ url }: { url: string }) {
             onClick={(e) => e.stopPropagation()}
             className=" p-6 rounded-xl max-w-md w-full"
           >
-            <BlackPopup />
+            {Popup ? <Popup /> : null}
           </div>
         </div>
       )}

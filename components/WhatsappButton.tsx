@@ -2,16 +2,21 @@
 import { useAuth } from "@/lib/AuthContext";
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import BlackPopup from "@/components/BlackPopup";
 
 export default function WhatsappButton() {
-  const { isSubscribed } = useAuth();
   const [state, setState] = useState<"idle" | "popup">("idle");
+  const [Popup, setPopup] = useState<null | ((props: any) => JSX.Element)>(null);
 
-  const handleClick = () => {
-    if (true) window.location.assign("https://wa.me/+393519523641");
-    else setState("popup");
+  const handleClick = async () => {
+    if (true) {
+      window.location.assign("https://wa.me/+393519523641");
+      return;
+    }
+    if (!Popup) {
+      const mod = await import("@/components/BlackPopup");
+      setPopup(() => mod.default ?? mod);
+    }
+    setState("popup");
   };
 
   const closePopup = () => setState("idle");
@@ -41,7 +46,7 @@ export default function WhatsappButton() {
             onClick={(e) => e.stopPropagation()}
             className=" p-6 rounded-xl max-w-md w-full"
           >
-            <BlackPopup />
+            {Popup ? <Popup /> : null}
           </div>
         </div>
       )}

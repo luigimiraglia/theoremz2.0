@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 // app/(lezioni)/[lezione]/LessonView.tsx
 import type { PortableTextBlock } from "sanity";
 import { PortableText } from "@portabletext/react";

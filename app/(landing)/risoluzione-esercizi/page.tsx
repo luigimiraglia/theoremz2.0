@@ -502,77 +502,7 @@ function ExampleCard({ title }: { title: string }) {
   );
 }
 
-function HeroIllo() {
-  return (
-    <svg
-      viewBox="0 0 560 340"
-      className="h-[220px] sm:h-[240px] lg:h-[320px] w-full"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="g" x1="0" x2="1">
-          <stop offset="0%" stopColor="#38bdf8" />
-          <stop offset="100%" stopColor="#60a5fa" />
-        </linearGradient>
-      </defs>
-      <rect
-        x="18"
-        y="20"
-        width="524"
-        height="220"
-        rx="16"
-        fill="#f8fafc"
-        stroke="#e2e8f0"
-      />
-      <rect x="40" y="48" width="120" height="12" rx="6" fill="#e2e8f0" />
-      <rect x="40" y="72" width="220" height="12" rx="6" fill="#e2e8f0" />
-      <rect x="40" y="96" width="180" height="12" rx="6" fill="#e2e8f0" />
-      <rect
-        x="280"
-        y="60"
-        width="240"
-        height="20"
-        rx="10"
-        fill="url(#g)"
-        opacity=".3"
-      />
-      <rect
-        x="280"
-        y="90"
-        width="200"
-        height="20"
-        rx="10"
-        fill="url(#g)"
-        opacity=".3"
-      />
-      <rect
-        x="280"
-        y="120"
-        width="220"
-        height="20"
-        rx="10"
-        fill="url(#g)"
-        opacity=".3"
-      />
-      <rect
-        x="40"
-        y="150"
-        width="200"
-        height="70"
-        rx="10"
-        fill="url(#g)"
-        opacity=".18"
-      />
-      <path
-        d="M60 200 C120 150, 160 170, 220 155"
-        fill="none"
-        stroke="url(#g)"
-        strokeWidth="6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+// HeroIllo era inutilizzato ed è stato rimosso per pulizia lint
 
 /* ---- FAQ ---- */
 const FAQS = [

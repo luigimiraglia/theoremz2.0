@@ -3,7 +3,7 @@ import { groq } from "next-sanity";
 import { notFound } from "next/navigation";
 import { sanityFetch } from "@/lib/sanityFetch";
 import type { PortableTextBlock } from "sanity";
-import LessonClient from "./ClientIslands"; // <-- wrapper client che carica il tuo LessonClient
+import LessonClient from "./LessonClient"; // server component; include client islands where needed
 import SeoJsonLd from "./SeoJsonLd"; // <-- JSON-LD Article + Breadcrumbs
 
 // Usa ISR per performance e SEO migliori; aggiorna periodicamente

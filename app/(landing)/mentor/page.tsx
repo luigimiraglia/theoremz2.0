@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 export default function MentorPage() {
   return (
     <main className="bg-white text-slate-900">
