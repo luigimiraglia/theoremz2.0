@@ -164,7 +164,7 @@ export default function LessonClient({
       {/* Indice sezioni (defer visibile) */}
       {!!sectionItems.length && (
         <LazyOnVisible
-          loader={() => import("@/components/LessonIndex")}
+          component="LessonIndex"
           props={{ sections: sectionItems }}
           rootMargin="200px"
           minHeight={48}
@@ -176,7 +176,7 @@ export default function LessonClient({
       {/* Videolezione */}
       {lesson.resources?.videolezione && (
         <LazyOnVisible
-          loader={() => import("@/components/VideoSection")}
+          component="VideoSection"
           props={{ url: lesson.resources.videolezione }}
           rootMargin="150px"
           minHeight={56}
@@ -230,7 +230,7 @@ export default function LessonClient({
 
       {/* ESERCIZI ALLA FINE */}
       <LazyOnVisible
-        loader={() => import("@/components/LessonExercises")}
+        component="LessonExercises"
         props={{
           lessonId: lesson.id,
           lessonTitle: lesson.title,

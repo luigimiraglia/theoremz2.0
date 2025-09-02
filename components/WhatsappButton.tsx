@@ -1,11 +1,11 @@
 "use client";
 import { useAuth } from "@/lib/AuthContext";
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import Image from "next/image";
 
 export default function WhatsappButton() {
   const [state, setState] = useState<"idle" | "popup">("idle");
-  const [Popup, setPopup] = useState<null | ((props: any) => JSX.Element)>(null);
+  const [Popup, setPopup] = useState<ComponentType | null>(null);
 
   const handleClick = async () => {
     if (true) {

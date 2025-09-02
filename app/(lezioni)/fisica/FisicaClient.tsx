@@ -257,7 +257,7 @@ export default function FisicaClient({
             ) : (
               <LazyOnVisible
                 key={categoria}
-                loader={() => import("@/components/CategoryBlock")}
+                component="CategoryBlock"
                 props={{
                   categoria,
                   lezioni,

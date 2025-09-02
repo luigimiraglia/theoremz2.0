@@ -3,14 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 
 type AnyProps = Record<string, any>;
+type ComponentId =
+  | "LessonIndex"
+  | "VideoSection"
+  | "LessonExercises"
+  | "CategoryBlock";
 
 export default function LazyOnVisible({
-  loader,
+  component,
   props,
   rootMargin = "200px",
   minHeight,
 }: {
-  loader: () => Promise<any>;
+  component: ComponentId;
   props?: AnyProps;
   rootMargin?: string;
   minHeight?: number;
@@ -41,14 +46,31 @@ export default function LazyOnVisible({
   useEffect(() => {
     if (!visible || Mod) return;
     let mounted = true;
-    loader().then((m) => {
-      if (!mounted) return;
-      setMod(() => m.default ?? m);
-    });
+    const load = async () => {
+      let m: any;
+      switch (component) {
+        case "LessonIndex":
+          m = await import("@/components/LessonIndex");
+          break;
+        case "VideoSection":
+          m = await import("@/components/VideoSection");
+          break;
+        case "LessonExercises":
+          m = await import("@/components/LessonExercises");
+          break;
+        case "CategoryBlock":
+          m = await import("@/components/CategoryBlock");
+          break;
+        default:
+          m = null;
+      }
+      if (mounted) setMod(() => (m ? m.default ?? m : null));
+    };
+    load();
     return () => {
       mounted = false;
     };
-  }, [visible, Mod, loader]);
+  }, [visible, Mod, component]);
 
   return (
     <div ref={ref} style={!Mod && minHeight ? { minHeight } : undefined}>
@@ -56,4 +78,3 @@ export default function LazyOnVisible({
     </div>
   );
 }
-

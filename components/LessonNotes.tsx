@@ -331,11 +331,14 @@ export default function LessonNotes({
                     <>
                       <ReactPdf.Document
                         file={absUrl}
-                        onLoadSuccess={({ numPages }) => {
+                        onLoadSuccess={(info: { numPages: number }) => {
+                          const { numPages } = info;
                           setNumPages(numPages);
                           setPageNumber(1);
                         }}
-                        onLoadError={(e) => console.error("PDF load error:", e)}
+                        onLoadError={(e: unknown) =>
+                          console.error("PDF load error:", e)
+                        }
                         loading={
                           <div className="text-gray-500">Caricamento…</div>
                         }
