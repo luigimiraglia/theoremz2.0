@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useDeferredValue } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import ClientVisible from "@/components/ClientVisible";
 
 type Lesson = {
   _id: string;
@@ -209,7 +210,7 @@ export default function MatematicaClient({
             {filteredByInterface.map((lesson) => {
               const lcp = lesson.slug.current === firstVisibleSlug;
               return (
-                <Link href={`/${lesson.slug.current}`} key={lesson._id}>
+                <Link href={`/${lesson.slug.current}`} key={lesson._id} prefetch={false}>
                   <div className="rounded-2xl bg-gray-100/60 min-w-[320px] border-2 border-slate-800 hover:shadow-[-5px_6px_0_0_#2b7fff] hover:translate-x-1 hover:-translate-y-1 transition-all cursor-pointer">
                     <div className="h-36 overflow-hidden rounded-t-2xl bg-white">
                       <Image
@@ -241,9 +242,9 @@ export default function MatematicaClient({
           </div>
         ) : (
           // Vista per categorie (mobile: mostra solo la prima voce fino a espansione)
-          Object.entries(groupedByCategory).map(([categoria, lezioni]) => {
+          Object.entries(groupedByCategory).map(([categoria, lezioni], idx) => {
             const expanded = expandedCats.has(categoria);
-            return (
+            const block = (
               <div key={categoria}>
                 <hr className="border-slate-600 rounded-xl border-1 mb-2" />
                 <h2 className="text-2xl font-semibold mb-2">{categoria}</h2>
@@ -262,6 +263,7 @@ export default function MatematicaClient({
                       <Link
                         href={`/${lesson.slug.current}`}
                         key={lesson._id}
+                        prefetch={false}
                         className={mobileHidden}
                       >
                         <div className="rounded-2xl bg-gray-100/60 min-w-[320px] border-2 border-slate-800 hover:shadow-[-5px_6px_0_0_#2b7fff] hover:translate-x-1 hover:-translate-y-1 transition-all cursor-pointer">
@@ -306,6 +308,14 @@ export default function MatematicaClient({
                   </button>
                 </div>
               </div>
+            );
+            // Defer le categorie sotto la seconda per ridurre il lavoro iniziale
+            return idx < 2 ? (
+              block
+            ) : (
+              <ClientVisible key={categoria} rootMargin="200px" minHeight={100}>
+                {block}
+              </ClientVisible>
             );
           })
         )}

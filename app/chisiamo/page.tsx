@@ -7,12 +7,12 @@ const TITLE = "Chi siamo | Theoremz — Persone, non solo formule";
 const DESC =
   "Siamo un piccolo team di insegnanti e studenti. Qui trovi come lavoriamo, perché lo facciamo e come contattarci. Niente ansia: solo chiarezza, ascolto e cura.";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
-const CANONICAL = `${SITE}/chi-siamo`;
+const CANONICAL = `${SITE}/chisiamo`;
 
 export const metadata: Metadata = {
   title: TITLE,
   description: DESC,
-  alternates: { canonical: "/chi-siamo" },
+  alternates: { canonical: "/chisiamo" },
   robots: { index: true, follow: true },
   openGraph: {
     title: TITLE,

@@ -6,7 +6,8 @@ import type { PortableTextBlock } from "sanity";
 import LessonClient from "./ClientIslands"; // <-- wrapper client che carica il tuo LessonClient
 import SeoJsonLd from "./SeoJsonLd"; // <-- JSON-LD Article + Breadcrumbs
 
-export const dynamic = "force-dynamic"; // mantieni il tuo comportamento attuale
+// Usa ISR per performance e SEO migliori; aggiorna periodicamente
+export const revalidate = 1800; // 30 minuti
 
 /* -------------------- Tipi -------------------- */
 type LessonResources = {

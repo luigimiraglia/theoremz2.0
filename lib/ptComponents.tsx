@@ -121,6 +121,8 @@ export const ptComponents: PortableTextComponents = {
         <img
           src={value.url}
           alt={value.alt || "Immagine"}
+          loading="lazy"
+          decoding="async"
           className="rounded-xl max-w-9/10 sm:max-w-3/5 lg:max-w-2/5 h-auto"
         />
       </div>

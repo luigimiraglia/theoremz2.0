@@ -3,3 +3,4 @@ Allow: /
 
 Sitemap: https://theoremz.com/sitemap.xml
 Host: theoremz.com
+

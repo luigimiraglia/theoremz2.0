@@ -83,6 +83,8 @@ export default function RootLayout({
         />
         <link rel="preconnect" href="https://apis.google.com" crossOrigin="" />
         <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="" />
+        <link rel="preconnect" href="https://i.ytimg.com" crossOrigin="" />
+        <link rel="preconnect" href="https://img.youtube.com" crossOrigin="" />
       </head>
 
       <body className="antialiased min-h-dvh bg-background text-foreground">

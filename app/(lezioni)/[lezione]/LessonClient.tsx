@@ -2,7 +2,8 @@
 
 import dynamic from "next/dynamic";
 import FormularioSection from "@/components/FormularioSection";
-import LessonNotes from "@/components/LessonNotes";
+import LessonNotesClient from "@/components/LessonNotesClient";
+import PortableRenderer from "./PortableRenderer"; // critical content: no code-split to avoid flicker
 import type { PortableTextBlock } from "sanity";
 
 // 🔸 lazy-load TUTTO ciò che può toccare il DOM
@@ -30,9 +31,9 @@ const EserciziSmallButton = dynamic(
   () => import("@/components/EserciziSmallButton"),
   { ssr: false }
 );
-const PortableRenderer = dynamic(() => import("./PortableRenderer"), {
-  ssr: false,
-});
+import ClientVisible from "@/components/ClientVisible";
+import HydrationGate from "@/components/HydrationGate";
+import LessonSkeleton from "@/components/LessonSkeleton";
 
 /* ---------- Tipi ---------- */
 type UnknownSlug = string | { current?: string | null } | null | undefined;
@@ -173,7 +174,12 @@ export default function LessonClient({
   const hasPrereq = obb.length > 0 || opt.length > 0;
 
   return (
-    <article className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert">
+    <HydrationGate
+      minDelayMs={300}
+      className="mx-auto max-w-6xl px-4 pb-12"
+      skeleton={<LessonSkeleton variant="inline" />}
+    >
+      <article className="prose prose-slate dark:prose-invert">
       {/* Header */}
       <header className="rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 text-center pt-3 pb-3">
         <div className="flex justify-between mx-3">
@@ -191,18 +197,27 @@ export default function LessonClient({
 
         <div className="mt-5 ml-2 flex items-center justify-end gap-0.5">
           <FormularioSection url={lesson.resources?.formulario ?? ""} />
-          <LessonNotes lessonTitle={lesson.title} lessonSlug={lesson.slug} />
+          <LessonNotesClient
+            lessonTitle={lesson.title}
+            lessonSlug={lesson.slug}
+          />
         </div>
       </header>
 
-      {/* Indice sezioni */}
-      {!!sectionItems.length && <LessonIndex sections={sectionItems} />}
+      {/* Indice sezioni (defer visibile) */}
+      {!!sectionItems.length && (
+        <ClientVisible rootMargin="0px 0px 200px 0px" minHeight={48}>
+          <LessonIndex sections={sectionItems} />
+        </ClientVisible>
+      )}
 
       <hr className="border-t-2 [.dark_&]:border-white border-blue-950 rounded-full mx-1" />
 
       {/* Videolezione */}
       {lesson.resources?.videolezione && (
-        <VideoSection url={lesson.resources.videolezione} />
+        <ClientVisible rootMargin="100px" minHeight={56}>
+          <VideoSection url={lesson.resources.videolezione} />
+        </ClientVisible>
       )}
 
       {/* Prerequisiti con animazione */}
@@ -251,11 +266,14 @@ export default function LessonClient({
       <TheoremzAIAssistant lessonId={lesson.id} lessonTitle={lesson.title} />
 
       {/* ESERCIZI ALLA FINE */}
-      <LessonExercises
-        lessonId={lesson.id}
-        lessonTitle={lesson.title}
-        lessonSlug={lesson.slug}
-      />
-    </article>
+      <ClientVisible rootMargin="400px" minHeight={200}>
+        <LessonExercises
+          lessonId={lesson.id}
+          lessonTitle={lesson.title}
+          lessonSlug={lesson.slug}
+        />
+      </ClientVisible>
+      </article>
+    </HydrationGate>
   );
 }

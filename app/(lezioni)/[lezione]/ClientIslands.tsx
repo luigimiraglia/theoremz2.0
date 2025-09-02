@@ -1,12 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
+// Import static to avoid hydration flicker
+import LessonClient from "./LessonClient";
 import type { PortableTextBlock } from "sanity";
-
-const LessonClient = dynamic(() => import("./LessonClient"), {
-  ssr: false,
-  loading: () => null,
-});
 
 type SectionItem = { _type: "section"; heading: string; shortTitle: string };
 type LinkedLesson = { title: string; slug: { current: string } };

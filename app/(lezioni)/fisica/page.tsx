@@ -1,18 +1,12 @@
 // app/fisica/page.tsx
 import { groq } from "next-sanity";
 import { sanityFetch } from "@/lib/sanityFetch";
-import dynamicImport from "next/dynamic";
+import FisicaClient from "./FisicaClient";
 
 export const revalidate = 120;
 export const dynamic = "force-static";
 
-const FisicaClient = dynamicImport(() => import("./FisicaClient"), {
-  loading: () => (
-    <div className="mx-auto max-w-3xl px-4 py-8 text-sm text-gray-500">
-      Caricamento…
-    </div>
-  ),
-});
+// Import diretto per evitare flicker tra SSR e hydration
 
 // Tipi minimi
 type Lesson = {
