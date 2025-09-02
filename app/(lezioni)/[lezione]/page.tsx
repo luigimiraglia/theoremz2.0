@@ -145,7 +145,7 @@ export async function generateMetadata({
     plain || "Lezione completa con spiegazione, formule ed esempi su Theoremz.";
 
   const baseUrl = "https://theoremz.com";
-  const canonical = `${baseUrl}/lezione/${lesson.slug.current}`;
+  const canonical = `${baseUrl}/${lesson.slug.current}`;
   const ogImage = lesson.thumbnailUrl ?? "/metadata.png";
 
   return {
@@ -230,7 +230,7 @@ export default async function Page({
           { name: "Lezioni", item: "https://theoremz.com/lezione" },
           {
             name: lesson.title,
-            item: `https://theoremz.com/lezione/${lesson.slug.current}`,
+            item: `https://theoremz.com/${lesson.slug.current}`,
           },
         ]}
       />
