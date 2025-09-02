@@ -229,6 +229,8 @@ export default function LessonClient({
       <AiChatLauncher lessonId={lesson.id} lessonTitle={lesson.title} />
 
       {/* ESERCIZI ALLA FINE */}
+      {/* Anchor for the top button to scroll even before the widget mounts */}
+      <div data-exercises-cta className="h-0" aria-hidden="true" />
       <LazyOnVisible
         component="LessonExercises"
         props={{

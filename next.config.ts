@@ -10,15 +10,14 @@ const nextConfig: NextConfig = {
     ],
   },
   images: {
-    // Usa l'optimizer di Next per AVIF/WebP e dimensioni adeguate
-    unoptimized: false,
+    // Disabilita l'optimizer di Next (usa file statici così come sono)
+    unoptimized: true,
     domains: [
       "cdn.sanity.io",
       "theoremz.com",
       "i.ytimg.com",
       "img.youtube.com",
     ],
-    formats: ["image/avif", "image/webp"],
   },
   async headers() {
     return [
