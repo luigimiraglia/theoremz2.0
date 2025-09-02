@@ -531,3 +531,24 @@ const FAQS = [
     a: "Dipende dal pacchetto: Singolo (1), Standard (5), Plus (10). Puoi sempre acquistare altri pacchetti.",
   },
 ];
+export const metadata = {
+  title: "Risoluzione esercizi — risposta in 2 ore con passaggi chiari",
+  description:
+    "Invia l'esercizio e ricevi la soluzione spiegata passo passo in 2 ore. Correzioni e chiarimenti inclusi.",
+  alternates: { canonical: "/risoluzione-esercizi" },
+  openGraph: {
+    type: "website",
+    title: "Risoluzione esercizi in 2 ore",
+    description:
+      "Soluzioni chiare, passaggi spiegati e chiarimenti inclusi. Zero ansia, risultati veloci.",
+    images: [{ url: "/metadata.png" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Risoluzione esercizi in 2 ore",
+    description:
+      "Soluzioni chiare, passaggi spiegati e chiarimenti inclusi. Zero ansia, risultati veloci.",
+    images: ["/metadata.png"],
+    site: "@theoremz_",
+  },
+};

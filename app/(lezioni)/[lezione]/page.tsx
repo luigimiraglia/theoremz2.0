@@ -228,7 +228,7 @@ export default async function Page({
         updatedAt={lesson._updatedAt}
         breadcrumbs={[
           { name: "Theoremz", item: "https://theoremz.com/" },
-          { name: "Lezioni", item: "https://theoremz.com/lezione" },
+          { name: "Lezioni", item: "https://theoremz.com/" },
           {
             name: lesson.title,
             item: `https://theoremz.com/${lesson.slug.current}`,

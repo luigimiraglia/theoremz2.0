@@ -1,4 +1,26 @@
 /* eslint-disable @next/next/no-img-element */
+export const metadata = {
+  title: "Theoremz Mentor — Tutor personale per verifiche ed esami",
+  description:
+    "Un tutor al tuo fianco ogni giorno: piani di studio, esercizi mirati e lezioni 1‑to‑1. Migliora voti e sicurezza senza ansia.",
+  alternates: { canonical: "/mentor" },
+  openGraph: {
+    type: "website",
+    title: "Theoremz Mentor — Tutor personale",
+    description:
+      "Piani di studio, esercizi mirati e lezioni 1‑to‑1: risultati reali, meno stress.",
+    images: [{ url: "/metadata.png" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Theoremz Mentor — Tutor personale",
+    description:
+      "Piani di studio, esercizi mirati e lezioni 1‑to‑1: risultati reali, meno stress.",
+    images: ["/metadata.png"],
+    site: "@theoremz_",
+  },
+};
+
 export default function MentorPage() {
   return (
     <main className="bg-white text-slate-900">
