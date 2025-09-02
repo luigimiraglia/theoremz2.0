@@ -9,7 +9,7 @@ export default function SeoJsonLd(props: {
   breadcrumbs: { name: string; item: string }[];
 }) {
   const base = "https://theoremz.com";
-  const url = `${base}/lezione/${props.slug}`;
+  const url = `${base}/${props.slug}`;
   const image = props.thumbnailUrl ?? `${base}/metadata.png`;
 
   const article = {
