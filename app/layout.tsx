@@ -63,8 +63,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="it" className={montserrat.className} suppressHydrationWarning>
+    <html lang="it" translate="no" className={montserrat.className} suppressHydrationWarning>
       <head>
+        <meta name="google" content="notranslate" />
         {/* Preconnect essenziali: Auth + Sanity CDN (immagini) */}
         <link
           rel="preconnect"
