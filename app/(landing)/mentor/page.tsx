@@ -22,19 +22,17 @@ export const metadata = {
 };
 
 export default function MentorPage() {
-  // JSON-LD: Breadcrumb + FAQ
+  // JSON-LD: Breadcrumb + FAQ + Service (single @graph)
   const SITE = "https://theoremz.com";
   const CANONICAL = `${SITE}/mentor`;
-  const breadcrumbLd = {
-    "@context": "https://schema.org",
+  const breadcrumb = {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: SITE },
       { "@type": "ListItem", position: 2, name: "Mentor", item: CANONICAL },
     ],
   } as const;
-  const faqLd = {
-    "@context": "https://schema.org",
+  const faq = {
     "@type": "FAQPage",
     mainEntity: FAQS.map((f) => ({
       "@type": "Question",
@@ -42,16 +40,47 @@ export default function MentorPage() {
       acceptedAnswer: { "@type": "Answer", text: f.a },
     })),
   } as const;
+  const service = {
+    "@type": "Service",
+    name: "Theoremz Mentor",
+    provider: { "@type": "Organization", name: "Theoremz", url: SITE },
+    areaServed: "IT",
+    serviceType: "Tutor personale di matematica e fisica",
+    description:
+      "Un tutor al tuo fianco ogni giorno: piani di studio, esercizi mirati e lezioni 1‑to‑1.",
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.9",
+      ratingCount: 86,
+      bestRating: 5,
+    },
+    review: [
+      {
+        "@type": "Review",
+        author: { "@type": "Person", name: "Giulia R." },
+        reviewRating: { "@type": "Rating", ratingValue: 5, bestRating: 5 },
+        reviewBody:
+          "Con Theoremz Mentor ho finalmente capito matematica! Il tutor mi segue passo passo.",
+      },
+      {
+        "@type": "Review",
+        author: { "@type": "Person", name: "Marco B." },
+        reviewRating: { "@type": "Rating", ratingValue: 5, bestRating: 5 },
+        reviewBody:
+          "Fisica era il mio incubo. Le lezioni e gli esercizi settimanali mi hanno sbloccato.",
+      },
+    ],
+  } as const;
+
+  const graph = [breadcrumb, faq, service];
 
   return (
     <main className="bg-white text-slate-900">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({ "@context": "https://schema.org", "@graph": graph }),
+        }}
       />
       <Hero /> {/* solo qui ho migliorato il responsive */}
       <AboutAndTeachers />

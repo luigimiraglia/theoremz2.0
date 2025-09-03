@@ -31,29 +31,43 @@ export default function RisoluzioneEserciziPage() {
       { "@type": "ListItem", position: 2, name: "Risoluzione Esercizi", item: CANONICAL },
     ],
   } as const;
-  const faqLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: FAQS.map((f) => ({
-      "@type": "Question",
-      name: f.q,
-      acceptedAnswer: { "@type": "Answer", text: f.a },
-    })),
-  } as const;
+  const graph = [
+    {
+      "@type": "Product",
+      name: "Risoluzione Esercizi Theoremz",
+      brand: { "@type": "Brand", name: "Theoremz" },
+      description:
+        "Invia l'esercizio e ricevi la soluzione spiegata passo passo in 2 ore.",
+      image: [`${SITE}/metadata.png`],
+      offers: productLd.offers,
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: "4.9",
+        ratingCount: 112,
+        bestRating: 5,
+      },
+    },
+    {
+      "@type": "BreadcrumbList",
+      ...breadcrumbLd,
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: FAQS.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
+  ];
 
   return (
     <main className="bg-white text-slate-900">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({ "@context": "https://schema.org", "@graph": graph }),
+        }}
       />
       {/* HERO */}
       <section className="relative overflow-hidden border-b border-slate-100">

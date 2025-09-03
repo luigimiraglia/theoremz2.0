@@ -118,33 +118,59 @@ export default function BlackPage() {
     ],
   };
 
-  const faqLd = {
-    "@context": "https://schema.org",
+  // Structured data (single @graph)
+  const product = {
+    "@type": "Product",
+    name: "Theoremz Black",
+    brand: { "@type": "Brand", name: "Theoremz" },
+    description: DESC,
+    image: [`${SITE}/metadata.png`],
+    offers: productLd.offers,
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.9",
+      ratingCount: 127,
+      bestRating: 5,
+    },
+    review: [
+      {
+        "@type": "Review",
+        reviewRating: { "@type": "Rating", ratingValue: 5, bestRating: 5 },
+        author: { "@type": "Person", name: "Giulia" },
+        reviewBody: "Risolto in 35 minuti con spiegazione dettagliata. Super servizio!",
+      },
+      {
+        "@type": "Review",
+        reviewRating: { "@type": "Rating", ratingValue: 5, bestRating: 5 },
+        author: { "@type": "Person", name: "Marco" },
+        reviewBody: "Mi hanno aiutato anche dopo con due dubbi in chat. Gentilissimi.",
+      },
+    ],
+  } as const;
+
+  const faq = {
     "@type": "FAQPage",
     mainEntity: FAQS.map(({ q, a }) => ({
       "@type": "Question",
       name: q,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: a,
-      },
+      acceptedAnswer: { "@type": "Answer", text: a },
     })),
-  };
+  } as const;
+
+  const graph = [
+    { "@type": "BreadcrumbList", ...breadcrumbLd },
+    product,
+    faq,
+  ];
 
   return (
     <main className="bg-black text-white">
-      {/* JSON-LD */}
+      {/* JSON-LD (single @graph) */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({ "@context": "https://schema.org", "@graph": graph }),
+        }}
       />
 
       {/* ============ HERO (2 colonne da md+) ============ */}
