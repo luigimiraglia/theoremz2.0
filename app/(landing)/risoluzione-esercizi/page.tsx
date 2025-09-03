@@ -1,7 +1,60 @@
 // app/esercizi/page.tsx
 export default function RisoluzioneEserciziPage() {
+  const SITE = "https://theoremz.com";
+  const CANONICAL = `${SITE}/risoluzione-esercizi`;
+  const productLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "Risoluzione Esercizi Theoremz",
+    brand: { "@type": "Brand", name: "Theoremz" },
+    description:
+      "Invia l'esercizio e ricevi la soluzione spiegata passo passo in 2 ore. Correzioni e chiarimenti inclusi.",
+    image: [`${SITE}/metadata.png`],
+    offers: {
+      "@type": "AggregateOffer",
+      priceCurrency: "EUR",
+      offerCount: 3,
+      lowPrice: "5",
+      highPrice: "15",
+      offers: [
+        { "@type": "Offer", name: "Pacchetto Singolo", price: "5", priceCurrency: "EUR", availability: "https://schema.org/InStock", url: CANONICAL + "#pricing" },
+        { "@type": "Offer", name: "Pacchetto Standard", price: "10", priceCurrency: "EUR", availability: "https://schema.org/InStock", url: CANONICAL + "#pricing" },
+        { "@type": "Offer", name: "Pacchetto Plus", price: "15", priceCurrency: "EUR", availability: "https://schema.org/InStock", url: CANONICAL + "#pricing" },
+      ],
+    },
+  } as const;
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+      { "@type": "ListItem", position: 2, name: "Risoluzione Esercizi", item: CANONICAL },
+    ],
+  } as const;
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  } as const;
+
   return (
     <main className="bg-white text-slate-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+      />
       {/* HERO */}
       <section className="relative overflow-hidden border-b border-slate-100">
         <div className="mx-auto max-w-6xl px-5 pt-4 pb-8 sm:px-8 lg:px-12 lg:pt-16">

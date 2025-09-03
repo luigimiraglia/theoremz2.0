@@ -634,15 +634,15 @@ const FAQS = [
   },
   {
     q: "Tutto questo vale per matematica e fisica?",
-    a: "Si, l'abbonamento include tutte le risorse di matematica e fisica e lo stesso vale per l'assistenza.",
+    a: "Sì, l'abbonamento include tutte le risorse di matematica e fisica e lo stesso vale per l'assistenza.",
   },
   {
     q: "È anche per studenti delle medie?",
-    a: "Assolutamente si! Il servizio è pensato per tutti gli studenti di medie e liceo.",
+    a: "Assolutamente sì! Il servizio è pensato per tutti gli studenti di medie e liceo.",
   },
   {
     q: "Vorrei abbonarmi con un amico, è possibile avere uno sconto?",
-    a: "Probabilmente si, contatta il servizio clienti per avere maggiori informazioni.",
+    a: "Probabilmente sì, contatta il servizio clienti per avere maggiori informazioni.",
   },
   {
     q: "Che qualifiche hanno gli insegnanti?",

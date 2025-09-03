@@ -91,6 +91,8 @@ export default async function Page() {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "Lezioni di matematica",
+    numberOfItems: (lessons ?? []).length,
+    itemListOrder: "http://schema.org/ItemListOrderAscending",
     itemListElement: (lessons ?? []).slice(0, TOP_N).map((l, i) => ({
       "@type": "ListItem",
       position: i + 1,

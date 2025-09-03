@@ -13,7 +13,12 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESC,
   alternates: { canonical: "/chisiamo" },
-  robots: { index: true, follow: true, googleBot: "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot:
+      "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
+  },
   openGraph: {
     title: TITLE,
     description: DESC,
@@ -44,7 +49,7 @@ export default function ChiSiamoPage() {
     "@type": "Organization",
     name: "Theoremz",
     url: SITE,
-    logo: `${SITE}/images/logo.png`,
+    logo: `${SITE}/images/logo.webp`,
     sameAs: [CONTACT.ig, CONTACT.tiktok],
     contactPoint: [
       {

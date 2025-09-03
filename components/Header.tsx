@@ -15,11 +15,13 @@ export default function Header() {
           className="flex items-center text-xl font-bold opacity-85"
         >
           <Image
-            src="/images/logo.png"
+            src="/images/logo.webp"
             alt="logo"
-            width={1024}
-            height={1024}
+            width={40}
+            height={40}
             className="rounded-lg h-10 w-10"
+            sizes="40px"
+            priority
           />
           <span className="ml-2 ">
             <p className="text-slate-900 [.dark_&]:text-white">Theoremz</p>

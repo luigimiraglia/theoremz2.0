@@ -70,6 +70,25 @@ export default function MatematicaClient({
   const fuseRef = useRef<any | null>(null);
   const fuseLoadedRef = useRef(false);
 
+  // Seed initial query from ?q= and keep URL in sync (for SearchAction)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("q");
+      if (q) setQuery(q);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (query) params.set("q", query);
+      else params.delete("q");
+      const qs = params.toString();
+      const url = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+      window.history.replaceState({}, "", url);
+    } catch {}
+  }, [query]);
+
   useEffect(() => {
     const q = dq.trim();
     if (!q) {

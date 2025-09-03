@@ -3,7 +3,8 @@ import { groq } from "next-sanity";
 import { notFound } from "next/navigation";
 import { sanityFetch } from "@/lib/sanityFetch";
 import type { PortableTextBlock } from "sanity";
-import LessonClient from "./LessonClient"; // server component; include client islands where needed
+import LessonClient from "./LessonClient"; // client wrapper for interactive UI
+import LessonContentServer from "./LessonContentServer"; // server-rendered content for better LCP
 import SeoJsonLd from "./SeoJsonLd"; // <-- JSON-LD Article + Breadcrumbs
 
 // Usa ISR per performance e SEO migliori; aggiorna periodicamente
@@ -245,7 +246,7 @@ export default async function Page({
         ]}
       />
 
-      {/* La tua UI client (ordine identico al tuo LessonClient) */}
+      {/* UI: render content server-side and pass it into client wrapper to reduce hydration cost */}
       <LessonClient
         lezione={lezione}
         lesson={{
@@ -266,6 +267,7 @@ export default async function Page({
             lesson.lezioniPropedeuticheOpzionali ?? [],
         }}
         sectionItems={sectionItems}
+        contentSlot={<LessonContentServer value={lesson.content} />}
       />
     </>
   );

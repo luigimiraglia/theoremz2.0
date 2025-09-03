@@ -2,7 +2,8 @@ import SaveLessonButton from "@/components/SaveLessonButton";
 import Link from "next/link";
 import FormularioSection from "@/components/FormularioSection";
 import LessonNotesClient from "@/components/LessonNotesClient";
-import PortableRenderer from "./PortableRenderer"; // critical content: no code-split to avoid flicker
+import type { ReactNode } from "react";
+import PortableRenderer from "./PortableRenderer"; // fallback if no server slot provided
 import type { PortableTextBlock } from "sanity";
 import LazyOnVisible from "@/components/LazyOnVisible";
 // Note: heavy widgets are loaded dynamically when visible to reduce JS
@@ -38,6 +39,7 @@ type LessonClientProps = {
     lezioniPropedeuticheOpzionali?: LinkedLessonRaw[];
   };
   sectionItems: { _type: "section"; heading: string; shortTitle: string }[];
+  contentSlot?: ReactNode; // server-rendered content to improve LCP
 };
 
 /* ---------- helpers robusti ---------- */
@@ -131,6 +133,7 @@ export default function LessonClient({
   lezione,
   lesson,
   sectionItems,
+  contentSlot,
 }: LessonClientProps) {
   const obb = sanitizeList(
     lesson.lezioniPropedeuticheObbligatorie,
@@ -245,7 +248,11 @@ export default function LessonClient({
       )}
 
       {/* Contenuto principale */}
-      <PortableRenderer value={lesson.content} />
+      {contentSlot ? (
+        contentSlot
+      ) : (
+        <PortableRenderer value={lesson.content} />
+      )}
 
       {/* Tag/percorsi in fondo alla lezione (non invasivi) */}
       {(!!(lesson.categoria && lesson.categoria.length) || !!(lesson.classe && lesson.classe.length)) && (
