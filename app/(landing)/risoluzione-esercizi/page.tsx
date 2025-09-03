@@ -536,6 +536,7 @@ export const metadata = {
   description:
     "Invia l'esercizio e ricevi la soluzione spiegata passo passo in 2 ore. Correzioni e chiarimenti inclusi.",
   alternates: { canonical: "/risoluzione-esercizi" },
+  robots: { index: true, follow: true, googleBot: "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" },
   openGraph: {
     type: "website",
     title: "Risoluzione esercizi in 2 ore",

@@ -21,3 +21,13 @@ export default function Home() {
     </>
   );
 }
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: true,
+    follow: true,
+    googleBot:
+      "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
+  },
+};

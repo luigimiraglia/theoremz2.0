@@ -82,7 +82,32 @@ export default function LessonExercises({
       )}
 
       {!!items.length && (
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-5">
+        <>
+          {/* JSON-LD PracticeProblem per i primi 3 esercizi */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@graph": items.slice(0, 3).map((ex) => ({
+                  "@type": "PracticeProblem",
+                  name: ex.titolo,
+                  eduQuestionType: "Esercizio svolto",
+                  isPartOf: {
+                    "@type": "LearningResource",
+                    name: lessonTitle,
+                    url: `https://theoremz.com/${lessonSlug}`,
+                  },
+                  hasPart: {
+                    "@type": "Question",
+                    name: ex.titolo,
+                  },
+                })),
+              }),
+            }}
+          />
+
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-5">
           {items.map((ex: ExerciseDoc) => (
             <div key={ex._id} className="w-full">
               <ExerciseCard
@@ -97,7 +122,8 @@ export default function LessonExercises({
               />
             </div>
           ))}
-        </div>
+          </div>
+        </>
       )}
 
       {state === "popup" && (

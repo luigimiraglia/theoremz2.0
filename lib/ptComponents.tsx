@@ -117,17 +117,51 @@ export const ptComponents: PortableTextComponents = {
         <InlineMath errorColor="#cc0000">{value.code}</InlineMath>
       ),
 
-    imageExternal: ({ value }) => (
-      <div className="my-6 flex justify-center">
-        <img
-          src={value.url}
-          alt={value.alt || "Immagine"}
-          loading="lazy"
-          decoding="async"
-          className="rounded-xl max-w-9/10 sm:max-w-3/5 lg:max-w-2/5 h-auto"
-        />
-      </div>
-    ),
+    imageExternal: ({ value }) => {
+      const url: string = value?.url || "";
+      const alt: string = value?.alt || "Immagine";
+
+      // Prova ad inferire dimensioni per evitare CLS
+      const dims = (() => {
+        try {
+          const u = new URL(url, "https://theoremz.com");
+          const isLocal =
+            (!u.host || u.host === "theoremz.com") && u.pathname.startsWith("/images/");
+          if (isLocal) {
+            const name = u.pathname.split("/").pop()?.toLowerCase() || "";
+            const known: Record<string, [number, number]> = {
+              "ap-esa.webp": [2000, 1396],
+              "ap-pent.webp": [2000, 1201],
+              "ap-triangolo.webp": [2000, 1006],
+              "ap-quadrato.webp": [2000, 985],
+            };
+            if (known[name]) return { width: known[name][0], height: known[name][1] };
+            const m = name.match(/-(\d+)x(\d+)\.(?:webp|jpe?g|png)$/);
+            if (m) return { width: Number(m[1]), height: Number(m[2]) };
+          }
+        } catch {}
+        return null as null | { width: number; height: number };
+      })();
+
+      const sizes = "(min-width: 1024px) 40vw, (min-width: 640px) 60vw, 90vw";
+      const style = dims ? ({ aspectRatio: `${dims.width} / ${dims.height}` } as React.CSSProperties) : undefined;
+
+      return (
+        <div className="my-6 flex justify-center">
+          <img
+            src={url}
+            alt={alt}
+            loading="lazy"
+            decoding="async"
+            sizes={sizes}
+            width={dims?.width}
+            height={dims?.height}
+            style={style}
+            className="rounded-xl max-w-9/10 sm:max-w-3/5 lg:max-w-2/5 h-auto"
+          />
+        </div>
+      );
+    },
 
     section: ({ value }) => {
       const anchor = value.shortTitle

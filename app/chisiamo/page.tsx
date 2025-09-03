@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 // ====== SEO ======
-const TITLE = "Chi siamo | Theoremz — Persone, non solo formule";
+const TITLE = "Chi siamo — Persone, non solo formule";
 const DESC =
   "Siamo un piccolo team di insegnanti e studenti. Qui trovi come lavoriamo, perché lo facciamo e come contattarci. Niente ansia: solo chiarezza, ascolto e cura.";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESC,
   alternates: { canonical: "/chisiamo" },
-  robots: { index: true, follow: true },
+  robots: { index: true, follow: true, googleBot: "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" },
   openGraph: {
     title: TITLE,
     description: DESC,

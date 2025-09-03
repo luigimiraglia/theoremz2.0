@@ -36,6 +36,12 @@ export async function generateMetadata() {
     title,
     description,
     alternates: { canonical: "/matematica" },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot:
+        "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
+    },
     openGraph: {
       title,
       description,
@@ -51,7 +57,6 @@ export async function generateMetadata() {
       images: ["/metadata.png"],
       site: "@theoremz_",
     },
-    robots: { index: true, follow: true },
   };
 }
 

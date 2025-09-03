@@ -105,7 +105,8 @@ function buildSeoTitle(raw: string): string {
         ? `${t} – ${match.suffix}`
         : `${t} – Spiegazione, Formule ed Esempi`;
 
-  return limitForSerp(`${base} | Theoremz`);
+  // Non aggiungere il brand qui: il layout ha già title.template "%s | Theoremz"
+  return limitForSerp(base);
 }
 function ptToPlain(blocks: PortableTextBlock[] | undefined): string {
   if (!blocks) return "";
@@ -153,7 +154,13 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
-    robots: { index: true, follow: true, "max-image-preview": "large" },
+    robots: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      googleBot:
+        "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
+    },
     openGraph: {
       type: "article",
       title,
@@ -224,6 +231,7 @@ export default async function Page({
         subtitle={lesson.subtitle ?? undefined}
         slug={lesson.slug.current}
         thumbnailUrl={lesson.thumbnailUrl ?? undefined}
+        videoUrl={lesson.resources?.videolezione ?? undefined}
         createdAt={lesson._createdAt}
         updatedAt={lesson._updatedAt}
         breadcrumbs={[

@@ -1,4 +1,5 @@
 import SaveLessonButton from "@/components/SaveLessonButton";
+import Link from "next/link";
 import FormularioSection from "@/components/FormularioSection";
 import LessonNotesClient from "@/components/LessonNotesClient";
 import PortableRenderer from "./PortableRenderer"; // critical content: no code-split to avoid flicker
@@ -139,8 +140,16 @@ export default function LessonClient({
     <article className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert">
       {/* Header */}
       <header className="rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 text-center pt-3 pb-3">
-        <div className="flex justify-between mx-3">
-          <EserciziSmallButton />
+        <div className="flex justify-between mx-3 items-center gap-2">
+          <div className="flex items-center gap-2">
+            <EserciziSmallButton />
+            <Link
+              href={`/esercizi/${lesson.slug}`}
+              className="hidden sm:inline text-sm font-semibold text-blue-600 underline underline-offset-2"
+            >
+              Lista esercizi ↗
+            </Link>
+          </div>
           <SaveLessonButton lessonSlug={lezione} />
         </div>
         <h1 className="text-[27px] px-3 sm:text-4xl font-bold opacity-95 leading-tight">

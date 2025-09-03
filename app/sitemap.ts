@@ -31,6 +31,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
-  return [...staticEntries, ...lessonEntries];
-}
+  // Exercise index pages per lesson (if any)
+  type ExRow = { slugs?: (string | null)[] };
+  const exRows = await client.fetch<ExRow[]>(
+    `*[_type=="exercise" && defined(lezioniCollegate)]{ "slugs": lezioniCollegate[]->slug.current }`
+  );
+  const exSet = new Set<string>();
+  for (const r of exRows || []) {
+    for (const s of r.slugs || []) if (s) exSet.add(s);
+  }
+  const exerciseEntries: MetadataRoute.Sitemap = Array.from(exSet).map((slug) => ({
+    url: `${baseUrl}/esercizi/${slug}`,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
 
+  return [...staticEntries, ...lessonEntries, ...exerciseEntries];
+}
