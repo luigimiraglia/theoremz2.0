@@ -121,12 +121,12 @@ export default function BlackPage() {
   const faqLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: FAQS.map((q) => ({
+    mainEntity: FAQS.map(({ q, a }) => ({
       "@type": "Question",
       name: q,
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Sì: assistenza rapida, materiali verificati e rimborso 100% se non soddisfatti.",
+        text: a,
       },
     })),
   };
@@ -404,17 +404,16 @@ export default function BlackPage() {
         </h3>
 
         <div className="mt-6 grid gap-3 lg:grid-cols-2">
-          {FAQS.map((q) => (
+          {FAQS.map((item) => (
             <details
-              key={q}
+              key={item.q}
               className="group rounded-xl bg-white text-slate-900 open:shadow-sm transition"
             >
               <summary className="cursor-pointer px-4 py-3 text-[16px] font-semibold">
-                {q}
+                {item.q}
               </summary>
               <div className="px-4 pb-4 text-[15px] text-slate-700">
-                Risposta sintetica: sì, ricevi supporto rapido con materiali
-                verificati.
+                {item.a}
               </div>
             </details>
           ))}
@@ -625,14 +624,40 @@ function HeroIllo() {
 
 /* ---------- FAQ data ---------- */
 const FAQS = [
-  "L'assistenza è illimitata?",
-  "L'assistenza è attiva il weekend?",
-  "A che ora si può contattare l'assistenza?",
-  "Tutto questo vale per matematica e fisica?",
-  "È anche per studenti delle medie?",
-  "Vorrei abbonarmi con un amico, è possibile avere uno sconto?",
-  "Che qualifiche hanno gli insegnanti?",
-  "In cosa consiste l'aiuto compiti?",
-  "E se provo e non sono convinto?",
-  "Posso cancellare l'abbonamento in qualsiasi momento?",
+  {
+    q: "L'assistenza è attiva il weekend?",
+    a: "Certo, l'assistenza è attiva ogni giorno, tranne in occasione di festività nazionali.",
+  },
+  {
+    q: "A che ora si può contattare l'assistenza?",
+    a: "In generale a qualsiasi orario ma potrebbe capitare che i messaggi ricevuti in tarda notte vengano visualizzati la mattina dopo.",
+  },
+  {
+    q: "Tutto questo vale per matematica e fisica?",
+    a: "Si, l'abbonamento include tutte le risorse di matematica e fisica e lo stesso vale per l'assistenza.",
+  },
+  {
+    q: "È anche per studenti delle medie?",
+    a: "Assolutamente si! Il servizio è pensato per tutti gli studenti di medie e liceo.",
+  },
+  {
+    q: "Vorrei abbonarmi con un amico, è possibile avere uno sconto?",
+    a: "Probabilmente si, contatta il servizio clienti per avere maggiori informazioni.",
+  },
+  {
+    q: "Che qualifiche hanno gli insegnanti?",
+    a: "Tutti gli insegnanti sono laureati in matematica, fisica o ingegneria e molti di loro hanno anche conseguito un master o una seconda laurea.",
+  },
+  {
+    q: "In cosa consiste l'aiuto compiti?",
+    a: "Lo studente ha a disposizione il tutor ogni giorno e può chiedergli aiuto per svolgere i compiti via chat.",
+  },
+  {
+    q: "E se provo e non sono convinto?",
+    a: "Nessun problema, se il servizio non soddisfa le aspettative è possibile richiedere un rimborso completo e immediato semplicemente informando l'assistenza clienti.",
+  },
+  {
+    q: "Posso cancellare l'abbonamento in qualsiasi momento?",
+    a: "Sì, puoi annullare il tuo abbonamento in qualsiasi momento senza penalità.",
+  },
 ];

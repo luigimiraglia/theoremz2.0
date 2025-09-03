@@ -31,6 +31,9 @@ type LessonClientProps = {
       videolezione?: string | null;
     };
     content: PortableTextBlock[];
+    materia?: string | null;
+    categoria?: string[];
+    classe?: string[];
     lezioniPropedeuticheObbligatorie?: LinkedLessonRaw[];
     lezioniPropedeuticheOpzionali?: LinkedLessonRaw[];
   };
@@ -136,6 +139,17 @@ export default function LessonClient({
   const opt = sanitizeList(lesson.lezioniPropedeuticheOpzionali, lesson.slug);
   const hasPrereq = obb.length > 0 || opt.length > 0;
 
+  function slugify(s: string) {
+    return (s || "").toLowerCase().replace(/\s+/g, "-");
+  }
+  function classLink(label: string) {
+    const mMedia = label.match(/^(\d+)º\s+Media$/i);
+    if (mMedia) return `/scuola/media/${mMedia[1]}`;
+    const m = label.match(/^(\d+)º\s+(.+)$/);
+    if (m) return `/scuola/liceo/${slugify(m[2])}/${m[1]}`;
+    return null;
+  }
+
   return (
     <article className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert">
       {/* Header */}
@@ -232,6 +246,36 @@ export default function LessonClient({
 
       {/* Contenuto principale */}
       <PortableRenderer value={lesson.content} />
+
+      {/* Tag/percorsi in fondo alla lezione (non invasivi) */}
+      {(!!(lesson.categoria && lesson.categoria.length) || !!(lesson.classe && lesson.classe.length)) && (
+        <div className="mt-6">
+          <hr className="my-3 border-t border-slate-200" />
+          <div className="flex flex-wrap gap-2 text-sm">
+            {(lesson.categoria || []).map((c) => (
+              <a
+                key={c}
+                href={`/${lesson.materia === "fisica" ? "fisica" : "matematica"}/${slugify(c)}`}
+                className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 hover:bg-slate-200"
+              >
+                #{c}
+              </a>
+            ))}
+            {(lesson.classe || [])
+              .map((cl) => ({ cl, href: classLink(cl) }))
+              .filter((x) => !!x.href)
+              .map((x) => (
+                <a
+                  key={x.cl}
+                  href={x.href!}
+                  className="rounded-full bg-blue-50 px-3 py-1 font-semibold text-blue-700 hover:bg-blue-100"
+                >
+                  🎓 {x.cl}
+                </a>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Azioni/Widget vari */}
       <WhatsappButton />

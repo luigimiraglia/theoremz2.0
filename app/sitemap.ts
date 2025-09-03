@@ -46,5 +46,55 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticEntries, ...lessonEntries, ...exerciseEntries];
+  // Category pages for matematica
+  type CatRow = { categoria?: string[] };
+  const catDocs = await client.fetch<CatRow[]>(`*[_type=="lesson" && materia=="matematica"]{ categoria }`);
+  const catSet = new Set<string>();
+  for (const d of catDocs || []) for (const c of d.categoria || []) catSet.add(c);
+  const catEntries: MetadataRoute.Sitemap = Array.from(catSet).map((c) => ({
+    url: `${baseUrl}/matematica/${c.toLowerCase().replace(/\s+/g, "-")}`,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+  // Category pages for fisica
+  const fisCatDocs = await client.fetch<CatRow[]>(`*[_type=="lesson" && materia=="fisica"]{ categoria }`);
+  const fisSet = new Set<string>();
+  for (const d of fisCatDocs || []) for (const c of d.categoria || []) fisSet.add(c);
+  const fisCatEntries: MetadataRoute.Sitemap = Array.from(fisSet).map((c) => ({
+    url: `${baseUrl}/fisica/${c.toLowerCase().replace(/\s+/g, "-")}`,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
+  // Scuola pages (media + liceo)
+  type ClRow = { classe?: string[] };
+  const clDocs = await client.fetch<ClRow[]>(`*[_type=="lesson"]{ classe }`);
+  const media: Array<{ anno: string }> = [];
+  const liceo: Array<{ indirizzo: string; anno: string }> = [];
+  for (const d of clDocs || []) {
+    for (const c of d.classe || []) {
+      const mMedia = c.match(/^(\d+)º\s+Media$/i);
+      if (mMedia) media.push({ anno: mMedia[1] });
+      const m = c.match(/^(\d+)º\s+(.+)$/);
+      if (m && !/Media/i.test(c)) liceo.push({ indirizzo: m[2].toLowerCase().replace(/\s+/g, "-"), anno: m[1] });
+    }
+  }
+  const uniq = <T,>(arr: T[], key: (x: T) => string) => {
+    const seen = new Set<string>();
+    const out: T[] = [];
+    for (const it of arr) { const k = key(it); if (!seen.has(k)) { seen.add(k); out.push(it); } }
+    return out;
+  };
+  const mediaEntries: MetadataRoute.Sitemap = uniq(media, (x) => x.anno).map((x) => ({
+    url: `${baseUrl}/scuola/media/${x.anno}`,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+  const liceoEntries: MetadataRoute.Sitemap = uniq(liceo, (x) => `${x.indirizzo}-${x.anno}`).map((x) => ({
+    url: `${baseUrl}/scuola/liceo/${x.indirizzo}/${x.anno}`,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
+  return [...staticEntries, ...lessonEntries, ...catEntries, ...fisCatEntries, ...mediaEntries, ...liceoEntries, ...exerciseEntries];
 }

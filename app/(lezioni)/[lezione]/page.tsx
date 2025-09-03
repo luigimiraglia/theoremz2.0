@@ -21,6 +21,7 @@ type LessonDoc = {
   _id: string;
   title: string;
   subtitle?: string | null;
+  materia?: string | null;
   slug: { current: string };
   thumbnailUrl?: string | null;
   resources?: LessonResources;
@@ -47,9 +48,9 @@ const seoLessonQuery = groq`
 `;
 const fullLessonQuery = groq`
   *[_type == "lesson" && slug.current == $slug][0]{
-    _id, title, subtitle, slug, thumbnailUrl, resources, content,
+    _id, title, subtitle, materia, slug, thumbnailUrl, resources, content,
     _createdAt, _updatedAt, tags,
-    // ⬇️ prerequisiti risolti
+    categoria, classe,
     lezioniPropedeuticheObbligatorie[]->{ title, "slug": slug },
     lezioniPropedeuticheOpzionali[]->{ title, "slug": slug }
   }
@@ -255,6 +256,9 @@ export default async function Page({
           thumbnailUrl: lesson.thumbnailUrl ?? null,
           resources: lesson.resources ?? {},
           content: lesson.content,
+          materia: (lesson as any).materia ?? null,
+          categoria: (lesson as any).categoria ?? [],
+          classe: (lesson as any).classe ?? [],
           // ⬇️ passa i prerequisiti
           lezioniPropedeuticheObbligatorie:
             lesson.lezioniPropedeuticheObbligatorie ?? [],
