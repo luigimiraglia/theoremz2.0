@@ -31,6 +31,11 @@ export default function RisoluzioneEserciziPage() {
       { "@type": "ListItem", position: 2, name: "Risoluzione Esercizi", item: CANONICAL },
     ],
   } as const;
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    itemListElement: breadcrumbLd.itemListElement,
+  } as const;
+
   const graph = [
     {
       "@type": "Product",
@@ -47,10 +52,7 @@ export default function RisoluzioneEserciziPage() {
         bestRating: 5,
       },
     },
-    {
-      "@type": "BreadcrumbList",
-      ...breadcrumbLd,
-    },
+    breadcrumb,
     {
       "@type": "FAQPage",
       mainEntity: FAQS.map((f) => ({

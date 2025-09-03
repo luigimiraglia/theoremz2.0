@@ -157,11 +157,12 @@ export default function BlackPage() {
     })),
   } as const;
 
-  const graph = [
-    { "@type": "BreadcrumbList", ...breadcrumbLd },
-    product,
-    faq,
-  ];
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    itemListElement: breadcrumbLd.itemListElement,
+  } as const;
+
+  const graph = [breadcrumb, product, faq];
 
   return (
     <main className="bg-black text-white">
