@@ -236,14 +236,21 @@ export default async function Page({
         videoUrl={lesson.resources?.videolezione ?? undefined}
         createdAt={lesson._createdAt}
         updatedAt={lesson._updatedAt}
-        breadcrumbs={[
-          { name: "Theoremz", item: "https://theoremz.com/" },
-          { name: "Lezioni", item: "https://theoremz.com/" },
-          {
-            name: lesson.title,
-            item: `https://theoremz.com/${lesson.slug.current}`,
-          },
-        ]}
+        breadcrumbs={(function () {
+          const SITE = "https://theoremz.com";
+          const materia = (lesson as any).materia as string | null | undefined;
+          const second = materia && /matematica|fisica/i.test(materia)
+            ? {
+                name: materia.charAt(0).toUpperCase() + materia.slice(1).toLowerCase(),
+                item: `${SITE}/${materia.toLowerCase()}`,
+              }
+            : { name: "Lezioni", item: SITE };
+          return [
+            { name: "Theoremz", item: `${SITE}/` },
+            second,
+            { name: lesson.title, item: `${SITE}/${lesson.slug.current}` },
+          ];
+        })()}
       />
 
       {/* UI: render content server-side and pass it into client wrapper to reduce hydration cost */}

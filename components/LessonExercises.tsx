@@ -92,6 +92,7 @@ export default function LessonExercises({
                 "@graph": items.slice(0, 3).map((ex) => ({
                   "@type": "PracticeProblem",
                   name: ex.titolo,
+                  isAccessibleForFree: true,
                   eduQuestionType: "Esercizio svolto",
                   isPartOf: {
                     "@type": "LearningResource",
@@ -101,6 +102,27 @@ export default function LessonExercises({
                   hasPart: {
                     "@type": "Question",
                     name: ex.titolo,
+                    acceptedAnswer: {
+                      "@type": "Answer",
+                      text: [ex.soluzione, ex.passaggi, ex.testo]
+                        .filter(Boolean)
+                        .map((arr) =>
+                          Array.isArray(arr)
+                            ? (arr as any[])
+                                .map((b: any) =>
+                                  b?._type === "block"
+                                    ? (b.children || [])
+                                        .map((c: any) => c.text || "")
+                                        .join("")
+                                    : ""
+                                )
+                                .join(" ")
+                            : ""
+                        )
+                        .join(" ")
+                        .replace(/\s+/g, " ")
+                        .trim(),
+                    },
                   },
                 })),
               }),

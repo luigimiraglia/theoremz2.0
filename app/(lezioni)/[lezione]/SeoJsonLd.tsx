@@ -13,12 +13,21 @@ export default function SeoJsonLd(props: {
   const url = `${base}/${props.slug}`;
   const image = props.thumbnailUrl ?? `${base}/metadata.png`;
 
+  // Utility to keep strings within Google's recommended limits
+  const clamp = (s: string | undefined, max = 110) => {
+    if (!s) return undefined;
+    const t = s.trim();
+    return t.length > max ? t.slice(0, max - 1).trimEnd() + "…" : t;
+  };
+
   // Article (primary)
   const article = {
     "@type": "Article",
-    headline: props.subtitle
-      ? `${props.title}: ${props.subtitle}`
-      : props.title,
+    // Google recommends headline <= 110 chars
+    headline: clamp(
+      props.subtitle ? `${props.title}: ${props.subtitle}` : props.title,
+      110
+    ),
     mainEntityOfPage: url,
     image: [image],
     author: { "@type": "Organization", name: "Theoremz", url: base },
@@ -38,9 +47,10 @@ export default function SeoJsonLd(props: {
   // LearningResource (didattico)
   const learningResource = {
     "@type": "LearningResource",
-    name: props.subtitle
-      ? `${props.title}: ${props.subtitle}`
-      : props.title,
+    name: clamp(
+      props.subtitle ? `${props.title}: ${props.subtitle}` : props.title,
+      110
+    ),
     url,
     image,
     inLanguage: "it-IT",
@@ -77,8 +87,8 @@ export default function SeoJsonLd(props: {
 
     video = {
       "@type": "VideoObject",
-      name: props.title,
-      description: props.subtitle || props.title,
+      name: clamp(props.title, 110),
+      description: clamp(props.subtitle || props.title, 160),
       thumbnailUrl: [image],
       uploadDate: props.createdAt ?? undefined,
       publisher: { "@type": "Organization", name: "Theoremz", url: base },

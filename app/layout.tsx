@@ -86,6 +86,34 @@ export default function RootLayout({
         <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="" />
         <link rel="preconnect" href="https://i.ytimg.com" crossOrigin="" />
         <link rel="preconnect" href="https://img.youtube.com" crossOrigin="" />
+
+        {/* Base structured data: Organization + WebSite */}
+        <script
+          type="application/ld+json"
+          // keep JSON minimal to avoid validation noise
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  name: "Theoremz",
+                  url: "https://theoremz.com",
+                  logo: {
+                    "@type": "ImageObject",
+                    url: "https://theoremz.com/metadata.png",
+                  },
+                },
+                {
+                  "@type": "WebSite",
+                  name: "Theoremz",
+                  url: "https://theoremz.com",
+                  inLanguage: "it-IT",
+                },
+              ],
+            }),
+          }}
+        />
       </head>
 
       <body className="antialiased min-h-dvh bg-background text-foreground">

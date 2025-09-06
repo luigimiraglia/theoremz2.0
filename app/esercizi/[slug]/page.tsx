@@ -87,6 +87,19 @@ function JsonLd({ data }: { data: unknown }) {
   );
 }
 
+// Convert a subset of PortableText blocks to plain text
+function ptToPlain(blocks: PortableTextBlock[] | undefined, max = 800) {
+  if (!blocks) return "";
+  const out: string[] = [];
+  for (const b of blocks) {
+    if ((b as any)._type === "block" && Array.isArray((b as any).children)) {
+      out.push(((b as any).children || []).map((c: any) => c.text || "").join(""));
+    }
+    if (out.join(" ").length > max) break;
+  }
+  return out.join(" ").replace(/\s+/g, " ").trim();
+}
+
 export default async function EserciziPerLezione({
   params,
 }: {
@@ -118,13 +131,21 @@ export default async function EserciziPerLezione({
     "@graph": (items || []).slice(0, 3).map((ex) => ({
       "@type": "PracticeProblem",
       name: ex.titolo,
+      isAccessibleForFree: true,
       eduQuestionType: "Esercizio svolto",
       isPartOf: {
         "@type": "LearningResource",
         name: lesson.title,
         url: `${SITE}/${lesson.slug.current}`,
       },
-      hasPart: { "@type": "Question", name: ex.titolo },
+      hasPart: {
+        "@type": "Question",
+        name: ex.titolo,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: ptToPlain(ex.soluzione || ex.passaggi || ex.testo, 800),
+        },
+      },
     })),
   };
 
