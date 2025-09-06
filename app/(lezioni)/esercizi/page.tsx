@@ -28,7 +28,18 @@ export default async function EserciziPage() {
     lesson: d.lessonSlug ? { title: d.lessonTitle, slug: d.lessonSlug } : null,
   }));
 
+  const SITE = "https://theoremz.com";
+  const canonical = `${SITE}/esercizi`;
+
   return (
-    <EserciziClient initialItems={mapped} initialTotal={total || mapped.length} initialLimit={LIMIT} />
+    <>
+      {/* Canonical esplicito per evitare discrepanze segnalate dai crawler */}
+      <link rel="canonical" href={canonical} />
+      <EserciziClient
+        initialItems={mapped}
+        initialTotal={total || mapped.length}
+        initialLimit={LIMIT}
+      />
+    </>
   );
 }
