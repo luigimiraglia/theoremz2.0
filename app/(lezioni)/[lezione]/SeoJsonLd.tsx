@@ -31,7 +31,6 @@ export default function SeoJsonLd(props: {
     mainEntityOfPage: url,
     image: [image],
     author: { "@type": "Organization", name: "Theoremz", url: base },
-    reviewedBy: { "@type": "Organization", name: "Theoremz", url: base },
     publisher: {
       "@type": "Organization",
       name: "Theoremz",
