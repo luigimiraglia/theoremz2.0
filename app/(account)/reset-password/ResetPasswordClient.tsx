@@ -12,8 +12,8 @@ import {
 export default function ResetPasswordClient() {
   const search = useSearchParams();
   const router = useRouter();
-  const oobCode = search.get("oobCode");
-  const mode = search.get("mode"); // "resetPassword" nei link Firebase
+  const oobCode = search?.get("oobCode") ?? null;
+  const mode = search?.get("mode") ?? null; // "resetPassword" nei link Firebase
 
   const showConfirm = useMemo(
     () => !!oobCode && mode === "resetPassword",

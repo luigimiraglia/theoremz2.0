@@ -1,6 +1,7 @@
 // app/(landing)/black/page.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
+import BuyLink from "@/components/BuyLink";
 import SenjaEmbed from "@/components/SenjaEmbed";
 
 // ---------- METADATA SEO ----------
@@ -556,8 +557,20 @@ function PriceCard({
           >
             Chiedi informazioni 💬
           </Link>
-          <Link
+          <BuyLink
             href={buyHref}
+            plan={
+              unit.includes("anno")
+                ? "Annuale"
+                : unit.includes("mese")
+                  ? price.includes("6,90")
+                    ? "Base Mensile"
+                    : price.includes("3,90")
+                      ? "Essential Mensile"
+                      : "Mensile"
+                  : ""
+            }
+            price={price}
             aria-label={`Acquista il piano ${
               unit.includes("anno")
                 ? "Annuale"
@@ -568,7 +581,7 @@ function PriceCard({
             className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-400 px-4 py-3 text-center font-extrabold text-white transition hover:from-sky-500 hover:to-sky-400"
           >
             Acquista ora 👉
-          </Link>
+          </BuyLink>
         </div>
       </div>
     </div>

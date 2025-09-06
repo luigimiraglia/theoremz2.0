@@ -1,4 +1,5 @@
 // app/esercizi/page.tsx
+import BuyLink from "@/components/BuyLink";
 export default function RisoluzioneEserciziPage() {
   const SITE = "https://theoremz.com";
   const CANONICAL = `${SITE}/risoluzione-esercizi`;
@@ -524,11 +525,10 @@ function PlanCard({
       </ul>
 
       <div className="mt-5">
-        <a
+        <BuyLink
           href={buyHref}
-          {...(isExternalBuy
-            ? { target: "_blank", rel: "noopener noreferrer" }
-            : {})}
+          plan={title}
+          price={price}
           className={`inline-flex w-full items-center justify-center rounded-xl px-5 py-3 text-[13.5px] sm:text-[14.5px] font-extrabold ${
             popular
               ? "bg-gradient-to-r from-sky-600 to-sky-500 text-white shadow-[0_7px_0_#1d4ed8] active:translate-y-[1px] active:shadow-[0_6px_0_#1d4ed8]"
@@ -536,7 +536,7 @@ function PlanCard({
           }`}
         >
           {cta}
-        </a>
+        </BuyLink>
         <p className="mt-2 text-center text-[11.5px] sm:text-[12.5px] font-semibold text-slate-500">
           🔒 Sicuro • 💸 Rimborso 100% • 📦 Email con ricevuta
         </p>

@@ -9,6 +9,7 @@ import React, {
   ReactNode,
 } from "react";
 import type { User as FirebaseUser } from "firebase/auth";
+import { track } from "@/lib/analytics";
 
 /* =========================
    Tipi
@@ -91,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading] = useState(false); // niente spinner globale
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
   const [savedLessons, setSavedLessons] = useState<string[]>([]);
+  const [reportedSubForEmail, setReportedSubForEmail] = useState<string | null>(null);
 
   /* ---------- Preferiti ---------- */
   const refreshSavedLessons = async () => {
@@ -168,6 +170,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When subscription becomes active for a user, send a one-time analytics event per session
+  useEffect(() => {
+    try {
+      if (!user?.email) return;
+      if (!isSubscribed) return;
+      const email = user.email.toLowerCase();
+      if (reportedSubForEmail === email) return;
+      track("subscription_active", { method: "stripe_status_check" });
+      setReportedSubForEmail(email);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSubscribed, user?.email]);
 
   /* ---------- Calcolo stato abbonamento (con cache/override) ---------- */
   const computeSubscription = async (emailNullable: string | null) => {

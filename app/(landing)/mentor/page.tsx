@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import BuyLink from "@/components/BuyLink";
 export const metadata = {
   title: "Theoremz Mentor — Tutor personale per verifiche ed esami",
   description:
@@ -453,12 +454,13 @@ function Plan({
         >
           Chiedi informazioni 💬
         </a>
-        <a
+        <BuyLink
           href={stripeLink}
+          plan={price}
           className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-sky-600 to-cyan-500 px-6 py-3 text-[15px] font-extrabold text-white shadow-[0_8px_0_#1d4ed8] active:translate-y-[1px] active:shadow-[0_7px_0_#1d4ed8]"
         >
           Acquista ora 👉
-        </a>
+        </BuyLink>
       </div>
     </div>
   );

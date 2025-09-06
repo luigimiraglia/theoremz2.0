@@ -1,8 +1,12 @@
 "use client";
 import { useCallback } from "react";
+import { track } from "@/lib/analytics";
 
 export default function EserciziSmallButton() {
   const clickHandle = useCallback(() => {
+    try {
+      track("exercise_cta_click", { where: "lesson_header" });
+    } catch {}
     const SELECTOR = "#lesson-exercises-cta, [data-exercises-cta]";
     const prefersReduced =
       typeof window !== "undefined" &&

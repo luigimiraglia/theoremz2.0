@@ -10,6 +10,7 @@ import LazyOnVisible from "@/components/LazyOnVisible";
 import WhatsappButton from "@/components/WhatsappButton";
 import AiChatLauncher from "@/components/AiChatLauncher";
 import EserciziSmallButton from "@/components/EserciziSmallButton";
+import LessonAnalytics from "@/components/LessonAnalytics";
 
 /* ---------- Tipi ---------- */
 type UnknownSlug = string | { current?: string | null } | null | undefined;
@@ -155,6 +156,14 @@ export default function LessonClient({
 
   return (
     <article className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert">
+      {/* Analytics for lesson view (client-only) */}
+      <LessonAnalytics
+        id={lesson.id}
+        slug={lesson.slug}
+        title={lesson.title}
+        materia={lesson.materia || null}
+        categoria={lesson.categoria || null}
+      />
       {/* Header */}
       <header className="rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 text-center pt-3 pb-3">
         <div className="flex justify-between mx-3 items-center gap-2">

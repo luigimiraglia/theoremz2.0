@@ -2,12 +2,16 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import { Suspense } from "react";
+import Script from "next/script";
+import { cookies } from "next/headers";
 import { AuthProvider } from "@/lib/AuthContext";
 import "./globals.css";
 import Providers from "./providers";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BlackPromoBanner from "@/components/BlackPromoBanner"; // ⬅️ NEW
+import AnalyticsListener from "@/components/AnalyticsListener";
+import CookieBanner from "@/components/CookieBanner";
 
 export const metadata: Metadata = {
   title: {
@@ -57,11 +61,21 @@ export const viewport: Viewport = {
   userScalable: true,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+  let hasAnalyticsConsent = false;
+  try {
+    const cookieStore = await cookies();
+    const c = cookieStore.get("tz_consent")?.value;
+    if (c) {
+      const v: any = JSON.parse(decodeURIComponent(c));
+      hasAnalyticsConsent = !!v?.c?.analytics;
+    }
+  } catch {}
   return (
     <html lang="it" translate="no" className={montserrat.className} suppressHydrationWarning>
       <head>
@@ -114,6 +128,42 @@ export default function RootLayout({
             }),
           }}
         />
+
+        {/* Consent Mode default (deny) – injected as early as possible */}
+        <Script id="consent-default" strategy="beforeInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);} 
+            gtag('consent', 'default', {
+              'ad_storage': 'denied',
+              'ad_user_data': 'denied',
+              'ad_personalization': 'denied',
+              'analytics_storage': 'denied',
+              'functionality_storage': 'denied',
+              'security_storage': 'granted'
+            });
+          `}
+        </Script>
+
+        {/* Google Analytics (GA4) – load only if analytics consent was already granted */}
+        {GA_ID && hasAnalyticsConsent ? (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);} 
+                window.gtag = gtag;
+                gtag('js', new Date());
+                // send_page_view: false to manually handle SPA navigations
+                gtag('config', '${GA_ID}', { anonymize_ip: true, send_page_view: false });
+              `}
+            </Script>
+          </>
+        ) : null}
       </head>
 
       <body className="antialiased min-h-dvh bg-background text-foreground">
@@ -134,6 +184,18 @@ export default function RootLayout({
 
               <Suspense fallback={null}>
                 <Footer />
+              </Suspense>
+
+              {/* SPA pageview listener (client) — only when analytics consent is present */}
+              {GA_ID && hasAnalyticsConsent ? (
+                <Suspense fallback={null}>
+                  <AnalyticsListener />
+                </Suspense>
+              ) : null}
+
+              {/* GDPR consent banner */}
+              <Suspense fallback={null}>
+                <CookieBanner />
               </Suspense>
             </Providers>
           </Suspense>

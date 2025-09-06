@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import BlackPopup from "./BlackPopup";
+import { track } from "@/lib/analytics";
 
 // Defer heavy react-pdf imports until viewer opens
 const ReactPdf: {
@@ -84,6 +85,9 @@ export default function LessonNotes({
       }
     }
     setOpen(true);
+    try {
+      track("notes_open_click", { lesson_slug: lessonSlug, lesson_title: lessonTitle });
+    } catch {}
   };
 
   type ApiPdfFile = {
