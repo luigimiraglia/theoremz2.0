@@ -187,6 +187,104 @@ export default defineType({
                     props.children
                   ),
               },
+              // Esempio: barra verticale (gradient) a sinistra che sposta l'indentazione
+              {
+                title: "Esempio (barra sx)",
+                value: "exUnderline",
+                icon: () =>
+                  React.createElement(
+                    "span",
+                    {
+                      style: {
+                        display: "inline-block",
+                        position: "relative",
+                        paddingLeft: 6,
+                      },
+                    },
+                    [
+                      React.createElement("span", {
+                        key: "bar",
+                        "aria-hidden": true,
+                        style: {
+                          position: "absolute",
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: 5,
+                          backgroundImage:
+                            "linear-gradient(180deg, #0ea5e9, #6366f1)",
+                          borderRadius: 9999,
+                        },
+                      }),
+                      "EX",
+                    ]
+                  ),
+                component: (props: { children: React.ReactNode }) =>
+                  React.createElement(
+                    "span",
+                    {
+                      style: {
+                        display: "inline-block",
+                        position: "relative",
+                        paddingLeft: 8,
+                      },
+                    },
+                    [
+                      React.createElement("span", {
+                        key: "bar",
+                        "aria-hidden": true,
+                        style: {
+                          position: "absolute",
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: 6,
+                          backgroundImage:
+                            "linear-gradient(180deg, #0ea5e9, #6366f1)",
+                          borderRadius: 9999,
+                        },
+                      }),
+                      props.children,
+                    ]
+                  ),
+              },
+              // Evidenziatore blu (decorator) — visibile anche nello Studio
+              {
+                title: "Evidenziatore (giallo)",
+                value: "highlightBlue",
+                icon: () =>
+                  React.createElement(
+                    "span",
+                    {
+                      style: {
+                        display: "inline-block",
+                        padding: "0 4px",
+                        borderRadius: 4,
+                        backgroundColor: "rgba(255,241,0,.92)",
+                        color: "inherit",
+                        fontWeight: 800,
+                        lineHeight: 1.1,
+                        WebkitBoxDecorationBreak: "clone",
+                        boxDecorationBreak: "clone",
+                      },
+                    },
+                    "HL"
+                  ),
+                component: (props: { children: React.ReactNode }) =>
+                  React.createElement(
+                    "span",
+                    {
+                      style: {
+                        backgroundColor: "rgba(255,241,0,.92)",
+                        borderRadius: 4,
+                        padding: "0.04em 0.26em",
+                        WebkitBoxDecorationBreak: "clone",
+                        boxDecorationBreak: "clone",
+                      },
+                    },
+                    props.children
+                  ),
+              },
             ],
             annotations: [
               {

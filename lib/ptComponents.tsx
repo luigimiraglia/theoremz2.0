@@ -15,6 +15,21 @@ const MathInChildren = ({ children }: { children: React.ReactNode }) => (
   </>
 );
 
+// Recursively apply MathText to all string nodes inside a React node tree
+function withInlineMath(children: React.ReactNode): React.ReactNode {
+  const map = (node: React.ReactNode): React.ReactNode => {
+    if (typeof node === "string") return <MathText text={node} />;
+    if (Array.isArray(node)) return node.map((n, i) => <React.Fragment key={i}>{map(n)}</React.Fragment>);
+    if (React.isValidElement(node)) {
+      const props: any = (node as any).props || {};
+      const newChildren = map(props.children);
+      return React.cloneElement(node as any, { ...props, children: newChildren });
+    }
+    return node;
+  };
+  return map(children);
+}
+
 /* ---------------- Helpers per le tabelle ---------------- */
 
 // matcha una cella che è SOLO una formula $...$ (non inline-pezzo)
@@ -70,6 +85,8 @@ export const ptComponents: PortableTextComponents = {
         </p>
       );
     },
+
+    // rimosso: vecchio stile blocco "Esempio" (ora usiamo una mark inline)
 
     blockquote: ({ children }) => (
       <blockquote className="my-6 rounded-lg border-l-4 border-blue-500 bg-blue-50 p-4 italic">
@@ -238,16 +255,51 @@ export const ptComponents: PortableTextComponents = {
   /* ----------   MARKS (inline) ---------- */
   marks: {
     /* nuovi decorator custom (schema v4: value "italic" e "bold") */
-    italic: ({ children }) => <em className="italic">{children}</em>,
-    bold: ({ children }) => <strong className="font-bold">{children}</strong>,
+    italic: ({ children }) => <em className="italic">{withInlineMath(children)}</em>,
+    bold: ({ children }) => <strong className="font-bold">{withInlineMath(children)}</strong>,
 
     /* retro-compatibilità per contenuti già salvati con em/strong */
-    em: ({ children }) => <em className="italic">{children}</em>,
-    strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+    em: ({ children }) => <em className="italic">{withInlineMath(children)}</em>,
+    strong: ({ children }) => <strong className="font-bold">{withInlineMath(children)}</strong>,
 
-    underline: ({ children }) => <span className="underline">{children}</span>,
+    underline: ({ children }) => <span className="underline">{withInlineMath(children)}</span>,
     blueBold: ({ children }) => (
-      <strong className="font-bold text-blue-500">{children}</strong>
+      <strong className="font-bold text-blue-500">{withInlineMath(children)}</strong>
+    ),
+
+    // Evidenziatore blu: effetto highlighter elegante e leggibile in light/dark
+    highlightBlue: ({ children }) => (
+      <span
+        className="relative inline rounded-[4px] px-[0.26em] py-[0.04em]"
+        style={{
+          // evidenziatore giallo fluorescente deciso che copre tutta la parola
+          backgroundColor: "rgba(255, 241, 0, 0.92)",
+          boxDecorationBreak: "clone" as any,
+          WebkitBoxDecorationBreak: "clone" as any,
+        }}
+      >
+        {withInlineMath(children)}
+      </span>
+    ),
+
+    // Barra verticale a sinistra (gradient) che sposta l'indentazione, con bordi arrotondati e singola barra per tutte le righe
+    exUnderline: ({ children }) => (
+      <span className="relative inline-block align-baseline" style={{ paddingLeft: 10 }}>
+        <span
+          aria-hidden
+          className="pointer-events-none"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 6,
+            backgroundImage: "linear-gradient(180deg, #0ea5e9, #6366f1)",
+            borderRadius: 9999,
+          }}
+        />
+        {withInlineMath(children)}
+      </span>
     ),
 
     // link: niente MathText dentro
@@ -262,7 +314,7 @@ export const ptComponents: PortableTextComponents = {
         rel="noopener noreferrer"
         className="text-blue-500 underline underline-offset-2 hover:text-blue-900"
       >
-        {children}
+        {withInlineMath(children)}
       </a>
     ),
 
