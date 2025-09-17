@@ -9,7 +9,7 @@ const MATH_RE =
 
 export default function MathText({
   text,
-  allowBlock = false, // di default nei titoli teniamo inline
+  allowBlock = false, // se true: forza visualizzazione display per ogni formula
 }: {
   text?: string | null;
   allowBlock?: boolean;
@@ -28,19 +28,24 @@ export default function MathText({
     if (i > last) parts.push(s.slice(last, i));
 
     const expr = dd ?? d ?? p ?? b ?? "";
-    const isBlock = !!dd || !!b;
 
-    parts.push(
-      isBlock && allowBlock ? (
-        <BlockMath key={parts.length} errorColor="#cc0000">
-          {expr}
-        </BlockMath>
-      ) : (
+    if (allowBlock) {
+      parts.push(
+        <div key={parts.length} className="my-3 overflow-x-auto">
+          <BlockMath errorColor="#cc0000">{expr}</BlockMath>
+        </div>
+      );
+    } else {
+      const needsDisplayInline = /\\(?:d?frac|cfrac|tfrac)\b/.test(expr);
+      const toRender = needsDisplayInline
+        ? `\\displaystyle { ${expr} }`
+        : expr;
+      parts.push(
         <InlineMath key={parts.length} errorColor="#cc0000">
-          {expr}
+          {toRender}
         </InlineMath>
-      )
-    );
+      );
+    }
 
     last = i + full.length;
   }

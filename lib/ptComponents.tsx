@@ -7,10 +7,14 @@ import { LucideQuote as BlockquoteIcon } from "lucide-react";
 import MathText from "@/components/MathText";
 
 /* ---- helper: applica MathText solo ai nodi stringa dei children ---- */
-const MathInChildren = ({ children }: { children: React.ReactNode }) => (
+const MathInChildren = ({ children, display = false }: { children: React.ReactNode; display?: boolean }) => (
   <>
     {React.Children.map(children, (child, i) =>
-      typeof child === "string" ? <MathText key={i} text={child} /> : child
+      typeof child === "string" ? (
+        <MathText key={i} text={child} allowBlock={display} />
+      ) : (
+        child
+      )
     )}
   </>
 );
@@ -42,7 +46,11 @@ const renderCell = (raw: unknown) => {
   if (!s) return "";
   if (isWholeMathCell(s)) {
     const inner = s.slice(1, -1);
-    return <InlineMath errorColor="#cc0000">{inner}</InlineMath>;
+    return (
+      <div className="my-2 overflow-x-auto">
+        <BlockMath errorColor="#cc0000">{inner}</BlockMath>
+      </div>
+    );
   }
   return <MathText text={s} />;
 };
@@ -71,7 +79,7 @@ export const ptComponents: PortableTextComponents = {
   block: {
     h2: ({ children }) => (
       <h2 className="mt-8 mb-4 text-2xl text-blue-500 font-extrabold">
-        <MathInChildren>{children}</MathInChildren>
+        <MathInChildren display={false}>{children}</MathInChildren>
       </h2>
     ),
 
@@ -80,9 +88,9 @@ export const ptComponents: PortableTextComponents = {
         return <MathText text={blockPlainText(value)} allowBlock />;
       }
       return (
-        <p className="my-4 leading-7 font-medium">
-          <MathInChildren>{children}</MathInChildren>
-        </p>
+        <div className="my-4 leading-7 font-medium">
+          <MathInChildren display>{children}</MathInChildren>
+        </div>
       );
     },
 
@@ -91,7 +99,7 @@ export const ptComponents: PortableTextComponents = {
     blockquote: ({ children }) => (
       <blockquote className="my-6 rounded-lg border-l-4 border-blue-500 bg-blue-50 p-4 italic">
         <BlockquoteIcon size={18} className="mr-1 inline" />
-        <MathInChildren>{children}</MathInChildren>
+        <MathInChildren display>{children}</MathInChildren>
       </blockquote>
     ),
   },
@@ -109,12 +117,12 @@ export const ptComponents: PortableTextComponents = {
   listItem: {
     bullet: ({ children }) => (
       <li>
-        <MathInChildren>{children}</MathInChildren>
+        <MathInChildren display>{children}</MathInChildren>
       </li>
     ),
     number: ({ children }) => (
       <li>
-        <MathInChildren>{children}</MathInChildren>
+        <MathInChildren display>{children}</MathInChildren>
       </li>
     ),
   },
@@ -128,11 +136,10 @@ export const ptComponents: PortableTextComponents = {
 
     // retro-compatibilità oggetto "latex"
     latex: ({ value }) =>
-      value.display ? (
+      // Forza stile display per leggibilità
+      <div className="my-3 overflow-x-auto">
         <BlockMath errorColor="#cc0000">{value.code}</BlockMath>
-      ) : (
-        <InlineMath errorColor="#cc0000">{value.code}</InlineMath>
-      ),
+      </div>,
 
     imageExternal: ({ value }) => {
       const url: string = value?.url || "";
@@ -267,16 +274,18 @@ export const ptComponents: PortableTextComponents = {
       <strong className="font-bold text-blue-500">{withInlineMath(children)}</strong>
     ),
 
-    // Evidenziatore blu: effetto highlighter elegante e leggibile in light/dark
+    // Evidenziatore: leggibile in light e dark
     highlightBlue: ({ children }) => (
       <span
-        className="relative inline rounded-[4px] px-[0.26em] py-[0.04em]"
-        style={{
-          // evidenziatore giallo fluorescente deciso che copre tutta la parola
-          backgroundColor: "rgba(255, 241, 0, 0.92)",
-          boxDecorationBreak: "clone" as any,
-          WebkitBoxDecorationBreak: "clone" as any,
-        }}
+        className={[
+          "relative inline rounded-[4px] px-[0.26em] py-[0.04em]",
+          // Light mode: giallo deciso
+          "bg-yellow-300/90 text-slate-900",
+          // Dark mode: tono leggero + anello per contrasto, mantiene il colore del testo
+          "dark:bg-yellow-300/25 dark:ring-1 dark:ring-yellow-300/30 dark:text-inherit",
+          // Copre parole spezzate su più righe
+          "[box-decoration-break:clone] [WebkitBoxDecorationBreak:clone]",
+        ].join(" ")}
       >
         {withInlineMath(children)}
       </span>
@@ -325,7 +334,7 @@ export const ptComponents: PortableTextComponents = {
 
     // retro-compatibilità: mark "inlineLatex"
     inlineLatex: ({ value }) => (
-      <InlineMath errorColor="#cc0000">{value.code}</InlineMath>
+      <InlineMath errorColor="#cc0000">{`\\displaystyle { ${value.code} }`}</InlineMath>
     ),
   },
 };

@@ -252,38 +252,74 @@ export default defineType({
               {
                 title: "Evidenziatore (giallo)",
                 value: "highlightBlue",
-                icon: () =>
-                  React.createElement(
+                // Icona sensibile al tema (usa prefers-color-scheme)
+                icon: () => {
+                  const isDark =
+                    typeof window !== "undefined" &&
+                    typeof window.matchMedia === "function" &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches;
+                  return React.createElement(
                     "span",
                     {
                       style: {
                         display: "inline-block",
                         padding: "0 4px",
                         borderRadius: 4,
-                        backgroundColor: "rgba(255,241,0,.92)",
+                        backgroundColor: isDark
+                          ? "rgba(250,204,21,.25)"
+                          : "rgba(255,241,0,.92)",
                         color: "inherit",
                         fontWeight: 800,
                         lineHeight: 1.1,
                         WebkitBoxDecorationBreak: "clone",
                         boxDecorationBreak: "clone",
+                        boxShadow: isDark
+                          ? "inset 0 0 0 1px rgba(250,204,21,.30)"
+                          : undefined,
                       },
                     },
                     "HL"
-                  ),
-                component: (props: { children: React.ReactNode }) =>
-                  React.createElement(
+                  );
+                },
+                // Componente React (client) che si adatta al tema
+                component: (props: { children: React.ReactNode }) => {
+                  const [isDark, setIsDark] = React.useState(false);
+                  React.useEffect(() => {
+                    try {
+                      const m = window.matchMedia(
+                        "(prefers-color-scheme: dark)"
+                      );
+                      const onChange = () => setIsDark(m.matches);
+                      onChange();
+                      if (m.addEventListener) m.addEventListener("change", onChange);
+                      else m.addListener(onChange);
+                      return () => {
+                        if (m.removeEventListener) m.removeEventListener("change", onChange);
+                        else m.removeListener(onChange);
+                      };
+                    } catch {
+                      // noop
+                    }
+                  }, []);
+                  return React.createElement(
                     "span",
                     {
                       style: {
-                        backgroundColor: "rgba(255,241,0,.92)",
+                        backgroundColor: isDark
+                          ? "rgba(250,204,21,.25)"
+                          : "rgba(255,241,0,.92)",
                         borderRadius: 4,
                         padding: "0.04em 0.26em",
                         WebkitBoxDecorationBreak: "clone",
                         boxDecorationBreak: "clone",
+                        boxShadow: isDark
+                          ? "inset 0 0 0 1px rgba(250,204,21,.30)"
+                          : undefined,
                       },
                     },
                     props.children
-                  ),
+                  );
+                },
               },
             ],
             annotations: [

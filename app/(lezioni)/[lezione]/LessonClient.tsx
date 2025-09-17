@@ -11,6 +11,7 @@ import WhatsappButton from "@/components/WhatsappButton";
 import AiChatLauncher from "@/components/AiChatLauncher";
 import EserciziSmallButton from "@/components/EserciziSmallButton";
 import LessonAnalytics from "@/components/LessonAnalytics";
+import LessonReview from "@/components/LessonReview";
 
 /* ---------- Tipi ---------- */
 type UnknownSlug = string | { current?: string | null } | null | undefined;
@@ -310,6 +311,9 @@ export default function LessonClient({
         rootMargin="400px"
         minHeight={200}
       />
+
+      {/* Recensioni (ultima sezione) */}
+      <LessonReview lessonSlug={lesson.slug} lessonTitle={lesson.title} />
     </article>
   );
 }
