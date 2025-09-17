@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import BuyLink from "@/components/BuyLink";
+import FloatingLeadButton from "@/components/FloatingLeadButton";
 export const metadata = {
   title: "Theoremz Mentor — Tutor personale per verifiche ed esami",
   description:
@@ -77,10 +78,17 @@ export default function MentorPage() {
 
   return (
     <main className="bg-white text-slate-900">
+      <FloatingLeadButton
+        href="/contatto-rapido?source=mentor"
+        label="Richiedi una chiamata gratuita"
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({ "@context": "https://schema.org", "@graph": graph }),
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": graph,
+          }),
         }}
       />
       <Hero /> {/* solo qui ho migliorato il responsive */}

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import BuyLink from "@/components/BuyLink";
 import SenjaEmbed from "@/components/SenjaEmbed";
+import FloatingLeadButton from "@/components/FloatingLeadButton";
 
 // ---------- METADATA SEO ----------
 const TITLE =
@@ -138,13 +139,15 @@ export default function BlackPage() {
         "@type": "Review",
         reviewRating: { "@type": "Rating", ratingValue: 5, bestRating: 5 },
         author: { "@type": "Person", name: "Giulia" },
-        reviewBody: "Risolto in 35 minuti con spiegazione dettagliata. Super servizio!",
+        reviewBody:
+          "Risolto in 35 minuti con spiegazione dettagliata. Super servizio!",
       },
       {
         "@type": "Review",
         reviewRating: { "@type": "Rating", ratingValue: 5, bestRating: 5 },
         author: { "@type": "Person", name: "Marco" },
-        reviewBody: "Mi hanno aiutato anche dopo con due dubbi in chat. Gentilissimi.",
+        reviewBody:
+          "Mi hanno aiutato anche dopo con due dubbi in chat. Gentilissimi.",
       },
     ],
   } as const;
@@ -167,11 +170,18 @@ export default function BlackPage() {
 
   return (
     <main className="bg-black text-white">
+      <FloatingLeadButton
+        href="/contatto-rapido?source=black"
+        label="Richiedi una chiamata gratuita"
+      />
       {/* JSON-LD (single @graph) */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({ "@context": "https://schema.org", "@graph": graph }),
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": graph,
+          }),
         }}
       />
 

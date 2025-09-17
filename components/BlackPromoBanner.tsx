@@ -18,7 +18,13 @@ export default function BlackStickyPromo() {
 
   const shouldShow = useMemo(() => {
     const p = (pathname || "").toLowerCase();
-    if (p.startsWith("/black") || p.startsWith("/mentor")) return false;
+    // Do not show on sales pages and lead form page
+    if (
+      p.startsWith("/black") ||
+      p.startsWith("/mentor") ||
+      p.startsWith("/contatto-rapido")
+    )
+      return false;
     return isSubscribed !== true;
   }, [pathname, isSubscribed]);
 

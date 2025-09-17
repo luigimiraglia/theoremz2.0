@@ -175,7 +175,7 @@ export default async function RootLayout({
                 <Header />
               </Suspense>
 
-              {/* Banner Black (client) — mostra solo se non abbonato, escluso /black e /mentor */}
+              {/* Banner Black (client) — mostra solo se non abbonato; escluso /black, /mentor e /contatto-rapido */}
               <Suspense fallback={null}>
                 <BlackPromoBanner />
               </Suspense>
