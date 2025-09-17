@@ -6,7 +6,7 @@ import { track } from "@/lib/analytics";
 
 export default function LeadFormClient() {
   const sp = useSearchParams();
-  const source = sp.get("source") || sp.get("ref") || "direct";
+  const source = sp?.get("source") || sp?.get("ref") || "direct";
 
   const [nome, setNome] = useState("");
   const [cognome, setCognome] = useState("");

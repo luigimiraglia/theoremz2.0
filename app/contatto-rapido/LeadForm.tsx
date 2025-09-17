@@ -7,7 +7,7 @@ import { Phone, MessageCircle, CheckCircle2, Clock, ShieldCheck, Star } from "lu
 
 export default function LeadForm() {
   const sp = useSearchParams();
-  const source = sp.get("source") || sp.get("ref") || "direct";
+  const source = sp?.get("source") || sp?.get("ref") || "direct";
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
