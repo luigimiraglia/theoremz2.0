@@ -9,7 +9,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  // Prima del mount renderizza direttamente i children, così non blocca il paint
+  // Prima del mount renderizza direttamente i children: il tema iniziale è già applicato
+  // dallo script in <head> (theme-init), quindi niente flash.
   if (!mounted) return <>{children}</>;
 
   return (
@@ -18,6 +19,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       defaultTheme="system"
       enableSystem
       storageKey="theme"
+      disableTransitionOnChange
     >
       {children}
     </ThemeProvider>

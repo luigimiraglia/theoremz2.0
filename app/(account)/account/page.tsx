@@ -1,10 +1,17 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { getAuth } from "firebase/auth";
+import dynamic from "next/dynamic";
+const GradesChartRecharts = dynamic(() => import("@/components/GradesChartRecharts"), {
+  ssr: false,
+  loading: () => (
+    <div className="mt-2 h-[240px] rounded-2xl border border-slate-200 bg-white [.dark_&]:bg-slate-900/60 animate-pulse" />
+  ),
+});
 
 /* ───────────────── helpers data ───────────────── */
 // Normalizza in millisecondi: accetta Date | string ISO | number (ms/sec) | Firestore Timestamp
@@ -370,6 +377,35 @@ function Card(props: {
         {props.right}
       </div>
       <div className="mt-4">{props.children}</div>
+    </div>
+  );
+}
+
+// Lazy render wrapper using IntersectionObserver to render the heavy chart only when in viewport
+function LazyChart({ math, phys }: { math: GradeItem[]; phys: GradeItem[] }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!ref.current || show) return;
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          setShow(true);
+          io.disconnect();
+          break;
+        }
+      }
+    }, { rootMargin: "200px" });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, [show]);
+  return (
+    <div ref={ref}>
+      {show ? (
+        <GradesChartRecharts math={math} phys={phys} />
+      ) : (
+        <div className="mt-2 h-[240px] rounded-2xl border border-slate-200 bg-white [.dark_&]:bg-slate-900/60 animate-pulse" />
+      )}
     </div>
   );
 }
@@ -1053,7 +1089,8 @@ function GradesCard({ userId }: { userId: string }) {
           </button>
         </div>
 
-        <MiniChart math={math} phys={phys} />
+        {/* Recharts-based chart, lazy-loaded and only rendered when visible */}
+        <LazyChart math={math} phys={phys} />
         <div className="mt-1 text-[13px] text-slate-700 flex flex-wrap gap-4">
           <span>
             Media Matematica:{" "}
@@ -1097,167 +1134,4 @@ function GradesCard({ userId }: { userId: string }) {
   );
 }
 
-function MiniChart({ math, phys }: { math: GradeItem[]; phys: GradeItem[] }) {
-  const points = useMemo(() => {
-    const xs = Array.from(
-      new Set([...math, ...phys].map((d) => d.date))
-    ).sort();
-    const mapX = new Map(xs.map((d, i) => [d, i] as const));
-    const toPts = (arr: GradeItem[]) =>
-      arr
-        .slice()
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map((d) => ({ x: mapX.get(d.date)!, y: d.grade }));
-    return { xs, math: toPts(math), phys: toPts(phys) };
-  }, [math, phys]);
-
-  const W = 560;
-  const H = 200; // un po' più alto, non schiacciato
-  const P = 28; // padding sinistro per scala
-  const R = 12; // padding destro/inferiore
-  const innerW = W - P - R;
-  const innerH = H - P - R;
-  const maxX = Math.max(1, points.xs.length - 1);
-  const sx = (x: number) => P + (x / maxX) * innerW;
-  const sy = (y: number) =>
-    R + (1 - Math.max(0, Math.min(10, y)) / 10) * innerH;
-
-  function toSmoothPath(arr: { x: number; y: number }[]) {
-    if (!arr.length) return "";
-    const pts = arr.map((p) => ({ x: sx(p.x), y: sy(p.y) }));
-    if (pts.length < 2) return `M${pts[0].x},${pts[0].y}`;
-    const d: string[] = [];
-    d.push(`M${pts[0].x},${pts[0].y}`);
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[i - 1] || pts[i];
-      const p1 = pts[i];
-      const p2 = pts[i + 1];
-      const p3 = pts[i + 2] || p2;
-      const k = 0.22;
-      const c1x = p1.x + (p2.x - p0.x) * k;
-      const c1y = p1.y + (p2.y - p0.y) * k;
-      const c2x = p2.x - (p3.x - p1.x) * k;
-      const c2y = p2.y - (p3.y - p1.y) * k;
-      d.push(`C${c1x},${c1y},${c2x},${c2y},${p2.x},${p2.y}`);
-    }
-    return d.join("");
-  }
-
-  const pathMath = toSmoothPath(points.math);
-  const pathPhys = toSmoothPath(points.phys);
-  function toAreaPath(arr: { x: number; y: number }[]) {
-    if (!arr.length) return "";
-    const start = { x: sx(arr[0].x), y: sy(arr[0].y) };
-    const end = { x: sx(arr[arr.length - 1].x), y: sy(arr[arr.length - 1].y) };
-    const baseline = sy(0);
-    const line = toSmoothPath(arr);
-    return `${line} L ${end.x},${baseline} L ${start.x},${baseline} Z`;
-  }
-  const areaMath = toAreaPath(points.math);
-  const areaPhys = toAreaPath(points.phys);
-
-  const Y_TICKS = [0, 5, 10];
-
-  return (
-    <div className="mt-2 rounded-2xl bg-white/80 [.dark_&]:bg-slate-900/60 border border-slate-200 overflow-hidden">
-      <svg
-        width="100%"
-        height={H}
-        viewBox={`0 0 ${W} ${H}`}
-        role="img"
-        aria-label="Andamento voti"
-        className="block"
-      >
-        <defs>
-          <linearGradient id="gMathArea" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.12" />
-            <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="gPhysArea" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0.12" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {/* Minimal scale */}
-        {Y_TICKS.map((v) => (
-          <g key={v}>
-            <line
-              x1={P}
-              y1={sy(v)}
-              x2={W - R}
-              y2={sy(v)}
-              stroke="#eef2f7"
-              strokeWidth={1}
-            />
-            <text x={4} y={sy(v) + 4} fontSize={10} fill="#64748b">
-              {v}
-            </text>
-          </g>
-        ))}
-
-        {/* Lines */}
-        {areaMath && <path d={areaMath} fill="url(#gMathArea)" />}
-        {areaPhys && <path d={areaPhys} fill="url(#gPhysArea)" />}
-        {pathMath && (
-          <path
-            d={pathMath}
-            fill="none"
-            stroke="#2563eb"
-            strokeWidth={3}
-            strokeLinecap="round"
-          />
-        )}
-        {pathPhys && (
-          <path
-            d={pathPhys}
-            fill="none"
-            stroke="#10b981"
-            strokeWidth={3}
-            strokeLinecap="round"
-          />
-        )}
-
-        {/* Points */}
-        {points.math.map((p, i) => (
-          <circle
-            key={`m${i}`}
-            cx={sx(p.x)}
-            cy={sy(p.y)}
-            r={2.5}
-            fill="#2563eb"
-            stroke="#fff"
-            strokeWidth={1}
-          />
-        ))}
-        {points.phys.map((p, i) => (
-          <circle
-            key={`p${i}`}
-            cx={sx(p.x)}
-            cy={sy(p.y)}
-            r={2.5}
-            fill="#10b981"
-            stroke="#fff"
-            strokeWidth={1}
-          />
-        ))}
-        {/* last point highlight */}
-        {points.math.length > 0 && (
-          <circle
-            cx={sx(points.math[points.math.length - 1].x)}
-            cy={sy(points.math[points.math.length - 1].y)}
-            r={3.5}
-            fill="#2563eb"
-          />
-        )}
-        {points.phys.length > 0 && (
-          <circle
-            cx={sx(points.phys[points.phys.length - 1].x)}
-            cy={sy(points.phys[points.phys.length - 1].y)}
-            r={3.5}
-            fill="#10b981"
-          />
-        )}
-      </svg>
-    </div>
-  );
-}
+// MiniChart removed in favor of GradesChart (shadcn-style)

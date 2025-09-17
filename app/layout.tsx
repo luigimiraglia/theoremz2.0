@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import { Suspense } from "react";
 import Script from "next/script";
-import { cookies } from "next/headers";
+// Note: avoid server cookies here to keep layout static and reduce FAC usage
 import { AuthProvider } from "@/lib/AuthContext";
 import "./globals.css";
 import Providers from "./providers";
@@ -11,6 +11,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BlackPromoBanner from "@/components/BlackPromoBanner"; // ⬅️ NEW
 import AnalyticsListener from "@/components/AnalyticsListener";
+import ClientAnalytics from "@/components/ClientAnalytics";
 import CookieBanner from "@/components/CookieBanner";
 
 export const metadata: Metadata = {
@@ -67,19 +68,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-  let hasAnalyticsConsent = false;
-  try {
-    const cookieStore = await cookies();
-    const c = cookieStore.get("tz_consent")?.value;
-    if (c) {
-      const v: any = JSON.parse(decodeURIComponent(c));
-      hasAnalyticsConsent = !!v?.c?.analytics;
-    }
-  } catch {}
   return (
     <html lang="it" translate="no" className={montserrat.className} suppressHydrationWarning>
       <head>
         <meta name="google" content="notranslate" />
+        <meta name="color-scheme" content="light dark" />
         {/* Preconnect essenziali: Auth + Sanity CDN (immagini) */}
         <link
           rel="preconnect"
@@ -145,25 +138,21 @@ export default async function RootLayout({
           `}
         </Script>
 
-        {/* Google Analytics (GA4) – load only if analytics consent was already granted */}
-        {GA_ID && hasAnalyticsConsent ? (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script id="ga4-init" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);} 
-                window.gtag = gtag;
-                gtag('js', new Date());
-                // send_page_view: false to manually handle SPA navigations
-                gtag('config', '${GA_ID}', { anonymize_ip: true, send_page_view: false });
-              `}
-            </Script>
-          </>
-        ) : null}
+        {/* Theme init (no-flash, resolves Android/system vs site selection) */}
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`
+            try {
+              var d = document.documentElement;
+              var s = localStorage.getItem('theme');
+              var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+              var t = (s === 'dark' || s === 'light') ? s : (prefersDark ? 'dark' : 'light');
+              if (t === 'dark') d.classList.add('dark'); else d.classList.remove('dark');
+              d.style.colorScheme = t;
+            } catch {}
+          `}
+        </Script>
+
+        {/* GA is loaded client-side only when consent is present */}
       </head>
 
       <body className="antialiased min-h-dvh bg-background text-foreground">
@@ -186,12 +175,13 @@ export default async function RootLayout({
                 <Footer />
               </Suspense>
 
-              {/* SPA pageview listener (client) — only when analytics consent is present */}
-              {GA_ID && hasAnalyticsConsent ? (
-                <Suspense fallback={null}>
-                  <AnalyticsListener />
-                </Suspense>
-              ) : null}
+              {/* Client analytics bootstrap + SPA pageviews (no server cookies) */}
+              <Suspense fallback={null}>
+                <ClientAnalytics />
+              </Suspense>
+              <Suspense fallback={null}>
+                <AnalyticsListener />
+              </Suspense>
 
               {/* GDPR consent banner */}
               <Suspense fallback={null}>
