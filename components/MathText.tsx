@@ -9,7 +9,7 @@ const MATH_RE =
 
 export default function MathText({
   text,
-  allowBlock = false, // se true: forza visualizzazione display per ogni formula
+  allowBlock = false, // se true: consenti il rendering in display per $$...$$ o \[...\]
 }: {
   text?: string | null;
   allowBlock?: boolean;
@@ -28,22 +28,20 @@ export default function MathText({
     if (i > last) parts.push(s.slice(last, i));
 
     const expr = dd ?? d ?? p ?? b ?? "";
+    const isBlock = !!dd || !!b; // $$...$$ or \[...\]
 
-    if (allowBlock) {
+    if (isBlock && allowBlock) {
       parts.push(
         <div key={parts.length} className="my-3 overflow-x-auto">
           <BlockMath errorColor="#cc0000">{expr}</BlockMath>
         </div>
       );
     } else {
+      // Inline: ingrandisci frazioni con \displaystyle senza spezzare il flusso
       const needsDisplayInline = /\\(?:d?frac|cfrac|tfrac)\b/.test(expr);
-      const toRender = needsDisplayInline
-        ? `\\displaystyle { ${expr} }`
-        : expr;
+      const toRender = needsDisplayInline ? `\\displaystyle { ${expr} }` : expr;
       parts.push(
-        <InlineMath key={parts.length} errorColor="#cc0000">
-          {toRender}
-        </InlineMath>
+        <InlineMath key={parts.length} errorColor="#cc0000">{toRender}</InlineMath>
       );
     }
 

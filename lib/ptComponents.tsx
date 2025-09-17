@@ -7,14 +7,10 @@ import { LucideQuote as BlockquoteIcon } from "lucide-react";
 import MathText from "@/components/MathText";
 
 /* ---- helper: applica MathText solo ai nodi stringa dei children ---- */
-const MathInChildren = ({ children, display = false }: { children: React.ReactNode; display?: boolean }) => (
+const MathInChildren = ({ children }: { children: React.ReactNode }) => (
   <>
     {React.Children.map(children, (child, i) =>
-      typeof child === "string" ? (
-        <MathText key={i} text={child} allowBlock={display} />
-      ) : (
-        child
-      )
+      typeof child === "string" ? <MathText key={i} text={child} /> : child
     )}
   </>
 );
@@ -46,11 +42,7 @@ const renderCell = (raw: unknown) => {
   if (!s) return "";
   if (isWholeMathCell(s)) {
     const inner = s.slice(1, -1);
-    return (
-      <div className="my-2 overflow-x-auto">
-        <BlockMath errorColor="#cc0000">{inner}</BlockMath>
-      </div>
-    );
+    return <InlineMath errorColor="#cc0000">{inner}</InlineMath>;
   }
   return <MathText text={s} />;
 };
@@ -79,7 +71,7 @@ export const ptComponents: PortableTextComponents = {
   block: {
     h2: ({ children }) => (
       <h2 className="mt-8 mb-4 text-2xl text-blue-500 font-extrabold">
-        <MathInChildren display={false}>{children}</MathInChildren>
+        <MathInChildren>{children}</MathInChildren>
       </h2>
     ),
 
@@ -88,9 +80,9 @@ export const ptComponents: PortableTextComponents = {
         return <MathText text={blockPlainText(value)} allowBlock />;
       }
       return (
-        <div className="my-4 leading-7 font-medium">
-          <MathInChildren display>{children}</MathInChildren>
-        </div>
+        <p className="my-4 leading-7 font-medium">
+          <MathInChildren>{children}</MathInChildren>
+        </p>
       );
     },
 
@@ -99,7 +91,7 @@ export const ptComponents: PortableTextComponents = {
     blockquote: ({ children }) => (
       <blockquote className="my-6 rounded-lg border-l-4 border-blue-500 bg-blue-50 p-4 italic">
         <BlockquoteIcon size={18} className="mr-1 inline" />
-        <MathInChildren display>{children}</MathInChildren>
+        <MathInChildren>{children}</MathInChildren>
       </blockquote>
     ),
   },
@@ -117,12 +109,12 @@ export const ptComponents: PortableTextComponents = {
   listItem: {
     bullet: ({ children }) => (
       <li>
-        <MathInChildren display>{children}</MathInChildren>
+        <MathInChildren>{children}</MathInChildren>
       </li>
     ),
     number: ({ children }) => (
       <li>
-        <MathInChildren display>{children}</MathInChildren>
+        <MathInChildren>{children}</MathInChildren>
       </li>
     ),
   },
