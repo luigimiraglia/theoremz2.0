@@ -42,6 +42,23 @@ export default function AccountPage() {
     savedLessons,
     refreshSavedLessons,
   } = useAuth();
+  // Mini-streak per header
+  const [streak, setStreak] = useState<number | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) return;
+        const res = await fetch("/api/me/streak", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        const json = await res.json();
+        if (typeof json?.count === "number") setStreak(json.count);
+      } catch {}
+    })();
+  }, [user?.uid]);
 
   // username: lazy init
   const [username, setUsername] = useState<string>(() => {
@@ -210,6 +227,11 @@ export default function AccountPage() {
                   Free
                 </span>
               )}
+              {typeof streak === "number" && (
+                <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-white/15 px-2.5 py-1 rounded-full">
+                  🔥 Streak {streak}g
+                </span>
+              )}
             </div>
             <p className="text-white/90 text-xs sm:text-sm mt-1 truncate">
               {user.email}
@@ -245,15 +267,13 @@ export default function AccountPage() {
         </div>
       </section>
 
-      {/* PANORAMICA */}
-      <StreakBadgesCard
-        userId={user.uid}
-        isSubscribed={isSubscribed}
-        savedCount={savedLessons?.length || 0}
-      />
+      {/* PANORAMICA: rimosso blocco badge */}
 
       {/* PERCORSO (skill path) */}
       <TracksCard savedSlugs={savedLessons || []} profile={profile} />
+
+      {/* VERIFICHE PROGRAMMATE */}
+      <ScheduledExamsCard />
 
       {/* CONTINUA A STUDIARE */}
       <Card
@@ -262,7 +282,7 @@ export default function AccountPage() {
         right={
           <button
             onClick={() => router.push("/matematica")}
-            className="text-sm text-blue-700 hover:underline"
+            className="text-sm text-blue-700 [.dark_&]:text-sky-300 hover:underline font-semibold"
           >
             Vai al catalogo →
           </button>
@@ -519,6 +539,17 @@ function Lock(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+function Trash(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path d="M3 6h18" strokeWidth="2" strokeLinecap="round" />
+      <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" strokeWidth="2" />
+      <path d="M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14" strokeWidth="2" />
+      <path d="M10 11v6M14 11v6" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function formatClass(
   p?: { cycle?: string; year?: number; indirizzo?: string } | null
 ) {
@@ -626,7 +657,7 @@ function ProfileSection(props: {
                   year: 1,
                 }))
               }
-              className="rounded-lg border px-3 py-2 text-sm"
+              className="rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 placeholder-slate-400 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
             >
               <option value="medie">Medie</option>
               <option value="liceo">Liceo</option>
@@ -637,7 +668,7 @@ function ProfileSection(props: {
               onChange={(e) =>
                 setPrefs((p) => ({ ...p, year: Number(e.target.value) }))
               }
-              className="rounded-lg border px-3 py-2 text-sm"
+              className="rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 placeholder-slate-400 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
             >
               {years.map((y) => (
                 <option key={y} value={y}>
@@ -650,7 +681,7 @@ function ProfileSection(props: {
               onChange={(e) =>
                 setPrefs((p) => ({ ...p, indirizzo: e.target.value }))
               }
-              className="rounded-lg border px-3 py-2 text-sm"
+              className="rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 placeholder-slate-400 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
             >
               {indirizzi.map((s) => (
                 <option key={s} value={s}>
@@ -675,7 +706,7 @@ function ProfileSection(props: {
             </button>
             <button
               onClick={() => setOpen(false)}
-              className="rounded-lg border px-4 py-2 text-sm"
+              className="rounded-lg border border-slate-300 [.dark_&]:border-white/20 px-4 py-2 text-sm text-slate-700 [.dark_&]:text-white"
             >
               Annulla
             </button>
@@ -788,7 +819,7 @@ function StreakBadgesCard({
                 {badges.map((b) => (
                   <li
                     key={b.id}
-                    className="px-3 py-1.5 rounded-full border text-sm bg-white"
+                    className="px-3 py-1.5 rounded-full border border-slate-200 [.dark_&]:border-white/20 text-sm bg-white [.dark_&]:bg-white/10 [.dark_&]:text-white"
                   >
                     <span className="mr-1">{b.emoji}</span>
                     {b.label}
@@ -988,6 +1019,7 @@ function GradesCard({ userId }: { userId: string }) {
   const [subject, setSubject] = useState<"matematica" | "fisica">("matematica");
   const [date, setDate] = useState<string>(() => isoDay());
   const [grade, setGrade] = useState<string>("6");
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -1049,6 +1081,14 @@ function GradesCard({ userId }: { userId: string }) {
 
   const math = items.filter((i) => i.subject === "matematica");
   const phys = items.filter((i) => i.subject === "fisica");
+  const orderedDesc = useMemo(
+    () => items.slice().sort((a, b) => b.date.localeCompare(a.date)),
+    [items]
+  );
+  const visibleRows = useMemo(
+    () => (expanded ? orderedDesc : orderedDesc.slice(0, 3)),
+    [expanded, orderedDesc]
+  );
 
   // medie semplici
   const avg = (arr: GradeItem[]) =>
@@ -1066,7 +1106,7 @@ function GradesCard({ userId }: { userId: string }) {
           <select
             value={subject}
             onChange={(e) => setSubject(e.target.value as any)}
-            className="rounded-lg border px-3 py-2 text-sm"
+            className="rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 placeholder-slate-400 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
           >
             <option value="matematica">Matematica</option>
             <option value="fisica">Fisica</option>
@@ -1075,7 +1115,7 @@ function GradesCard({ userId }: { userId: string }) {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded-lg border px-3 py-2 text-sm"
+            className="rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 placeholder-slate-400 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
           />
           <input
             type="number"
@@ -1085,7 +1125,7 @@ function GradesCard({ userId }: { userId: string }) {
             value={grade}
             onChange={(e) => setGrade(e.target.value)}
             placeholder="Voto (0–10)"
-            className="rounded-lg border px-3 py-2 text-sm"
+            className="rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 placeholder-slate-400 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
           />
           <button
             onClick={addItem}
@@ -1097,7 +1137,7 @@ function GradesCard({ userId }: { userId: string }) {
 
         {/* Recharts-based chart, lazy-loaded and only rendered when visible */}
         <LazyChart math={math} phys={phys} />
-        <div className="mt-1 text-[13px] text-slate-700 flex flex-wrap gap-4">
+        <div className="mt-1 text-[13px] text-slate-700 [.dark_&]:text-white/80 flex flex-wrap gap-4">
           <span>
             Media Matematica:{" "}
             <strong>{avgMath !== null ? avgMath!.toFixed(1) : "—"}</strong>
@@ -1109,31 +1149,57 @@ function GradesCard({ userId }: { userId: string }) {
         </div>
 
         {items.length > 0 && (
-          <ul className="mt-2 max-h-48 overflow-auto divide-y">
-            {items
-              .slice()
-              .reverse()
-              .map((it) => (
-                <li
-                  key={it.id}
-                  className="py-1.5 flex items-center justify-between text-sm"
-                >
-                  <span className="opacity-70 w-28 capitalize">
-                    {it.subject}
-                  </span>
-                  <span className="w-28">{it.date}</span>
-                  <span className="font-semibold w-10 text-right">
-                    {it.grade}
-                  </span>
-                  <button
-                    onClick={() => removeItem(it.id)}
-                    className="ml-2 text-red-600 hover:underline"
-                  >
-                    Rimuovi
-                  </button>
-                </li>
-              ))}
-          </ul>
+          <div className="mt-2 overflow-auto max-h-60 rounded-xl border border-slate-200">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 [.dark_&]:bg-slate-800/40">
+                <tr>
+                  <th className="text-left px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">Materia</th>
+                  <th className="text-left px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">Data</th>
+                  <th className="text-right px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">Voto</th>
+                  <th className="w-8 px-2" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 [.dark_&]:divide-white/10">
+                {visibleRows.map((it) => (
+                    <tr
+                      key={it.id}
+                      className="hover:bg-slate-50 [.dark_&]:hover:bg-white/5 transition-colors"
+                    >
+                      <td className="px-3 py-2 capitalize text-slate-700 [.dark_&]:text-white/90">
+                        {it.subject}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600 [.dark_&]:text-white/80">
+                        {it.date}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <span className={gradeBadgeClass(it.grade)}>{it.grade}</span>
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        <button
+                          onClick={() => removeItem(it.id)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 hover:bg-red-50 [.dark_&]:hover:bg-red-500/10"
+                          title="Rimuovi voto"
+                          aria-label="Rimuovi voto"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {items.length > 3 && (
+          <div className="mt-2 text-right">
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="text-sm font-semibold text-blue-700 [.dark_&]:text-sky-300 hover:underline"
+            >
+              {expanded ? "Mostra meno" : `Mostra altri ${items.length - 3}`}
+            </button>
+          </div>
         )}
       </div>
     </Card>
@@ -1141,3 +1207,442 @@ function GradesCard({ userId }: { userId: string }) {
 }
 
 // MiniChart removed in favor of GradesChart (shadcn-style)
+
+function gradeBadgeClass(g: number) {
+  if (g >= 8.5)
+    return "inline-flex items-center justify-center min-w-[3ch] rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 font-semibold";
+  if (g >= 6.0)
+    return "inline-flex items-center justify-center min-w-[3ch] rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 font-semibold";
+  return "inline-flex items-center justify-center min-w-[3ch] rounded-full bg-red-100 text-red-700 px-2 py-0.5 font-semibold";
+}
+
+/* ────────────────────── Verifiche programmate ────────────────────── */
+type ExamItem = { id: string; date: string; subject?: string | null };
+
+function ymd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function monthMatrix(year: number, month: number) {
+  // month: 0-11
+  const first = new Date(year, month, 1);
+  const startDay = (first.getDay() + 6) % 7; // Monday=0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: Array<Date | null> = [];
+  for (let i = 0; i < startDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+  while (cells.length % 7 !== 0) cells.push(null);
+  const rows: (Array<Date | null>)[] = [];
+  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+  return rows;
+}
+
+function CalendarView({
+  year,
+  month,
+  onPrev,
+  onNext,
+  today,
+  selected,
+  onSelect,
+}: {
+  year: number;
+  month: number; // 0-11
+  onPrev: () => void;
+  onNext: () => void;
+  today: string; // YYYY-MM-DD
+  selected: string | null | undefined; // YYYY-MM-DD
+  onSelect: (ds: string) => void;
+}) {
+  const rows = monthMatrix(year, month);
+  const monthLabel = new Date(year, month, 1).toLocaleString("it-IT", {
+    month: "long",
+    year: "numeric",
+  });
+  return (
+    <div>
+      <div className="flex items-center justify-between px-2 py-2">
+        <button
+          onClick={onPrev}
+          className="h-8 w-8 rounded-md hover:bg-slate-100 [.dark_&]:hover:bg-white/10 grid place-items-center"
+          aria-label="Mese precedente"
+        >
+          ‹
+        </button>
+        <div className="text-sm font-semibold capitalize">{monthLabel}</div>
+        <button
+          onClick={onNext}
+          className="h-8 w-8 rounded-md hover:bg-slate-100 [.dark_&]:hover:bg-white/10 grid place-items-center"
+          aria-label="Mese successivo"
+        >
+          ›
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-px bg-slate-100 [.dark_&]:bg-white/10 rounded-lg overflow-hidden">
+        {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((d) => (
+          <div key={d} className="bg-white [.dark_&]:bg-slate-900 text-center text-xs py-1 font-semibold">
+            {d}
+          </div>
+        ))}
+        {rows.flat().map((d, i) => {
+          const isEmpty = !d;
+          const ds = d ? ymd(d) : "";
+          const isToday = d ? ds === today : false;
+          const isSelected = selected ? ds === selected : false;
+          return (
+            <button
+              key={i}
+              disabled={!d}
+              onClick={() => d && onSelect(ymd(d))}
+              className={[
+                "min-h-12 py-2 text-sm bg-white [.dark_&]:bg-slate-900",
+                !d ? "opacity-50 cursor-default" : "hover:bg-slate-50 [.dark_&]:hover:bg-white/5",
+                isSelected ? "bg-sky-600 text-white hover:bg-sky-600" : "",
+              ].join(" ")}
+            >
+              <span className="inline-flex items-center gap-1">
+                {d ? d.getDate() : ""}
+                {isToday && !isSelected && (
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ScheduledExamsCard() {
+  const [items, setItems] = useState<ExamItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  // selezione data (header)
+  const [date, setDate] = useState<string>("");
+  const [subject, setSubject] = useState<string>("");
+  const [showHeaderCalendar, setShowHeaderCalendar] = useState(false);
+  // selezione prima verifica (modal stile shadcn)
+  const [firstOpen, setFirstOpen] = useState(false);
+  const [firstDate, setFirstDate] = useState<string>("");
+  const [firstSubject, setFirstSubject] = useState<string>("");
+
+  const [viewYear, setViewYear] = useState<number>(new Date().getFullYear());
+  const [viewMonth, setViewMonth] = useState<number>(new Date().getMonth());
+  const today = ymd(new Date());
+
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) return;
+        const res = await fetch("/api/me/exams", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+          signal: ac.signal,
+        });
+        const json = await res.json();
+        setItems(Array.isArray(json.items) ? json.items : []);
+      } catch (e: any) {
+        setError(e?.message || "Errore");
+      } finally {
+        setLoading(false);
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  async function addExam() {
+    if (!date) return;
+    try {
+      setAdding(true);
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) return;
+      const res = await fetch("/api/me/exams", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ date, subject: subject || null }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) throw new Error(json?.error || "Errore");
+      const next = [...items, { id: json.id, date, subject: subject || null }].sort(
+        (a, b) => a.date.localeCompare(b.date)
+      );
+      setItems(next);
+      // Se è la prima verifica, centra la vista su quel mese
+      const d = new Date(date + "T00:00:00");
+      setViewYear(d.getFullYear());
+      setViewMonth(d.getMonth());
+      setSubject("");
+      setShowHeaderCalendar(false);
+    } catch (e) {
+      // no-op
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function removeExam(id: string) {
+    try {
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) return;
+      const res = await fetch(`/api/me/exams/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      setItems(items.filter((x) => x.id !== id));
+    } catch {}
+  }
+
+  const hasAny = items.length > 0;
+
+  return (
+    <Card
+      title="Verifiche programmate"
+      subtitle={
+        hasAny
+          ? "Gestisci le date e tieni d'occhio il calendario."
+          : "Aggiungi la tua prossima verifica per sbloccare il calendario."
+      }
+      right={
+        hasAny ? (
+          <div className="hidden sm:flex items-center gap-2 relative">
+            <button
+              onClick={() => setShowHeaderCalendar((v) => !v)}
+              className="rounded-lg border px-3 py-1.5 text-sm bg-white text-slate-900 border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
+            >
+              {date || "Seleziona data"}
+            </button>
+            <input
+              type="text"
+              placeholder="Materia (facoltativa)"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="rounded-lg border px-3 py-1.5 text-sm bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
+            />
+            <button
+              onClick={addExam}
+              disabled={adding || !date}
+              className="rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] text-white px-3 py-1.5 text-sm font-semibold disabled:opacity-60"
+            >
+              Aggiungi
+            </button>
+            {showHeaderCalendar && (
+              <div className="absolute right-0 top-[110%] z-20 w-[320px] rounded-xl border border-slate-200 [.dark_&]:border-white/10 bg-white [.dark_&]:bg-slate-900 shadow-lg p-2">
+                <CalendarView
+                  year={viewYear}
+                  month={viewMonth}
+                  onPrev={() => {
+                    const m = viewMonth - 1;
+                    if (m < 0) {
+                      setViewMonth(11);
+                      setViewYear(viewYear - 1);
+                    } else setViewMonth(m);
+                  }}
+                  onNext={() => {
+                    const m = viewMonth + 1;
+                    if (m > 11) {
+                      setViewMonth(0);
+                      setViewYear(viewYear + 1);
+                    } else setViewMonth(m);
+                  }}
+                  today={today}
+                  selected={date}
+                  onSelect={(ds) => {
+                    setDate(ds);
+                    setShowHeaderCalendar(false);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        ) : null
+      }
+    >
+      {loading ? (
+        <div className="h-24 rounded-xl bg-slate-100 [.dark_&]:bg-white/10 animate-pulse" />
+      ) : !hasAny ? (
+        <div className="flex flex-col items-center justify-center gap-4 py-8">
+          <button
+            onClick={() => setFirstOpen(true)}
+            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] text-white px-6 py-3 text-base sm:text-lg font-extrabold shadow hover:opacity-95 active:scale-[0.99]"
+          >
+            Programma la tua prima verifica
+          </button>
+
+          {firstOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setFirstOpen(false)}>
+              <div className="w-full max-w-md rounded-2xl border border-slate-200 [.dark_&]:border-white/10 bg-white [.dark_&]:bg-slate-900 shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-base font-semibold mb-2">Scegli una data</h3>
+                <CalendarView
+                  year={viewYear}
+                  month={viewMonth}
+                  onPrev={() => {
+                    const m = viewMonth - 1;
+                    if (m < 0) { setViewMonth(11); setViewYear(viewYear - 1); } else setViewMonth(m);
+                  }}
+                  onNext={() => {
+                    const m = viewMonth + 1;
+                    if (m > 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(m);
+                  }}
+                  today={today}
+                  selected={firstDate}
+                  onSelect={(ds) => setFirstDate(ds)}
+                />
+                <input
+                  type="text"
+                  placeholder="Materia (facoltativa)"
+                  value={firstSubject}
+                  onChange={(e) => setFirstSubject(e.target.value)}
+                  className="mt-3 w-full rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
+                />
+                <div className="mt-3 flex justify-end gap-2">
+                  <button
+                    onClick={() => setFirstOpen(false)}
+                    className="rounded-lg border px-3 py-1.5 text-sm border-slate-300 [.dark_&]:border-white/20"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!firstDate) return;
+                      setDate(firstDate);
+                      setSubject(firstSubject);
+                      await addExam();
+                      setFirstOpen(false);
+                      setFirstDate("");
+                      setFirstSubject("");
+                    }}
+                    disabled={!firstDate}
+                    className="rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] text-white px-4 py-1.5 text-sm font-semibold disabled:opacity-60"
+                  >
+                    Conferma
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Calendario mese */}
+          <div className="rounded-xl border border-slate-200 [.dark_&]:border-white/10 overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 bg-slate-50 [.dark_&]:bg-white/5">
+              <button
+                onClick={() => {
+                  const m = viewMonth - 1;
+                  if (m < 0) {
+                    setViewMonth(11);
+                    setViewYear(viewYear - 1);
+                  } else setViewMonth(m);
+                }}
+                className="h-8 w-8 rounded-md hover:bg-slate-200/70 [.dark_&]:hover:bg-white/10 grid place-items-center"
+                aria-label="Mese precedente"
+              >
+                ‹
+              </button>
+              <div className="text-sm font-semibold">
+                {new Date(viewYear, viewMonth, 1).toLocaleString("it-IT", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </div>
+              <button
+                onClick={() => {
+                  const m = viewMonth + 1;
+                  if (m > 11) {
+                    setViewMonth(0);
+                    setViewYear(viewYear + 1);
+                  } else setViewMonth(m);
+                }}
+                className="h-8 w-8 rounded-md hover:bg-slate-200/70 [.dark_&]:hover:bg-white/10 grid place-items-center"
+                aria-label="Mese successivo"
+              >
+                ›
+              </button>
+            </div>
+            <div className="grid grid-cols-7 gap-px bg-slate-200 [.dark_&]:bg-white/10">
+              {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((d) => (
+                <div key={d} className="bg-white [.dark_&]:bg-slate-900 text-center text-xs py-1 font-semibold">
+                  {d}
+                </div>
+              ))}
+              {monthMatrix(viewYear, viewMonth).flat().map((d, i) => {
+                const key = i;
+                const isEmpty = !d;
+                const ds = d ? ymd(d) : "";
+                const scheduled = d && items.some((it) => it.date === ds);
+                const isToday = d ? ds === today : false;
+                return (
+                  <div
+                    key={key}
+                    className={[
+                      "min-h-14 bg-white [.dark_&]:bg-slate-900 p-1",
+                      scheduled ? "ring-2 ring-sky-400" : "",
+                    ].join(" ")}
+                    title={scheduled ? "Verifica programmata" : undefined}
+                  >
+                    <div className="text-xs font-semibold text-slate-700 [.dark_&]:text-white/80 flex items-center gap-1">
+                      {d ? d.getDate() : ""}
+                      {isToday && (
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Lista verifiche */}
+          <div className="rounded-xl border border-slate-200 [.dark_&]:border-white/10 p-3">
+            <div className="text-sm font-semibold mb-2">Prossime verifiche</div>
+            {items.length === 0 ? (
+              <div className="text-sm text-slate-600 [.dark_&]:text-white/70">Nessuna.</div>
+            ) : (
+              <ul className="divide-y divide-slate-200 [.dark_&]:divide-white/10">
+                {items.map((it) => {
+                  const rem = daysBetweenISO(today, it.date);
+                  let label: string;
+                  if (rem < 0) label = `passata da ${Math.abs(rem)}g`;
+                  else if (rem === 0) label = "Oggi";
+                  else if (rem === 1) label = "Domani";
+                  else label = `tra ${rem}g`;
+                  return (
+                  <li key={it.id} className="py-2 flex items-center justify-between text-sm">
+                    <div>
+                      <div className="font-semibold">{it.date}</div>
+                      <div className="text-slate-600 [.dark_&]:text-white/70 flex items-center gap-2">
+                        {it.subject && <span>{it.subject}</span>}
+                        <span className="text-blue-700 [.dark_&]:text-sky-300 font-semibold">{label}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeExam(it.id)}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 hover:bg-red-50 [.dark_&]:hover:bg-red-500/10"
+                      aria-label="Rimuovi"
+                      title="Rimuovi"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </button>
+                  </li>
+                );})}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
