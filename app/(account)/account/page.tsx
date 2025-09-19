@@ -222,6 +222,12 @@ export default function AccountPage() {
                 {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
               </button>
               <button
+                onClick={() => router.push("/simula-verifica")}
+                className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
+              >
+                Simula verifica
+              </button>
+              <button
                 onClick={async () => {
                   try {
                     await doLogout();
