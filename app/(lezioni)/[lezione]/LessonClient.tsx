@@ -312,6 +312,8 @@ export default function LessonClient({
         minHeight={200}
       />
 
+      {/* Pulsante: Simula verifica spostato accanto al CTA esercizi dentro LessonExercises */}
+
       {/* Recensioni (ultima sezione) */}
       <LessonReview lessonSlug={lesson.slug} lessonTitle={lesson.title} />
     </article>

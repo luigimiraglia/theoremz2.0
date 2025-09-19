@@ -42,6 +42,7 @@ export async function POST(req: Request) {
   if (typeof body.indirizzo === "string") patch.indirizzo = String(body.indirizzo).slice(0, 64);
   if (typeof body.goalMin === "number") patch.goalMin = Math.max(5, Math.min(120, body.goalMin));
   if (typeof body.showBadges === "boolean") patch.showBadges = body.showBadges;
+  // avatar non più supportato
 
   if (!Object.keys(patch).length)
     return NextResponse.json({ error: "nothing_to_update" }, { status: 400 });
@@ -49,4 +50,3 @@ export async function POST(req: Request) {
   await adminDb.doc(`users/${uid}`).set({ ...patch, updatedAt: Date.now() }, { merge: true });
   return NextResponse.json({ ok: true });
 }
-

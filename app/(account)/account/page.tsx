@@ -1,17 +1,21 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { getAuth } from "firebase/auth";
 import dynamic from "next/dynamic";
-const GradesChartRecharts = dynamic(() => import("@/components/GradesChartRecharts"), {
-  ssr: false,
-  loading: () => (
-    <div className="mt-2 h-[240px] rounded-2xl border border-slate-200 bg-white [.dark_&]:bg-slate-900/60 animate-pulse" />
-  ),
-});
+const GradesChartRecharts = dynamic(
+  () => import("@/components/GradesChartRecharts"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-2 h-[240px] rounded-2xl border border-slate-200 bg-white [.dark_&]:bg-slate-900/60 animate-pulse" />
+    ),
+  }
+);
 
 /* ───────────────── helpers data ───────────────── */
 // Normalizza in millisecondi: accetta Date | string ISO | number (ms/sec) | Firestore Timestamp
@@ -267,6 +271,8 @@ export default function AccountPage() {
         </div>
       </section>
 
+      {/* Avatar picker rimosso */}
+
       {/* PANORAMICA: rimosso blocco badge */}
 
       {/* PERCORSO (skill path) */}
@@ -383,6 +389,13 @@ export default function AccountPage() {
 
 /* ────────────────────── UI helpers ────────────────────── */
 
+function FirstExamPortal({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return createPortal(children as any, document.body);
+}
+
 function Card(props: {
   title: string;
   subtitle?: string;
@@ -407,21 +420,26 @@ function Card(props: {
   );
 }
 
+// AvatarCard rimosso
+
 // Lazy render wrapper using IntersectionObserver to render the heavy chart only when in viewport
 function LazyChart({ math, phys }: { math: GradeItem[]; phys: GradeItem[] }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [show, setShow] = useState(false);
   useEffect(() => {
     if (!ref.current || show) return;
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) {
-          setShow(true);
-          io.disconnect();
-          break;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setShow(true);
+            io.disconnect();
+            break;
+          }
         }
-      }
-    }, { rootMargin: "200px" });
+      },
+      { rootMargin: "200px" }
+    );
     io.observe(ref.current);
     return () => io.disconnect();
   }, [show]);
@@ -1153,39 +1171,47 @@ function GradesCard({ userId }: { userId: string }) {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 [.dark_&]:bg-slate-800/40">
                 <tr>
-                  <th className="text-left px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">Materia</th>
-                  <th className="text-left px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">Data</th>
-                  <th className="text-right px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">Voto</th>
+                  <th className="text-left px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">
+                    Materia
+                  </th>
+                  <th className="text-left px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">
+                    Data
+                  </th>
+                  <th className="text-right px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">
+                    Voto
+                  </th>
                   <th className="w-8 px-2" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 [.dark_&]:divide-white/10">
                 {visibleRows.map((it) => (
-                    <tr
-                      key={it.id}
-                      className="hover:bg-slate-50 [.dark_&]:hover:bg-white/5 transition-colors"
-                    >
-                      <td className="px-3 py-2 capitalize text-slate-700 [.dark_&]:text-white/90">
-                        {it.subject}
-                      </td>
-                      <td className="px-3 py-2 text-slate-600 [.dark_&]:text-white/80">
-                        {it.date}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <span className={gradeBadgeClass(it.grade)}>{it.grade}</span>
-                      </td>
-                      <td className="px-2 py-2 text-right">
-                        <button
-                          onClick={() => removeItem(it.id)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 hover:bg-red-50 [.dark_&]:hover:bg-red-500/10"
-                          title="Rimuovi voto"
-                          aria-label="Rimuovi voto"
-                        >
-                          <Trash className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  <tr
+                    key={it.id}
+                    className="hover:bg-slate-50 [.dark_&]:hover:bg-white/5 transition-colors"
+                  >
+                    <td className="px-3 py-2 capitalize text-slate-700 [.dark_&]:text-white/90">
+                      {it.subject}
+                    </td>
+                    <td className="px-3 py-2 text-slate-600 [.dark_&]:text-white/80">
+                      {it.date}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <span className={gradeBadgeClass(it.grade)}>
+                        {it.grade}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      <button
+                        onClick={() => removeItem(it.id)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 hover:bg-red-50 [.dark_&]:hover:bg-red-500/10"
+                        title="Rimuovi voto"
+                        aria-label="Rimuovi voto"
+                      >
+                        <Trash className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -1235,7 +1261,7 @@ function monthMatrix(year: number, month: number) {
   for (let i = 0; i < startDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
   while (cells.length % 7 !== 0) cells.push(null);
-  const rows: (Array<Date | null>)[] = [];
+  const rows: Array<Date | null>[] = [];
   for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
   return rows;
 }
@@ -1283,7 +1309,10 @@ function CalendarView({
       </div>
       <div className="grid grid-cols-7 gap-px bg-slate-100 [.dark_&]:bg-white/10 rounded-lg overflow-hidden">
         {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((d) => (
-          <div key={d} className="bg-white [.dark_&]:bg-slate-900 text-center text-xs py-1 font-semibold">
+          <div
+            key={d}
+            className="bg-white [.dark_&]:bg-slate-900 text-center text-xs py-1 font-semibold"
+          >
             {d}
           </div>
         ))}
@@ -1299,7 +1328,9 @@ function CalendarView({
               onClick={() => d && onSelect(ymd(d))}
               className={[
                 "min-h-12 py-2 text-sm bg-white [.dark_&]:bg-slate-900",
-                !d ? "opacity-50 cursor-default" : "hover:bg-slate-50 [.dark_&]:hover:bg-white/5",
+                !d
+                  ? "opacity-50 cursor-default"
+                  : "hover:bg-slate-50 [.dark_&]:hover:bg-white/5",
                 isSelected ? "bg-sky-600 text-white hover:bg-sky-600" : "",
               ].join(" ")}
             >
@@ -1359,8 +1390,10 @@ function ScheduledExamsCard() {
     return () => ac.abort();
   }, []);
 
-  async function addExam() {
-    if (!date) return;
+  async function addExam(dateOverride?: string, subjectOverride?: string) {
+    const useDate = ((dateOverride ?? date) || "").trim();
+    const useSubject = ((subjectOverride ?? subject) || "").trim();
+    if (!useDate) return;
     try {
       setAdding(true);
       const token = await getAuth().currentUser?.getIdToken();
@@ -1371,16 +1404,17 @@ function ScheduledExamsCard() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ date, subject: subject || null }),
+        body: JSON.stringify({ date: useDate, subject: useSubject || null }),
       });
       const json = await res.json();
       if (!res.ok || !json?.ok) throw new Error(json?.error || "Errore");
-      const next = [...items, { id: json.id, date, subject: subject || null }].sort(
-        (a, b) => a.date.localeCompare(b.date)
-      );
+      const next = [
+        ...items,
+        { id: json.id, date: useDate, subject: useSubject || null },
+      ].sort((a, b) => a.date.localeCompare(b.date));
       setItems(next);
       // Se è la prima verifica, centra la vista su quel mese
-      const d = new Date(date + "T00:00:00");
+      const d = new Date(useDate + "T00:00:00");
       setViewYear(d.getFullYear());
       setViewMonth(d.getMonth());
       setSubject("");
@@ -1432,7 +1466,7 @@ function ScheduledExamsCard() {
               className="rounded-lg border px-3 py-1.5 text-sm bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
             />
             <button
-              onClick={addExam}
+              onClick={() => addExam()}
               disabled={adding || !date}
               className="rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] text-white px-3 py-1.5 text-sm font-semibold disabled:opacity-60"
             >
@@ -1481,32 +1515,64 @@ function ScheduledExamsCard() {
             Programma la tua prima verifica
           </button>
 
-          {firstOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setFirstOpen(false)}>
-              <div className="w-full max-w-md rounded-2xl border border-slate-200 [.dark_&]:border-white/10 bg-white [.dark_&]:bg-slate-900 shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-base font-semibold mb-2">Scegli una data</h3>
+          {firstOpen && <FirstExamPortal>
+            <div
+              className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="first-exam-title"
+              onClick={() => setFirstOpen(false)}
+            >
+              <div
+                className="w-full max-w-md sm:rounded-2xl rounded-t-2xl border border-slate-200 [.dark_&]:border-white/10 bg-white [.dark_&]:bg-slate-900 shadow-2xl p-4 max-h-[85vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 id="first-exam-title" className="text-base font-semibold">
+                    Scegli una data
+                  </h3>
+                  <button
+                    onClick={() => setFirstOpen(false)}
+                    className="rounded-md px-2 py-1 text-sm bg-slate-100 [.dark_&]:bg-white/10 hover:bg-slate-200 [.dark_&]:hover:bg-white/15"
+                    aria-label="Chiudi"
+                  >
+                    Chiudi
+                  </button>
+                </div>
+                <p className="mt-1 mb-2 text-[12px] text-slate-600 [.dark_&]:text-white/70">
+                  Tocca un giorno nel calendario per selezionarlo.
+                </p>
                 <CalendarView
                   year={viewYear}
                   month={viewMonth}
                   onPrev={() => {
                     const m = viewMonth - 1;
-                    if (m < 0) { setViewMonth(11); setViewYear(viewYear - 1); } else setViewMonth(m);
+                    if (m < 0) {
+                      setViewMonth(11);
+                      setViewYear(viewYear - 1);
+                    } else setViewMonth(m);
                   }}
                   onNext={() => {
                     const m = viewMonth + 1;
-                    if (m > 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(m);
+                    if (m > 11) {
+                      setViewMonth(0);
+                      setViewYear(viewYear + 1);
+                    } else setViewMonth(m);
                   }}
                   today={today}
                   selected={firstDate}
                   onSelect={(ds) => setFirstDate(ds)}
                 />
-                <input
-                  type="text"
-                  placeholder="Materia (facoltativa)"
-                  value={firstSubject}
-                  onChange={(e) => setFirstSubject(e.target.value)}
-                  className="mt-3 w-full rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
-                />
+                <label className="mt-3 block text-[12px] font-medium text-slate-700 [.dark_&]:text-white/80">
+                  Materia (facoltativa)
+                  <input
+                    type="text"
+                    placeholder="Es. Matematica, Fisica"
+                    value={firstSubject}
+                    onChange={(e) => setFirstSubject(e.target.value)}
+                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
+                  />
+                </label>
                 <div className="mt-3 flex justify-end gap-2">
                   <button
                     onClick={() => setFirstOpen(false)}
@@ -1517,9 +1583,7 @@ function ScheduledExamsCard() {
                   <button
                     onClick={async () => {
                       if (!firstDate) return;
-                      setDate(firstDate);
-                      setSubject(firstSubject);
-                      await addExam();
+                      await addExam(firstDate, firstSubject);
                       setFirstOpen(false);
                       setFirstDate("");
                       setFirstSubject("");
@@ -1532,7 +1596,7 @@ function ScheduledExamsCard() {
                 </div>
               </div>
             </div>
-          )}
+          </FirstExamPortal>}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1574,34 +1638,39 @@ function ScheduledExamsCard() {
             </div>
             <div className="grid grid-cols-7 gap-px bg-slate-200 [.dark_&]:bg-white/10">
               {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((d) => (
-                <div key={d} className="bg-white [.dark_&]:bg-slate-900 text-center text-xs py-1 font-semibold">
+                <div
+                  key={d}
+                  className="bg-white [.dark_&]:bg-slate-900 text-center text-xs py-1 font-semibold"
+                >
                   {d}
                 </div>
               ))}
-              {monthMatrix(viewYear, viewMonth).flat().map((d, i) => {
-                const key = i;
-                const isEmpty = !d;
-                const ds = d ? ymd(d) : "";
-                const scheduled = d && items.some((it) => it.date === ds);
-                const isToday = d ? ds === today : false;
-                return (
-                  <div
-                    key={key}
-                    className={[
-                      "min-h-14 bg-white [.dark_&]:bg-slate-900 p-1",
-                      scheduled ? "ring-2 ring-sky-400" : "",
-                    ].join(" ")}
-                    title={scheduled ? "Verifica programmata" : undefined}
-                  >
-                    <div className="text-xs font-semibold text-slate-700 [.dark_&]:text-white/80 flex items-center gap-1">
-                      {d ? d.getDate() : ""}
-                      {isToday && (
-                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
-                      )}
+              {monthMatrix(viewYear, viewMonth)
+                .flat()
+                .map((d, i) => {
+                  const key = i;
+                  const isEmpty = !d;
+                  const ds = d ? ymd(d) : "";
+                  const scheduled = d && items.some((it) => it.date === ds);
+                  const isToday = d ? ds === today : false;
+                  return (
+                    <div
+                      key={key}
+                      className={[
+                        "min-h-14 bg-white [.dark_&]:bg-slate-900 p-1",
+                        scheduled ? "ring-2 ring-sky-400" : "",
+                      ].join(" ")}
+                      title={scheduled ? "Verifica programmata" : undefined}
+                    >
+                      <div className="text-xs font-semibold text-slate-700 [.dark_&]:text-white/80 flex items-center gap-1">
+                        {d ? d.getDate() : ""}
+                        {isToday && (
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
 
@@ -1609,7 +1678,9 @@ function ScheduledExamsCard() {
           <div className="rounded-xl border border-slate-200 [.dark_&]:border-white/10 p-3">
             <div className="text-sm font-semibold mb-2">Prossime verifiche</div>
             {items.length === 0 ? (
-              <div className="text-sm text-slate-600 [.dark_&]:text-white/70">Nessuna.</div>
+              <div className="text-sm text-slate-600 [.dark_&]:text-white/70">
+                Nessuna.
+              </div>
             ) : (
               <ul className="divide-y divide-slate-200 [.dark_&]:divide-white/10">
                 {items.map((it) => {
@@ -1620,24 +1691,30 @@ function ScheduledExamsCard() {
                   else if (rem === 1) label = "Domani";
                   else label = `tra ${rem}g`;
                   return (
-                  <li key={it.id} className="py-2 flex items-center justify-between text-sm">
-                    <div>
-                      <div className="font-semibold">{it.date}</div>
-                      <div className="text-slate-600 [.dark_&]:text-white/70 flex items-center gap-2">
-                        {it.subject && <span>{it.subject}</span>}
-                        <span className="text-blue-700 [.dark_&]:text-sky-300 font-semibold">{label}</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => removeExam(it.id)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 hover:bg-red-50 [.dark_&]:hover:bg-red-500/10"
-                      aria-label="Rimuovi"
-                      title="Rimuovi"
+                    <li
+                      key={it.id}
+                      className="py-2 flex items-center justify-between text-sm"
                     >
-                      <Trash className="h-4 w-4" />
-                    </button>
-                  </li>
-                );})}
+                      <div>
+                        <div className="font-semibold">{it.date}</div>
+                        <div className="text-slate-600 [.dark_&]:text-white/70 flex items-center gap-2">
+                          {it.subject && <span>{it.subject}</span>}
+                          <span className="text-blue-700 [.dark_&]:text-sky-300 font-semibold">
+                            {label}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeExam(it.id)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 hover:bg-red-50 [.dark_&]:hover:bg-red-500/10"
+                        aria-label="Rimuovi"
+                        title="Rimuovi"
+                      >
+                        <Trash className="h-4 w-4" />
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

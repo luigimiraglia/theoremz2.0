@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, ListChecks, Timer as TimerIcon, FileText, PlayCircle, Lock } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getAuth } from "firebase/auth";
 import { useAuth } from "@/lib/AuthContext";
 import ReactMarkdown from "react-markdown";
@@ -67,6 +67,21 @@ export default function SimulaVerificaPage() {
       abort = true;
     };
   }, []);
+
+  // Preselezione da querystring: ?lessonId=...&slug=...&title=...
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    try {
+      const id = searchParams?.get("lessonId");
+      const slug = searchParams?.get("slug");
+      const title = searchParams?.get("title");
+      if (id && slug) {
+        setSelected((prev) => (prev.some((p) => p.id === id) ? prev : [...prev, { id, slug, title: title || slug }]));
+        setStep("durata");
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const [search, setSearch] = useState("");
   const [searching, setSearching] = useState(false);

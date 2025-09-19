@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import ExerciseCard from "@/components/ExerciseCard";
 import BlackPopup from "@/components/BlackPopup";
@@ -62,12 +63,12 @@ export default function LessonExercises({
 
   return (
     <section className="mt-12">
-      <div className="flex justify-center">
+      <div className="flex flex-wrap items-center justify-center gap-2">
         <button
           id="lesson-exercises-cta"
           onClick={handleClick}
           disabled={loading}
-          className="inline-flex items-center justify-center rounded-2xl  bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] px-8 sm:px-10 py-3 text-xl sm:text-2xl font-bold text-white hover:from-[#1a5fd6] hover:to-[#3d85ff] disabled:opacity-60"
+          className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] px-8 sm:px-10 py-3 text-xl sm:text-2xl font-bold text-white hover:from-[#1a5fd6] hover:to-[#3d85ff] disabled:opacity-60"
         >
           {loading
             ? "Carico gli esercizi…"
@@ -75,6 +76,13 @@ export default function LessonExercises({
               ? "Ricarica esercizi"
               : "Mostra esercizi"}
         </button>
+
+        <Link
+          href={`/simula-verifica?lessonId=${encodeURIComponent(lessonId)}&slug=${encodeURIComponent(lessonSlug)}&title=${encodeURIComponent(lessonTitle)}`}
+          className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-8 sm:px-10 py-3 text-xl sm:text-2xl font-extrabold text-white hover:brightness-110"
+        >
+          Simula verifica
+        </Link>
       </div>
 
       {error && (
