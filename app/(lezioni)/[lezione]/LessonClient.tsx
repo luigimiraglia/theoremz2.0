@@ -39,6 +39,7 @@ type LessonClientProps = {
     classe?: string[];
     lezioniPropedeuticheObbligatorie?: LinkedLessonRaw[];
     lezioniPropedeuticheOpzionali?: LinkedLessonRaw[];
+    lezioniFiglie?: LinkedLessonRaw[];
   };
   sectionItems: { _type: "section"; heading: string; shortTitle: string }[];
   contentSlot?: ReactNode; // server-rendered content to improve LCP
@@ -143,6 +144,7 @@ export default function LessonClient({
   );
   const opt = sanitizeList(lesson.lezioniPropedeuticheOpzionali, lesson.slug);
   const hasPrereq = obb.length > 0 || opt.length > 0;
+  const childrenLessons = sanitizeList(lesson.lezioniFiglie, lesson.slug);
 
   function slugify(s: string) {
     return (s || "").toLowerCase().replace(/\s+/g, "-");
@@ -255,6 +257,34 @@ export default function LessonClient({
             </div>
           </div>
         </details>
+      )}
+
+      {/* Sotto-lezioni (figlie) */}
+      {!!childrenLessons.length && (
+        <section className="mt-4">
+          <h3 className="text-lg font-bold mb-2">Sotto-lezioni e approfondimenti</h3>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {childrenLessons.map((l, i) => (
+              <li
+                key={(l.slug ?? l.title) + "-child-" + i}
+                className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              >
+                {l.slug ? (
+                  <a
+                    href={`/${l.slug}`}
+                    className="font-semibold text-blue-600 hover:text-blue-700"
+                  >
+                    {l.title}
+                  </a>
+                ) : (
+                  <span className="font-semibold text-blue-600 opacity-80">
+                    {l.title}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {/* Contenuto principale */}

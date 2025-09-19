@@ -33,6 +33,7 @@ type LessonDoc = {
   // ⬇️ nuovi
   lezioniPropedeuticheObbligatorie?: LinkedLesson[];
   lezioniPropedeuticheOpzionali?: LinkedLesson[];
+  lezioniFiglie?: LinkedLesson[];
 };
 type SectionBlock = PortableTextBlock & {
   _type: "section";
@@ -53,7 +54,8 @@ const fullLessonQuery = groq`
     _createdAt, _updatedAt, tags,
     categoria, classe,
     lezioniPropedeuticheObbligatorie[]->{ title, "slug": slug },
-    lezioniPropedeuticheOpzionali[]->{ title, "slug": slug }
+    lezioniPropedeuticheOpzionali[]->{ title, "slug": slug },
+    lezioniFiglie[]->{ title, "slug": slug, thumbnailUrl }
   }
 `;
 
@@ -272,6 +274,8 @@ export default async function Page({
             lesson.lezioniPropedeuticheObbligatorie ?? [],
           lezioniPropedeuticheOpzionali:
             lesson.lezioniPropedeuticheOpzionali ?? [],
+          // ⬇️ passa le sotto-lezioni
+          lezioniFiglie: lesson.lezioniFiglie ?? [],
         }}
         sectionItems={sectionItems}
         contentSlot={<LessonContentServer value={lesson.content} />}

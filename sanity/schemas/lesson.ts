@@ -480,5 +480,14 @@ export default defineType({
       type: "array",
       of: [{ type: "reference", to: [{ type: "exercise" }] }],
     }),
+    defineField({
+      name: "lezioniFiglie",
+      title: "Lezioni figlie (sotto-argomenti)",
+      description:
+        "Elenca qui le lezioni specifiche/figlie che dipendono da questa (es. sotto-punti dell'argomento).",
+      type: "array",
+      of: [{ type: "reference", to: [{ type: "lesson" }] }],
+      options: { sortable: true },
+    }),
   ],
 });
