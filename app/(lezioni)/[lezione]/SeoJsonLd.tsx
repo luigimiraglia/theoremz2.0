@@ -8,6 +8,9 @@ export default function SeoJsonLd(props: {
   updatedAt?: string;
   breadcrumbs: { name: string; item: string }[];
   videoUrl?: string | null;
+  // SEO relations
+  hasPart?: { name: string; slug?: string | null }[];
+  isPartOf?: { name: string; slug?: string | null }[];
 }) {
   const base = "https://theoremz.com";
   const url = `${base}/${props.slug}`;
@@ -21,7 +24,7 @@ export default function SeoJsonLd(props: {
   };
 
   // Article (primary)
-  const article = {
+  const article: any = {
     "@type": "Article",
     // Google recommends headline <= 110 chars
     headline: clamp(
@@ -41,10 +44,10 @@ export default function SeoJsonLd(props: {
     dateModified: props.updatedAt ?? props.createdAt ?? undefined,
     inLanguage: "it-IT",
     url,
-  } as const;
+  };
 
   // LearningResource (didattico)
-  const learningResource = {
+  const learningResource: any = {
     "@type": "LearningResource",
     name: clamp(
       props.subtitle ? `${props.title}: ${props.subtitle}` : props.title,
@@ -55,7 +58,29 @@ export default function SeoJsonLd(props: {
     inLanguage: "it-IT",
     isAccessibleForFree: true,
     provider: { "@type": "Organization", name: "Theoremz", url: base },
-  } as const;
+  };
+
+  // Relations (hasPart / isPartOf)
+  const mapCW = (arr?: { name: string; slug?: string | null }[]) =>
+    (arr || [])
+      .filter((x) => x && x.name && x.slug)
+      .map((x) => ({
+        "@type": "CreativeWork",
+        name: x.name,
+        url: `${base}/${x.slug}`,
+      }));
+  const hasPart = mapCW(props.hasPart);
+  const isPartOf = mapCW(props.isPartOf);
+  if (hasPart.length) {
+    article.hasPart = hasPart;
+    learningResource.hasPart = hasPart;
+  }
+  if (isPartOf.length) {
+    // Schema.org consente array o singolo oggetto
+    article.isPartOf = isPartOf.length === 1 ? isPartOf[0] : isPartOf;
+    learningResource.isPartOf =
+      isPartOf.length === 1 ? isPartOf[0] : isPartOf;
+  }
 
   // Breadcrumbs
   const breadcrumbs = {

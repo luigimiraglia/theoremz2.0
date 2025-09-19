@@ -34,6 +34,8 @@ type LessonDoc = {
   lezioniPropedeuticheObbligatorie?: LinkedLesson[];
   lezioniPropedeuticheOpzionali?: LinkedLesson[];
   lezioniFiglie?: LinkedLesson[];
+  // reverse lookup: lezioni che referenziano questa (padre/i)
+  parents?: LinkedLesson[];
 };
 type SectionBlock = PortableTextBlock & {
   _type: "section";
@@ -55,7 +57,8 @@ const fullLessonQuery = groq`
     categoria, classe,
     lezioniPropedeuticheObbligatorie[]->{ title, "slug": slug },
     lezioniPropedeuticheOpzionali[]->{ title, "slug": slug },
-    lezioniFiglie[]->{ title, "slug": slug, thumbnailUrl }
+    lezioniFiglie[]->{ title, "slug": slug, thumbnailUrl },
+    "parents": *[_type == "lesson" && references(^._id)][0..2]{ title, "slug": slug }
   }
 `;
 
@@ -247,12 +250,32 @@ export default async function Page({
                 item: `${SITE}/${materia.toLowerCase()}`,
               }
             : { name: "Lezioni", item: SITE };
-          return [
+          const crumbs = [
             { name: "Theoremz", item: `${SITE}/` },
             second,
-            { name: lesson.title, item: `${SITE}/${lesson.slug.current}` },
           ];
+          const parent = (lesson.parents ?? [])[0];
+          if (parent?.slug?.current && parent?.title) {
+            crumbs.push({
+              name: parent.title,
+              item: `${SITE}/${parent.slug.current}`,
+            });
+          }
+          crumbs.push({
+            name: lesson.title,
+            item: `${SITE}/${lesson.slug.current}`,
+          });
+          return crumbs;
         })()}
+        // SEO relations
+        hasPart={(lesson.lezioniFiglie ?? []).map((c) => ({
+          name: c.title,
+          slug: c.slug.current,
+        }))}
+        isPartOf={(lesson.parents ?? []).map((p) => ({
+          name: p.title,
+          slug: p.slug.current,
+        }))}
       />
 
       {/* UI: render content server-side and pass it into client wrapper to reduce hydration cost */}
