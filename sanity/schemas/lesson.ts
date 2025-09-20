@@ -187,6 +187,17 @@ export default defineType({
                     props.children
                   ),
               },
+              {
+                title: "Red Bold",
+                value: "redBold",
+                icon: () => React.createElement("span", null, "RB"),
+                component: (props: { children: React.ReactNode }) =>
+                  React.createElement(
+                    "strong",
+                    { style: { fontWeight: 700, color: "#dc143c" } },
+                    props.children
+                  ),
+              },
               // Esempio: barra verticale (gradient) a sinistra che sposta l'indentazione
               {
                 title: "Esempio (barra sx)",
@@ -291,10 +302,12 @@ export default defineType({
                       );
                       const onChange = () => setIsDark(m.matches);
                       onChange();
-                      if (m.addEventListener) m.addEventListener("change", onChange);
+                      if (m.addEventListener)
+                        m.addEventListener("change", onChange);
                       else m.addListener(onChange);
                       return () => {
-                        if (m.removeEventListener) m.removeEventListener("change", onChange);
+                        if (m.removeEventListener)
+                          m.removeEventListener("change", onChange);
                         else m.removeListener(onChange);
                       };
                     } catch {

@@ -19,11 +19,17 @@ const MathInChildren = ({ children }: { children: React.ReactNode }) => (
 function withInlineMath(children: React.ReactNode): React.ReactNode {
   const map = (node: React.ReactNode): React.ReactNode => {
     if (typeof node === "string") return <MathText text={node} />;
-    if (Array.isArray(node)) return node.map((n, i) => <React.Fragment key={i}>{map(n)}</React.Fragment>);
+    if (Array.isArray(node))
+      return node.map((n, i) => (
+        <React.Fragment key={i}>{map(n)}</React.Fragment>
+      ));
     if (React.isValidElement(node)) {
       const props: any = (node as any).props || {};
       const newChildren = map(props.children);
-      return React.cloneElement(node as any, { ...props, children: newChildren });
+      return React.cloneElement(node as any, {
+        ...props,
+        children: newChildren,
+      });
     }
     return node;
   };
@@ -127,11 +133,12 @@ export const ptComponents: PortableTextComponents = {
     lineBreak: () => <br />,
 
     // retro-compatibilità oggetto "latex"
-    latex: ({ value }) =>
+    latex: ({ value }) => (
       // Forza stile display per leggibilità
       <div className="my-3 overflow-x-auto">
         <BlockMath errorColor="#cc0000">{value.code}</BlockMath>
-      </div>,
+      </div>
+    ),
 
     imageExternal: ({ value }) => {
       const url: string = value?.url || "";
@@ -142,7 +149,8 @@ export const ptComponents: PortableTextComponents = {
         try {
           const u = new URL(url, "https://theoremz.com");
           const isLocal =
-            (!u.host || u.host === "theoremz.com") && u.pathname.startsWith("/images/");
+            (!u.host || u.host === "theoremz.com") &&
+            u.pathname.startsWith("/images/");
           if (isLocal) {
             const name = u.pathname.split("/").pop()?.toLowerCase() || "";
             const known: Record<string, [number, number]> = {
@@ -151,7 +159,8 @@ export const ptComponents: PortableTextComponents = {
               "ap-triangolo.webp": [2000, 1006],
               "ap-quadrato.webp": [2000, 985],
             };
-            if (known[name]) return { width: known[name][0], height: known[name][1] };
+            if (known[name])
+              return { width: known[name][0], height: known[name][1] };
             const m = name.match(/-(\d+)x(\d+)\.(?:webp|jpe?g|png)$/);
             if (m) return { width: Number(m[1]), height: Number(m[2]) };
           }
@@ -160,7 +169,11 @@ export const ptComponents: PortableTextComponents = {
       })();
 
       const sizes = "(min-width: 1024px) 40vw, (min-width: 640px) 60vw, 90vw";
-      const style = dims ? ({ aspectRatio: `${dims.width} / ${dims.height}` } as React.CSSProperties) : undefined;
+      const style = dims
+        ? ({
+            aspectRatio: `${dims.width} / ${dims.height}`,
+          } as React.CSSProperties)
+        : undefined;
 
       return (
         <div className="my-6 flex justify-center">
@@ -254,16 +267,33 @@ export const ptComponents: PortableTextComponents = {
   /* ----------   MARKS (inline) ---------- */
   marks: {
     /* nuovi decorator custom (schema v4: value "italic" e "bold") */
-    italic: ({ children }) => <em className="italic">{withInlineMath(children)}</em>,
-    bold: ({ children }) => <strong className="font-bold">{withInlineMath(children)}</strong>,
+    italic: ({ children }) => (
+      <em className="italic">{withInlineMath(children)}</em>
+    ),
+    bold: ({ children }) => (
+      <strong className="font-bold">{withInlineMath(children)}</strong>
+    ),
 
     /* retro-compatibilità per contenuti già salvati con em/strong */
-    em: ({ children }) => <em className="italic">{withInlineMath(children)}</em>,
-    strong: ({ children }) => <strong className="font-bold">{withInlineMath(children)}</strong>,
+    em: ({ children }) => (
+      <em className="italic">{withInlineMath(children)}</em>
+    ),
+    strong: ({ children }) => (
+      <strong className="font-bold">{withInlineMath(children)}</strong>
+    ),
 
-    underline: ({ children }) => <span className="underline">{withInlineMath(children)}</span>,
+    underline: ({ children }) => (
+      <span className="underline">{withInlineMath(children)}</span>
+    ),
     blueBold: ({ children }) => (
-      <strong className="font-bold text-blue-500">{withInlineMath(children)}</strong>
+      <strong className="font-bold text-blue-500">
+        {withInlineMath(children)}
+      </strong>
+    ),
+    redBold: ({ children }) => (
+      <strong className="font-bold text-[#dc143c]">
+        {withInlineMath(children)}
+      </strong>
     ),
 
     // Evidenziatore: leggibile in light e dark
@@ -285,7 +315,10 @@ export const ptComponents: PortableTextComponents = {
 
     // Barra verticale a sinistra (gradient) che sposta l'indentazione, con bordi arrotondati e singola barra per tutte le righe
     exUnderline: ({ children }) => (
-      <span className="relative inline-block align-baseline" style={{ paddingLeft: 10 }}>
+      <span
+        className="relative inline-block align-baseline"
+        style={{ paddingLeft: 10 }}
+      >
         <span
           aria-hidden
           className="pointer-events-none"
