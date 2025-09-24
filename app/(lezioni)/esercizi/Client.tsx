@@ -158,7 +158,10 @@ export default function EserciziClient({
       <div className="rounded-2xl bg-gray-100/60 [.dark_&]:bg-slate-800 py-4 px-4 sm:px-6 flex flex-col text-slate-800 [.dark_&]:text-white md:flex-row md:items-center gap-3">
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Esercizi</h1>
         <div className="flex-1" />
+        <label htmlFor="exercise-search" className="sr-only">Cerca esercizi</label>
         <input
+          id="exercise-search"
+          name="q"
           type="text"
           placeholder="🔍 Cerca per titolo o lezione…"
           value={query}

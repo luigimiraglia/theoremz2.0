@@ -93,11 +93,14 @@ export default function LeadFormClient() {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">
+          <label htmlFor="lead-given-name" className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">
             Nome *
           </label>
           <input
+            id="lead-given-name"
+            name="given-name"
             type="text"
+            autoComplete="given-name"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             className="mt-1 w-full rounded-2xl border-2 border-slate-200 bg-white [.dark_&]:bg-slate-900 px-3 py-2.5 text-[15px] font-semibold focus:outline-none focus:ring-2 focus:ring-sky-300"
@@ -106,11 +109,14 @@ export default function LeadFormClient() {
           />
         </div>
         <div>
-          <label className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">
+          <label htmlFor="lead-family-name" className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">
             Cognome *
           </label>
           <input
+            id="lead-family-name"
+            name="family-name"
             type="text"
+            autoComplete="family-name"
             value={cognome}
             onChange={(e) => setCognome(e.target.value)}
             className="mt-1 w-full rounded-2xl border-2 border-slate-200 bg-white [.dark_&]:bg-slate-900 px-3 py-2.5 text-[15px] font-semibold focus:outline-none focus:ring-2 focus:ring-sky-300"
@@ -121,7 +127,7 @@ export default function LeadFormClient() {
       </div>
 
       <div className="mt-3">
-        <label className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">
+        <label htmlFor="lead-tel" className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">
           Telefono *
         </label>
         <div className="mt-1 flex rounded-2xl border-2 border-slate-200 bg-white [.dark_&]:bg-slate-900 focus-within:ring-2 focus-within:ring-sky-300">
@@ -129,8 +135,11 @@ export default function LeadFormClient() {
             +39
           </span>
           <input
+            id="lead-tel"
+            name="tel"
             type="tel"
             inputMode="tel"
+            autoComplete="tel"
             value={telefono}
             onChange={(e) => setTelefono(e.target.value)}
             className="w-full rounded-r-2xl bg-transparent px-2 py-2.5 text-[15px] font-semibold focus:outline-none"
@@ -153,10 +162,12 @@ export default function LeadFormClient() {
       </div>
 
       <div className="mt-3">
-        <label className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">
+        <label htmlFor="lead-notes" className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">
           Note (facoltative)
         </label>
         <textarea
+          id="lead-notes"
+          name="notes"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={4}
@@ -166,6 +177,8 @@ export default function LeadFormClient() {
       </div>
 
       <div className="mt-0 flex justify-center">
+        {/* Hidden input to expose selected slot/orario to autofill/analytics */}
+        <input type="hidden" name="slot" value={orario} />
         <button
           type="submit"
           disabled={sending}

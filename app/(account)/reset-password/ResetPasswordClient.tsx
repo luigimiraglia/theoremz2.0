@@ -69,8 +69,12 @@ function RequestForm() {
       </p>
 
       <form onSubmit={onSubmit} className="mt-4 space-y-3">
+        <label htmlFor="reset-email" className="sr-only">Email</label>
         <input
+          id="reset-email"
+          name="email"
           type="email"
+          autoComplete="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -174,15 +178,23 @@ function ConfirmForm({
       </p>
 
       <form onSubmit={onSubmit} className="mt-4 space-y-3">
+        <label htmlFor="new-password-1" className="sr-only">Nuova password</label>
         <input
+          id="new-password-1"
+          name="new-password"
           type="password"
+          autoComplete="new-password"
           value={pw1}
           onChange={(e) => setPw1(e.target.value)}
           placeholder="Nuova password (min 8 caratteri)"
           className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
         />
+        <label htmlFor="new-password-2" className="sr-only">Ripeti nuova password</label>
         <input
+          id="new-password-2"
+          name="new-password-confirm"
           type="password"
+          autoComplete="new-password"
           value={pw2}
           onChange={(e) => setPw2(e.target.value)}
           placeholder="Ripeti nuova password"

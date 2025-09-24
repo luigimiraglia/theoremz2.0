@@ -274,6 +274,8 @@ export default function MatematicaClient({
       <div className="[.dark_&]:bg-slate-800/80 bg-gray-50 rounded-2xl py-8 px-6 flex flex-col sm:flex-row justify-center items-center gap-4">
         <h1 className="text-2xl font-bold">Matematica</h1>
         <input
+          id="matematica-search"
+          name="q"
           type="text"
           placeholder="🔍 Cerca lezione..."
           value={query}

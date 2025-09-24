@@ -273,6 +273,8 @@ export default function FisicaClient({
       <div className="[.dark_&]:bg-slate-800/80 bg-gray-50 rounded-2xl py-8 px-6 flex flex-col sm:flex-row justify-center items-center gap-4">
         <h1 className="text-2xl font-bold">Fisica</h1>
         <input
+          id="fisica-search"
+          name="q"
           type="text"
           placeholder="🔍 Cerca lezione di fisica..."
           value={query}

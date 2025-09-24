@@ -45,7 +45,10 @@ export default function ExercisesIndex({
           </div>
           <div className="w-full sm:w-[420px]">
             <div className="relative">
+              <label htmlFor="exidx-search" className="sr-only">Cerca esercizi</label>
               <input
+                id="exidx-search"
+                name="q"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Cerca lezione o titolo…"

@@ -70,8 +70,12 @@ export default function Register() {
 
         {/* form email / pw */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          <label htmlFor="reg-email" className="sr-only">Email</label>
           <input
+            id="reg-email"
+            name="email"
             type="email"
+            autoComplete="email"
             placeholder="Email"
             className="w-full rounded border p-2 text-slate-800"
             value={email}
@@ -79,8 +83,12 @@ export default function Register() {
             required
           />
 
+          <label htmlFor="reg-password" className="sr-only">Password</label>
           <input
+            id="reg-password"
+            name="password"
             type="password"
+            autoComplete={isLogin ? "current-password" : "new-password"}
             placeholder="Password"
             className="w-full rounded border p-2 text-slate-800"
             value={password}
@@ -89,8 +97,10 @@ export default function Register() {
           />
 
           {!isLogin && (
-            <label className="flex cursor-pointer items-start gap-2 text-sm">
+            <label htmlFor="accept-terms" className="flex cursor-pointer items-start gap-2 text-sm">
               <input
+                id="accept-terms"
+                name="acceptTerms"
                 type="checkbox"
                 className="mt-1"
                 checked={acceptTerms}

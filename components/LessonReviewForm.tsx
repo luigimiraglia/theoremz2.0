@@ -104,9 +104,12 @@ export default function LessonReviewForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Nome *</label>
+          <label htmlFor="review-name" className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Nome *</label>
           <input
+            id="review-name"
+            name="name"
             type="text"
+            autoComplete="name"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -115,9 +118,12 @@ export default function LessonReviewForm({
           />
         </div>
         <div>
-          <label className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Email (facoltativa)</label>
+          <label htmlFor="review-email" className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Email (facoltativa)</label>
           <input
+            id="review-email"
+            name="email"
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="mt-1 w-full rounded-xl border-2 border-amber-300/60 bg-white [.dark_&]:bg-slate-800 px-3 py-2.5 text-[15px] font-semibold focus:outline-none focus:ring-2 focus:ring-amber-300"
@@ -127,8 +133,10 @@ export default function LessonReviewForm({
       </div>
 
       <div>
-        <label className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Commento *</label>
+        <label htmlFor="review-comment" className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Commento *</label>
         <textarea
+          id="review-comment"
+          name="comment"
           required
           value={comment}
           onChange={(e) => setComment(e.target.value)}
@@ -173,4 +181,3 @@ export default function LessonReviewForm({
     </form>
   );
 }
-

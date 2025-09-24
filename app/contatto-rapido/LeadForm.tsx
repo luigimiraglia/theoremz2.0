@@ -83,10 +83,13 @@ export default function LeadForm() {
         {/* Inputs */}
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Nome e cognome *</label>
+            <label htmlFor="lead-name" className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Nome e cognome *</label>
             <div className="mt-1 relative">
               <input
+                id="lead-name"
+                name="name"
                 type="text"
+                autoComplete="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="peer mt-0 w-full rounded-2xl border-2 border-slate-200 bg-white [.dark_&]:bg-slate-800 pl-3 pr-3 py-3 text-[15px] font-semibold focus:outline-none focus:ring-2 focus:ring-sky-300"
@@ -96,12 +99,15 @@ export default function LeadForm() {
             </div>
           </div>
           <div>
-            <label className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Telefono *</label>
+            <label htmlFor="lead-phone" className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Telefono *</label>
             <div className="mt-1 flex rounded-2xl border-2 border-slate-200 bg-white [.dark_&]:bg-slate-800 focus-within:ring-2 focus-within:ring-sky-300">
               <span className="inline-flex items-center gap-1 pl-3 pr-2 text-[13px] font-black text-slate-500 select-none">+39</span>
               <input
+                id="lead-phone"
+                name="phone"
                 type="tel"
                 inputMode="tel"
+                autoComplete="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full rounded-r-2xl bg-transparent px-2 py-3 text-[15px] font-semibold focus:outline-none"
@@ -149,8 +155,10 @@ export default function LeadForm() {
         </div>
 
         <div className="mt-4">
-          <label className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Note (facoltative)</label>
+          <label htmlFor="lead-note" className="block text-[12.5px] font-black text-slate-800 [.dark_&]:text-slate-100">Note (facoltative)</label>
           <textarea
+            id="lead-note"
+            name="note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={4}
@@ -158,6 +166,10 @@ export default function LeadForm() {
             className="mt-1 w-full rounded-2xl border-2 border-slate-200 bg-white [.dark_&]:bg-slate-800 px-3 py-3 text-[15px] font-semibold focus:outline-none focus:ring-2 focus:ring-sky-300"
           />
         </div>
+
+        {/* Hidden inputs for non-text controls so browsers can autofill/name map */}
+        <input type="hidden" name="slot" value={slot} />
+        <input type="hidden" name="contact" value={contact} />
 
         <div className="mt-5">
           <button
