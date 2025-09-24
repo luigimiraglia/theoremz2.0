@@ -11,14 +11,14 @@ export const metadata = {
     title: "Theoremz Mentor — Tutor personale",
     description:
       "Piani di studio, esercizi mirati e lezioni 1‑to‑1: risultati reali, meno stress.",
-    images: [{ url: "/metadata.png" }],
+    images: [{ url: "/opengraph-image" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Theoremz Mentor — Tutor personale",
     description:
       "Piani di studio, esercizi mirati e lezioni 1‑to‑1: risultati reali, meno stress.",
-    images: ["/metadata.png"],
+    images: ["/opengraph-image"],
     site: "@theoremz_",
   },
 };

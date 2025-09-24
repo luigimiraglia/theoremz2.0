@@ -58,7 +58,7 @@ export async function GET() {
 
   for (const r of items) {
     const loc = `${base}/${r.slug}`;
-    const thumb = r.thumbnailUrl ? `${r.thumbnailUrl}` : `${base}/metadata.png`;
+    const thumb = r.thumbnailUrl ? `${r.thumbnailUrl}` : `${base}/opengraph-image`;
     const title = escapeXml(r.title || (r.slug as string));
     const desc = escapeXml(`Videolezione su ${r.title || r.slug}`);
     const embed = r.video ? toYouTubeEmbed(r.video) : null;
@@ -86,4 +86,3 @@ export async function GET() {
     headers: { "Content-Type": "application/xml; charset=utf-8" },
   });
 }
-

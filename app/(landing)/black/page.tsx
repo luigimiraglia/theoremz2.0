@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     description: DESC,
     url: CANONICAL,
     siteName: "Theoremz",
-    images: [{ url: "/metadata.png" }],
+    images: [{ url: "/opengraph-image" }],
     type: "website",
   },
   twitter: {
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESC,
     site: "@theoremz_",
-    images: ["/metadata.png"],
+    images: ["/opengraph-image"],
   },
 };
 
@@ -65,7 +65,7 @@ export default function BlackPage() {
     name: "Theoremz Black",
     brand: { "@type": "Brand", name: "Theoremz" },
     description: DESC,
-    image: [`${SITE}/metadata.png`],
+    image: [`${SITE}/opengraph-image`],
     offers: {
       "@type": "AggregateOffer",
       offerCount: 3,
@@ -126,7 +126,7 @@ export default function BlackPage() {
     name: "Theoremz Black",
     brand: { "@type": "Brand", name: "Theoremz" },
     description: DESC,
-    image: [`${SITE}/metadata.png`],
+    image: [`${SITE}/opengraph-image`],
     offers: productLd.offers,
     aggregateRating: {
       "@type": "AggregateRating",

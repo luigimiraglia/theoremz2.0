@@ -20,7 +20,7 @@ export default function Home() {
                 "@type": "Organization",
                 name: "Theoremz",
                 url: "https://theoremz.com",
-                logo: "https://theoremz.com/metadata.png",
+                logo: "https://theoremz.com/images/logo.webp",
                 sameAs: ["https://twitter.com/theoremz_"],
               },
               {

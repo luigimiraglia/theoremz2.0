@@ -11,7 +11,7 @@ export default function RisoluzioneEserciziPage() {
     brand: { "@type": "Brand", name: "Theoremz" },
     description:
       "Invia l'esercizio e ricevi la soluzione spiegata passo passo in 2 ore. Correzioni e chiarimenti inclusi.",
-    image: [`${SITE}/metadata.png`],
+    image: [`${SITE}/opengraph-image`],
     offers: {
       "@type": "AggregateOffer",
       priceCurrency: "EUR",
@@ -71,7 +71,7 @@ export default function RisoluzioneEserciziPage() {
       brand: { "@type": "Brand", name: "Theoremz" },
       description:
         "Invia l'esercizio e ricevi la soluzione spiegata passo passo in 2 ore.",
-      image: [`${SITE}/metadata.png`],
+      image: [`${SITE}/opengraph-image`],
       offers: productLd.offers,
       aggregateRating: {
         "@type": "AggregateRating",
@@ -650,14 +650,14 @@ export const metadata = {
     title: "Risoluzione esercizi in 2 ore",
     description:
       "Soluzioni chiare, passaggi spiegati e chiarimenti inclusi. Zero ansia, risultati veloci.",
-    images: [{ url: "/metadata.png" }],
+    images: [{ url: "/opengraph-image" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Risoluzione esercizi in 2 ore",
     description:
       "Soluzioni chiare, passaggi spiegati e chiarimenti inclusi. Zero ansia, risultati veloci.",
-    images: ["/metadata.png"],
+    images: ["/opengraph-image"],
     site: "@theoremz_",
   },
 };

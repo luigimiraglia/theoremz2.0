@@ -13,14 +13,19 @@ type Lesson = {
   _id: string;
   title: string;
   nomeAbbreviato?: string;
+  materia?: string;
   categoria: string[];
   classe: string[];
   slug: { current: string };
   thumbnailUrl?: string;
+  sections?: string[];
+  h2s?: { t: string[] }[];
 };
 
-const Q = groq`*[_type=="lesson" && materia=="matematica"]{
-  _id, title, nomeAbbreviato, categoria, classe, slug, thumbnailUrl
+const Q = groq`*[_type=="lesson"]{
+  _id, title, nomeAbbreviato, materia, categoria, classe, slug, thumbnailUrl,
+  "sections": content[_type=="section"].heading,
+  "h2s": content[_type=="block" && style=="h2"]{ "t": children[].text }
 } | order(title asc)`;
 
 /* ================== SEO (solo server, zero UI) ================== */
@@ -48,13 +53,13 @@ export async function generateMetadata() {
       url: CANONICAL,
       siteName: "Theoremz",
       type: "website",
-      images: [{ url: "/metadata.png" }],
+      images: [{ url: "/opengraph-image" }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: ["/metadata.png"],
+      images: ["/opengraph-image"],
       site: "@theoremz_",
     },
   };
@@ -74,6 +79,20 @@ export default async function Page() {
     cache: "force-cache",
     next: { revalidate },
     stega: false,
+  });
+  // Costruisci indice sezioni (solo per ricerca)
+  const sectionIndex = (lessons || []).flatMap((l) => {
+    const h2 = (l.h2s || []).map((b) => (b && Array.isArray(b.t) ? b.t.join("") : "")).filter(Boolean);
+    const all = [...(l.sections || []), ...h2];
+    return all.map((heading) => ({
+      lessonId: l._id,
+      lessonTitle: l.title,
+      lessonSlug: l.slug.current,
+      lessonThumb: l.thumbnailUrl || null,
+      materia: l.materia || null,
+      heading,
+      classe: l.classe,
+    }));
   });
 
   // JSON-LD invisibile (Breadcrumb + elenco lezioni + FAQ)
@@ -129,8 +148,8 @@ export default async function Page() {
       <JsonLd data={breadcrumbJsonLd} />
       <JsonLd data={itemListJsonLd} />
       <JsonLd data={faqJsonLd} />
-      {/* UI INVARIATA: solo il tuo client */}
-      <MatematicaClient initialLessons={lessons ?? []} />
+      {/* Client con indice sezioni per la ricerca */}
+      <MatematicaClient initialLessons={lessons ?? []} initialSections={sectionIndex} />
     </>
   );
 }

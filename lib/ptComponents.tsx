@@ -6,6 +6,16 @@ import "katex/dist/katex.min.css";
 import { LucideQuote as BlockquoteIcon } from "lucide-react";
 import MathText from "@/components/MathText";
 
+// Genera un anchor id stabile a partire dal testo
+function toAnchorId(s: string | undefined | null): string {
+  const t = String(s ?? "").toLowerCase();
+  return t
+    .replace(/<[^>]+>/g, "") // rimuovi eventuale HTML
+    .replace(/[^\p{L}\p{N}]+/gu, "-") // lettere/numeri unicode → - per spazi/punteggiatura
+    .replace(/^-+|-+$/g, "") // trim -
+    .slice(0, 80); // evita id troppo lunghi
+}
+
 // Costruisce uno srcset responsive per immagini su cdn.sanity.io
 function buildSanitySrcSet(url: string): string | null {
   try {
@@ -95,11 +105,19 @@ const isPureBlockMath = (value: any) =>
 export const ptComponents: PortableTextComponents = {
   /* ----------   BLOCKS   ---------- */
   block: {
-    h2: ({ children }) => (
-      <h2 className="mt-8 mb-4 text-2xl text-blue-500 font-extrabold">
-        <MathInChildren>{children}</MathInChildren>
-      </h2>
-    ),
+    h2: ({ children, value }) => {
+      const text = blockPlainText(value);
+      const id = toAnchorId(text);
+      return (
+        <h2
+          id={id}
+          tabIndex={-1}
+          className="mt-8 mb-4 text-2xl text-blue-500 font-extrabold scroll-mt-24"
+        >
+          <MathInChildren>{children}</MathInChildren>
+        </h2>
+      );
+    },
 
     normal: ({ children, value }) => {
       if (isPureBlockMath(value)) {
@@ -215,13 +233,11 @@ export const ptComponents: PortableTextComponents = {
     },
 
     section: ({ value }) => {
-      const anchor = value.shortTitle
-        ?.toLowerCase()
-        .replace(/[^\w]+/g, "-")
-        .replace(/^-+|-+$/g, "");
+      const anchor = toAnchorId(value.heading || value.shortTitle);
       return (
         <h2
           id={anchor}
+          tabIndex={-1}
           className="mt-4 text-2xl font-bold text-blue-500 scroll-mt-24"
         >
           <MathText text={value.heading} />

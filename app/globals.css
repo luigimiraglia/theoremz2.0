@@ -27,6 +27,9 @@ body {
   color: var(--foreground);
 }
 
+/* Smooth anchor scrolling su tutta la pagina */
+html[data-scroll-behavior="smooth"] { scroll-behavior: smooth; }
+
 /* Global keyframes used by lesson animations (server-safe) */
 @keyframes fadeSlide {
   0% {

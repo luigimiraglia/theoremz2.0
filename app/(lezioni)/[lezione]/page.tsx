@@ -115,6 +115,14 @@ function buildSeoTitle(raw: string): string {
   // Non aggiungere il brand qui: il layout ha già title.template "%s | Theoremz"
   return limitForSerp(base);
 }
+function toAnchorId(s: string): string {
+  const t = String(s || "").toLowerCase();
+  return t
+    .replace(/<[^>]+>/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
 function ptToPlain(blocks: PortableTextBlock[] | undefined): string {
   if (!blocks) return "";
   const out: string[] = [];
@@ -155,7 +163,7 @@ export async function generateMetadata({
 
   const baseUrl = "https://theoremz.com";
   const canonical = `${baseUrl}/${lesson.slug.current}`;
-  const ogImage = lesson.thumbnailUrl ?? "/metadata.png";
+  const ogImage = lesson.thumbnailUrl ?? "/opengraph-image";
 
   return {
     title,
@@ -230,6 +238,13 @@ export default async function Page({
         x !== null
     );
 
+  // JSON-LD: aggiungi anche le sezioni come hasPart con ancore (#)
+  const sectionHasPart = sectionItems.map((s) => ({
+    name: s.shortTitle,
+    // Usa l'H2 completo per l'anchor, il mini-index resta solo come label
+    slug: `${lesson.slug.current}#${toAnchorId(s.heading)}`,
+  }));
+
   return (
     <>
       {/* JSON-LD strutturato (Article + Breadcrumbs) */}
@@ -267,11 +282,14 @@ export default async function Page({
           });
           return crumbs;
         })()}
-        // SEO relations
-        hasPart={(lesson.lezioniFiglie ?? []).map((c) => ({
-          name: c.title,
-          slug: c.slug.current,
-        }))}
+        // SEO relations: sotto-lezioni + sezioni con ancore
+        hasPart={[
+          ...(lesson.lezioniFiglie ?? []).map((c) => ({
+            name: c.title,
+            slug: c.slug.current,
+          })),
+          ...sectionHasPart,
+        ]}
         isPartOf={(lesson.parents ?? []).map((p) => ({
           name: p.title,
           slug: p.slug.current,

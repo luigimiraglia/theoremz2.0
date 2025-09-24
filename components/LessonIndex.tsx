@@ -7,6 +7,14 @@ type SectionItem = {
 export default function LessonIndex({ sections }: { sections: SectionItem[] }) {
   if (!sections?.length) return null;
 
+  const toAnchorId = (s: string) =>
+    String(s || "")
+      .toLowerCase()
+      .replace(/<[^>]+>/g, "")
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80);
+
   return (
     <nav aria-label="Indice della lezione" className="my-1">
       <ul
@@ -17,11 +25,8 @@ export default function LessonIndex({ sections }: { sections: SectionItem[] }) {
         "
       >
         {sections.map((section) => {
-          const anchor = section.shortTitle
-            .toLowerCase()
-            .replace(/[^\w]+/g, "-")
-            .replace(/^-+|-+$/g, ""); // trim - agli estremi
-
+          // Usa l'H2 completo per l'anchor
+          const anchor = toAnchorId(section.heading);
           return (
             <li key={anchor} className="shrink-0">
               <a

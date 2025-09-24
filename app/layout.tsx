@@ -28,7 +28,7 @@ export const metadata: Metadata = {
       "Studia gratuitamente le materie scientifiche su Theoremz! Qui troverai anche esercizi per allenarti.",
     url: "https://theoremz.com",
     siteName: "Theoremz",
-    images: [{ url: "/metadata.png" }],
+    images: [{ url: "/opengraph-image" }],
     type: "website",
   },
   twitter: {
@@ -37,11 +37,11 @@ export const metadata: Metadata = {
     description:
       "Studia gratuitamente le materie scientifiche su Theoremz! Qui troverai anche esercizi per allenarti.",
     site: "@theoremz_",
-    images: ["/metadata.png"],
+    images: ["/opengraph-image"],
   },
   icons: {
     icon: "/favicon.ico",
-    apple: "/images/apple-touch.webp",
+    apple: "/images/apple-touch.png",
   },
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },
@@ -69,7 +69,13 @@ export default async function RootLayout({
 }) {
   const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   return (
-    <html lang="it" translate="no" className={montserrat.className} suppressHydrationWarning>
+    <html
+      lang="it"
+      translate="no"
+      className={montserrat.className}
+      suppressHydrationWarning
+      data-scroll-behavior="smooth"
+    >
       <head>
         <meta name="google" content="notranslate" />
         <meta name="color-scheme" content="light dark" />
@@ -90,7 +96,7 @@ export default async function RootLayout({
                   url: "https://theoremz.com",
                   logo: {
                     "@type": "ImageObject",
-                    url: "https://theoremz.com/metadata.png",
+                    url: "https://theoremz.com/images/logo.webp",
                   },
                 },
                 {

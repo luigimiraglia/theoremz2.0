@@ -1,8 +1,11 @@
+"use client";
+
 import SaveLessonButton from "@/components/SaveLessonButton";
 import Link from "next/link";
 import FormularioSection from "@/components/FormularioSection";
 import LessonNotesClient from "@/components/LessonNotesClient";
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import PortableRenderer from "./PortableRenderer"; // fallback if no server slot provided
 import type { PortableTextBlock } from "sanity";
 import LazyOnVisible from "@/components/LazyOnVisible";
@@ -155,6 +158,31 @@ export default function LessonClient({
     if (m) return `/scuola/liceo/${slugify(m[2])}/${m[1]}`;
     return null;
   }
+
+  // Scroll a ancora (#id) al mount e su hashchange
+  useEffect(() => {
+    const doScroll = () => {
+      try {
+        const raw = window.location.hash || "";
+        if (!raw) return;
+        const id = decodeURIComponent(raw.replace(/^#/, ""));
+        if (!id) return;
+        const el = document.getElementById(id);
+        if (!el) return;
+        // scroll-mt-* è già applicato sugli H2; usa smooth scroll globale
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Migliora accessibilità: porta focus (se possibile)
+        try { (el as any).focus?.(); } catch {}
+      } catch {}
+    };
+    // Esegui al primo paint e dopo
+    const t = setTimeout(() => requestAnimationFrame(doScroll), 0);
+    window.addEventListener("hashchange", doScroll);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("hashchange", doScroll);
+    };
+  }, []);
 
   return (
     <article className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert">
