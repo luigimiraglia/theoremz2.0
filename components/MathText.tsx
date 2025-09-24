@@ -1,6 +1,6 @@
 // components/MathText.tsx
 import React from "react";
-import { InlineMath, BlockMath } from "react-katex";
+import { KaInline, KaBlock } from "@/components/KaTeX";
 import "katex/dist/katex.min.css";
 
 // Match $$...$$ | $...$ | \(...\) | \[...\]
@@ -33,7 +33,7 @@ export default function MathText({
     if (isBlock && allowBlock) {
       parts.push(
         <div key={parts.length} className="my-3 overflow-x-auto">
-          <BlockMath errorColor="#cc0000">{expr}</BlockMath>
+          <KaBlock>{expr}</KaBlock>
         </div>
       );
     } else {
@@ -41,7 +41,7 @@ export default function MathText({
       const needsDisplayInline = /\\(?:d?frac|cfrac|tfrac)\b/.test(expr);
       const toRender = needsDisplayInline ? `\\displaystyle { ${expr} }` : expr;
       parts.push(
-        <InlineMath key={parts.length} errorColor="#cc0000">{toRender}</InlineMath>
+        <KaInline key={parts.length}>{toRender}</KaInline>
       );
     }
 

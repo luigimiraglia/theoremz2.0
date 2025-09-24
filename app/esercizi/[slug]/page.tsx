@@ -123,7 +123,6 @@ export default async function EserciziPerLezione({
   });
 
   const SITE = "https://theoremz.com";
-  const canonical = `${SITE}/esercizi/${lesson.slug.current}`;
 
   // JSON-LD PracticeProblem per i primi esercizi
   const practiceJsonLd = {
@@ -193,7 +192,7 @@ export default async function EserciziPerLezione({
         </div>
       )}
 
-      <link rel="canonical" href={canonical} />
+      {/* Canonical gestito da generateMetadata */}
     </main>
   );
 }

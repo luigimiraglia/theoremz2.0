@@ -48,15 +48,15 @@ const nextConfig: NextConfig = {
       },
       // Extra safety: prevent indexing of account pages via headers too
       {
-        source: "/account",
+        source: "/account/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
       {
-        source: "/register",
+        source: "/register/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
       {
-        source: "/reset-password",
+        source: "/reset-password/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
     ];

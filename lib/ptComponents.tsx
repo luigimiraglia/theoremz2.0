@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React from "react";
 import type { PortableTextComponents } from "@portabletext/react";
-import { InlineMath, BlockMath } from "react-katex";
+import { KaInline, KaBlock } from "@/components/KaTeX";
 import "katex/dist/katex.min.css";
 import { LucideQuote as BlockquoteIcon } from "lucide-react";
 import MathText from "@/components/MathText";
@@ -78,7 +78,7 @@ const renderCell = (raw: unknown) => {
   if (!s) return "";
   if (isWholeMathCell(s)) {
     const inner = s.slice(1, -1);
-    return <InlineMath errorColor="#cc0000">{inner}</InlineMath>;
+    return <KaInline>{inner}</KaInline>;
   }
   return <MathText text={s} />;
 };
@@ -121,7 +121,28 @@ export const ptComponents: PortableTextComponents = {
 
     normal: ({ children, value }) => {
       if (isPureBlockMath(value)) {
-        return <MathText text={blockPlainText(value)} allowBlock />;
+        const txt = blockPlainText(value);
+        // Verifica se il blocco ha il decorator custom 'mathBlueBox' applicato ai children
+        const hasBlueBox = Array.isArray((value as any)?.children)
+          ? ((value as any).children as any[]).some(
+              (c) => Array.isArray(c?.marks) && c.marks.includes("mathBlueBox")
+            )
+          : false;
+        const math = <MathText text={txt} allowBlock />;
+        if (!hasBlueBox) return math;
+        return (
+          <div className="my-3 flex justify-center">
+            <div
+              className="w-full max-w-[680px] rounded-lg border-4 px-1 py-0.5 
+                         border-blue-600 dark:border-blue-400 
+                         [&_.katex-display]:m-0"
+            >
+              <div className="prose prose-slate dark:prose-invert max-w-none text-[0.96rem]">
+                {math}
+              </div>
+            </div>
+          </div>
+        );
       }
       return (
         <p className="my-4 leading-7 font-medium">
@@ -174,7 +195,7 @@ export const ptComponents: PortableTextComponents = {
     latex: ({ value }) => (
       // Forza stile display per leggibilità
       <div className="my-3 overflow-x-auto">
-        <BlockMath errorColor="#cc0000">{value.code}</BlockMath>
+        <KaBlock>{value.code}</KaBlock>
       </div>
     ),
 
@@ -397,7 +418,11 @@ export const ptComponents: PortableTextComponents = {
 
     // retro-compatibilità: mark "inlineLatex"
     inlineLatex: ({ value }) => (
-      <InlineMath errorColor="#cc0000">{`\\displaystyle { ${value.code} }`}</InlineMath>
+      <KaInline>{`\\displaystyle { ${value.code} }`}</KaInline>
     ),
+
+    // Decorator custom usato solo come flag per il box blu dei blocchi $$...$$
+    // Qui è una no-op per evitare warning di @portabletext/react
+    mathBlueBox: ({ children }) => <>{children}</>,
   },
 };

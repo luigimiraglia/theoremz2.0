@@ -24,7 +24,7 @@ export default function LessonView({
   return (
     <article className="mx-auto max-w-6xl px-6 pb-12">
       {/* Header server-rendered (riserva spazio a dx per il pulsante client) */}
-      <header className="relative rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 pt-3 pb-4 text-center pr-[140px]">
+      <header className="relative rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 pt-3 pb-4 text-center pr-0 sm:pr-[140px]">
         <h1 className="text-[27px] px-3 sm:text-4xl font-bold opacity-95 leading-tight">
           {lesson.title}
         </h1>

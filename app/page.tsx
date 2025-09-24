@@ -10,40 +10,6 @@ import ThemeToggle from "@/components/ThemeToggle";
 export default function Home() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@graph": [
-              {
-                "@type": "Organization",
-                name: "Theoremz",
-                url: "https://theoremz.com",
-                logo: "https://theoremz.com/images/logo.webp",
-                sameAs: ["https://twitter.com/theoremz_"],
-              },
-              {
-                "@type": "WebSite",
-                name: "Theoremz",
-                url: "https://theoremz.com",
-                potentialAction: [
-                  {
-                    "@type": "SearchAction",
-                    target: "https://theoremz.com/matematica?q={search_term_string}",
-                    "query-input": "required name=search_term_string",
-                  },
-                  {
-                    "@type": "SearchAction",
-                    target: "https://theoremz.com/fisica?q={search_term_string}",
-                    "query-input": "required name=search_term_string",
-                  },
-                ],
-              },
-            ],
-          }),
-        }}
-      />
       <Hero />
       <SocialProof />
       <Index />

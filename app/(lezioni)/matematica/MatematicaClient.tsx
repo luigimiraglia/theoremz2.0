@@ -155,13 +155,16 @@ export default function MatematicaClient({
   }, [dq, lessons, sections]);
 
   const filteredByInterface = useMemo(() => {
-    // Se c'è una ricerca, non filtrare nulla
-    if (dq.trim()) return filteredLessons;
-    // Se nessun ciclo selezionato e nessuna classe, mostra tutto
-    if (!interfaceMode && !selectedClasse) return filteredLessons;
-    // Altrimenti filtra per ciclo e/o classe
+    const q = dq.trim();
+    // In ricerca: mostra tutte le materie (math + fisica)
+    if (q) return filteredLessons;
+    // Fuori dalla ricerca: escludi esplicitamente Fisica dalla pagina Matematica
+    const onlyMat = filteredLessons.filter(
+      (l) => (l.materia || "").toLowerCase() === "matematica"
+    );
+    if (!interfaceMode && !selectedClasse) return onlyMat;
     const validClassi = interfaceMode === "medie" ? CLASSI_MEDIE : CLASSI_SUPERIORI;
-    return filteredLessons.filter((lesson) => {
+    return onlyMat.filter((lesson) => {
       const inInterface = interfaceMode
         ? lesson.classe.some((c) => validClassi.includes(c))
         : true;
@@ -329,9 +332,12 @@ export default function MatematicaClient({
                   {filteredSectionResults.slice(0, 18).map((s) => {
                     const anchor = toAnchorId(s.heading);
                     return (
-                      <li key={`${s.lessonId}-${anchor}`} className="rounded-2xl bg-gray-100/60 border-2 border-slate-800 overflow-hidden">
+                      <li
+                        key={`${s.lessonId}-${anchor}`}
+                        className="group rounded-xl bg-white ring-1 ring-slate-200 hover:ring-blue-400/70 hover:shadow-[0_8px_20px_-10px_rgba(30,58,138,0.35)] transition overflow-hidden"
+                      >
                         <Link href={`/${s.lessonSlug}#${anchor}`} prefetch={false} className="flex items-stretch gap-0">
-                          <div className="w-28 h-20 bg-white flex items-center justify-center shrink-0">
+                          <div className="w-28 h-20 bg-slate-50 flex items-center justify-center shrink-0">
                             <Image
                               src={s.lessonThumb || "/images/thumb/in-arrivo.webp"}
                               alt={s.lessonTitle}
@@ -343,8 +349,12 @@ export default function MatematicaClient({
                             />
                           </div>
                           <div className="p-3 flex-1 min-w-0">
-                            <div className="text-[14px] font-semibold text-slate-900 line-clamp-2">{s.heading}</div>
-                            <div className="text-[12px] text-slate-600 truncate">in {s.lessonTitle}</div>
+                            <div className="text-[14px] font-semibold text-slate-900 line-clamp-2">
+                              {s.heading}
+                            </div>
+                            <div className="mt-0.5 text-[12px] text-slate-600 truncate">
+                              in <span className="text-[#1a5fd6] group-hover:underline">{s.lessonTitle}</span>
+                            </div>
                           </div>
                         </Link>
                       </li>

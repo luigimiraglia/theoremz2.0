@@ -334,6 +334,40 @@ export default defineType({
                   );
                 },
               },
+              // Box blu per display math ($$...$$) selezionabile dall'editor
+              {
+                title: "Box blu (display $$)",
+                value: "mathBlueBox",
+                icon: () =>
+                  React.createElement(
+                    "span",
+                    {
+                      style: {
+                        display: "inline-block",
+                        padding: "0 6px",
+                        borderRadius: 6,
+                        backgroundColor: "#dbeafe", // bg-blue-100
+                        color: "#1e3a8a", // blue-900
+                        fontWeight: 800,
+                        lineHeight: 1.1,
+                      },
+                    },
+                    "∑"
+                  ),
+                component: (props: { children: React.ReactNode }) =>
+                  React.createElement(
+                    "span",
+                    {
+                      style: {
+                        backgroundColor: "#dbeafe",
+                        borderRadius: 6,
+                        padding: "0 6px",
+                        color: "inherit",
+                      },
+                    },
+                    props.children
+                  ),
+              },
             ],
             annotations: [
               {
