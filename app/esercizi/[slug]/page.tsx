@@ -165,9 +165,9 @@ export default async function EserciziPerLezione({
       <p className="mt-1 text-slate-700">
         Selezione di esercizi con passaggi e soluzioni. Per la teoria, vedi la
         lezione:{" "}
-        <a href={`/${lesson.slug.current}`} className="text-blue-600 underline">
+        <Link href={`/${lesson.slug.current}`} className="text-blue-600 underline">
           {lesson.title}
-        </a>
+        </Link>
         .
       </p>
 

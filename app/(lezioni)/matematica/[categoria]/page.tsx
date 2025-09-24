@@ -1,6 +1,7 @@
 import { groq } from "next-sanity";
 import { sanityFetch } from "@/lib/sanityFetch";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 type Row = { title: string; slug: { current: string } };
 
@@ -52,13 +53,12 @@ export default async function Page({ params }: { params: Promise<{ categoria: st
       <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {(rows || []).map((r) => (
           <li key={r.slug.current} className="rounded-2xl bg-white/80 border border-slate-200 p-3">
-            <a href={`/${r.slug.current}`} className="font-semibold text-[#1a5fd6] hover:underline">
+            <Link href={`/${r.slug.current}`} className="font-semibold text-[#1a5fd6] hover:underline">
               {r.title}
-            </a>
+            </Link>
           </li>
         ))}
       </ul>
     </main>
   );
 }
-

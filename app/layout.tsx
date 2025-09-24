@@ -73,26 +73,8 @@ export default async function RootLayout({
       <head>
         <meta name="google" content="notranslate" />
         <meta name="color-scheme" content="light dark" />
-        {/* Preconnect essenziali: Auth + Sanity CDN (immagini) */}
-        <link
-          rel="preconnect"
-          href="https://theoremz-login.firebaseapp.com"
-          crossOrigin=""
-        />
-        <link
-          rel="dns-prefetch"
-          href="https://theoremz-login.firebaseapp.com"
-        />
-        <link rel="preconnect" href="https://www.gstatic.com" crossOrigin="" />
-        <link
-          rel="preconnect"
-          href="https://securetoken.googleapis.com"
-          crossOrigin=""
-        />
-        <link rel="preconnect" href="https://apis.google.com" crossOrigin="" />
-        <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="" />
-        <link rel="preconnect" href="https://i.ytimg.com" crossOrigin="" />
-        <link rel="preconnect" href="https://img.youtube.com" crossOrigin="" />
+        {/* DNS prefetch leggero per immagini da Sanity; evita connessioni TCP/TLS inutili */}
+        <link rel="dns-prefetch" href="https://cdn.sanity.io" />
 
         {/* Base structured data: Organization + WebSite */}
         <script

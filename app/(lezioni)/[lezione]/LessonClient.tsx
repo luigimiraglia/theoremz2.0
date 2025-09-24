@@ -112,12 +112,12 @@ function PrereqList({
               </svg>
 
               {l.slug ? (
-                <a
-                  href={`/${l.slug}`} // ⬅️ path coerente col resto del sito
+                <Link
+                  href={`/${l.slug}`}
                   className="text-blue-500 -ml-1.5 hover:text-blue-600 transition-all duration-300 font-semibold"
                 >
                   {l.title}
-                </a>
+                </Link>
               ) : (
                 <span className="text-blue-500 -ml-1.5 font-semibold opacity-80">
                   {l.title}
@@ -273,25 +273,25 @@ export default function LessonClient({
           <hr className="my-3 border-t border-slate-200" />
           <div className="flex flex-wrap gap-2 text-sm">
             {(lesson.categoria || []).map((c) => (
-              <a
+              <Link
                 key={c}
                 href={`/${lesson.materia === "fisica" ? "fisica" : "matematica"}/${slugify(c)}`}
                 className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 hover:bg-slate-200"
               >
                 #{c}
-              </a>
+              </Link>
             ))}
             {(lesson.classe || [])
               .map((cl) => ({ cl, href: classLink(cl) }))
               .filter((x) => !!x.href)
               .map((x) => (
-                <a
+                <Link
                   key={x.cl}
                   href={x.href!}
                   className="rounded-full bg-blue-50 px-3 py-1 font-semibold text-blue-700 hover:bg-blue-100"
                 >
                   🎓 {x.cl}
-                </a>
+                </Link>
               ))}
           </div>
         </div>

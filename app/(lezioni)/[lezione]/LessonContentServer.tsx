@@ -11,6 +11,25 @@ export default function LessonContentServer({
 }) {
   let firstImageUsed = false;
 
+  // Genera srcset responsive per immagini ospitate su cdn.sanity.io
+  function buildSanitySrcSet(url: string): string | null {
+    try {
+      const u = new URL(url);
+      if (!/cdn\.sanity\.io$/i.test(u.hostname)) return null;
+      const widths = [360, 480, 640, 768, 960, 1200, 1600, 2000];
+      const parts: string[] = [];
+      for (const w of widths) {
+        const uw = new URL(u.toString());
+        uw.searchParams.set("w", String(w));
+        if (!uw.searchParams.has("auto")) uw.searchParams.set("auto", "format");
+        parts.push(`${uw.toString()} ${w}w`);
+      }
+      return parts.join(", ");
+    } catch {
+      return null;
+    }
+  }
+
   const components = {
     ...ptComponents,
     types: {
@@ -43,6 +62,7 @@ export default function LessonContentServer({
         })();
 
         const sizes = "(min-width: 1024px) 40vw, (min-width: 640px) 60vw, 90vw";
+        const srcSet = buildSanitySrcSet(url);
         const style = dims ? ({ aspectRatio: `${dims.width} / ${dims.height}` } as React.CSSProperties) : undefined;
 
         return (
@@ -53,6 +73,7 @@ export default function LessonContentServer({
               loading={eager ? "eager" : "lazy"}
               fetchPriority={eager ? ("high" as const) : undefined}
               decoding="async"
+              srcSet={srcSet ?? undefined}
               sizes={sizes}
               width={dims?.width}
               height={dims?.height}
@@ -71,4 +92,3 @@ export default function LessonContentServer({
     </div>
   );
 }
-
