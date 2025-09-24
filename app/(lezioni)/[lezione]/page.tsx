@@ -163,7 +163,7 @@ export async function generateMetadata({
 
   const baseUrl = "https://theoremz.com";
   const canonical = `${baseUrl}/${lesson.slug.current}`;
-  const ogImage = lesson.thumbnailUrl ?? "/opengraph-image";
+  const ogImage = lesson.thumbnailUrl ?? "/metadata.png";
 
   return {
     title,

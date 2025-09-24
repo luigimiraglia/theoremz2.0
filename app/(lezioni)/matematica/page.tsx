@@ -53,13 +53,13 @@ export async function generateMetadata() {
       url: CANONICAL,
       siteName: "Theoremz",
       type: "website",
-      images: [{ url: "/opengraph-image" }],
+      images: [{ url: "/metadata.png" }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: ["/opengraph-image"],
+      images: ["/metadata.png"],
       site: "@theoremz_",
     },
   };

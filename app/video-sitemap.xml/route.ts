@@ -60,7 +60,7 @@ export async function GET() {
     const loc = `${base}/${r.slug}`;
     const thumb = r.thumbnailUrl
       ? (r.thumbnailUrl.startsWith("http") ? r.thumbnailUrl : `${base}${r.thumbnailUrl}`)
-      : `${base}/opengraph-image`;
+      : `${base}/metadata.png`;
     const title = escapeXml(r.title || (r.slug as string));
     const desc = escapeXml(`Videolezione su ${r.title || r.slug}`);
     const embed = r.video ? toYouTubeEmbed(r.video) : null;

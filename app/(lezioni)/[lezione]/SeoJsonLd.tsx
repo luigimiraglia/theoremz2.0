@@ -14,7 +14,7 @@ export default function SeoJsonLd(props: {
 }) {
   const base = "https://theoremz.com";
   const url = `${base}/${props.slug}`;
-  const image = props.thumbnailUrl ?? `${base}/opengraph-image`;
+  const image = props.thumbnailUrl ?? `${base}/metadata.png`;
 
   // Utility to keep strings within Google's recommended limits
   const clamp = (s: string | undefined, max = 110) => {

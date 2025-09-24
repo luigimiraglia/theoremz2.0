@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     description: DESC,
     url: CANONICAL,
     siteName: "Theoremz",
-    images: [{ url: "/opengraph-image" }],
+    images: [{ url: "/metadata.png" }],
     type: "website",
   },
   twitter: {
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESC,
     site: "@theoremz_",
-    images: ["/opengraph-image"],
+    images: ["/metadata.png"],
   },
 };
 

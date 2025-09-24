@@ -11,14 +11,14 @@ export const metadata: Metadata = {
     title: "Esercizi svolti di matematica e fisica",
     description:
       "Allenati con esercizi svolti passo passo: tracce chiare, soluzioni e passaggi spiegati.",
-    images: [{ url: "/opengraph-image" }],
+    images: [{ url: "/metadata.png" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Esercizi svolti di matematica e fisica",
     description:
       "Allenati con esercizi svolti passo passo: tracce chiare, soluzioni e passaggi spiegati.",
-    images: ["/opengraph-image"],
+    images: ["/metadata.png"],
     site: "@theoremz_",
   },
 };

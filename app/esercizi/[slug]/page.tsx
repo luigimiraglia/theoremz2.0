@@ -65,14 +65,14 @@ export async function generateMetadata({
       url: `https://theoremz.com${canonical}`,
       siteName: "Theoremz",
       type: "website",
-      images: [{ url: "/opengraph-image" }],
+      images: [{ url: "/metadata.png" }],
       locale: "it_IT",
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: ["/opengraph-image"],
+      images: ["/metadata.png"],
       site: "@theoremz_",
     },
   };

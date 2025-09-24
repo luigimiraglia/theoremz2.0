@@ -28,7 +28,7 @@ export const metadata: Metadata = {
       "Studia gratuitamente le materie scientifiche su Theoremz! Qui troverai anche esercizi per allenarti.",
     url: "https://theoremz.com",
     siteName: "Theoremz",
-    images: [{ url: "/opengraph-image" }],
+    images: [{ url: "/metadata.png" }],
     type: "website",
   },
   twitter: {
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     description:
       "Studia gratuitamente le materie scientifiche su Theoremz! Qui troverai anche esercizi per allenarti.",
     site: "@theoremz_",
-    images: ["/opengraph-image"],
+    images: ["/metadata.png"],
   },
   icons: {
     icon: "/favicon.ico",
