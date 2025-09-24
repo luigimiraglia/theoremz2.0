@@ -45,7 +45,7 @@ export default function TheoremzAIAssistant({
   }, [messages, open]);
 
   const handleOpen = () => {
-    if (!true) {
+    if (!isSubscribed) {
       setShowBanner(true);
       return;
     }

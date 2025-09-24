@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import BlackPopup from "./BlackPopup";
+import { useAuth } from "@/lib/AuthContext";
 import { track } from "@/lib/analytics";
 
 // Defer heavy react-pdf imports until viewer opens
@@ -36,6 +37,7 @@ export default function LessonNotes({
   lessonTitle: string;
   lessonSlug: string;
 }) {
+  const { isSubscribed } = useAuth();
   const [showPopup, setShowPopup] = useState(false);
   const [open, setOpen] = useState(false);
   const [pdfReady, setPdfReady] = useState(false);
@@ -70,7 +72,7 @@ export default function LessonNotes({
   }, [currentPdf]);
 
   const handleOpen = async () => {
-    if (!true) return setShowPopup(true);
+    if (!isSubscribed) return setShowPopup(true);
     // Lazy import react-pdf only when opening the viewer
     if (!pdfReady) {
       try {

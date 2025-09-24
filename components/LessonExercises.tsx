@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import ExerciseCard from "@/components/ExerciseCard";
 import BlackPopup from "@/components/BlackPopup";
@@ -59,6 +58,15 @@ export default function LessonExercises({
     }
   };
 
+  const handleSimulaClick = async () => {
+    if (!isSubscribed) {
+      setState("popup");
+      return;
+    }
+    const url = `/simula-verifica?lessonId=${encodeURIComponent(lessonId)}&slug=${encodeURIComponent(lessonSlug)}&title=${encodeURIComponent(lessonTitle)}`;
+    window.location.assign(url);
+  };
+
   const closePopup = () => setState("idle");
 
   return (
@@ -77,12 +85,12 @@ export default function LessonExercises({
               : "Mostra esercizi"}
         </button>
 
-        <Link
-          href={`/simula-verifica?lessonId=${encodeURIComponent(lessonId)}&slug=${encodeURIComponent(lessonSlug)}&title=${encodeURIComponent(lessonTitle)}`}
+        <button
+          onClick={handleSimulaClick}
           className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-8 sm:px-10 py-3 text-xl sm:text-2xl font-extrabold text-white hover:brightness-110"
         >
           Simula verifica
-        </Link>
+        </button>
       </div>
 
       {error && (

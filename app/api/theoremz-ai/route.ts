@@ -32,8 +32,8 @@ export async function POST(req: Request) {
   try {
     const { messages, lessonId, userId, isSubscribed } = await req.json();
 
-    // Controllo abbonamento
-    if (!true) {
+    // Controllo abbonamento (soft check dal client)
+    if (!isSubscribed) {
       return NextResponse.json({
         reply:
           "🔒 Per usare Theoremz AI devi abbonarti. [Abbonati qui](https://theoremz.com/black)",

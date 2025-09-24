@@ -5,6 +5,7 @@ import { BookOpen, ListChecks, Timer as TimerIcon, FileText, PlayCircle, Lock } 
 import { useRouter, useSearchParams } from "next/navigation";
 import { getAuth } from "firebase/auth";
 import { useAuth } from "@/lib/AuthContext";
+import BlackPopup from "@/components/BlackPopup";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -24,7 +25,7 @@ type LessonRef = {
 };
 
 export default function SimulaVerificaPage() {
-  const { user } = useAuth();
+  const { user, isSubscribed } = useAuth();
   const router = useRouter();
 
   // redirect if not logged in (soft)
@@ -247,7 +248,15 @@ export default function SimulaVerificaPage() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl p-4 sm:p-6 space-y-6">
+    <>
+      {isSubscribed === false && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+          <div className="w-full max-w-2xl">
+            <BlackPopup />
+          </div>
+        </div>
+      )}
+      <main className="mx-auto max-w-5xl p-4 sm:p-6 space-y-6">
       <style>{`
         @page { size: A4; margin: 18mm; }
         @media print {
@@ -670,7 +679,8 @@ export default function SimulaVerificaPage() {
           </div>
         </section>
       )}
-    </main>
+      </main>
+    </>
   );
 }
 

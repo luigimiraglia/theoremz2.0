@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function BlackPopup() {
   return (
     <div className="flex z-100 flex-col gap-3 bg-[#f8fafc] [.dark_&]:text-black border-10 border-white fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-2xl pt-4 pb-4 text-center drop-shadow-xl shadow drop-shadow-blue-100 w-80 ">
@@ -67,9 +69,9 @@ export default function BlackPopup() {
           <span className="h-10">Tanto altro ancora</span>
         </li>
       </ul>
-      <button className="bg-black font-bold py-2 rounded-lg text-white mx-4 mt-2">
+      <Link href="/black" className="bg-black font-bold py-2 rounded-lg text-white mx-4 mt-2">
         Scopri di più
-      </button>
+      </Link>
     </div>
   );
 }

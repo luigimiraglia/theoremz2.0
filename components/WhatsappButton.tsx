@@ -4,11 +4,12 @@ import { useState, type ComponentType } from "react";
 import Image from "next/image";
 
 export default function WhatsappButton() {
+  const { isSubscribed } = useAuth();
   const [state, setState] = useState<"idle" | "popup">("idle");
   const [Popup, setPopup] = useState<ComponentType | null>(null);
 
   const handleClick = async () => {
-    if (true) {
+    if (isSubscribed) {
       window.location.assign("https://wa.me/+393519523641");
       return;
     }
