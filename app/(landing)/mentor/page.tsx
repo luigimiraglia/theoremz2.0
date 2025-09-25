@@ -42,12 +42,13 @@ export default function MentorPage() {
       acceptedAnswer: { "@type": "Answer", text: f.a },
     })),
   } as const;
-  const service = {
-    "@type": "Service",
+  // Use Product schema (Google supports reviews for Product; Service may be ignored)
+  const product = {
+    "@type": "Product",
     name: "Theoremz Mentor",
-    provider: { "@type": "Organization", name: "Theoremz", url: SITE },
-    areaServed: "IT",
-    serviceType: "Tutor personale di matematica e fisica",
+    brand: { "@type": "Brand", name: "Theoremz" },
+    url: CANONICAL,
+    image: [`${SITE}/metadata.png`],
     description:
       "Un tutor al tuo fianco ogni giorno: piani di studio, esercizi mirati e lezioni 1‑to‑1.",
     aggregateRating: {
@@ -74,7 +75,7 @@ export default function MentorPage() {
     ],
   } as const;
 
-  const graph = [breadcrumb, faq, service];
+  const graph = [breadcrumb, faq, product];
 
   return (
     <main className="bg-white text-slate-900">

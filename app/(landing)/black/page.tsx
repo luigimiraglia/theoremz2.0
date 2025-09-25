@@ -337,9 +337,9 @@ export default function BlackPage() {
       {/* ============ PRICING (3 card da lg) ============ */}
       <section
         id="pricing"
-        className="mx-auto mt-10 max-w-6xl px-5 pb-4 sm:px-8 lg:px-12"
+        className="mx-auto mt-10 max-w-7xl px-5 pb-4 sm:px-8 lg:px-12"
       >
-        <div className="mx-auto grid max-w-2xl gap-8 lg:max-w-none lg:grid-cols-3">
+        <div className="mx-auto grid max-w-2xl gap-8 lg:max-w-none lg:grid-cols-2 xl:grid-cols-3">
           {/* Colonna 1 – Essential */}
           <div>
             <div className="rounded-xl bg-gradient-to-r from-green-500 to-cyan-400 py-2 text-center font-bold text-white">
@@ -518,7 +518,7 @@ function PriceCard({
   return (
     <div className="mt-3 rounded-2xl bg-white text-slate-900 shadow-sm ring-1 ring-slate-200">
       <div className="px-6 py-6 lg:px-8 lg:py-8">
-        <div className="text-[41px] lg:text-[46px] font-semibold bg-gradient-to-r text-transparent from-blue-600 to-cyan-400 bg-clip-text ">
+        <div className="text-[41px] lg:text-[46px] font-semibold bg-gradient-to-r text-transparent from-blue-600 to-cyan-400 bg-clip-text lg:whitespace-nowrap">
           {price}
           {unit}
         </div>
@@ -553,7 +553,7 @@ function PriceCard({
           })}
         </ul>
 
-        <div className="mt-7 grid gap-3 sm:grid-cols-2">
+        <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
           <Link
             href={infoHref}
             aria-label={`Chiedi informazioni sul piano ${
@@ -563,7 +563,7 @@ function PriceCard({
                   ? "Mensile"
                   : ""
             }`}
-            className="rounded-xl bg-black px-4 py-3 text-center font-bold text-white transition hover:bg-slate-800"
+            className="w-full rounded-xl bg-black px-4 py-3 text-center font-bold text-white transition hover:bg-slate-800 lg:whitespace-nowrap"
           >
             Chiedi informazioni 💬
           </Link>
@@ -588,7 +588,7 @@ function PriceCard({
                   ? "Mensile"
                   : ""
             }`}
-            className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-400 px-4 py-3 text-center font-extrabold text-white transition hover:from-sky-500 hover:to-sky-400"
+            className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-cyan-400 px-4 py-3 text-center font-extrabold text-white transition hover:from-sky-500 hover:to-sky-400 lg:whitespace-nowrap"
           >
             Acquista ora 👉
           </BuyLink>

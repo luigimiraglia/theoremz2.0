@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, type ComponentType } from "react";
 import {
   doc,
   getDoc,
@@ -25,8 +25,10 @@ export default function SaveLessonButton({
   lessonSlug: string | undefined;
   className?: string;
 }) {
-  const { user, savedLessons, refreshSavedLessons } = useAuth() as AuthReturn;
+  const { user, savedLessons, refreshSavedLessons, isSubscribed } = useAuth() as AuthReturn & { isSubscribed?: boolean | null };
   const [busy, setBusy] = useState(false);
+  const [Popup, setPopup] = useState<ComponentType | null>(null);
+  const [state, setState] = useState<"idle" | "popup">("idle");
 
   const slug = useMemo(
     () => (typeof lessonSlug === "string" ? lessonSlug.trim() : ""),
@@ -38,6 +40,16 @@ export default function SaveLessonButton({
     savedLessons && Array.isArray(savedLessons) && savedLessons.includes(slug);
 
   const toggle = async () => {
+    // Gating: serve abbonamento
+    if (!isSubscribed) {
+      if (!Popup) {
+        const mod = await import("@/components/BlackPopup");
+        setPopup(() => mod.default ?? (mod as any));
+      }
+      setState("popup");
+      return;
+    }
+
     if (!user || !isValid || busy) return;
     setBusy(true);
     try {
@@ -59,31 +71,47 @@ export default function SaveLessonButton({
   };
 
   return (
-    <button
-      onClick={toggle}
-      disabled={!user || !isValid || busy}
-      className={`inline-flex shadow-md items-center font-semibold gap-1 px-2 py-1 text-sm rounded-lg transition-all duration-300 border 
+    <>
+      <button
+        onClick={toggle}
+        disabled={!user || !isValid || busy}
+        className={`inline-flex shadow-md items-center font-semibold gap-1 px-2 py-1 text-sm rounded-lg transition-all duration-300 border 
         ${
           isSaved
             ? "bg-yellow-400 border-yellow-500 text-black hover:bg-yellow-300"
             : "bg-blue-600 border-blue-700 text-white hover:bg-blue-500"
         }
         disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
-      title={
-        !isValid
-          ? "Slug non valido"
-          : isSaved
-            ? "Rimuovi dai salvati"
-            : "Salva lezione"
-      }
-    >
-      <svg
-        viewBox="0 0 24 24"
-        className={`h-[18px] w-[18px] transition-colors duration-300 ${isSaved ? "fill-yellow-700" : "fill-white"}`}
+        title={
+          !isValid
+            ? "Slug non valido"
+            : isSaved
+              ? "Rimuovi dai salvati"
+              : "Salva lezione"
+        }
       >
-        <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" />
-      </svg>
-      {isSaved ? "Salvata" : "Salva lezione"}
-    </button>
+        <svg
+          viewBox="0 0 24 24"
+          className={`h-[18px] w-[18px] transition-colors duration-300 ${isSaved ? "fill-yellow-700" : "fill-white"}`}
+        >
+          <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" />
+        </svg>
+        {isSaved ? "Salvata" : "Salva lezione"}
+      </button>
+
+      {state === "popup" && (
+        <div
+          onClick={() => setState("idle")}
+          className="fixed inset-0 z-50 backdrop-blur-md flex justify-center items-center"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="p-6 rounded-xl max-w-md w-full"
+          >
+            {Popup ? <Popup /> : null}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

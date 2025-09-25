@@ -1,12 +1,13 @@
 "use client";
 import type { PortableTextBlock } from "sanity";
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { PortableText } from "@portabletext/react";
 import { ptComponents } from "@/lib/ptComponents";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, ListTree, BookOpen } from "lucide-react";
 import Link from "next/link";
 import MathText from "@/components/MathText"; // ⬅️ ADD
+import { useAuth } from "@/lib/AuthContext";
 
 export type Exercise = {
   _id: string;
@@ -18,8 +19,21 @@ export type Exercise = {
 };
 
 export default function ExerciseCard({ ex }: { ex: Exercise }) {
+  const { isSubscribed } = useAuth();
   const [showSol, setShowSol] = useState(false);
   const [showSteps, setShowSteps] = useState(false);
+  const [Popup, setPopup] = useState<ComponentType | null>(null);
+  const [state, setState] = useState<"idle" | "popup">("idle");
+
+  const requireSub = async () => {
+    if (isSubscribed) return true;
+    if (!Popup) {
+      const mod = await import("@/components/BlackPopup");
+      setPopup(() => (mod as any).default ?? (mod as any));
+    }
+    setState("popup");
+    return false;
+  };
 
   return (
     <motion.article
@@ -57,7 +71,10 @@ export default function ExerciseCard({ ex }: { ex: Exercise }) {
         <div className="mt-6 flex flex-wrap gap-4">
           {ex.soluzione?.length && (
             <button
-              onClick={() => setShowSol(!showSol)}
+              onClick={async () => {
+                if (!(await requireSub())) return;
+                setShowSol((v) => !v);
+              }}
               className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-200 to-emerald-300 px-4 py-1.5 text-sm font-semibold text-emerald-900 ring-2 ring-emerald-400 hover:from-emerald-300 hover:to-emerald-400"
             >
               {showSol ? (
@@ -71,7 +88,10 @@ export default function ExerciseCard({ ex }: { ex: Exercise }) {
 
           {ex.passaggi?.length && (
             <button
-              onClick={() => setShowSteps(!showSteps)}
+              onClick={async () => {
+                if (!(await requireSub())) return;
+                setShowSteps((v) => !v);
+              }}
               className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#dce9ff] [.dark_&]:bg-slate-800 to-[#a8cfff] px-4 py-1.5 text-sm font-semibold text-[#1a5fd6] ring-2 ring-[#2b7fff] hover:from-[#c7dcff] hover:to-[#90baff]"
             >
               <ListTree className="h-4 w-4" />
@@ -120,6 +140,19 @@ export default function ExerciseCard({ ex }: { ex: Exercise }) {
           )}
         </AnimatePresence>
       </div>
+      {state === "popup" && (
+        <div
+          onClick={() => setState("idle")}
+          className="fixed inset-0 z-50 backdrop-blur-md flex justify-center items-center"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="p-6 rounded-xl max-w-md w-full"
+          >
+            {Popup ? <Popup /> : null}
+          </div>
+        </div>
+      )}
     </motion.article>
   );
 }
