@@ -82,6 +82,27 @@ export default async function RootLayout({
         {/* DNS prefetch leggero per immagini da Sanity; evita connessioni TCP/TLS inutili */}
         <link rel="dns-prefetch" href="https://cdn.sanity.io" />
         <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="anonymous" />
+        {/* Hint early connections used by auth/Google APIs (saves ~300ms on mobile) */}
+        <link rel="preconnect" href="https://apis.google.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://apis.google.com" />
+        <link rel="preconnect" href="https://www.googleapis.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://www.googleapis.com" />
+        {/* DNS only for resources that may be gated by consent */}
+        <link rel="dns-prefetch" href="https://www.gstatic.com" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        {process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ? (
+          <>
+            <link
+              rel="preconnect"
+              href={`https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}`}
+              crossOrigin="anonymous"
+            />
+            <link
+              rel="dns-prefetch"
+              href={`https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}`}
+            />
+          </>
+        ) : null}
 
         {/* Base structured data: Organization + WebSite */}
         <script

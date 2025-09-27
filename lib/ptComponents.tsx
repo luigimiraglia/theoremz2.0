@@ -217,6 +217,16 @@ export const ptComponents: PortableTextComponents = {
               "ap-pent.webp": [2000, 1201],
               "ap-triangolo.webp": [2000, 1006],
               "ap-quadrato.webp": [2000, 985],
+              // Rombo images (LCP on /rombo): 2000x1500
+              "ro1.webp": [2000, 1500],
+              "ro2.webp": [2000, 1500],
+              "ro3.webp": [2000, 1500],
+              "ro4.webp": [2000, 1500],
+              "ro5.webp": [2000, 1500],
+              "ro6.webp": [2000, 1500],
+              "ro7.webp": [2000, 1500],
+              "ro8.webp": [2000, 1500],
+              "ro9.webp": [2000, 1500],
             };
             if (known[name])
               return { width: known[name][0], height: known[name][1] };
