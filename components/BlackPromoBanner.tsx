@@ -70,28 +70,27 @@ export default function BlackStickyPromo() {
     }
   }, [shouldShow]);
 
+  // Render nothing until we know the offset to avoid jumping
   if (closed || topOffset == null) return null;
 
   return (
+    // Fixed overlay to avoid layout shifts (CLS) when the banner mounts
     <div
       role="region"
       aria-label="Promozione Theoremz Black"
-      className={[
-        "sticky z-40 mx-2 xl:mx-auto",
-        "w-[min(95vw,56rem)]",
-        "transition-transform motion-safe:duration-200",
-      ].join(" ")}
+      className="fixed left-0 right-0 z-40 pointer-events-none"
       style={{ top: topOffset }}
     >
-      <div
-        className={[
-          "rounded-2xl border border-white/20",
-          "bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white",
-          "shadow-lg shadow-blue-900/15",
-          "backdrop-blur supports-[backdrop-filter]:backdrop-blur-md",
-        ].join(" ")}
-      >
-        <div className="px-4 py-2 sm:py-2 flex items-center gap-3">
+      <div className="mx-2 xl:mx-auto w-[min(95vw,56rem)] pointer-events-auto">
+        <div
+          className={[
+            "rounded-2xl border border-white/20",
+            "bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white",
+            "shadow-lg shadow-blue-900/15",
+            "backdrop-blur supports-[backdrop-filter]:backdrop-blur-md",
+          ].join(" ")}
+        >
+          <div className="px-4 py-2 sm:py-2 flex items-center gap-3">
           {/* MOBILE: solo “Scopri Theoremz Black” */}
           <span className="sm:hidden text-sm font-semibold">
             Scopri{" "}
@@ -131,6 +130,7 @@ export default function BlackStickyPromo() {
                 <path d="M6.225 4.811L4.811 6.225 10.586 12l-5.775 5.775 1.414 1.414L12 13.414l5.775 5.775 1.414-1.414L13.414 12l5.775-5.775-1.414-1.414L12 10.586z" />
               </svg>
             </button>
+          </div>
           </div>
         </div>
       </div>
