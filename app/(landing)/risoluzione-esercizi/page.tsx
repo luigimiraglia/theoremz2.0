@@ -1,6 +1,5 @@
 // app/esercizi/page.tsx
 import BuyLink from "@/components/BuyLink";
-import FloatingLeadButton from "@/components/FloatingLeadButton";
 export default function RisoluzioneEserciziPage() {
   const SITE = "https://theoremz.com";
   const CANONICAL = `${SITE}/risoluzione-esercizi`;
@@ -93,10 +92,6 @@ export default function RisoluzioneEserciziPage() {
 
   return (
     <main className="bg-white text-slate-900">
-      <FloatingLeadButton
-        href="/contatto-rapido?source=risoluzione-esercizi"
-        label="Richiedi una chiamata gratuita"
-      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

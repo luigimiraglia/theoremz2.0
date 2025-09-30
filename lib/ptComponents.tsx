@@ -233,32 +233,40 @@ export const ptComponents: PortableTextComponents = {
             const m = name.match(/-(\d+)x(\d+)\.(?:webp|jpe?g|png)$/);
             if (m) return { width: Number(m[1]), height: Number(m[2]) };
           }
+          // Sanity CDN: the filename typically contains -{w}x{h}.ext
+          if (/cdn\.sanity\.io$/i.test(u.hostname)) {
+            const last = u.pathname.split("/").pop() || "";
+            const ms = last.match(/-(\d+)x(\d+)\.(?:webp|jpe?g|png|gif|avif)$/i);
+            if (ms) return { width: Number(ms[1]), height: Number(ms[2]) };
+          }
         } catch {}
         return null as null | { width: number; height: number };
       })();
 
       const sizes = "(min-width: 1024px) 40vw, (min-width: 640px) 60vw, 90vw";
       const srcSet = buildSanitySrcSet(url);
-      const style = dims
-        ? ({
-            aspectRatio: `${dims.width} / ${dims.height}`,
-          } as React.CSSProperties)
-        : undefined;
+      const arStyle = {
+        aspectRatio: `${(dims?.width ?? 4)} / ${(dims?.height ?? 3)}`,
+      } as React.CSSProperties;
 
       return (
         <div className="my-6 flex justify-center">
-          <img
-            src={url}
-            alt={alt}
-            loading="lazy"
-            decoding="async"
-            srcSet={srcSet ?? undefined}
-            sizes={sizes}
-            width={dims?.width}
-            height={dims?.height}
-            style={style}
-            className="rounded-xl max-w-9/10 sm:max-w-3/5 lg:max-w-2/5 h-auto"
-          />
+          <div
+            className="relative w-full max-w-9/10 sm:max-w-3/5 lg:max-w-2/5 rounded-xl overflow-hidden"
+            style={arStyle}
+          >
+            <img
+              src={url}
+              alt={alt}
+              loading="lazy"
+              decoding="async"
+              srcSet={srcSet ?? undefined}
+              sizes={sizes}
+              width={dims?.width}
+              height={dims?.height}
+              className="absolute inset-0 h-full w-full object-contain"
+            />
+          </div>
         </div>
       );
     },

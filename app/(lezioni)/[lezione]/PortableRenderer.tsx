@@ -52,10 +52,26 @@ export default function PortableRenderer({
                   "ap-pent.webp": [2000, 1201],
                   "ap-triangolo.webp": [2000, 1006],
                   "ap-quadrato.webp": [2000, 985],
+                  // Rombo images (LCP on /rombo): 2000x1500
+                  "ro1.webp": [2000, 1500],
+                  "ro2.webp": [2000, 1500],
+                  "ro3.webp": [2000, 1500],
+                  "ro4.webp": [2000, 1500],
+                  "ro5.webp": [2000, 1500],
+                  "ro6.webp": [2000, 1500],
+                  "ro7.webp": [2000, 1500],
+                  "ro8.webp": [2000, 1500],
+                  "ro9.webp": [2000, 1500],
                 };
                 if (known[name]) return { width: known[name][0], height: known[name][1] };
                 const m = name.match(/-(\d+)x(\d+)\.(?:webp|jpe?g|png)$/);
                 if (m) return { width: Number(m[1]), height: Number(m[2]) };
+              }
+              // Sanity CDN: parse -{w}x{h}.ext in filename
+              if (/cdn\.sanity\.io$/i.test(u.hostname)) {
+                const last = u.pathname.split("/").pop() || "";
+                const ms = last.match(/-(\d+)x(\d+)\.(?:webp|jpe?g|png|avif|gif)$/i);
+                if (ms) return { width: Number(ms[1]), height: Number(ms[2]) };
               }
             } catch {}
             return null as null | { width: number; height: number };
@@ -63,23 +79,29 @@ export default function PortableRenderer({
 
           const sizes = "(min-width: 1024px) 40vw, (min-width: 640px) 60vw, 90vw";
           const srcSet = buildSanitySrcSet(url);
-          const style = dims ? ({ aspectRatio: `${dims.width} / ${dims.height}` } as React.CSSProperties) : undefined;
+          const arStyle = ({
+            aspectRatio: `${(dims?.width ?? 4)} / ${(dims?.height ?? 3)}`,
+          } as React.CSSProperties);
 
           return (
             <div className="my-6 flex justify-center">
-              <img
-                src={url}
-                alt={alt}
-                loading={eager ? "eager" : "lazy"}
-                fetchPriority={eager ? ("high" as const) : undefined}
-                decoding="async"
-                srcSet={srcSet ?? undefined}
-                sizes={sizes}
-                width={dims?.width}
-                height={dims?.height}
-                style={style}
-                className="rounded-xl max-w-9/10 sm:max-w-3/5 lg:max-w-2/5 h-auto"
-              />
+              <div
+                className="relative w-full max-w-9/10 sm:max-w-3/5 lg:max-w-2/5 rounded-xl overflow-hidden"
+                style={arStyle}
+              >
+                <img
+                  src={url}
+                  alt={alt}
+                  loading={eager ? "eager" : "lazy"}
+                  fetchPriority={eager ? ("high" as const) : undefined}
+                  decoding="async"
+                  srcSet={srcSet ?? undefined}
+                  sizes={sizes}
+                  width={dims?.width}
+                  height={dims?.height}
+                  className="absolute inset-0 h-full w-full object-contain"
+                />
+              </div>
             </div>
           );
         },

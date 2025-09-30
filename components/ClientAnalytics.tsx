@@ -6,9 +6,15 @@ import Script from "next/script";
 function getConsent(): boolean {
   try {
     const m = document.cookie.match(/(?:^|; )tz_consent=([^;]+)/);
-    if (!m) return false;
-    const v = JSON.parse(decodeURIComponent(m[1]));
-    return !!v?.c?.analytics;
+    if (m) {
+      const v = JSON.parse(decodeURIComponent(m[1]));
+      return !!v?.c?.analytics;
+    }
+    // Fallback: read localStorage manager state (covers users who cleared cookies only)
+    const raw = localStorage.getItem("tz_consent_v2");
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    return !!parsed?.cat?.analytics;
   } catch {
     return false;
   }
@@ -40,4 +46,3 @@ export default function ClientAnalytics() {
     </>
   );
 }
-

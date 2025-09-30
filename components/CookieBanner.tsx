@@ -149,6 +149,16 @@ export default function CookieBanner() {
             anonymize_ip: true,
             send_page_view: false,
           });
+          // Send initial page_view after consent is granted so Real‑Time shows immediately
+          try {
+            const path =
+              window.location.pathname +
+              (window.location.search ? window.location.search : "");
+            (window as any).gtag("event", "page_view", {
+              page_path: path,
+              page_title: document?.title || undefined,
+            });
+          } catch {}
         }
       } catch {}
 
