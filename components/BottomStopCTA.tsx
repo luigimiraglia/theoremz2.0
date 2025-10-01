@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import TrackedLink from "@/components/TrackedLink";
+import { Phone } from "lucide-react";
 
 export default function BottomStopCTA() {
   const [atEnd, setAtEnd] = useState(false);
@@ -23,21 +24,16 @@ export default function BottomStopCTA() {
   }, []);
 
   const baseCls =
-    "z-50 w-[calc(100%-40px)] max-w-[480px] rounded-2xl bg-gradient-to-r from-emerald-400 to-sky-500 px-5 py-3 mt-5 text-center text-[15px] font-extrabold text-white shadow-md ring-1 ring-sky-400/30 transition hover:from-sky-500 hover:to-indigo-400 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300";
+    "z-50 w-[calc(100%-40px)] max-w-[480px] rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-500 px-7 py-3.5 text-center text-[15px] font-black text-white shadow-md ring-1 ring-sky-400/30 transition hover:from-sky-500 hover:to-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300";
 
   const posCls = atEnd
-    ? "absolute left-1/2 -translate-x-1/2 bottom-0"
-    : "fixed left-1/2 -translate-x-1/2 bottom-4";
-
-  const style: CSSProperties = {
-    bottom: atEnd ? "2rem" : "calc(2rem + env(safe-area-inset-bottom))",
-  };
+    ? "absolute left-1/2 -translate-x-1/2 bottom-8"
+    : "fixed left-1/2 -translate-x-1/2 bottom-[calc(2rem+env(safe-area-inset-bottom))]";
 
   return (
     <TrackedLink
       href="/contatto-rapido?source=link-in-bio"
       className={`${baseCls} ${posCls}`}
-      style={style}
       event="linkinbio_call_click"
       ariaLabel="Richiedi informazioni"
     >
@@ -47,9 +43,7 @@ export default function BottomStopCTA() {
       </span>
       <span className="inline-flex items-center justify-center gap-2">
         <span>Richiedi informazioni</span>
-        <span className="text-white" aria-hidden>
-          📞
-        </span>
+        <Phone aria-hidden className="h-4 w-4 text-white" />
       </span>
     </TrackedLink>
   );
