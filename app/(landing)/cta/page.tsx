@@ -62,8 +62,8 @@ export default function LinkInBioPage() {
           </div>
           <h1 className="text-[22px] font-black">Theoremz</h1>
           <p className="mt-1 max-w-sm text-[13.5px] font-semibold text-slate-600">
-            Aiuto in matematica e fisica. Risoluzione esercizi, risorse gratuite
-            e assistenza.
+            La piattaforma N1 di matematica e fisica. Risorse gratuite +
+            percorsi guidati per il successo scolastico.
           </p>
         </div>
 
@@ -82,8 +82,11 @@ export default function LinkInBioPage() {
           </div>
           <ul className="grid gap-2">
             {freebies.map((f) => {
-              const isWA = (f as any).isWhatsApp || (typeof f.href === "string" && f.href.includes("wa.link"));
-              const base = "flex items-center justify-between rounded-xl px-4 py-3 text-[14px] font-semibold ring-1 transition hover:shadow-md hover:ring-slate-300";
+              const isWA =
+                (f as any).isWhatsApp ||
+                (typeof f.href === "string" && f.href.includes("wa.link"));
+              const base =
+                "flex items-center justify-between rounded-xl px-4 py-3 text-[14px] font-semibold ring-1 transition hover:shadow-md hover:ring-slate-300";
               const cls = `${base} bg-white text-slate-900 ring-slate-200`;
 
               return (
@@ -91,14 +94,19 @@ export default function LinkInBioPage() {
                   <TrackedA
                     href={f.href}
                     event="linkinbio_freebie_click"
-                    params={{ title: f.title, platform: isWA ? "whatsapp" : "pdf" }}
+                    params={{
+                      title: f.title,
+                      platform: isWA ? "whatsapp" : "pdf",
+                    }}
                     className={cls}
                     target={isWA ? "_blank" : undefined}
                     rel={isWA ? "noopener noreferrer" : undefined}
                     aria-label={`Ottieni — ${f.title}`}
                   >
                     <span className="flex items-center gap-2">
-                      <span className="text-[18px]" aria-hidden>{(f as any).emoji}</span>
+                      <span className="text-[18px]" aria-hidden>
+                        {(f as any).emoji}
+                      </span>
                       <span>{f.title}</span>
                     </span>
                     {/* Pulsante "Ottieni": colore unico + shimmer in movimento */}
@@ -123,19 +131,27 @@ export default function LinkInBioPage() {
           </p>
           <ul className="mt-3 grid gap-2 text-[13.5px] text-slate-700">
             <li className="flex items-start gap-2">
-              <span aria-hidden className="text-sky-600">✔</span>
+              <span aria-hidden className="text-sky-600">
+                ✔
+              </span>
               Spiegazioni chiare e applicabili subito
             </li>
             <li className="flex items-start gap-2">
-              <span aria-hidden className="text-sky-600">✔</span>
+              <span aria-hidden className="text-sky-600">
+                ✔
+              </span>
               Esercizi svolti e strategie per verifiche/interrogazioni
             </li>
             <li className="flex items-start gap-2">
-              <span aria-hidden className="text-sky-600">✔</span>
+              <span aria-hidden className="text-sky-600">
+                ✔
+              </span>
               Percorso personalizzato e supporto quando serve
             </li>
             <li className="flex items-start gap-2">
-              <span aria-hidden className="text-sky-600">✔</span>
+              <span aria-hidden className="text-sky-600">
+                ✔
+              </span>
               Un insegnante dedicato ti aiuta ogni giorno
             </li>
           </ul>
@@ -226,7 +242,7 @@ export default function LinkInBioPage() {
                   + tante altre testimonianze
                 </div>
                 <div className="text-[12px] font-semibold text-slate-500">
-                  WhatsApp, Instagram e chat private
+                  Siamo valutati 4.8/5 ⭐️
                 </div>
               </div>
             </div>
