@@ -62,8 +62,7 @@ export default function OpenInBrowserButton({
 
   const hint = useMemo(() => {
     if (!isInApp) return null;
-    if (isIOS)
-      return "Se sei su Instagram, tocca ⋯ e scegli ‘Apri in Safari’.";
+    if (isIOS) return "Se sei su Instagram, tocca ⋯ e scegli ‘Apri in Safari’.";
     if (isAndroid)
       return "Se sei su Instagram, apri il menu ⋮ e scegli ‘Apri in Chrome’.";
     return null;
@@ -75,9 +74,9 @@ export default function OpenInBrowserButton({
         type="button"
         onClick={openExternal}
         className="block w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-5 py-3 text-center text-[15px] font-extrabold text-white shadow-[0_8px_0_#3730a3] active:translate-y-[1px] active:shadow-[0_7px_0_#3730a3]"
-        aria-label="Apri il sito nel browser (Safari/Chrome)"
+        aria-label="Apri il sito nel browser"
       >
-        🌐 Apri il sito nel browser (Safari/Chrome)
+        🌐 Apri il sito nel browser
       </button>
       {hint ? (
         <p className="mt-2 text-center text-[12px] font-semibold text-slate-500">

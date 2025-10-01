@@ -2,6 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import OpenInBrowserButton from "@/components/OpenInBrowserButton";
+import BottomStopCTA from "@/components/BottomStopCTA";
 import TrackedLink from "@/components/TrackedLink";
 import TrackedA from "@/components/TrackedA";
 
@@ -29,23 +30,23 @@ export const metadata = {
 
 const freebies = [
   {
-    title: "Teoremi di Analisi (PDF)",
-    href: "/pdf/teoremi-di-analisi.pdf?utm_source=link-in-bio&utm_medium=social&utm_campaign=freebie",
-    emoji: "📘",
+    title: "Guida per le verifiche",
+    href: "https://wa.link/6d4vpu",
+    emoji: "📝",
+    isWhatsApp: true,
   },
-  { title: "Numeri Complessi (PDF)", href: "/pdf/numeri-complessi.pdf?utm_source=link-in-bio&utm_medium=social&utm_campaign=freebie", emoji: "📗" },
-  { title: "Derivate (PDF)", href: "/pdf/derivate.pdf?utm_source=link-in-bio&utm_medium=social&utm_campaign=freebie", emoji: "📙" },
   {
-    title: "Limiti notevoli (PDF)",
-    href: "/pdf/limiti-notevoli.pdf?utm_source=link-in-bio&utm_medium=social&utm_campaign=freebie",
-    emoji: "📕",
+    title: "Libro: Concentrarsi in classe",
+    href: "https://wa.link/5fu7to",
+    emoji: "📚",
+    isWhatsApp: true,
   },
 ];
 
 export default function LinkInBioPage() {
   return (
-    <main className="bg-white text-slate-900">
-      <section className="mx-auto max-w-md px-5 pb-10 pt-8">
+    <main className="bg-gradient-to-br from-sky-50 to-indigo-50 text-slate-900">
+      <section className="relative mx-auto max-w-md px-5 pb-10 pt-8">
         {/* Header */}
         <div className="flex flex-col items-center text-center">
           <div className="relative mb-3 h-16 w-16 overflow-hidden rounded-full ring-2 ring-slate-200">
@@ -61,61 +62,178 @@ export default function LinkInBioPage() {
           </div>
           <h1 className="text-[22px] font-black">Theoremz</h1>
           <p className="mt-1 max-w-sm text-[13.5px] font-semibold text-slate-600">
-            Aiuto in matematica e fisica. Risoluzione esercizi, risorse
-            gratuite e assistenza.
+            Aiuto in matematica e fisica. Risoluzione esercizi, risorse gratuite
+            e assistenza.
           </p>
         </div>
 
-        {/* Primary CTAs */}
-        <div className="mt-5 space-y-3">
-          {/* Main: open site in system browser */}
+        {/* Primary CTA: apri il sito nel browser di sistema */}
+        <div className="mt-5">
           <OpenInBrowserButton
             className=""
             href="https://theoremz.com/?utm_source=link-in-bio&utm_medium=social&utm_campaign=linkinbio"
           />
-
-          {/* Call request (max 4 words) */}
-          <TrackedLink
-            href="/contatto-rapido?source=link-in-bio"
-            className="block w-full rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-3 text-center text-[15px] font-extrabold text-emerald-700"
-            event="linkinbio_call_click"
-            ariaLabel="Richiedi una chiamata gratuita"
-          >
-            ☎️ Ti chiamiamo per orientarti
-          </TrackedLink>
         </div>
 
         {/* Freebies */}
         <div className="mt-7 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
           <div className="mb-2 text-center text-[16px] font-extrabold text-slate-900">
-            🎁 Freebies da scaricare
+            🎁 Risorse da scaricare gratis
           </div>
           <ul className="grid gap-2">
-            {freebies.map((f) => (
-              <li key={f.href}>
-                <TrackedA
-                  href={f.href}
-                  event="linkinbio_freebie_click"
-                  params={{ title: f.title }}
-                  className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-[18px]" aria-hidden>
-                      {f.emoji}
+            {freebies.map((f) => {
+              const isWA = (f as any).isWhatsApp || (typeof f.href === "string" && f.href.includes("wa.link"));
+              const base = "flex items-center justify-between rounded-xl px-4 py-3 text-[14px] font-semibold ring-1 transition hover:shadow-md hover:ring-slate-300";
+              const cls = `${base} bg-white text-slate-900 ring-slate-200`;
+
+              return (
+                <li key={f.href}>
+                  <TrackedA
+                    href={f.href}
+                    event="linkinbio_freebie_click"
+                    params={{ title: f.title, platform: isWA ? "whatsapp" : "pdf" }}
+                    className={cls}
+                    target={isWA ? "_blank" : undefined}
+                    rel={isWA ? "noopener noreferrer" : undefined}
+                    aria-label={`Ottieni — ${f.title}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-[18px]" aria-hidden>{(f as any).emoji}</span>
+                      <span>{f.title}</span>
                     </span>
-                    {f.title}
-                  </span>
-                  <span className="text-sky-600">Scarica</span>
-                </TrackedA>
-              </li>
-            ))}
+                    {/* Pulsante "Ottieni": colore unico + shimmer in movimento */}
+                    <span className="inline-flex items-center rounded-full px-3 py-1 text-white text-[12.5px] font-extrabold shadow-md transition select-none bg-[linear-gradient(90deg,#0284c7,#38bdf8,#0284c7)] bg-[length:200%_100%] animate-shimmer">
+                      Ottieni
+                    </span>
+                  </TrackedA>
+                </li>
+              );
+            })}
           </ul>
         </div>
 
-        {/* Footer mini */}
-        <p className="mt-6 text-center text-[12.5px] font-semibold text-slate-500">
-          © {new Date().getFullYear()} Theoremz — Tutti i diritti riservati
-        </p>
+        {/* Elevator pitch */}
+        <section className="mt-6 mb-4 rounded-2xl border border-slate-200 bg-white p-4">
+          <h2 className="text-center text-[16px] font-extrabold text-slate-900">
+            ❓ Vuoi migliorare in matematica e fisica?
+          </h2>
+          <p className="mt-2 text-center text-[13.5px] font-semibold text-slate-700">
+            Ti guidiamo passo passo: dalle nozioni al metodo, fino a come
+            affrontare le verifiche senza ansia. Meno stress, più risultati.
+          </p>
+          <ul className="mt-3 grid gap-2 text-[13.5px] text-slate-700">
+            <li className="flex items-start gap-2">
+              <span aria-hidden className="text-sky-600">✔</span>
+              Spiegazioni chiare e applicabili subito
+            </li>
+            <li className="flex items-start gap-2">
+              <span aria-hidden className="text-sky-600">✔</span>
+              Esercizi svolti e strategie per verifiche/interrogazioni
+            </li>
+            <li className="flex items-start gap-2">
+              <span aria-hidden className="text-sky-600">✔</span>
+              Percorso personalizzato e supporto quando serve
+            </li>
+            <li className="flex items-start gap-2">
+              <span aria-hidden className="text-sky-600">✔</span>
+              Un insegnante dedicato ti aiuta ogni giorno
+            </li>
+          </ul>
+        </section>
+
+        {/* CTA fisso che si ferma a fine pagina */}
+        <BottomStopCTA />
+        {/* Come aiutiamo gli studenti (collage testimonianze) */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
+          <h2 className="text-center text-[16px] font-extrabold text-slate-900">
+            💡 Come aiutiamo gli studenti
+          </h2>
+          <p className="mt-1 text-center text-[13px] font-semibold text-slate-600">
+            Miglioriamo voti, metodo e sicurezza. Alcune testimonianze reali ↓
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-3">
+            {/* 1 */}
+            <a
+              href="/images/testimonial1.webp"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Apri testimonianza studente 1 a schermo intero"
+              title="Apri testimonianza"
+              className="block"
+            >
+              <div className="relative h-52 overflow-hidden rounded-xl ring-1 ring-slate-200 shadow-sm">
+                <div className="absolute inset-2">
+                  <Image
+                    src="/images/testimonial1.webp"
+                    alt="Testimonianza studente 1"
+                    fill
+                    sizes="(max-width: 480px) 100vw, 420px"
+                    className="object-contain"
+                    priority
+                  />
+                </div>
+              </div>
+            </a>
+
+            {/* 2 */}
+            <a
+              href="/images/testimonial2.webp"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Apri testimonianza studente 2 a schermo intero"
+              title="Apri testimonianza"
+              className="block"
+            >
+              <div className="relative h-52 overflow-hidden rounded-xl ring-1 ring-slate-200 shadow-sm">
+                <div className="absolute inset-2">
+                  <Image
+                    src="/images/testimonial2.webp"
+                    alt="Testimonianza studente 2"
+                    fill
+                    sizes="(max-width: 480px) 100vw, 420px"
+                    className="object-contain"
+                  />
+                </div>
+              </div>
+            </a>
+
+            {/* 3 */}
+            <a
+              href="/images/testimonial3.webp"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Apri testimonianza studente 3 a schermo intero"
+              title="Apri testimonianza"
+              className="block"
+            >
+              <div className="relative h-52 overflow-hidden rounded-xl ring-1 ring-slate-200 shadow-sm">
+                <div className="absolute inset-2">
+                  <Image
+                    src="/images/testimonial3.webp"
+                    alt="Testimonianza studente 3"
+                    fill
+                    sizes="(max-width: 480px) 100vw, 420px"
+                    className="object-contain"
+                  />
+                </div>
+              </div>
+            </a>
+
+            {/* + altre */}
+            <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-center">
+              <div>
+                <div className="text-[14px] font-extrabold text-slate-700">
+                  + tante altre testimonianze
+                </div>
+                <div className="text-[12px] font-semibold text-slate-500">
+                  WhatsApp, Instagram e chat private
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        {/* Sentinella per fermare il CTA al fondo pagina */}
+        <div id="cta-page-end" className="h-4" />
       </section>
     </main>
   );
