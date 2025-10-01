@@ -4,6 +4,19 @@ import Link from "next/link";
 import BuyLink from "@/components/BuyLink";
 import SenjaEmbed from "@/components/SenjaEmbed";
 import FloatingLeadButton from "@/components/FloatingLeadButton";
+import type { LucideIcon } from "lucide-react";
+import {
+  MessageCircle,
+  ClipboardCheck,
+  ListChecks,
+  CheckCircle2,
+  BookOpen,
+  Megaphone,
+  Trophy,
+  Sparkles,
+  Star,
+  Users,
+} from "lucide-react";
 
 // ---------- METADATA SEO ----------
 const TITLE =
@@ -186,82 +199,134 @@ export default function BlackPage() {
       />
 
       {/* ============ HERO (2 colonne da md+) ============ */}
-      <section className="mx-auto max-w-6xl px-5 pt-12 pb-8 sm:px-8 lg:px-12">
-        <div className="grid gap-10 md:grid-cols-2 md:items-center">
-          {/* Testo */}
-          <div>
-            <h1 className="font-black leading-tight text-[36px] sm:text-[42px] lg:text-[52px]">
-              Theoremz
-              <span className="ml-1 align-[-0.18em] italic font-extrabold text-[30px] sm:text-[34px] lg:text-[40px]">
-                Black
-              </span>
-              , sblocca tutte le{" "}
-              <span className="bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent font-semibold">
-                risorse
-              </span>{" "}
-              per il tuo successo!
-            </h1>
+      <section className="relative mx-auto max-w-6xl px-5 pt-12 pb-12 sm:px-8 lg:px-12">
+        <div
+          className="absolute inset-x-6 -top-6 -z-10 h-[340px] rounded-full bg-sky-500/10 blur-3xl sm:inset-x-12 sm:top-[-3rem]"
+          aria-hidden
+        />
+        <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-br from-[#0a101d] via-[#111827] to-[#020312] px-6 py-10 shadow-[0_22px_60px_-25px_rgba(14,165,233,0.7)] sm:px-10 lg:px-16">
+          <div
+            className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-cyan-400/30 blur-3xl sm:-right-24 sm:-top-24 sm:h-64 sm:w-64"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute -bottom-24 left-4 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl sm:-bottom-28 sm:left-12 sm:h-72 sm:w-72"
+            aria-hidden
+          />
 
-            <p className="mt-5 max-w-2xl text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/85">
-              Il primo servizio per lo studio che ti mette a disposizione{" "}
-              <span className="font-semibold">
-                tutto quello di cui hai bisogno
-              </span>{" "}
-              per eccellere.
-            </p>
+          <div className="relative grid gap-10 md:grid-cols-2 md:items-center">
+            {/* Testo */}
+            <div>
+              <h1 className="font-black leading-tight text-[36px] sm:text-[44px] lg:text-[54px]">
+                Il tuo pass per tutte le risorse di
+                <span className="ml-2 align-[-0.18em] italic font-extrabold text-sky-300">
+                  Theoremz Black
+                </span>
+              </h1>
 
-            <div className="mt-8 flex items-center gap-4">
-              <a
-                href="#pricing"
-                className="inline-flex items-center gap-2 rounded-2xl bg-sky-500 px-6 py-3 text-[16px] font-extrabold text-black transition hover:bg-sky-400"
-              >
-                Scopri le offerte
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              <p className="mt-5 max-w-2xl text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/90 font-medium">
+                Il primo servizio per lo studio che ti mette a disposizione{" "}
+                <span className="font-semibold text-white">
+                  tutto quello di cui hai bisogno
+                </span>{" "}
+                per eccellere, con supporto umano e tecnologia sempre al tuo
+                fianco.
+              </p>
+
+              <div className="mt-8 flex items-center gap-4">
+                <a
+                  href="#pricing"
+                  className="group relative inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[16px] font-extrabold text-white transition-all duration-300 btn-gradient-animate btn-halo"
                 >
-                  <path d="M5 12h14" />
-                  <path d="m12 5 7 7-7 7" />
-                </svg>
-              </a>
-              <span className="-scale-x-100 text-white/90 text-3xl select-none md:hidden">
-                ↩︎
-              </span>
+                  Scopri le offerte
+                  <svg
+                    className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12h14" />
+                    <path d="m12 5 7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 md:hidden">
+                <Star
+                  className="h-4 w-4 text-amber-300"
+                  strokeWidth={0}
+                  fill="currentColor"
+                  aria-hidden
+                />
+                4.8/5 da studenti soddisfatti
+              </div>
             </div>
-          </div>
 
-          {/* Illustrazione (solo da md+) */}
-          <div className="hidden md:block">
-            <HeroIllo />
+            {/* Social proof banner (solo da md+) */}
+            <div className="hidden md:flex justify-center">
+              <div className="group relative w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent px-8 py-9 text-center shadow-[0_25px_70px_-30px_rgba(56,189,248,0.8)] backdrop-blur transition-transform duration-500 ease-out will-change-transform motion-safe:hover:-translate-y-2 motion-safe:hover:scale-[1.02]">
+                <div
+                  className="pointer-events-none absolute -top-10 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-cyan-400/20 blur-3xl transition-all duration-500 ease-out motion-safe:group-hover:-top-14 motion-safe:group-hover:bg-cyan-300/30"
+                  aria-hidden
+                />
+                <div className="relative space-y-5 transition-transform duration-500 ease-out motion-safe:group-hover:-translate-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/60 transition-colors duration-500 motion-safe:group-hover:text-white/80">
+                    Valutazione studenti
+                  </p>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-end gap-2 transition-transform duration-500 ease-out motion-safe:group-hover:scale-105">
+                      <span className="text-[52px] font-black leading-none text-white">
+                        4.8
+                      </span>
+                      <span className="pb-1 text-lg font-semibold text-white/70 transition-colors duration-500 motion-safe:group-hover:text-white/90">
+                        su 5
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className="h-7 w-7 text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,0.55)] transition-transform duration-500 ease-out motion-safe:group-hover:translate-y-[-2px] motion-safe:group-hover:drop-shadow-[0_0_16px_rgba(251,191,36,0.85)]"
+                          strokeWidth={0}
+                          fill="currentColor"
+                          aria-hidden
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/90 transition-transform duration-500 ease-out motion-safe:group-hover:translate-y-1 motion-safe:group-hover:bg-white/15">
+                    <Users className="h-4 w-4 text-sky-300" aria-hidden />
+                    Oltre 200 studenti soddisfatti
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ============ INTRO ============ */}
       <section className="mx-auto max-w-6xl px-5 pb-8 sm:px-8 lg:px-12">
-        <h2 className="text-[26px] sm:text-[28px] lg:text-[32px] font-extrabold">
+        <h2 className="text-[26px] sm:text-[28px] lg:text-[32px] font-black text-white">
           Di cosa si tratta?
         </h2>
-        <p className="mt-3 max-w-3xl text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/85">
-          <span className="text-sky-400 underline-offset-2 hover:underline">
+        <p className="mt-3 max-w-3xl text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/90 font-medium">
+          <span className="text-white font-semibold underline-offset-2 hover:underline">
             Theoremz Black
           </span>{" "}
           ti fornisce un&apos;esperienza di apprendimento unica, con un team di{" "}
-          <u>insegnanti</u> pronti ad assisterti ogni giorno via chat. Avrai
-          accesso completo a tutte le risorse di Theoremz: esercizi, quiz,
-          appunti e videolezioni per ogni lezione, oltre a tutto quello che ti
-          serve per studiare come si deve.
+          <u className="font-semibold text-white">insegnanti dedicati</u> pronti
+          ad assisterti ogni giorno via chat. Avrai accesso completo a tutte le
+          risorse di Theoremz: esercizi, quiz, appunti e videolezioni per ogni
+          lezione, oltre a tutto quello che ti serve per studiare come si deve.
         </p>
       </section>
 
       {/* ============ COSA INCLUDE (grid 2 colonne da lg) ============ */}
       <section className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-12">
-        <h2 className="text-[26px] sm:text-[28px] lg:text-[32px] font-extrabold">
+        <h2 className="text-[26px] sm:text-[28px] lg:text-[32px] font-black text-white">
           Cosa include?
         </h2>
 
@@ -326,8 +391,16 @@ export default function BlackPage() {
               />
             </div>
             <div className="flex-1">
-              <div className="h-full rounded-2xl bg-gradient-to-br from-blue-700 to-cyan-400 px-6 py-8 text-center text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white">
-                +100% Soddisfatti o Rimborsati
+              <div className="h-full rounded-2xl border border-white/20 bg-gradient-to-br from-cyan-500/90 via-sky-500/80 to-blue-600/80 px-6 py-9 text-center text-2xl sm:text-3xl lg:text-4xl font-black text-white shadow-[0_20px_45px_-28px_rgba(14,165,233,0.9)]">
+                <span className="block text-sm font-semibold uppercase tracking-[0.35em] text-white/80">
+                  Garanzia totale
+                </span>
+                <span className="mt-4 block">
+                  +100% Soddisfatti o Rimborsati
+                </span>
+                <span className="mt-3 block text-base font-semibold text-white/90">
+                  Cambia idea quando vuoi
+                </span>
               </div>
             </div>
           </div>
@@ -355,18 +428,22 @@ export default function BlackPage() {
               infoHref="https://wa.link/mkxv41"
               buyHref="https://buy.stripe.com/7sIaIa5f5b21dOgcNo"
               features={[
-                ["ok", "Studia sempre senza pubblicità"],
+                // Contenuti principali
                 ["ok", "Centinaia di esercizi risolti"],
                 ["ok", "Videolezione per ogni argomento"],
                 ["ok", "Formulari, quiz e appunti"],
-                ["ok", "Sconto del 10% sulle ripetizioni"],
-                ["ok", "Dark Mode per lo studio"],
+                // Strumenti avanzati
+                ["ok", "Theoremz AI"],
+                ["ok", "Simulazione verifiche"],
+                // Qualità di vita
                 ["ok", "Salva le lezioni nei preferiti"],
-                ["ok", "App Theoremz dedicata"],
+                ["ok", "Dark Mode per lo studio"],
                 ["ok", "Tutte le funzionalità Theoremz"],
+                // Garanzia
                 ["ok", "100% soddisfatti o rimborsati"],
                 ["no", "Assistenza via chat illimitata"],
                 ["no", "Aiuto compiti giornaliero"],
+                ["no", "Sconto del 10% sulle ripetizioni"],
               ]}
             />
           </div>
@@ -380,26 +457,39 @@ export default function BlackPage() {
               Piano Base
             </div>
 
-            <PriceCard
-              price="6,90€"
-              unit=" /mese"
-              infoHref="https://wa.link/4ogl5q"
-              buyHref="https://buy.stripe.com/cN29E66j97PPbG84gT"
-              features={[
-                ["pink", "Assistenza via chat illimitata"],
-                ["pink", "Aiuto compiti giornaliero"],
-                ["ok", "Studia sempre senza pubblicità"],
-                ["ok", "Centinaia di esercizi risolti"],
-                ["ok", "Videolezione per ogni argomento"],
-                ["ok", "Formulari, quiz e appunti"],
-                ["ok", "Sconto del 10% sulle ripetizioni"],
-                ["ok", "Dark Mode per lo studio"],
-                ["ok", "Salva le lezioni nei preferiti"],
-                ["ok", "App Theoremz dedicata"],
-                ["ok", "Tutte le funzionalità Theoremz"],
-                ["ok", "100% soddisfatti o rimborsati"],
-              ]}
-            />
+            <div className="relative">
+              {/* Halo fucsia dietro la card Base */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -inset-3 top-6 rounded-[22px] bg-gradient-to-r from-fuchsia-500 via-pink-500 to-fuchsia-400 opacity-35 blur-2xl"
+              />
+              <div className="relative z-10">
+                <PriceCard
+                  price="6,90€"
+                  unit=" /mese"
+                  infoHref="https://wa.link/4ogl5q"
+                  buyHref="https://buy.stripe.com/cN29E66j97PPbG84gT"
+                  features={[
+                    // Differenziatori principali
+                    ["pink", "Assistenza via chat illimitata"],
+                    ["pink", "Aiuto compiti giornaliero"],
+                    // Contenuti principali
+                    ["ok", "Centinaia di esercizi risolti"],
+                    ["ok", "Videolezione per ogni argomento"],
+                    ["ok", "Formulari, quiz e appunti"],
+                    // Strumenti avanzati
+                    ["ok", "Theoremz AI"],
+                    ["ok", "Simulazione verifiche"],
+                    ["ok", "Salva le lezioni nei preferiti"],
+                    ["ok", "Dark Mode per lo studio"],
+                    ["ok", "Tutte le funzionalità Theoremz"],
+                    ["ok", "Sconto del 10% sulle ripetizioni"],
+                    // Garanzia in chiusura
+                    ["ok", "100% soddisfatti o rimborsati"],
+                  ]}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Colonna 3 – Annuale */}
@@ -417,17 +507,21 @@ export default function BlackPage() {
               infoHref="https://wa.link/rwbkqd"
               buyHref="https://buy.stripe.com/6oE3fIfTJ6LL11u9Be"
               features={[
+                // Differenziatori principali
                 ["pink", "Assistenza via chat illimitata"],
                 ["pink", "Aiuto compiti giornaliero"],
-                ["ok", "Studia sempre senza pubblicità"],
+                // Contenuti principali
                 ["ok", "Centinaia di esercizi risolti"],
                 ["ok", "Videolezione per ogni argomento"],
                 ["ok", "Formulari, quiz e appunti"],
-                ["ok", "Sconto del 10% sulle ripetizioni"],
-                ["ok", "Dark Mode per lo studio"],
+                // Strumenti avanzati
+                ["ok", "Theoremz AI"],
+                ["ok", "Simulazione verifiche"],
                 ["ok", "Salva le lezioni nei preferiti"],
-                ["ok", "App Theoremz dedicata"],
+                ["ok", "Dark Mode per lo studio"],
                 ["ok", "Tutte le funzionalità Theoremz"],
+                ["ok", "Sconto del 10% sulle ripetizioni"],
+                // Garanzia in chiusura
                 ["ok", "100% soddisfatti o rimborsati"],
               ]}
             />
@@ -482,18 +576,45 @@ function IncludeCard({
   title: string;
   items: [string, string][];
 }) {
+  function iconFor(h: string): LucideIcon {
+    const t = h.toLowerCase();
+    if (t.includes("supporto") || t.includes("chat")) return MessageCircle;
+    if (t.includes("compiti")) return ClipboardCheck;
+    if (t.includes("catalogo") || t.includes("esercizi")) return ListChecks;
+    if (t.includes("risolti") || t.includes("spiegati")) return CheckCircle2;
+    if (
+      t.includes("argomenti") ||
+      t.includes("lezioni") ||
+      t.includes("formulari")
+    )
+      return BookOpen;
+    if (t.includes("materiale")) return Megaphone;
+    if (t.includes("premi") || t.includes("primo posto")) return Trophy;
+    return Sparkles;
+  }
   return (
-    <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-6 lg:p-7">
-      <h3 className="text-[20px] lg:text-[22px] font-extrabold text-sky-400">
+    <div className="group rounded-2xl border border-white/25 bg-gradient-to-br from-white/15 via-white/5 to-white/0 p-6 shadow-[0_18px_40px_-30px_rgba(56,189,248,0.6)] transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/50 hover:shadow-[0_22px_50px_-28px_rgba(56,189,248,0.9)] lg:p-7">
+      <h3 className="text-[20px] lg:text-[22px] font-black text-white">
         {title}
       </h3>
-      <ul className="mt-3 space-y-3">
+      <ul className="mt-5 space-y-3">
         {items.map(([h, p]) => (
-          <li key={h} className="flex gap-3">
-            <span className="select-none text-white/90">✦</span>
+          <li
+            key={h}
+            className="flex gap-3 rounded-xl border border-white/15 bg-white/[0.07] px-4 py-3 transition-colors duration-300 group-hover:border-cyan-200/60 group-hover:bg-white/15"
+          >
+            {(() => {
+              const Icon = iconFor(h);
+              return (
+                <Icon
+                  className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300"
+                  aria-hidden
+                />
+              );
+            })()}
             <div>
-              <p className="font-semibold">{h}</p>
-              <p className="text-white/85 text-[15px] leading-relaxed">{p}</p>
+              <p className="font-semibold text-white tracking-wide">{h}</p>
+              <p className="text-[15px] leading-relaxed text-white/85">{p}</p>
             </div>
           </li>
         ))}
@@ -516,14 +637,26 @@ function PriceCard({
   buyHref: string;
 }) {
   return (
-    <div className="mt-3 rounded-2xl bg-white text-slate-900 shadow-sm ring-1 ring-slate-200">
-      <div className="px-6 py-6 lg:px-8 lg:py-8">
-        <div className="text-[41px] lg:text-[46px] font-semibold bg-gradient-to-r text-transparent from-blue-600 to-cyan-400 bg-clip-text lg:whitespace-nowrap">
-          {price}
-          {unit}
+    <div className="relative mt-3 overflow-hidden rounded-2xl border border-white/15 bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_-30px_rgba(15,23,42,0.45)]">
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-cyan-100/20 to-transparent"
+        aria-hidden
+      />
+      <div className="relative px-6 py-6 lg:px-8 lg:py-8">
+        <div className="relative inline-block">
+          <span
+            className="pointer-events-none absolute inset-0 -translate-y-1.5 scale-105 rounded-full bg-gradient-to-r from-blue-500/25 to-cyan-300/25 blur-xl"
+            aria-hidden
+          />
+          <div className="relative text-[41px] lg:text-[46px] font-black bg-gradient-to-r text-transparent from-blue-600 to-cyan-400 bg-clip-text drop-shadow-[0_8px_24px_rgba(56,189,248,0.38)] lg:whitespace-nowrap">
+            {price}
+            {unit}
+          </div>
         </div>
 
-        <ul className="mt-5 grid gap-2 text-[16px] font-semibold lg:text-[15.5px]">
+        <div className="mt-5 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+
+        <ul className="mt-4 grid gap-2 text-[16px] font-semibold lg:text-[15.5px]">
           {features.map(([variant, text], i) => {
             const color =
               variant === "no"
@@ -553,7 +686,9 @@ function PriceCard({
           })}
         </ul>
 
-        <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+        <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
           <Link
             href={infoHref}
             aria-label={`Chiedi informazioni sul piano ${
@@ -595,80 +730,6 @@ function PriceCard({
         </div>
       </div>
     </div>
-  );
-}
-
-/* ---------- Decorative hero illustration (solo desktop) ---------- */
-function HeroIllo() {
-  return (
-    <svg
-      viewBox="0 0 560 340"
-      className="h-[220px] sm:h-[260px] lg:h-[300px] w-full"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="b" x1="0" x2="1">
-          <stop offset="0%" stopColor="#60a5fa" />
-          <stop offset="100%" stopColor="#22d3ee" />
-        </linearGradient>
-      </defs>
-      <rect
-        x="20"
-        y="20"
-        width="520"
-        height="220"
-        rx="16"
-        fill="#0d0f12"
-        stroke="#1f2937"
-      />
-      <circle cx="60" cy="50" r="6" fill="#374151" />
-      <circle cx="82" cy="50" r="6" fill="#374151" />
-      <circle cx="104" cy="50" r="6" fill="#374151" />
-      <rect x="60" y="90" width="200" height="100" rx="12" fill="#111827" />
-      <path
-        d="M80 160 C120 110, 160 140, 200 110 S250 190, 260 160"
-        fill="none"
-        stroke="url(#b)"
-        strokeWidth="6"
-        strokeLinecap="round"
-      />
-      <rect
-        x="290"
-        y="90"
-        width="210"
-        height="120"
-        rx="14"
-        fill="url(#b)"
-        opacity=".25"
-      />
-      <rect
-        x="310"
-        y="110"
-        width="170"
-        height="16"
-        rx="8"
-        fill="#fff"
-        opacity=".85"
-      />
-      <rect
-        x="310"
-        y="138"
-        width="130"
-        height="16"
-        rx="8"
-        fill="#fff"
-        opacity=".85"
-      />
-      <rect
-        x="310"
-        y="166"
-        width="150"
-        height="16"
-        rx="8"
-        fill="#fff"
-        opacity=".85"
-      />
-    </svg>
   );
 }
 
