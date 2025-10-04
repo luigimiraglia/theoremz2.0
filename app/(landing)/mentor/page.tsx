@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import BuyLink from "@/components/BuyLink";
 import FloatingLeadButton from "@/components/FloatingLeadButton";
+import { CheckCircle2, Sparkles } from "lucide-react";
 export const metadata = {
   title: "Theoremz Mentor — Tutor personale per verifiche ed esami",
   description:
@@ -78,7 +79,7 @@ export default function MentorPage() {
   const graph = [breadcrumb, faq, product];
 
   return (
-    <main className="bg-white text-slate-900">
+    <main className="bg-slate-950 text-white">
       <FloatingLeadButton
         href="/contatto-rapido?source=mentor"
         label="Richiedi una chiamata gratuita"
@@ -99,7 +100,7 @@ export default function MentorPage() {
       <Pricing />
       <Reviews /> {/* 3 recensioni con stelle */}
       <FAQ />
-      <footer className="mt-10 border-t border-slate-100 py-8 text-center text-[13px] text-slate-500">
+      <footer className="mt-10 border-t border-white/10 py-8 text-center text-[13px] text-white/50">
         © {new Date().getFullYear()} Theoremz — Tutti i diritti riservati
       </footer>
     </main>
@@ -109,44 +110,42 @@ export default function MentorPage() {
 /* ---------------- HERO (responsive migliorato) ---------------- */
 function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      <div className="mx-auto max-w-6xl px-5 pt-10 pb-6 sm:px-8 lg:px-12">
-        {/* Mobile: stack; Desktop: 2 colonne perfettamente allineate */}
-        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-          {/* Testo */}
-          <div className="order-2 lg:order-1">
-            <h1 className="text-[30px] sm:text-[36px] lg:text-[44px] font-black leading-tight [text-wrap:balance] break-words hyphens-auto">
-              Ti senti <span className="text-rose-500">sopraffatto</span> dai
-              compiti e dalle verifiche?
-            </h1>
-            <p className="mt-3 text-[15.5px] sm:text-[16.5px] text-slate-700 leading-relaxed">
-              Studiare da soli può essere <b>difficile</b> e <b>frustrante</b>.
-              Senza una guida costante i progressi rallentano e la motivazione
-              crolla.
-            </p>
+    <section className="relative overflow-hidden bg-slate-950 text-white">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-[-18rem] h-[420px] bg-gradient-to-b from-slate-900/45 via-slate-900/18 to-transparent blur-3xl"
+        aria-hidden
+      />
+      <div className="mx-auto max-w-6xl px-5 pt-12 pb-8 sm:px-8 lg:px-12">
+        <div className="relative overflow-hidden rounded-[28px] border border-white/12 bg-white/10 px-6 py-10 shadow-[0_45px_120px_-60px_rgba(14,165,233,0.5)] backdrop-blur sm:px-10 lg:px-16">
+          <div
+            className="pointer-events-none absolute -right-20 top-12 h-64 w-64 rounded-full bg-cyan-300/25 blur-3xl sm:-right-24 sm:top-6"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute -bottom-24 left-8 h-56 w-56 rounded-full bg-sky-400/20 blur-3xl sm:-bottom-28 sm:left-16"
+            aria-hidden
+          />
 
-            <div className="mt-8">
-              <div className="inline-block rounded-xl bg-slate-900/90 px-4 py-2 text-[28px] sm:text-[32px] lg:text-[36px] font-black text-white">
-                Theoremz <span className="text-sky-300">Mentor</span>
+          <div className="relative grid gap-12 lg:grid-cols-[1.15fr,0.85fr] lg:items-center">
+            {/* Testo */}
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <h1 className="text-[30px] font-black leading-tight sm:text-[36px] lg:text-[44px]">
+                  Ti senti <span className="bg-gradient-to-r from-rose-400 to-rose-300 bg-clip-text text-transparent">sopraffatto</span> da compiti e verifiche?
+                </h1>
+                <p className="text-[15.5px] leading-relaxed text-white/90 sm:text-[16.5px]">
+                  Studiare da soli può essere <strong>difficile</strong> e spesso porta a rimandare. Con Theoremz Mentor hai un tutor personale che ti segue ogni giorno e trasforma lo stress in risultati concreti.
+                </p>
               </div>
-              <h2 className="mt-3 text-[28px] sm:text-[30px] lg:text-[32px] font-extrabold leading-tight">
-                un tutor <span className="text-sky-600">personale</span> per il
-                tuo successo!
-              </h2>
 
-              <p className="mt-3 text-[15.5px] text-slate-700">
-                Il primo sistema di apprendimento con un tutor{" "}
-                <b>sempre al tuo fianco</b>.
-              </p>
-
-              <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <a
                   href="#pricing"
-                  className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-sky-600 to-sky-500 px-6 py-3 text-[15px] font-extrabold text-white shadow-[0_8px_0_#1d4ed8] active:translate-y-[1px] active:shadow-[0_7px_0_#1d4ed8]"
+                  className="group inline-flex items-center justify-center rounded-2xl px-6 py-3 text-[15px] font-extrabold text-white transition-all duration-300 btn-gradient-animate btn-halo"
                 >
                   Scopri le offerte
                   <svg
-                    className="ml-2 h-5 w-5"
+                    className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -158,14 +157,52 @@ function Hero() {
                     <path d="m12 5 7 7-7 7" />
                   </svg>
                 </a>
-                <span className="inline-flex items-center justify-center rounded-2xl bg-slate-50 px-4 py-3 text-[12.5px] font-semibold text-slate-600 ring-1 ring-slate-200">
-                  ⭐️⭐️⭐️⭐️⭐️ Recensioni verificate
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/12 px-4 py-3 text-[12.5px] font-semibold text-white/85 shadow-sm">
+                  <Sparkles className="h-4 w-4 text-sky-300" aria-hidden />
+                  ⭐️⭐️⭐️⭐️⭐️ <span>Valutazione media 4,9</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 text-[13px] font-semibold text-white/80 sm:flex-row sm:items-center">
+                <span className="rounded-2xl border border-white/10 bg-white/12 px-4 py-2">
+                  Tutor dedicato + piani su misura
+                </span>
+                <span className="rounded-2xl border border-white/10 bg-white/12 px-4 py-2">
+                  Allenamenti e lezioni 1‑to‑1 ogni settimana
                 </span>
               </div>
             </div>
-          </div>
 
-          {/* Illustrazione/Statistiche */}
+            {/* Card laterale */}
+            <div className="hidden lg:order-none lg:block">
+              <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-white/10 px-6 py-6 text-white shadow-[0_35px_90px_-50px_rgba(56,189,248,0.55)] backdrop-blur">
+                <div
+                  className="pointer-events-none absolute -top-16 right-12 h-44 w-44 rounded-full bg-cyan-400/35 blur-3xl"
+                  aria-hidden
+                />
+                <h3 className="text-[20px] font-black text-white">
+                  Con Mentor ottieni
+                </h3>
+                <ul className="mt-4 space-y-3 text-[14.5px] font-semibold text-white/80">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-[2px] h-4 w-4 text-emerald-500" aria-hidden />
+                    Tutor dedicato che segue i tuoi progressi ogni settimana
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-[2px] h-4 w-4 text-emerald-500" aria-hidden />
+                    Piano di studio dinamico e aggiornato dopo ogni verifica
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-[2px] h-4 w-4 text-emerald-500" aria-hidden />
+                    Lezioni 1‑to‑1 + esercizi mirati con correzione
+                  </li>
+                </ul>
+                <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-[13px] font-semibold text-white/70">
+                  &ldquo;Dopo due mesi con Mentor mio figlio è passato da 5 a 7,5 in matematica&rdquo; — <span className="text-white font-bold">Elena, mamma di Luca</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -175,28 +212,32 @@ function Hero() {
 /* ------------- ABOUT + TEACHERS ------------- */
 function AboutAndTeachers() {
   return (
-    <section className="border-t border-slate-100">
-      <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 lg:px-12">
-        <div className="grid gap-8 md:grid-cols-2">
+    <section className="relative border-t border-white/10 bg-slate-950">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-[-10rem] h-[260px] bg-gradient-to-b from-sky-900/40 via-slate-950/60 to-transparent blur-3xl"
+        aria-hidden
+      />
+      <div className="relative mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-12">
+        <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
           {/* about */}
-          <div>
-            <h3 className="text-[26px] sm:text-[28px] font-extrabold">
+          <div className="rounded-[26px] border border-white/10 bg-white/5 px-6 py-7 text-white shadow-[0_40px_90px_-55px_rgba(56,189,248,0.45)] backdrop-blur">
+            <h3 className="text-[26px] sm:text-[30px] font-black text-white">
               Di cosa si tratta?
             </h3>
-            <p className="mt-2 text-[15.5px] leading-relaxed text-slate-700">
-              <b>Theoremz Mentor</b> offre un’esperienza di apprendimento unica,
-              con un tutor <b>dedicato</b> che ti segue ogni giorno. Avrai
-              accesso a piani di studio personalizzati, esercizi settimanali e
-              ore di lezione online per superare ogni sfida.
+            <p className="mt-4 text-[15.5px] leading-relaxed text-white/80">
+              <strong>Theoremz Mentor</strong> è il percorso premium per studenti e famiglie che vogliono un affiancamento continuo. Ogni studente lavora con un tutor dedicato, riceve un piano di studio dinamico e ha esercizi mirati che si aggiornano dopo ogni verifica.
+            </p>
+            <p className="mt-3 text-[15.5px] leading-relaxed text-white/80">
+              Nessun pacchetto generico: ogni settimana analizziamo progressi, difficoltà e obiettivi per tenere alta la motivazione e arrivare tranquilli a interrogazioni ed esami.
             </p>
           </div>
 
           {/* teachers */}
-          <div>
-            <div className="rounded-xl bg-slate-50 px-4 py-2 text-center text-[13px] font-bold text-slate-700 ring-1 ring-slate-200">
-              I nostri migliori insegnanti 👇
+          <div className="space-y-4">
+            <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3 text-center text-[13px] font-semibold uppercase tracking-[0.3em] text-white/70 shadow-sm backdrop-blur">
+              I nostri migliori insegnanti
             </div>
-            <div className="mt-4 space-y-4">
+            <div className="space-y-4">
               <TeacherCard
                 name="Flavio"
                 subtitle="Master in Ingegneria Biomedica"
@@ -229,19 +270,19 @@ function TeacherCard({
   link: string;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+    <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_24px_60px_-40px_rgba(56,189,248,0.45)] backdrop-blur">
       <img
         alt={name}
         src={img}
-        className="h-20 w-20 rounded-xl object-cover ring-1 ring-slate-200"
+        className="h-20 w-20 rounded-xl object-cover ring-1 ring-white/20"
       />
       <div className="flex-1">
-        <div className="font-extrabold">{name}</div>
-        <div className="text-[13px] text-slate-600">{subtitle}</div>
+        <div className="text-[16px] font-black text-white">{name}</div>
+        <div className="text-[13px] text-white/70">{subtitle}</div>
       </div>
       <a
         href={link}
-        className="rounded-xl bg-emerald-500 px-3 py-2 text-[13px] font-bold text-white hover:bg-emerald-600"
+        className="rounded-xl bg-gradient-to-r from-sky-600 to-cyan-500 px-3 py-2 text-[13px] font-bold text-white shadow-[0_5px_16px_-8px_rgba(37,99,235,0.75)] transition hover:from-sky-500 hover:to-cyan-400"
       >
         Prenota ora
       </a>
@@ -252,13 +293,14 @@ function TeacherCard({
 /* ------------- INCLUDE GRID ------------- */
 function IncludesGrid() {
   return (
-    <section className="border-t border-slate-100 bg-slate-50/50">
-      <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 lg:px-12">
-        <h3 className="text-[26px] sm:text-[28px] font-extrabold">
+    <section className="relative border-t border-white/10 bg-slate-950">
+      <div className="pointer-events-none absolute inset-x-0 top-[-12rem] h-[300px] bg-gradient-to-b from-slate-900/60 via-slate-950/50 to-transparent blur-3xl" aria-hidden />
+      <div className="relative mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-12">
+        <h3 className="text-[26px] sm:text-[30px] font-black text-white">
           Cosa include?
         </h3>
 
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
           <IncludeBlock
             title="Un Tutor per Ogni Studente"
             points={[
@@ -325,17 +367,24 @@ function IncludeBlock({
   points: [string, string][];
 }) {
   return (
-    <div className="rounded-2xl bg-white p-5 ring-1 ring-slate-200">
-      <h4 className="bg-gradient-to-r from-sky-600 to-cyan-500 bg-clip-text text-[20px] font-black text-transparent">
+    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 shadow-[0_35px_90px_-55px_rgba(56,189,248,0.45)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_45px_110px_-50px_rgba(56,189,248,0.55)] backdrop-blur">
+      <span
+        className="pointer-events-none absolute inset-x-6 top-0 h-[2px] rounded-full bg-gradient-to-r from-sky-500/80 via-cyan-400/60 to-transparent opacity-90"
+        aria-hidden
+      />
+      <h4 className="bg-gradient-to-r from-sky-300 to-cyan-200 bg-clip-text text-[20px] font-black text-transparent">
         {title}
       </h4>
-      <ul className="mt-3 space-y-4">
+      <ul className="mt-4 space-y-3">
         {points.map(([h, p]) => (
-          <li key={h} className="grid grid-cols-[20px_1fr] items-start gap-3">
-            <span className="mt-[3px] text-slate-700">✒️</span>
+          <li
+            key={h}
+            className="grid grid-cols-[22px_1fr] items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white group-hover:border-sky-300/60"
+          >
+            <span className="mt-1 text-sky-300">✓</span>
             <div>
-              <div className="text-[16px] font-extrabold">{h}</div>
-              <p className="text-[14.5px] text-slate-700">{p}</p>
+              <div className="text-[15.5px] font-bold text-white">{h}</div>
+              <p className="text-[14px] text-white/75">{p}</p>
             </div>
           </li>
         ))}
@@ -347,12 +396,16 @@ function IncludeBlock({
 /* ------------- BANNER GARANZIA ------------- */
 function SatisfactionBanner() {
   return (
-    <section>
-      <div className="mx-auto max-w-6xl px-5 pb-0 sm:px-8 lg:px-12">
-        <div className="rounded-2xl bg-gradient-to-r from-sky-600 to-cyan-500 px-6 py-8 text-center text-white shadow-md">
-          <div className="mx-auto max-w-3xl text-[26px] sm:text-[30px] font-black leading-tight">
+    <section className="relative border-t border-white/10 bg-slate-950">
+      <div className="pointer-events-none absolute inset-x-0 top-[-8rem] h-[220px] bg-gradient-to-b from-emerald-500/30 via-slate-950/40 to-transparent blur-3xl" aria-hidden />
+      <div className="relative mx-auto max-w-6xl px-5 pb-0 pt-10 sm:px-8 lg:px-12">
+        <div className="overflow-hidden rounded-[26px] border border-emerald-400/60 bg-gradient-to-br from-emerald-500 via-teal-500 to-sky-500 px-6 py-9 text-center text-white shadow-[0_45px_110px_-50px_rgba(16,185,129,0.75)]">
+          <div className="mx-auto max-w-3xl text-[26px] font-black leading-tight sm:text-[30px]">
             +100% Soddisfatti o Rimborsati
           </div>
+          <p className="mt-2 text-[14px] text-emerald-100">
+            7 giorni per valutare il percorso, rimborso completo se non è quello che cerchi.
+          </p>
         </div>
       </div>
     </section>
@@ -362,10 +415,9 @@ function SatisfactionBanner() {
 /* ------------- PRICING (orizzontale su desktop) ------------- */
 function Pricing() {
   return (
-    <section
-      id="pricing"
-      className="mx-auto max-w-6xl px-5 py-10 sm:px-8 lg:px-12"
-    >
+    <section id="pricing" className="relative border-t border-white/10 bg-slate-950">
+      <div className="pointer-events-none absolute inset-x-0 top-[-10rem] h-[260px] bg-gradient-to-b from-sky-900/40 via-slate-950/50 to-transparent blur-3xl" aria-hidden />
+      <div className="relative mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-12">
       <TierTag> Piano Base 👇 </TierTag>
       <Plan
         price="89,90€ /mese"
@@ -419,13 +471,14 @@ function Pricing() {
         stripeLink={"https://buy.stripe.com/6oEeYq6j9fih11ubJg"}
         waLink={"https://wa.link/tzu43l"}
       />
+      </div>
     </section>
   );
 }
 
 function TierTag({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-3 rounded-2xl bg-slate-50 py-2 text-center text-[15px] font-extrabold ring-1 ring-slate-200">
+    <div className="mb-4 inline-flex rounded-2xl border border-white/15 bg-white/10 px-4 py-1.5 text-center text-[12.5px] font-semibold uppercase tracking-[0.25em] text-white/70 shadow-sm">
       {children}
     </div>
   );
@@ -443,30 +496,41 @@ function Plan({
   stripeLink: string;
 }) {
   return (
-    <div className="mb-6 rounded-3xl bg-white p-6 ring-1 ring-slate-200 shadow-sm">
-      <div className="text-[36px] sm:text-[44px] font-black leading-none bg-gradient-to-r from-sky-600 to-cyan-500 bg-clip-text text-transparent">
-        {price}
+    <div className="mb-8 overflow-hidden rounded-3xl border border-white/15 bg-white/5 px-6 py-7 shadow-[0_45px_110px_-55px_rgba(56,189,248,0.45)] backdrop-blur">
+      <div className="relative inline-flex items-baseline gap-1">
+        <span
+          className="pointer-events-none absolute inset-0 -translate-y-2 scale-110 rounded-full bg-gradient-to-r from-sky-500/30 to-cyan-300/30 blur-xl"
+          aria-hidden
+        />
+        <span className="relative text-[32px] font-black leading-none text-white sm:text-[38px] lg:text-[44px]">
+          {price}
+        </span>
       </div>
-      <ul className="mt-4 space-y-3">
+
+      <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+
+      <ul className="mt-4 space-y-2 text-[15px] font-semibold text-white/85">
         {bullets.map((b) => (
-          <li key={b} className="flex items-start gap-3 text-[16px]">
-            <span className="mt-1 text-emerald-600">✓</span>
-            <span className="text-slate-800">{b}</span>
+          <li key={b} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+            <span className="mt-[2px] text-emerald-400">✓</span>
+            <span className="leading-snug text-white/80">{b}</span>
           </li>
         ))}
       </ul>
 
+      <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <a
           href={waLink}
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-black px-6 py-3 text-[15px] font-extrabold text-white hover:bg-slate-800"
+          className="inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-black px-6 py-3 text-[15px] font-extrabold text-white transition hover:bg-slate-800"
         >
           Chiedi informazioni 💬
         </a>
         <BuyLink
           href={stripeLink}
           plan={price}
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-sky-600 to-cyan-500 px-6 py-3 text-[15px] font-extrabold text-white shadow-[0_8px_0_#1d4ed8] active:translate-y-[1px] active:shadow-[0_7px_0_#1d4ed8]"
+          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-sky-600 to-cyan-500 px-6 py-3 text-[15px] font-extrabold text-white shadow-[0_12px_30px_-18px_rgba(37,99,235,0.65)] transition hover:from-sky-500 hover:to-cyan-400"
         >
           Acquista ora 👉
         </BuyLink>
@@ -502,18 +566,18 @@ function Reviews() {
   ];
 
   return (
-    <section className="bg-slate-50/60">
-      <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 lg:px-12">
-        <h3 className="mb-6 text-[26px] sm:text-[28px] font-extrabold">
+    <section className="border-t border-white/10 bg-slate-950">
+      <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-12">
+        <h3 className="mb-6 text-[26px] sm:text-[28px] font-extrabold text-white">
           Cosa dicono gli studenti
         </h3>
         <div className="grid gap-6 md:grid-cols-3">
           {data.map((r) => (
             <div
               key={r.name}
-              className="rounded-2xl bg-white p-5 ring-1 ring-slate-200"
+              className="rounded-2xl border border-white/10 bg-white/5 p-5 text-white shadow-[0_30px_90px_-55px_rgba(56,189,248,0.45)] backdrop-blur"
             >
-              <div className="flex items-center  gap-4">
+              <div className="flex items-center gap-4">
                 {/* <img
                   src={r.img}
                   alt={r.name}
@@ -521,17 +585,17 @@ function Reviews() {
                 /> */}
                 <div className="h-12 w-12 bg-blue-500 rounded-full"></div>
                 <div>
-                  <div className="font-bold">{r.name}</div>
-                  <div className="text-xs text-slate-500">{r.class}</div>
+                  <div className="font-bold text-white">{r.name}</div>
+                  <div className="text-xs text-white/60">{r.class}</div>
                 </div>
               </div>
-              <div className="mt-3 text-sky-500">
+              <div className="mt-3 text-sky-300">
                 {"⭐️".repeat(r.stars)}
-                <span className="ml-2 align-middle text-[12px] text-slate-500">
+                <span className="ml-2 align-middle text-[12px] text-white/60">
                   ({r.stars}.0)
                 </span>
               </div>
-              <p className="mt-2 text-[14.5px] text-slate-700">“{r.text}”</p>
+              <p className="mt-2 text-[14.5px] text-white/75">“{r.text}”</p>
             </div>
           ))}
         </div>
@@ -543,21 +607,21 @@ function Reviews() {
 /* ------------- FAQ ------------- */
 function FAQ() {
   return (
-    <section className="border-t border-slate-100 bg-slate-50/60">
-      <div className="mx-auto max-w-4xl px-5 py-10 sm:px-8 lg:px-12">
-        <h3 className="text-[26px] sm:text-[28px] font-extrabold">
+    <section className="border-t border-white/10 bg-slate-950">
+      <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 lg:px-12">
+        <h3 className="text-[26px] sm:text-[28px] font-extrabold text-white">
           Domande frequenti
         </h3>
         <div className="mt-5 space-y-3">
           {FAQS.map((f) => (
             <details
               key={f.q}
-              className="group rounded-2xl bg-white ring-1 ring-slate-200"
+              className="group rounded-2xl border border-white/10 bg-white/5 text-white shadow-[0_25px_80px_-50px_rgba(56,189,248,0.4)] backdrop-blur"
             >
-              <summary className="cursor-pointer px-4 py-3 text-[15.5px] font-bold text-slate-800">
+              <summary className="cursor-pointer px-4 py-3 text-[15.5px] font-bold text-white">
                 {f.q}
               </summary>
-              <div className="px-4 pb-4 text-[15px] text-slate-700">{f.a}</div>
+              <div className="px-4 pb-4 text-[15px] text-white/75">{f.a}</div>
             </details>
           ))}
         </div>

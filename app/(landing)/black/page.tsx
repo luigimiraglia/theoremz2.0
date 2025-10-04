@@ -200,19 +200,8 @@ export default function BlackPage() {
 
       {/* ============ HERO (2 colonne da md+) ============ */}
       <section className="relative mx-auto max-w-6xl px-5 pt-12 pb-12 sm:px-8 lg:px-12">
-        <div
-          className="absolute inset-x-6 -top-6 -z-10 h-[340px] rounded-full bg-sky-500/10 blur-3xl sm:inset-x-12 sm:top-[-3rem]"
-          aria-hidden
-        />
         <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-br from-[#0a101d] via-[#111827] to-[#020312] px-6 py-10 shadow-[0_22px_60px_-25px_rgba(14,165,233,0.7)] sm:px-10 lg:px-16">
-          <div
-            className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-cyan-400/30 blur-3xl sm:-right-24 sm:-top-24 sm:h-64 sm:w-64"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute -bottom-24 left-4 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl sm:-bottom-28 sm:left-12 sm:h-72 sm:w-72"
-            aria-hidden
-          />
+
 
           <div className="relative grid gap-10 md:grid-cols-2 md:items-center">
             {/* Testo */}
@@ -267,10 +256,6 @@ export default function BlackPage() {
             {/* Social proof banner (solo da md+) */}
             <div className="hidden md:flex justify-center">
               <div className="group relative w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent px-8 py-9 text-center shadow-[0_25px_70px_-30px_rgba(56,189,248,0.8)] backdrop-blur transition-transform duration-500 ease-out will-change-transform motion-safe:hover:-translate-y-2 motion-safe:hover:scale-[1.02]">
-                <div
-                  className="pointer-events-none absolute -top-10 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-cyan-400/20 blur-3xl transition-all duration-500 ease-out motion-safe:group-hover:-top-14 motion-safe:group-hover:bg-cyan-300/30"
-                  aria-hidden
-                />
                 <div className="relative space-y-5 transition-transform duration-500 ease-out motion-safe:group-hover:-translate-y-1">
                   <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/60 transition-colors duration-500 motion-safe:group-hover:text-white/80">
                     Valutazione studenti
@@ -322,6 +307,20 @@ export default function BlackPage() {
           risorse di Theoremz: esercizi, quiz, appunti e videolezioni per ogni
           lezione, oltre a tutto quello che ti serve per studiare come si deve.
         </p>
+        <ul className="mt-5 grid gap-3 text-[14.5px] font-semibold text-white/85 sm:grid-cols-3">
+          <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+            <MessageCircle className="h-5 w-5 text-sky-300" aria-hidden />
+            Tutor via chat ogni giorno
+          </li>
+          <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+            <ListChecks className="h-5 w-5 text-cyan-300" aria-hidden />
+            Esercizi pronti e spiegati passo passo
+          </li>
+          <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+            <Sparkles className="h-5 w-5 text-emerald-300" aria-hidden />
+            Accesso immediato a tutte le risorse
+          </li>
+        </ul>
       </section>
 
       {/* ============ COSA INCLUDE (grid 2 colonne da lg) ============ */}
@@ -459,10 +458,6 @@ export default function BlackPage() {
 
             <div className="relative">
               {/* Halo fucsia dietro la card Base */}
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -inset-3 top-6 rounded-[22px] bg-gradient-to-r from-fuchsia-500 via-pink-500 to-fuchsia-400 opacity-35 blur-2xl"
-              />
               <div className="relative z-10">
                 <PriceCard
                   price="6,90€"
@@ -638,16 +633,8 @@ function PriceCard({
 }) {
   return (
     <div className="relative mt-3 overflow-hidden rounded-2xl border border-white/15 bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_-30px_rgba(15,23,42,0.45)]">
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-cyan-100/20 to-transparent"
-        aria-hidden
-      />
       <div className="relative px-6 py-6 lg:px-8 lg:py-8">
         <div className="relative inline-block">
-          <span
-            className="pointer-events-none absolute inset-0 -translate-y-1.5 scale-105 rounded-full bg-gradient-to-r from-blue-500/25 to-cyan-300/25 blur-xl"
-            aria-hidden
-          />
           <div className="relative text-[41px] lg:text-[46px] font-black bg-gradient-to-r text-transparent from-blue-600 to-cyan-400 bg-clip-text drop-shadow-[0_8px_24px_rgba(56,189,248,0.38)] lg:whitespace-nowrap">
             {price}
             {unit}
