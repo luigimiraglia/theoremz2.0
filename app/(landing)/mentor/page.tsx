@@ -1,6 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
 import BuyLink from "@/components/BuyLink";
-import FloatingLeadButton from "@/components/FloatingLeadButton";
 import { CheckCircle2, Sparkles } from "lucide-react";
 export const metadata = {
   title: "Theoremz Mentor — Tutor personale per verifiche ed esami",
@@ -80,10 +79,6 @@ export default function MentorPage() {
 
   return (
     <main className="bg-slate-950 text-white">
-      <FloatingLeadButton
-        href="/contatto-rapido?source=mentor"
-        label="Richiedi una chiamata gratuita"
-      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

@@ -298,7 +298,7 @@ export default function StartGenitorePage() {
             ))}
           </div>
           <p className="mt-3 text-center text-[12px] font-semibold text-slate-500">
-            Preferisci parlarne? <Link href="/contatto-rapido?source=start-genitore" className="underline underline-offset-4 hover:text-slate-700">Richiedi una chiamata gratuita</Link>
+            Preferisci parlarne? <Link href="/contatto-rapido?source=start-genitore" className="underline underline-offset-4 hover:text-slate-700">Parla con un tutor</Link>
           </p>
         </section>
       </section>

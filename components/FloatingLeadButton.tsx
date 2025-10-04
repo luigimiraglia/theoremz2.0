@@ -4,7 +4,7 @@ import { Phone } from "lucide-react";
 
 export default function FloatingLeadButton({
   href,
-  label = "Richiedi una chiamata gratuita",
+  label = "Parla con un tutor",
 }: {
   href: string;
   label?: string;
@@ -23,8 +23,8 @@ export default function FloatingLeadButton({
         width: "calc(100% - 2rem)",
         maxWidth: "520px",
       }}
-      aria-label={`${label} — Parla con un tutor`}
-      title={`${label} — Parla con un tutor`}
+      aria-label={`${label} — Theoremz`}
+      title={`${label} — Theoremz`}
     >
       {/* Green corner beacon */}
       <span className="pointer-events-none absolute -top-1 -right-1 inline-flex h-3 w-3">

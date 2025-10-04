@@ -9,7 +9,7 @@ import TrackedA from "@/components/TrackedA";
 export const metadata = {
   title: "Link in bio — risorse, esercizi e aiuto",
   description:
-    "Tutti i link utili di Theoremz: risoluzione esercizi in 2 ore, risorse gratuite (freebies) e possibilità di richiedere una chiamata.",
+    "Tutti i link utili di Theoremz: risoluzione esercizi in 2 ore, risorse gratuite (freebies) e assistenza diretta.",
   alternates: { canonical: "/cta" },
   openGraph: {
     type: "website",

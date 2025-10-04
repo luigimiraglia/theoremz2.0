@@ -13,7 +13,7 @@
 - CTA primarie affiancate:
   - Pulsante 1: "Sono uno studente"
   - Pulsante 2: "Sono un genitore"
-- CTA di supporto (link testuale sotto i pulsanti): "Vuoi parlarne con noi? Prenota una chiamata gratuita"
+- CTA di supporto (link testuale sotto i pulsanti): "Vuoi parlarne con noi? Scrivici e ti rispondiamo subito"
 - Micro badge sotto headline: "4,8/5 la soddisfazione media degli utenti"
 - Microcopy di continuità (sopra CTA): "Passo 1 di 3 · Seleziona il profilo più adatto alla tua situazione"
 - Visual suggerito: collage leggero con screenshot testimonianze (media 9,76, messaggi WhatsApp, valutazioni).

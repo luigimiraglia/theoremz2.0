@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import BuyLink from "@/components/BuyLink";
 import SenjaEmbed from "@/components/SenjaEmbed";
-import FloatingLeadButton from "@/components/FloatingLeadButton";
 import type { LucideIcon } from "lucide-react";
 import {
   MessageCircle,
@@ -183,10 +182,6 @@ export default function BlackPage() {
 
   return (
     <main className="bg-black text-white">
-      <FloatingLeadButton
-        href="/contatto-rapido?source=black"
-        label="Richiedi una chiamata gratuita"
-      />
       {/* JSON-LD (single @graph) */}
       <script
         type="application/ld+json"
@@ -201,25 +196,25 @@ export default function BlackPage() {
       {/* ============ HERO (2 colonne da md+) ============ */}
       <section className="relative mx-auto max-w-6xl px-5 pt-12 pb-12 sm:px-8 lg:px-12">
         <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-br from-[#0a101d] via-[#111827] to-[#020312] px-6 py-10 shadow-[0_22px_60px_-25px_rgba(14,165,233,0.7)] sm:px-10 lg:px-16">
-
-
           <div className="relative grid gap-10 md:grid-cols-2 md:items-center">
             {/* Testo */}
             <div>
               <h1 className="font-black leading-tight text-[36px] sm:text-[44px] lg:text-[54px]">
-                Il tuo pass per tutte le risorse di
-                <span className="ml-2 align-[-0.18em] italic font-extrabold text-sky-300">
-                  Theoremz Black
+                Studia la matematica in modo
+                <span className="italic font-extrabold text-sky-300">
+                  {" "}
+                  semplice.
                 </span>
               </h1>
 
               <p className="mt-5 max-w-2xl text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/90 font-medium">
-                Il primo servizio per lo studio che ti mette a disposizione{" "}
-                <span className="font-semibold text-white">
-                  tutto quello di cui hai bisogno
+                Con{" "}
+                <span className="inline-block bg-[linear-gradient(90deg,#38bdf8,#bae6fd,#38bdf8)] bg-[length:200%_100%] bg-clip-text text-transparent animate-shimmer font-extrabold">
+                  Theoremz Black
                 </span>{" "}
-                per eccellere, con supporto umano e tecnologia sempre al tuo
-                fianco.
+                studi con lezioni chiare, esercizi guidati e un{" "}
+                <span className="font-bold">tutor</span> pronto ad aiutarti ogni
+                giorno.
               </p>
 
               <div className="mt-8 flex items-center gap-4">
@@ -297,16 +292,33 @@ export default function BlackPage() {
         <h2 className="text-[26px] sm:text-[28px] lg:text-[32px] font-black text-white">
           Di cosa si tratta?
         </h2>
-        <p className="mt-3 max-w-3xl text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/90 font-medium">
-          <span className="text-white font-semibold underline-offset-2 hover:underline">
-            Theoremz Black
-          </span>{" "}
-          ti fornisce un&apos;esperienza di apprendimento unica, con un team di{" "}
-          <u className="font-semibold text-white">insegnanti dedicati</u> pronti
-          ad assisterti ogni giorno via chat. Avrai accesso completo a tutte le
-          risorse di Theoremz: esercizi, quiz, appunti e videolezioni per ogni
-          lezione, oltre a tutto quello che ti serve per studiare come si deve.
-        </p>
+        <div className="mt-4 max-w-3xl space-y-4 text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/90 font-medium">
+          <p>
+            <span className="font-semibold text-white">Theoremz Black</span> ti
+            offre un
+            <span className="font-semibold text-sky-200">
+              {" "}
+              modo nuovo di studiare
+            </span>
+            : ogni giorno, un{" "}
+            <span className="font-semibold text-white">insegnante</span> ti
+            segue via chat e ti aiuta a capire ogni argomento passo dopo passo.
+          </p>
+          <p>
+            Oltre al supporto personale, hai accesso a
+            <span className="font-semibold text-white">
+              {" "}
+              tutte le risorse di Theoremz
+            </span>
+            : esercizi spiegati, quiz, appunti e videolezioni per ogni lezione.
+          </p>
+          <p>
+            <span className="font-semibold text-sky-200">
+              Tutto in un solo posto
+            </span>
+            , per studiare meglio, con costanza e sicurezza.
+          </p>
+        </div>
         <ul className="mt-5 grid gap-3 text-[14.5px] font-semibold text-white/85 sm:grid-cols-3">
           <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <MessageCircle className="h-5 w-5 text-sky-300" aria-hidden />
