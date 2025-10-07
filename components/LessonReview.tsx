@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useEffect, useRef, useState, Suspense } from "react";
 import { track } from "@/lib/analytics";
 
 export default function LessonReview({
@@ -12,17 +12,85 @@ export default function LessonReview({
 }) {
   const [showForm, setShowForm] = useState(false);
   const [FormComp, setFormComp] = useState<any>(null);
+  const containerRef = useRef<HTMLElement | null>(null);
+  const loadingRef = useRef<Promise<any> | null>(null);
 
   function openForm() {
     setShowForm(true);
     try { track("review_open_form", { lesson: lessonSlug }); } catch {}
     if (!FormComp) {
-      import("./LessonReviewForm").then((m) => setFormComp(() => m.default));
+      loadForm();
     }
   }
 
+  function loadForm() {
+    if (FormComp || loadingRef.current) return;
+    loadingRef.current = import("./LessonReviewForm")
+      .then((m) => {
+        setFormComp(() => m.default);
+      })
+      .catch(() => {
+        // Allow retry on demand if the network failed.
+        loadingRef.current = null;
+      })
+      .finally(() => {
+        loadingRef.current = null;
+      });
+  }
+
+  useEffect(() => {
+    if (showForm && !FormComp) {
+      loadForm();
+    }
+  }, [showForm, FormComp]);
+
+  useEffect(() => {
+    if (FormComp) return;
+    const el = containerRef.current;
+    if (!el || typeof window === "undefined") return;
+
+    let idleId: number | null = null;
+    let rafId: number | null = null;
+    let io: IntersectionObserver | null = null;
+
+    const maybeLoad = () => {
+      if (!FormComp) loadForm();
+    };
+
+    if ("IntersectionObserver" in window) {
+      io = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            maybeLoad();
+            io?.disconnect();
+          }
+        },
+        { rootMargin: "200px" }
+      );
+      io.observe(el);
+    }
+
+    if ("requestIdleCallback" in window) {
+      idleId = (window as any).requestIdleCallback(maybeLoad, { timeout: 2000 });
+    } else {
+      rafId = window.requestAnimationFrame(maybeLoad);
+    }
+
+    return () => {
+      io?.disconnect();
+      if (idleId && "cancelIdleCallback" in window) {
+        (window as any).cancelIdleCallback(idleId);
+      }
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, [FormComp]);
+
   return (
-    <section aria-labelledby="lesson-review-title" className="mt-6">
+    <section
+      aria-labelledby="lesson-review-title"
+      className="mt-6"
+      ref={containerRef}
+    >
       {!showForm && (
         <div className="flex items-center justify-between rounded-2xl border border-amber-300/60 bg-white [.dark_&]:bg-slate-900 px-4 py-3">
           <div className="text-[15px] font-semibold text-slate-800 [.dark_&]:text-slate-100">
