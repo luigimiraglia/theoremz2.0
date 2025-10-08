@@ -9,33 +9,17 @@ const nextConfig: NextConfig = {
       "lucide-react",
     ],
   },
-  compiler: {
-    removeConsole: process.env.NODE_ENV === "production",
-  },
-  webpack: (config, { dev, isServer }) => {
-    if (!dev && !isServer) {
-      // Configurazione di base per il chunking
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          minSize: 20000,
-          maxSize: 50000,
-        }
-      };
-    }
-    return config;
-  },
+  poweredByHeader: false,
+  compress: true,
   images: {
-    // Usa le immagini pre-ottimizzate dal nostro script
-    unoptimized: true,
+    unoptimized: true, // Disabilita l'ottimizzazione di Vercel per risparmiare quota
     domains: [
       "cdn.sanity.io",
       "theoremz.com",
       "i.ytimg.com",
       "img.youtube.com",
     ],
-    deviceSizes: [360, 480, 640, 768, 960, 1200, 1600, 2000], // Allinea con lo script di ottimizzazione
+    deviceSizes: [360, 480, 640, 768, 960, 1200, 1600, 2000],
   },
   async headers() {
     return [
