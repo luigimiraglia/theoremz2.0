@@ -15,6 +15,7 @@ import BlackPromoBanner from "@/components/BlackPromoBanner";
 import AnalyticsListener from "@/components/AnalyticsListener";
 import ClientAnalytics from "@/components/ClientAnalytics";
 import CookieBanner from "@/components/CookieBanner";
+import KatexFonts from "@/components/KatexFonts";
 
 export const metadata: Metadata = {
   title: {
@@ -79,6 +80,7 @@ export default async function RootLayout({
       data-scroll-behavior="smooth"
     >
       <head>
+        <KatexFonts />
         <meta name="google" content="notranslate" />
         <meta name="color-scheme" content="light dark" />
         {/* DNS prefetch leggero per immagini da Sanity; evita connessioni TCP/TLS inutili */}

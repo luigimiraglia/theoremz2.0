@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
       "react-katex",
       "lucide-react",
     ],
+    optimizeCss: true,
   },
   poweredByHeader: false,
   compress: true,
@@ -19,7 +20,8 @@ const nextConfig: NextConfig = {
       "i.ytimg.com",
       "img.youtube.com",
     ],
-    deviceSizes: [360, 480, 640, 768, 960, 1200, 1600, 2000],
+    deviceSizes: [40, 80, 360, 480, 640, 684, 768, 960],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   async headers() {
     return [

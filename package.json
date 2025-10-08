@@ -19,6 +19,7 @@
     "@sanity/table": "^1.1.4",
     "@sanity/vision": "^4.1.1",
     "cookie": "^1.0.2",
+    "critters": "^0.0.25",
     "firebase": "^12.0.0",
     "firebase-admin": "^13.4.0",
     "fuse.js": "^7.1.0",

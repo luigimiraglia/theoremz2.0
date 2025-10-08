@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const FORMATS = ['webp']; // Possiamo aggiungere 'avif' se necessario
-const WIDTHS = [360, 480, 640, 768, 960, 1200, 1600, 2000];
+const WIDTHS = [40, 80, 360, 480, 640, 768, 960, 1200, 1600, 2000];
 const QUALITY = 80;
 
 async function optimizeImage(filePath) {

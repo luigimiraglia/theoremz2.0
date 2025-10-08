@@ -16,6 +16,9 @@ export default function OptimizedImage({
   width,
   height,
   quality = 80,
+  sizes = '100vw',
+  priority = false,
+  loading,
   ...props
 }: OptimizedImageProps) {
   const optimizedSrc = useMemo(() => {
@@ -29,13 +32,9 @@ export default function OptimizedImage({
     // Rimuovi l'estensione
     const nameWithoutExt = basePath.replace(/\.(jpg|jpeg|png|gif|webp)$/, '');
     
-    // Determina la dimensione più appropriata
-    const sizes = [360, 480, 640, 768, 960, 1200, 1600, 2000];
+    // Usa la dimensione originale per l'src principale
     const targetWidth = typeof width === 'number' ? width : parseInt(width || '0', 10);
-    const optimalSize = sizes.find(size => size >= targetWidth) || sizes[sizes.length - 1];
-
-    // Usa l'immagine WebP pre-ottimizzata
-    return `/images/${nameWithoutExt}-${optimalSize}.webp`;
+    return `/images/${nameWithoutExt}-${targetWidth}.webp`;
   }, [src, width]);
 
   return (
@@ -45,6 +44,11 @@ export default function OptimizedImage({
       width={width}
       height={height}
       quality={quality}
+      sizes={sizes}
+      priority={priority}
+      loading={loading || (priority ? 'eager' : 'lazy')}
+      fetchPriority={priority ? 'high' : 'auto'}
+      alt={props.alt || ''}
     />
   );
 }
