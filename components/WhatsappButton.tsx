@@ -24,21 +24,19 @@ export default function WhatsappButton() {
 
   return (
     <>
-      <div className="fixed bottom-4 sm:bottom-6 right-3 h-[52px] w-[180px] sm:h-[60px] sm:w-[200px]">
-        <button
-          onClick={handleClick}
-          className="w-full h-full flex shadow-xl z-10 bg-gradient-to-br from-[#02C36A] to-[#17E9B6] hover:from-[#17E9B6] hover:to-[#02C36A] transition-colors ease-in-out duration-300 text-white font-semibold py-2 sm:text-lg sm:py-2 px-3 rounded-xl sm:rounded-2xl"
-        >
-          <p className="mt-0.4">Fai una domanda</p>
-          <Image
-            className="ml-2 h-6 w-6 sm:h-6.5 sm:w-6.5"
-            alt="whatsapp button"
-            width={30}
-            height={30}
-            src="/images/wa.svg"
-          />
-        </button>
-      </div>
+      <button
+        onClick={handleClick}
+        className="fixed flex bottom-4 shadow-xl z-10 sm:bottom-6 right-3 bg-gradient-to-br from-[#02C36A] to-[#17E9B6] hover:from-[#17E9B6] hover:to-[#02C36A] transition-colors ease-in-out duration-300 text-white font-semibold py-2 sm:text-lg sm:py-2 px-3 rounded-xl sm:rounded-2xl"
+      >
+        <p className="mt-0.4">Fai una domanda</p>
+        <Image
+          className="ml-2 h-6 w-6 sm:h-6.5 sm:w-6.5"
+          alt="whatsapp button"
+          width={30}
+          height={30}
+          src="/images/wa.svg"
+        />
+      </button>
 
       {state === "popup" && (
         <div
