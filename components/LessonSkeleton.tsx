@@ -12,7 +12,7 @@ export default function LessonSkeleton({
   return (
     <Wrapper {...wrapperProps}>
       {/* Mantieni esattamente la stessa struttura e padding della view reale */}
-      <article className="mx-auto max-w-6xl px-4 sm:px-6 pb-12">
+      <article className="mx-auto max-w-6xl px-4 sm:px-6 pb-12 min-h-[800px]">
         {/* Header card aligned like real header (text-center + right reserved space) */}
         <div className="relative rounded-2xl ring-1 ring-slate-200 [.dark_&]:ring-slate-700 bg-gray-50 [.dark_&]:bg-slate-800/80 pt-3 pb-4 text-center pr-0 sm:pr-[140px] animate-pulse">
           <div className="mx-auto h-8 w-3/4 rounded-md bg-gray-300 [.dark_&]:bg-slate-600" />
@@ -28,12 +28,43 @@ export default function LessonSkeleton({
 
         {/* Body paragraphs inside a prose container with max-w-none like the real page */}
         <div className="prose prose-slate dark:prose-invert max-w-none">
+          {/* First paragraph block */}
           <div className="mt-6 space-y-3 animate-pulse">
             <div className="h-4 w-full rounded bg-gray-200 [.dark_&]:bg-slate-700" />
             <div className="h-4 w-11/12 rounded bg-gray-200 [.dark_&]:bg-slate-700" />
             <div className="h-4 w-10/12 rounded bg-gray-200 [.dark_&]:bg-slate-700" />
             <div className="h-4 w-9/12 rounded bg-gray-200 [.dark_&]:bg-slate-700" />
           </div>
+          
+          {/* Fake formula block */}
+          <div className="my-8 h-16 w-2/3 mx-auto rounded bg-gray-200 [.dark_&]:bg-slate-700/60 animate-pulse" />
+          
+          {/* Second paragraph block */}
+          <div className="mt-6 space-y-3 animate-pulse">
+            <div className="h-4 w-full rounded bg-gray-200 [.dark_&]:bg-slate-700" />
+            <div className="h-4 w-10/12 rounded bg-gray-200 [.dark_&]:bg-slate-700" />
+            <div className="h-4 w-11/12 rounded bg-gray-200 [.dark_&]:bg-slate-700" />
+          </div>
+
+          {/* Example or highlight block */}
+          <div className="my-6 p-4 rounded-xl bg-gray-100 [.dark_&]:bg-slate-800/50 animate-pulse">
+            <div className="space-y-3">
+              <div className="h-4 w-11/12 rounded bg-gray-200 [.dark_&]:bg-slate-700" />
+              <div className="h-4 w-10/12 rounded bg-gray-200 [.dark_&]:bg-slate-700" />
+              <div className="h-4 w-9/12 rounded bg-gray-200 [.dark_&]:bg-slate-700" />
+            </div>
+          </div>
+
+          {/* Third paragraph block */}
+          <div className="mt-6 space-y-3 animate-pulse">
+            <div className="h-4 w-full rounded bg-gray-200 [.dark_&]:bg-slate-700" />
+            <div className="h-4 w-11/12 rounded bg-gray-200 [.dark_&]:bg-slate-700" />
+            <div className="h-4 w-10/12 rounded bg-gray-200 [.dark_&]:bg-slate-700" />
+            <div className="h-4 w-9/12 rounded bg-gray-200 [.dark_&]:bg-slate-700" />
+          </div>
+
+          {/* Another formula block */}
+          <div className="my-8 h-16 w-3/4 mx-auto rounded bg-gray-200 [.dark_&]:bg-slate-700/60 animate-pulse" />
         </div>
       </article>
     </Wrapper>
