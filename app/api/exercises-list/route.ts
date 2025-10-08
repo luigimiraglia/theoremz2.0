@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { client as base } from "@/sanity/lib/client";
 import { groq } from "next-sanity";
 
-export const revalidate = 0;
+export const revalidate = 3600; // Cache per 1 ora
 
 const QUERY = groq`
   *[_type=="exercise"]{

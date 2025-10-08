@@ -1,0 +1,19 @@
+# Cache assets statici per 1 anno
+/images/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/notes/*
+  Cache-Control: public, max-age=31536000
+  X-Robots-Tag: noindex
+
+# Cache JavaScript e CSS
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Cache fonts
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Cache video
+/video/*
+  Cache-Control: public, max-age=31536000, immutable

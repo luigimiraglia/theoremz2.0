@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { client } from "@/sanity/lib/client";
 
 // Revalidate the sitemap periodically to keep it fresh
-export const revalidate = 3600; // 1 hour
+export const revalidate = 14400; // 4 ore - ridotto il consumo di ISR
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://theoremz.com";

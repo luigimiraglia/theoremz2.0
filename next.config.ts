@@ -9,8 +9,13 @@ const nextConfig: NextConfig = {
       "lucide-react",
     ],
   },
+  swcMinify: true,
+  compiler: {
+    // Abilita le moderne funzionalità JS senza polyfill non necessari
+    removeConsole: process.env.NODE_ENV === "production",
+  },
   images: {
-    // Disabilita l'optimizer di Next (usa file statici così come sono)
+    // Usa le immagini pre-ottimizzate dal nostro script
     unoptimized: true,
     domains: [
       "cdn.sanity.io",
@@ -18,6 +23,7 @@ const nextConfig: NextConfig = {
       "i.ytimg.com",
       "img.youtube.com",
     ],
+    deviceSizes: [360, 480, 640, 768, 960, 1200, 1600, 2000], // Allinea con lo script di ottimizzazione
   },
   async headers() {
     return [

@@ -8,7 +8,7 @@ import LessonContentServer from "./LessonContentServer"; // server-rendered cont
 import SeoJsonLd from "./SeoJsonLd"; // <-- JSON-LD Article + Breadcrumbs
 
 // Usa ISR per performance e SEO migliori; aggiorna periodicamente
-export const revalidate = 1800; // 30 minuti
+export const revalidate = 7200; // 2 ore - ridotto il consumo di ISR
 
 /* -------------------- Tipi -------------------- */
 type LessonResources = {
@@ -259,16 +259,16 @@ export default async function Page({
         breadcrumbs={(function () {
           const SITE = "https://theoremz.com";
           const materia = (lesson as any).materia as string | null | undefined;
-          const second = materia && /matematica|fisica/i.test(materia)
-            ? {
-                name: materia.charAt(0).toUpperCase() + materia.slice(1).toLowerCase(),
-                item: `${SITE}/${materia.toLowerCase()}`,
-              }
-            : { name: "Lezioni", item: SITE };
-          const crumbs = [
-            { name: "Theoremz", item: `${SITE}/` },
-            second,
-          ];
+          const second =
+            materia && /matematica|fisica/i.test(materia)
+              ? {
+                  name:
+                    materia.charAt(0).toUpperCase() +
+                    materia.slice(1).toLowerCase(),
+                  item: `${SITE}/${materia.toLowerCase()}`,
+                }
+              : { name: "Lezioni", item: SITE };
+          const crumbs = [{ name: "Theoremz", item: `${SITE}/` }, second];
           const parent = (lesson.parents ?? [])[0];
           if (parent?.slug?.current && parent?.title) {
             crumbs.push({
