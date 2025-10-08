@@ -9,10 +9,22 @@ const nextConfig: NextConfig = {
       "lucide-react",
     ],
   },
-  swcMinify: true,
   compiler: {
-    // Abilita le moderne funzionalità JS senza polyfill non necessari
     removeConsole: process.env.NODE_ENV === "production",
+  },
+  webpack: (config, { dev, isServer }) => {
+    if (!dev && !isServer) {
+      // Configurazione di base per il chunking
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          minSize: 20000,
+          maxSize: 50000,
+        }
+      };
+    }
+    return config;
   },
   images: {
     // Usa le immagini pre-ottimizzate dal nostro script

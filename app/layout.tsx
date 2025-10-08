@@ -6,10 +6,12 @@ import Script from "next/script";
 // Note: avoid server cookies here to keep layout static and reduce FAC usage
 import { AuthProvider } from "@/lib/AuthContext";
 import "./globals.css";
+// Import solo il CSS critico
+import "./critical.css";
 import Providers from "./providers";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import BlackPromoBanner from "@/components/BlackPromoBanner"; // ⬅️ NEW
+import BlackPromoBanner from "@/components/BlackPromoBanner";
 import AnalyticsListener from "@/components/AnalyticsListener";
 import ClientAnalytics from "@/components/ClientAnalytics";
 import CookieBanner from "@/components/CookieBanner";
