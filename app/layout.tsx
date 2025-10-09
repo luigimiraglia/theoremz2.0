@@ -181,7 +181,7 @@ export default async function RootLayout({
         {/* GA is loaded client-side only when consent is present */}
       </head>
 
-      <body className="antialiased min-h-dvh bg-background text-foreground">
+      <body className="antialiased min-h-dvh bg-background text-foreground overflow-x-hidden">
         <AuthProvider>
           {/* Non bloccare il paint del contenuto server-rendered */}
           <Suspense fallback={null}>

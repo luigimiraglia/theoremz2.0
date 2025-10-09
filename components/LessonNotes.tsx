@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import BlackPopup from "./BlackPopup";
+import { useEffect, useMemo, useRef, useState, memo } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { track } from "@/lib/analytics";
+import Icon from "./Icon";
+import AnimatedButtonWrapper from "./AnimatedButtonWrapper";
 
 // Defer heavy react-pdf imports until viewer opens
 const ReactPdf: {
@@ -11,8 +12,6 @@ const ReactPdf: {
   Page?: any;
   pdfjs?: any;
 } = {};
-
-type PdfEntry = { name: string; url: string };
 
 /* Hook: misura larghezza contenitore per fare fit-to-width */
 function useContainerWidth<T extends HTMLElement>() {
@@ -30,7 +29,7 @@ function useContainerWidth<T extends HTMLElement>() {
   return { ref, width: w };
 }
 
-export default function LessonNotes({
+const LessonNotes = memo(function LessonNotes({
   lessonTitle,
   lessonSlug,
 }: {
@@ -72,7 +71,11 @@ export default function LessonNotes({
   }, [currentPdf]);
 
   const handleOpen = async () => {
-    if (!isSubscribed) return setShowPopup(true);
+    if (!isSubscribed) {
+      const BlackPopup = (await import("./BlackPopup")).default;
+      setShowPopup(true);
+      return;
+    }
     // Lazy import react-pdf only when opening the viewer
     if (!pdfReady) {
       try {
@@ -208,13 +211,16 @@ export default function LessonNotes({
   return (
     <>
       {/* Floating button */}
-      <button
-        onClick={handleOpen}
-        className=" font-semibold shadow-md px-2 mr-3 text-[14px] sm:text-base rounded-md [.dark_&]:text-white [.dark_&]:bg-slate-800 bg-gray-100 border-2 "
-        aria-label="Apri Appunti"
-      >
-        Appunti
-      </button>
+      <AnimatedButtonWrapper delay={0}>
+        <button
+          onClick={handleOpen}
+          className="min-w-0 flex-shrink font-semibold sm:font-bold shadow-md px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:brightness-110 hover:scale-105 transition-all duration-500 whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
+          aria-label="Apri Appunti"
+        >
+          <Icon name="document" size="sm" />
+          <span className="truncate">Appunti</span>
+        </button>
+      </AnimatedButtonWrapper>
 
       {/* Viewer */}
       {open && (
@@ -478,13 +484,15 @@ export default function LessonNotes({
             className="w-full max-w-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <BlackPopup />
+            {/* BlackPopup sarà caricato dinamicamente */}
           </div>
         </div>
       )}
     </>
   );
-}
+});
+
+export default LessonNotes;
 
 /* Icons */
 function CloseIcon(props: React.SVGProps<SVGSVGElement>) {

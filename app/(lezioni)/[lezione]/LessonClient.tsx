@@ -2,8 +2,7 @@
 
 import SaveLessonButton from "@/components/SaveLessonButton";
 import Link from "next/link";
-import FormularioSection from "@/components/FormularioSection";
-import LessonNotesClient from "@/components/LessonNotesClient";
+import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import PortableRenderer from "./PortableRenderer"; // fallback if no server slot provided
@@ -12,10 +11,73 @@ import LazyOnVisible from "@/components/LazyOnVisible";
 // Note: heavy widgets are loaded dynamically when visible to reduce JS
 import WhatsappButton from "@/components/WhatsappButton";
 import AiChatLauncher from "@/components/AiChatLauncher";
-import EserciziSmallButton from "@/components/EserciziSmallButton";
 import LessonAnalytics from "@/components/LessonAnalytics";
 import LessonReview from "@/components/LessonReview";
 
+// Lazy load dei componenti dell'header per performance
+const FormularioSection = dynamic(
+  () => import("@/components/FormularioSection"),
+  {
+    ssr: false,
+    loading: () => (
+      <button
+        className="min-w-0 flex-shrink font-semibold sm:font-bold px-2 sm:px-3 py-1.5 text-xs sm:text-sm shadow-md rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
+        disabled
+      >
+        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-white/30 rounded animate-pulse flex-shrink-0" />
+        <span className="truncate">Formulario</span>
+      </button>
+    ),
+  }
+);
+
+const LessonNotesClient = dynamic(
+  () => import("@/components/LessonNotesClient"),
+  {
+    ssr: false,
+    loading: () => (
+      <button
+        className="min-w-0 flex-shrink font-semibold sm:font-bold shadow-md px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
+        disabled
+      >
+        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-white/30 rounded animate-pulse flex-shrink-0" />
+        <span className="truncate">Appunti</span>
+      </button>
+    ),
+  }
+);
+
+const EserciziSmallButton = dynamic(
+  () => import("@/components/EserciziSmallButton"),
+  {
+    ssr: false,
+    loading: () => (
+      <button
+        className="min-w-0 flex-shrink py-1.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold sm:font-bold shadow-md bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
+        disabled
+      >
+        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-white/30 rounded animate-pulse flex-shrink-0" />
+        <span className="truncate">Esercizi</span>
+      </button>
+    ),
+  }
+);
+
+const FlashcardsSmallButton = dynamic(
+  () => import("@/components/FlashcardsSmallButton"),
+  {
+    ssr: false,
+    loading: () => (
+      <button
+        className="min-w-0 flex-shrink py-1.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold sm:font-bold shadow-md bg-gradient-to-r from-emerald-500 to-teal-400 text-white rounded-lg whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
+        disabled
+      >
+        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-white/30 rounded animate-pulse flex-shrink-0" />
+        <span className="truncate">Flashcards</span>
+      </button>
+    ),
+  }
+);
 /* ---------- Tipi ---------- */
 type UnknownSlug = string | { current?: string | null } | null | undefined;
 type LinkedLessonRaw =
@@ -40,6 +102,11 @@ type LessonClientProps = {
     materia?: string | null;
     categoria?: string[];
     classe?: string[];
+    formule?: {
+      formula: string;
+      explanation: string;
+      difficulty: number;
+    }[];
     lezioniPropedeuticheObbligatorie?: LinkedLessonRaw[];
     lezioniPropedeuticheOpzionali?: LinkedLessonRaw[];
     lezioniFiglie?: LinkedLessonRaw[];
@@ -141,6 +208,30 @@ export default function LessonClient({
   sectionItems,
   contentSlot,
 }: LessonClientProps) {
+  // Performance: preconnect a risorse critiche
+  useEffect(() => {
+    const preconnectResources = () => {
+      const links = [
+        'https://fonts.gstatic.com',
+        'https://cdn.sanity.io'
+      ];
+      
+      links.forEach(href => {
+        const existing = document.querySelector(`link[href="${href}"]`);
+        if (!existing) {
+          const link = document.createElement('link');
+          link.rel = 'preconnect';
+          link.href = href;
+          link.crossOrigin = 'anonymous';
+          document.head.appendChild(link);
+        }
+      });
+    };
+
+    // Esegui al prossimo frame per non bloccare il rendering
+    requestAnimationFrame(preconnectResources);
+  }, []);
+
   const obb = sanitizeList(
     lesson.lezioniPropedeuticheObbligatorie,
     lesson.slug
@@ -172,7 +263,9 @@ export default function LessonClient({
         // scroll-mt-* è già applicato sugli H2; usa smooth scroll globale
         el.scrollIntoView({ behavior: "smooth", block: "start" });
         // Migliora accessibilità: porta focus (se possibile)
-        try { (el as any).focus?.(); } catch {}
+        try {
+          (el as any).focus?.();
+        } catch {}
       } catch {}
     };
     // Esegui al primo paint e dopo
@@ -185,7 +278,7 @@ export default function LessonClient({
   }, []);
 
   return (
-    <article className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert">
+    <article className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert overflow-x-hidden">
       {/* Analytics for lesson view (client-only) */}
       <LessonAnalytics
         id={lesson.id}
@@ -198,13 +291,7 @@ export default function LessonClient({
       <header className="rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 text-center pt-3 pb-3">
         <div className="flex justify-between mx-3 items-center gap-2">
           <div className="flex items-center gap-2">
-            <EserciziSmallButton />
-            <Link
-              href={`/esercizi/${lesson.slug}`}
-              className="hidden sm:inline text-sm font-semibold text-blue-600 underline underline-offset-2"
-            >
-              Lista esercizi ↗
-            </Link>
+            {/* Rimosso il bottone esercizi da qui */}
           </div>
           <SaveLessonButton lessonSlug={lezione} />
         </div>
@@ -217,12 +304,14 @@ export default function LessonClient({
           </h2>
         )}
 
-        <div className="mt-5 ml-2 flex items-center justify-end gap-0.5">
-          <FormularioSection url={lesson.resources?.formulario ?? ""} />
+        <div className="mt-4 flex items-center justify-center gap-1 sm:gap-2 overflow-hidden px-2">
+          <FlashcardsSmallButton />
+          <EserciziSmallButton />
           <LessonNotesClient
             lessonTitle={lesson.title}
             lessonSlug={lesson.slug}
           />
+          <FormularioSection url={lesson.resources?.formulario ?? ""} />
         </div>
       </header>
 
@@ -289,14 +378,11 @@ export default function LessonClient({
       {/* Niente lista di sotto-lezioni: usata solo per SEO/breadcrumbs */}
 
       {/* Contenuto principale */}
-      {contentSlot ? (
-        contentSlot
-      ) : (
-        <PortableRenderer value={lesson.content} />
-      )}
+      {contentSlot ? contentSlot : <PortableRenderer value={lesson.content} />}
 
       {/* Tag/percorsi in fondo alla lezione (non invasivi) */}
-      {(!!(lesson.categoria && lesson.categoria.length) || !!(lesson.classe && lesson.classe.length)) && (
+      {(!!(lesson.categoria && lesson.categoria.length) ||
+        !!(lesson.classe && lesson.classe.length)) && (
         <div className="mt-6">
           <hr className="my-3 border-t border-slate-200" />
           <div className="flex flex-wrap gap-2 text-sm">
@@ -342,6 +428,9 @@ export default function LessonClient({
         rootMargin="400px"
         minHeight={200}
       />
+
+      {/* FLASHCARDS - Anchor invisibile per il scroll del pulsante header */}
+      <div data-flashcards-cta className="h-0" aria-hidden="true" />
 
       {/* Pulsante: Simula verifica spostato accanto al CTA esercizi dentro LessonExercises */}
 

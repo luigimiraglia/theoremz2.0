@@ -6,9 +6,14 @@ import type { PortableTextBlock } from "sanity";
 import LessonClient from "./LessonClient"; // client wrapper for interactive UI
 import LessonContentServer from "./LessonContentServer"; // server-rendered content for better LCP
 import SeoJsonLd from "./SeoJsonLd"; // <-- JSON-LD Article + Breadcrumbs
+import LessonPrefetch from "@/components/LessonPrefetch"; // Prefetch intelligente
 
 // Usa ISR per performance e SEO migliori; aggiorna periodicamente
 export const revalidate = 7200; // 2 ore - ridotto il consumo di ISR
+
+// Prefetch delle risorse critiche per performance ottimale
+export const runtime = 'nodejs'; // Assicura runtime ottimizzato
+export const dynamic = 'force-static'; // Forza generazione statica quando possibile
 
 /* -------------------- Tipi -------------------- */
 type LessonResources = {
@@ -30,6 +35,11 @@ type LessonDoc = {
   _createdAt?: string;
   _updatedAt?: string;
   tags?: string[];
+  formule?: {
+    formula: string;
+    explanation: string;
+    difficulty: number;
+  }[];
   // ⬇️ nuovi
   lezioniPropedeuticheObbligatorie?: LinkedLesson[];
   lezioniPropedeuticheOpzionali?: LinkedLesson[];
@@ -47,7 +57,12 @@ type SectionBlock = PortableTextBlock & {
 const seoLessonQuery = groq`
   *[_type=="lesson" && slug.current==$slug][0]{
     _id, title, subtitle, slug, thumbnailUrl,
-    content[0..2], _createdAt, _updatedAt, tags
+    content[0..2], _createdAt, _updatedAt, tags,
+    formule[]{
+      formula,
+      explanation,
+      difficulty
+    }
   }
 `;
 const fullLessonQuery = groq`
@@ -173,6 +188,8 @@ export async function generateMetadata({
       index: true,
       follow: true,
       "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
       googleBot:
         "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
     },
@@ -182,7 +199,12 @@ export async function generateMetadata({
       description,
       url: canonical,
       siteName: "Theoremz",
-      images: [{ url: ogImage }],
+      images: [{ 
+        url: ogImage,
+        width: 1200,
+        height: 630,
+        alt: title
+      }],
       locale: "it_IT",
       publishedTime: lesson._createdAt,
       modifiedTime: lesson._updatedAt,
@@ -198,12 +220,24 @@ export async function generateMetadata({
       lesson.title,
       ...(lesson.tags ?? []),
       "formule",
-      "esempi",
+      "esempi", 
       "esercizi",
       "appunti",
       "theoremz",
       "lezione",
+      "matematica",
+      "fisica",
+      "studio"
     ],
+    other: {
+      // SEO avanzato per ranking
+      "article:author": "Theoremz",
+      "article:section": lesson.materia || "Matematica e Fisica",
+      "article:tag": lesson.tags?.join(", ") || "",
+      // Performance hints
+      "format-detection": "telephone=no",
+      "theme-color": "#3b82f6",
+    },
   };
 }
 
@@ -320,6 +354,23 @@ export default async function Page({
         }}
         sectionItems={sectionItems}
         contentSlot={<LessonContentServer value={lesson.content} />}
+      />
+      
+      {/* Prefetch intelligente per risorse correlate */}
+      <LessonPrefetch
+        currentLessonId={lesson._id}
+        relatedLessons={[
+          ...(lesson.lezioniFiglie ?? []).map(l => ({
+            slug: l.slug?.current || '',
+            title: l.title
+          })),
+          ...(lesson.lezioniPropedeuticheObbligatorie ?? []).map(l => ({
+            slug: l.slug?.current || '',
+            title: l.title
+          }))
+        ].filter(l => l.slug)}
+        formularioUrl={lesson.resources?.formulario || undefined}
+        videolezioneUrl={lesson.resources?.videolezione || undefined}
       />
     </>
   );

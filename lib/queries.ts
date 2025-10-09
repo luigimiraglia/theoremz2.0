@@ -4,7 +4,12 @@ export const lessonBySlugQuery = groq`
   *[_type == "lesson" && slug.current == $slug][0]{
     _id,
     title,
-    content[]
+    content[],
+    formule[]{
+      formula,
+      explanation,
+      difficulty
+    }
   }
 `;
 

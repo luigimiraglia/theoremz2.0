@@ -12,6 +12,7 @@ import lesson, {
   latex,
   lineBreak,
   sectionTitle,
+  formulaFlashcard,
 } from "./sanity/schemas/lesson";
 // Go to https://www.sanity.io/docs/api-versioning to learn how API versioning works
 import { apiVersion, dataset, projectId } from "./sanity/env";
@@ -35,6 +36,7 @@ export default defineConfig({
       latex,
       imageExternal,
       sectionTitle,
+      formulaFlashcard,
     ], // registra tutti i tipi
   },
   plugins: [

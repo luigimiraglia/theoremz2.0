@@ -25,16 +25,11 @@ type LessonRef = {
 };
 
 export default function SimulaVerificaPage() {
-  const { user, isSubscribed } = useAuth();
+  const { user, isSubscribed, loading } = useAuth();
   const router = useRouter();
 
-  // redirect if not logged in (soft)
-  useEffect(() => {
-    if (user === null) {
-      // If user context already resolved and is null → go to register
-      router.push("/register");
-    }
-  }, [user, router]);
+  // Non fare redirect automatico, lascia che l'utente veda la pagina
+  // e mostra un messaggio se non è loggato
 
   const [loadingSaved, setLoadingSaved] = useState(true);
   const [savedLessons, setSavedLessons] = useState<LessonRef[]>([]);
@@ -249,14 +244,42 @@ export default function SimulaVerificaPage() {
 
   return (
     <>
-      {isSubscribed === false && (
+      {/* Loading state while auth is being determined */}
+      {loading && (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p className="text-slate-600">Caricamento...</p>
+          </div>
+        </div>
+      )}
+      
+      {/* User not logged in */}
+      {!loading && !user && (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center max-w-md mx-auto p-6">
+            <h1 className="text-2xl font-bold text-slate-800 mb-4">Accesso richiesto</h1>
+            <p className="text-slate-600 mb-6">Devi essere loggato per accedere alla simulazione verifica.</p>
+            <button
+              onClick={() => router.push('/register')}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            >
+              Vai al login
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {!loading && user && isSubscribed === false && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
           <div className="w-full max-w-2xl">
             <BlackPopup />
           </div>
         </div>
       )}
-      <main className="mx-auto max-w-5xl p-4 sm:p-6 space-y-6">
+      
+      {!loading && user && (
+        <main className="mx-auto max-w-5xl p-4 sm:p-6 space-y-6">
       <style>{`
         @page { size: A4; margin: 18mm; }
         @media print {
@@ -680,6 +703,7 @@ export default function SimulaVerificaPage() {
         </section>
       )}
       </main>
+      )}
     </>
   );
 }

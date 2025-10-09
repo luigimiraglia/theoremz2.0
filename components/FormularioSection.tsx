@@ -1,17 +1,23 @@
 "use client";
 import { useAuth } from "@/lib/AuthContext";
-import { useState, type ComponentType } from "react";
+import { useState, type ComponentType, memo } from "react";
+import Icon from "./Icon";
+import AnimatedButtonWrapper from "./AnimatedButtonWrapper";
 
-export default function FormularioSection({ url }: { url: string }) {
+const FormularioSection = memo(function FormularioSection({ url }: { url: string }) {
   const { isSubscribed } = useAuth();
   const [state, setState] = useState<"idle" | "popup">("idle");
   const [Popup, setPopup] = useState<ComponentType | null>(null);
 
-  const handleClick = async () => {
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (isSubscribed) {
       window.location.assign(url);
       return;
     }
+    
     if (!Popup) {
       const mod = await import("@/components/BlackPopup");
       setPopup(() => mod.default ?? mod);
@@ -23,12 +29,16 @@ export default function FormularioSection({ url }: { url: string }) {
 
   return (
     <>
-      <button
-        onClick={handleClick}
-        className=" font-semibold px-2  text-[14px] sm:text-base shadow-md rounded-md [.dark_&]:text-white [.dark_&]:bg-slate-800 bg-gray-100 border-2  mr-1"
-      >
-        Formulario
-      </button>
+      <AnimatedButtonWrapper delay={0}>
+        <button
+          type="button"
+          onClick={handleClick}
+          className="min-w-0 flex-shrink font-semibold sm:font-bold px-2 sm:px-3 py-1.5 text-xs sm:text-sm shadow-md rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white hover:brightness-110 hover:scale-105 transition-all duration-500 whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
+        >
+          <Icon name="calculator" size="sm" />
+          <span className="truncate">Formulario</span>
+        </button>
+      </AnimatedButtonWrapper>
       {state === "popup" && (
         <div
           onClick={closePopup}
@@ -44,4 +54,6 @@ export default function FormularioSection({ url }: { url: string }) {
       )}
     </>
   );
-}
+});
+
+export default FormularioSection;

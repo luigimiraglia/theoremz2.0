@@ -94,6 +94,53 @@ export const sectionTitle = defineType({
 
 /* ─────────── Documento Lezione ─────────── */
 
+export const formulaFlashcard = defineType({
+  name: "formulaFlashcard",
+  title: "Formula da memorizzare",
+  type: "object",
+  fields: [
+    defineField({
+      name: "formula",
+      title: "Formula",
+      type: "string",
+      description: "La formula matematica in formato LaTeX",
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: "explanation",
+      title: "Spiegazione",
+      type: "text",
+      description: "La spiegazione della formula",
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: "difficulty",
+      title: "Difficoltà",
+      type: "number",
+      options: {
+        list: [
+          { title: "Base", value: 1 },
+          { title: "Intermedio", value: 2 },
+          { title: "Avanzato", value: 3 }
+        ]
+      },
+      initialValue: 1,
+    }),
+  ],
+  preview: {
+    select: {
+      formula: "formula",
+      explanation: "explanation",
+    },
+    prepare({ formula, explanation }) {
+      return {
+        title: `${formula}`,
+        subtitle: explanation?.slice(0, 50) + "..."
+      };
+    },
+  },
+});
+
 export default defineType({
   name: "lesson",
   title: "Lezione",
@@ -136,6 +183,13 @@ export default defineType({
       type: "slug",
       options: { source: "title", maxLength: 96 },
       validation: (R) => R.required(),
+    }),
+    defineField({
+      name: "formule",
+      title: "Formule da memorizzare",
+      description: "Lista delle formule importanti da memorizzare per questa lezione",
+      type: "array",
+      of: [{ type: "formulaFlashcard" }],
     }),
     defineField({
       name: "content",
