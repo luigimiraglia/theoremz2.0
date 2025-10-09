@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import BuyLink from "@/components/BuyLink";
 import SenjaEmbed from "@/components/SenjaEmbed";
+import CountdownTimer from "@/components/CountdownTimer";
 import type { LucideIcon } from "lucide-react";
 import {
   MessageCircle,
@@ -468,11 +469,14 @@ export default function BlackPage() {
               Piano Base
             </div>
 
+            {/* Timer countdown */}
+
             <div className="relative">
               {/* Halo fucsia dietro la card Base */}
               <div className="relative z-10">
                 <PriceCard
                   price="6,90€"
+                  regularPrice="9,90€"
                   unit=" /mese"
                   infoHref="https://wa.link/4ogl5q"
                   buyHref="https://buy.stripe.com/cN29E66j97PPbG84gT"
@@ -632,12 +636,14 @@ function IncludeCard({
 
 function PriceCard({
   price,
+  regularPrice,
   unit,
   features,
   infoHref,
   buyHref,
 }: {
   price: string;
+  regularPrice?: string;
   unit: string;
   features: [variant: "ok" | "no" | "pink", text: string][];
   infoHref: string;
@@ -645,11 +651,29 @@ function PriceCard({
 }) {
   return (
     <div className="relative mt-3 overflow-hidden rounded-2xl border border-white/15 bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_-30px_rgba(15,23,42,0.45)]">
+      {regularPrice == "9,90€" ? (
+        <CountdownTimer targetDate="2025-10-13T23:59:59" />
+      ) : (
+        ""
+      )}
       <div className="relative px-6 py-6 lg:px-8 lg:py-8">
         <div className="relative inline-block">
-          <div className="relative text-[41px] lg:text-[46px] font-black bg-gradient-to-r text-transparent from-blue-600 to-cyan-400 bg-clip-text drop-shadow-[0_8px_24px_rgba(56,189,248,0.38)] lg:whitespace-nowrap">
-            {price}
-            {unit}
+          <div className="flex flex-col items-center">
+            {regularPrice && (
+              <div className="mb-1 flex items-center gap-2">
+                <span className="text-lg text-slate-500 line-through">
+                  {regularPrice}
+                  {unit}
+                </span>
+                <span className="text-sm font-semibold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded">
+                  -30%
+                </span>
+              </div>
+            )}
+            <div className="relative text-[41px] lg:text-[46px] font-black bg-gradient-to-r text-transparent from-blue-600 to-cyan-400 bg-clip-text drop-shadow-[0_8px_24px_rgba(56,189,248,0.38)] lg:whitespace-nowrap">
+              {price}
+              {unit}
+            </div>
           </div>
         </div>
 
