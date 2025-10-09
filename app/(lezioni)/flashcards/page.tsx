@@ -9,6 +9,7 @@ import { groq } from 'next-sanity';
 
 // Tipo per le formule della lezione
 type FormulaFlashcard = {
+  title: string;
   formula: string;
   explanation: string;
   difficulty: number;
@@ -27,7 +28,12 @@ const lessonFormulasQuery = groq`
     _id,
     title,
     slug,
-    formule
+    formule[] {
+      title,
+      formula,
+      explanation,
+      difficulty
+    }
   }
 `;
 
@@ -242,7 +248,7 @@ export default function FlashCardsExercise() {
             <div className="relative">
               <FlashCard
                 key={currentIndex}
-                title={`Formula ${currentIndex + 1}`}
+                title={formulas[currentIndex].title}
                 formula={formulas[currentIndex].formula}
                 explanation={formulas[currentIndex].explanation}
                 id={currentIndex.toString()}

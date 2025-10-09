@@ -100,18 +100,27 @@ export const formulaFlashcard = defineType({
   type: "object",
   fields: [
     defineField({
-      name: "formula",
-      title: "Formula",
+      name: "title",
+      title: "Titolo (mnemonico)",
       type: "string",
-      description: "La formula matematica in formato LaTeX",
+      description:
+        "Breve etichetta per ricordare a colpo d’occhio (es. “Teorema di Pitagora”).",
+      validation: (Rule) => Rule.required().max(80),
+    }),
+    defineField({
+      name: "formula",
+      title: "Formula (LaTeX)",
+      type: "string",
+      description:
+        "La formula in LaTeX senza delimitatori ($$, \\[\\], \\(\\)).",
       validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: "explanation",
-      title: "Spiegazione",
+      title: "Descrizione",
       type: "text",
-      description: "La spiegazione della formula",
-      validation: (Rule) => Rule.required(),
+      description: "Spiegazione breve (≤ 150 caratteri).",
+      validation: (Rule) => Rule.required().max(150),
     }),
     defineField({
       name: "difficulty",
@@ -121,21 +130,20 @@ export const formulaFlashcard = defineType({
         list: [
           { title: "Base", value: 1 },
           { title: "Intermedio", value: 2 },
-          { title: "Avanzato", value: 3 }
-        ]
+          { title: "Avanzato", value: 3 },
+        ],
+        layout: "radio",
       },
       initialValue: 1,
+      validation: (Rule) => Rule.required().min(1).max(3),
     }),
   ],
   preview: {
-    select: {
-      formula: "formula",
-      explanation: "explanation",
-    },
-    prepare({ formula, explanation }) {
+    select: { title: "title", formula: "formula" },
+    prepare({ title, formula }) {
       return {
-        title: `${formula}`,
-        subtitle: explanation?.slice(0, 50) + "..."
+        title: title || "(senza titolo)",
+        subtitle: formula?.slice(0, 60) || "",
       };
     },
   },
@@ -187,7 +195,8 @@ export default defineType({
     defineField({
       name: "formule",
       title: "Formule da memorizzare",
-      description: "Lista delle formule importanti da memorizzare per questa lezione",
+      description:
+        "Lista delle formule importanti da memorizzare per questa lezione",
       type: "array",
       of: [{ type: "formulaFlashcard" }],
     }),
