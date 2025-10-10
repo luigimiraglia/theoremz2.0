@@ -1,73 +1,89 @@
 import Database from 'better-sqlite3';
+import { createClient, type Client } from '@libsql/client';
 import path from 'path';
 
-// Determina il percorso del database basato sull'ambiente
+// Determina il tipo di database e inizializza
 const isProduction = process.env.NODE_ENV === 'production';
-let dbPath: string;
-
-if (isProduction) {
-  // In produzione, prova diversi percorsi
-  const tempDir = process.env.VERCEL_TEMP_DIR || process.env.TMPDIR || '/tmp';
-  dbPath = path.join(tempDir, 'analytics.db');
-  console.log(`[Analytics DB] Production mode - temp dir: ${tempDir}`);
-} else {
-  // In sviluppo, usa la directory del progetto
-  dbPath = path.join(process.cwd(), 'analytics.db');
-}
+const useCloudDatabase = isProduction && process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN;
 
 console.log(`[Analytics DB] Environment: ${process.env.NODE_ENV}`);
-console.log(`[Analytics DB] Using database path: ${dbPath}`);
 
-let db: Database.Database;
+let localDB: Database.Database | null = null;
+let cloudDB: Client | null = null;
 
-try {
-  db = new Database(dbPath);
-  console.log(`[Analytics DB] Database initialized successfully`);
+if (useCloudDatabase) {
+  // Usa Turso in produzione
+  console.log(`[Analytics DB] Using Turso cloud database`);
+  cloudDB = createClient({
+    url: process.env.TURSO_DATABASE_URL!,
+    authToken: process.env.TURSO_AUTH_TOKEN!,
+  });
+} else {
+  // Usa SQLite locale in sviluppo o come fallback
+  const dbPath = path.join(process.cwd(), 'analytics.db');
+  console.log(`[Analytics DB] Using local SQLite: ${dbPath}`);
   
-  // Abilita WAL mode per performance migliori (solo se supportato)
   try {
-    db.pragma('journal_mode = WAL');
+    localDB = new Database(dbPath);
+    console.log(`[Analytics DB] Local database initialized successfully`);
+    
+    // Abilita WAL mode per performance migliori (solo per SQLite locale)
+    try {
+      localDB.pragma('journal_mode = WAL');
+    } catch (error) {
+      console.warn(`[Analytics DB] WAL mode not supported:`, error);
+      // Fallback a DELETE mode
+      localDB.pragma('journal_mode = DELETE');
+    }
   } catch (error) {
-    console.warn(`[Analytics DB] WAL mode not supported:`, error);
-    // Fallback a DELETE mode
-    db.pragma('journal_mode = DELETE');
+    console.error(`[Analytics DB] Failed to initialize database:`, error);
+    // Fallback: database in memoria se tutto fallisce
+    console.log(`[Analytics DB] Falling back to in-memory database`);
+    localDB = new Database(':memory:');
   }
-} catch (error) {
-  console.error(`[Analytics DB] Failed to initialize database:`, error);
-  // Fallback: database in memoria se tutto fallisce
-  console.log(`[Analytics DB] Falling back to in-memory database`);
-  db = new Database(':memory:');
 }
 
+// Helper function per eseguire query
+const executeQuery = async (sql: string, params?: any[]): Promise<any> => {
+  if (cloudDB) {
+    const result = await cloudDB.execute(sql, params);
+    return result;
+  } else if (localDB) {
+    if (sql.toLowerCase().includes('select')) {
+      const stmt = localDB.prepare(sql);
+      return params ? stmt.all(...params) : stmt.all();
+    } else {
+      const stmt = localDB.prepare(sql);
+      return params ? stmt.run(...params) : stmt.run();
+    }
+  }
+  throw new Error('No database connection available');
+};
+
 // Schema database
-const initDB = () => {
+const initDB = async () => {
   try {
     console.log(`[Analytics DB] Initializing database schema...`);
     
-    // Tabella eventi analytics
-    db.exec(`
+    // Tabella eventi
+    await executeQuery(`
       CREATE TABLE IF NOT EXISTS events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         event_name TEXT NOT NULL,
         page_path TEXT,
         user_id TEXT,
         session_id TEXT,
         anon_id TEXT,
-        params TEXT, -- JSON string
+        params TEXT,
         user_agent TEXT,
         ip_address TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `);
     console.log(`[Analytics DB] Events table created/verified`);
-  } catch (error) {
-    console.error(`[Analytics DB] Error creating events table:`, error);
-  }
 
-  try {
     // Tabella sessioni
-    db.exec(`
+    await executeQuery(`
       CREATE TABLE IF NOT EXISTS sessions (
         id TEXT PRIMARY KEY,
         user_id TEXT,
@@ -83,35 +99,27 @@ const initDB = () => {
       );
     `);
     console.log(`[Analytics DB] Sessions table created/verified`);
-  } catch (error) {
-    console.error(`[Analytics DB] Error creating sessions table:`, error);
-  }
 
-  try {
     // Tabella conversioni (per trackare il funnel)
-    db.exec(`
+    await executeQuery(`
       CREATE TABLE IF NOT EXISTS conversions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         session_id TEXT,
         user_id TEXT,
         anon_id TEXT,
-        conversion_type TEXT NOT NULL, -- 'quiz_parent', 'quiz_student', 'black_page_visit', 'popup_click', 'purchase'
-        conversion_value TEXT, -- dettagli specifici
+        conversion_type TEXT NOT NULL,
+        conversion_value TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         page_path TEXT,
         FOREIGN KEY (session_id) REFERENCES sessions(id)
       );
     `);
     console.log(`[Analytics DB] Conversions table created/verified`);
-  } catch (error) {
-    console.error(`[Analytics DB] Error creating conversions table:`, error);
-  }
 
-  try {
     // Tabella statistiche giornaliere (per performance)
-    db.exec(`
+    await executeQuery(`
       CREATE TABLE IF NOT EXISTS daily_stats (
-        date TEXT PRIMARY KEY, -- YYYY-MM-DD
+        date TEXT PRIMARY KEY,
         unique_visitors INTEGER DEFAULT 0,
         total_pageviews INTEGER DEFAULT 0,
         new_sessions INTEGER DEFAULT 0,
@@ -124,23 +132,33 @@ const initDB = () => {
       );
     `);
     console.log(`[Analytics DB] Daily stats table created/verified`);
-  } catch (error) {
-    console.error(`[Analytics DB] Error creating daily stats table:`, error);
-  }
 
-  try {
-    // Indici per performance
-    db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_events_event_name ON events(event_name);
-      CREATE INDEX IF NOT EXISTS idx_events_session_id ON events(session_id);
-      CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON sessions(started_at);
-      CREATE INDEX IF NOT EXISTS idx_conversions_timestamp ON conversions(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_conversions_type ON conversions(conversion_type);
-    `);
-    console.log(`[Analytics DB] Database indices created/verified`);
+    // Indici per performance (solo per SQLite locale)
+    if (localDB) {
+      await executeQuery(`
+        CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(created_at);
+      `);
+      await executeQuery(`
+        CREATE INDEX IF NOT EXISTS idx_events_event_name ON events(event_name);
+      `);
+      await executeQuery(`
+        CREATE INDEX IF NOT EXISTS idx_events_session_id ON events(session_id);
+      `);
+      await executeQuery(`
+        CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON sessions(started_at);
+      `);
+      await executeQuery(`
+        CREATE INDEX IF NOT EXISTS idx_conversions_timestamp ON conversions(timestamp);
+      `);
+      await executeQuery(`
+        CREATE INDEX IF NOT EXISTS idx_conversions_type ON conversions(conversion_type);
+      `);
+      console.log(`[Analytics DB] Database indices created/verified`);
+    }
+
+    console.log(`[Analytics DB] Database initialization completed`);
   } catch (error) {
-    console.error(`[Analytics DB] Error creating database indices:`, error);
+    console.error(`[Analytics DB] Schema initialization failed:`, error);
   }
 };
 
@@ -150,360 +168,200 @@ initDB();
 // Funzioni di utilità
 export const analyticsDB = {
   // Inserisci evento
-  insertEvent: db.prepare(`
-    INSERT INTO events (event_name, page_path, user_id, session_id, anon_id, params, user_agent, ip_address)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `),
+  insertEvent: async (eventName: string, pagePath?: string, userId?: string, sessionId?: string, anonId?: string, params?: string, userAgent?: string, ipAddress?: string) => {
+    return executeQuery(
+      `INSERT INTO events (event_name, page_path, user_id, session_id, anon_id, params, user_agent, ip_address)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [eventName, pagePath, userId, sessionId, anonId, params, userAgent, ipAddress]
+    );
+  },
 
   // Inserisci sessione
-  insertSession: db.prepare(`
-    INSERT INTO sessions (id, user_id, anon_id, landing_page, referrer, user_agent, ip_address)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `),
+  insertSession: async (id: string, userId?: string, anonId?: string, landingPage?: string, referrer?: string, userAgent?: string, ipAddress?: string) => {
+    return executeQuery(
+      `INSERT INTO sessions (id, user_id, anon_id, landing_page, referrer, user_agent, ip_address)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, userId, anonId, landingPage, referrer, userAgent, ipAddress]
+    );
+  },
 
   // Aggiorna sessione
-  updateSession: db.prepare(`
-    UPDATE sessions 
-    SET ended_at = CURRENT_TIMESTAMP, pages_visited = ?, duration_seconds = ?
-    WHERE id = ?
-  `),
+  updateSession: async (id: string, pagesVisited: number, durationSeconds: number) => {
+    return executeQuery(
+      `UPDATE sessions 
+       SET ended_at = CURRENT_TIMESTAMP, pages_visited = ?, duration_seconds = ?
+       WHERE id = ?`,
+      [pagesVisited, durationSeconds, id]
+    );
+  },
 
   // Inserisci conversione
-  insertConversion: db.prepare(`
-    INSERT INTO conversions (session_id, user_id, anon_id, conversion_type, conversion_value, page_path)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `),
+  insertConversion: async (conversionType: string, sessionId?: string, userId?: string, anonId?: string, conversionValue?: string, pagePath?: string) => {
+    return executeQuery(
+      `INSERT INTO conversions (session_id, user_id, anon_id, conversion_type, conversion_value, page_path)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [sessionId, userId, anonId, conversionType, conversionValue, pagePath]
+    );
+  },
 
-  // Ottieni o crea statistiche giornaliere
-  getDailyStats: db.prepare(`
-    SELECT * FROM daily_stats WHERE date = ?
-  `),
+  // Query per analytics dashboard
+  getDailyStats: async (date: string) => {
+    return executeQuery(`SELECT * FROM daily_stats WHERE date = ?`, [date]);
+  },
 
-  // Aggiorna statistiche giornaliere
-  updateDailyStats: db.prepare(`
-    INSERT OR REPLACE INTO daily_stats 
-    (date, unique_visitors, total_pageviews, new_sessions, quiz_parent_clicks, quiz_student_clicks, black_page_visits, popup_clicks, conversions, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-  `),
+  getEventsByDateRange: async (startDate: string, endDate: string) => {
+    return executeQuery(
+      `SELECT DATE(created_at) as date, event_name, COUNT(*) as count
+       FROM events 
+       WHERE DATE(created_at) BETWEEN ? AND ?
+       GROUP BY DATE(created_at), event_name
+       ORDER BY date DESC`,
+      [startDate, endDate]
+    );
+  },
 
-  // Query analytics
-  getEventsByDateRange: db.prepare(`
-    SELECT * FROM events 
-    WHERE timestamp BETWEEN ? AND ?
-    ORDER BY timestamp DESC
-  `),
+  getConversionFunnel: async (startDate: string, endDate: string) => {
+    return executeQuery(
+      `SELECT conversion_type, COUNT(*) as count, DATE(timestamp) as date
+       FROM conversions 
+       WHERE DATE(timestamp) BETWEEN ? AND ?
+       GROUP BY conversion_type, DATE(timestamp)
+       ORDER BY date DESC`,
+      [startDate, endDate]
+    );
+  },
 
-  getConversionFunnel: db.prepare(`
-    SELECT 
-      conversion_type,
-      COUNT(*) as count,
-      DATE(timestamp) as date
-    FROM conversions 
-    WHERE timestamp >= ?
-    GROUP BY conversion_type, DATE(timestamp)
-    ORDER BY date DESC, conversion_type
-  `),
+  getTopPages: async (startDate: string, endDate: string, limit: number = 10) => {
+    return executeQuery(
+      `SELECT page_path, COUNT(*) as visits
+       FROM events 
+       WHERE event_name = 'page_view' 
+         AND DATE(created_at) BETWEEN ? AND ?
+         AND page_path IS NOT NULL
+       GROUP BY page_path 
+       ORDER BY visits DESC 
+       LIMIT ?`,
+      [startDate, endDate, limit]
+    );
+  },
 
-  getTopPages: db.prepare(`
-    SELECT 
-      page_path,
-      COUNT(*) as visits,
-      COUNT(DISTINCT session_id) as unique_visitors
-    FROM events 
-    WHERE event_name = 'page_view' AND timestamp >= ?
-    GROUP BY page_path
-    ORDER BY visits DESC
-    LIMIT 20
-  `),
+  getSessionStats: async (startDate: string, endDate: string) => {
+    return executeQuery(
+      `SELECT 
+         COUNT(*) as total_sessions,
+         COUNT(DISTINCT anon_id) as unique_visitors,
+         AVG(duration_seconds) as avg_duration,
+         AVG(pages_visited) as avg_pages_per_session
+       FROM sessions 
+       WHERE DATE(started_at) BETWEEN ? AND ?`,
+      [startDate, endDate]
+    );
+  },
 
-  getSessionStats: db.prepare(`
-    SELECT 
-      DATE(started_at) as date,
-      COUNT(*) as sessions,
-      COUNT(DISTINCT COALESCE(user_id, anon_id)) as unique_visitors,
-      AVG(duration_seconds) as avg_duration,
-      AVG(pages_visited) as avg_pages
-    FROM sessions 
-    WHERE started_at >= ?
-    GROUP BY DATE(started_at)
-    ORDER BY date DESC
-  `),
+  getDailyStatsRange: async (startDate: string, endDate: string) => {
+    return executeQuery(
+      `SELECT * FROM daily_stats WHERE date BETWEEN ? AND ? ORDER BY date DESC`,
+      [startDate, endDate]
+    );
+  },
 
-  // Query aggiuntive per la dashboard
-  getDailyStatsRange: db.prepare(`
-    SELECT * FROM daily_stats 
-    WHERE date BETWEEN ? AND ?
-    ORDER BY date DESC
-  `),
+  getRecentEvents: async (limit: number = 100) => {
+    return executeQuery(
+      `SELECT * FROM events 
+       ORDER BY created_at DESC 
+       LIMIT ?`,
+      [limit]
+    );
+  },
 
-  getRecentEvents: db.prepare(`
-    SELECT event_name, COUNT(*) as count
-    FROM events 
-    WHERE timestamp >= ?
-    GROUP BY event_name
-    ORDER BY count DESC
-    LIMIT 10
-  `),
+  // Query specifiche per funnel analysis
+  getFunnelEntriesDaily: async (startDate: string, endDate: string) => {
+    return executeQuery(
+      `SELECT 
+         DATE(created_at) as date,
+         SUM(CASE WHEN event_name = 'quiz_parent_click' THEN 1 ELSE 0 END) as quiz_parent_clicks,
+         SUM(CASE WHEN event_name = 'quiz_student_click' THEN 1 ELSE 0 END) as quiz_student_clicks,
+         SUM(CASE WHEN event_name = 'popup_click' THEN 1 ELSE 0 END) as popup_clicks
+       FROM events 
+       WHERE DATE(created_at) BETWEEN ? AND ?
+       GROUP BY DATE(created_at)
+       ORDER BY date DESC`,
+      [startDate, endDate]
+    );
+  },
 
-  // Query per funnel entries (/start)
-  getFunnelEntriesDaily: db.prepare(`
-    SELECT DATE(timestamp) as date, COUNT(DISTINCT session_id) as count
-    FROM events 
-    WHERE event_name = 'page_view' 
-    AND page_path LIKE '%/start%'
-    AND timestamp >= ?
-    GROUP BY DATE(timestamp)
-    ORDER BY date
-  `),
+  getTotalVisitsDaily: async (startDate: string, endDate: string) => {
+    return executeQuery(
+      `SELECT 
+         DATE(created_at) as date,
+         COUNT(DISTINCT session_id) as total_visits,
+         COUNT(DISTINCT anon_id) as unique_visitors
+       FROM events 
+       WHERE event_name = 'page_view' AND DATE(created_at) BETWEEN ? AND ?
+       GROUP BY DATE(created_at)
+       ORDER BY date DESC`,
+      [startDate, endDate]
+    );
+  },
 
-  // Query per visite totali giornaliere
-  getTotalVisitsDaily: db.prepare(`
-    SELECT DATE(timestamp) as date, COUNT(*) as count
-    FROM events 
-    WHERE event_name = 'page_view'
-    AND timestamp >= ?
-    GROUP BY DATE(timestamp)
-    ORDER BY date
-  `),
+  getBlackPageVisitsDaily: async (startDate: string, endDate: string) => {
+    return executeQuery(
+      `SELECT 
+         DATE(created_at) as date,
+         COUNT(*) as black_page_visits,
+         COUNT(DISTINCT session_id) as unique_black_visitors
+       FROM events 
+       WHERE page_path = '/black' AND DATE(created_at) BETWEEN ? AND ?
+       GROUP BY DATE(created_at)
+       ORDER BY date DESC`,
+      [startDate, endDate]
+    );
+  },
 
-  // Query per visite pagina black giornaliere
-  getBlackPageVisitsDaily: db.prepare(`
-    SELECT DATE(timestamp) as date, COUNT(DISTINCT session_id) as count
-    FROM events 
-    WHERE event_name = 'page_view' 
-    AND page_path LIKE '%/black%'
-    AND timestamp >= ?
-    GROUP BY DATE(timestamp)
-    ORDER BY date
-  `),
+  getBuyClicksDaily: async (startDate: string, endDate: string) => {
+    return executeQuery(
+      `SELECT 
+         DATE(created_at) as date,
+         COUNT(*) as buy_clicks,
+         COUNT(DISTINCT session_id) as unique_buyers
+       FROM events 
+       WHERE event_name = 'subscribe_click' AND DATE(created_at) BETWEEN ? AND ?
+       GROUP BY DATE(created_at)
+       ORDER BY date DESC`,
+      [startDate, endDate]
+    );
+  },
 
-  // Query per visite pagina mentor giornaliere
-  getMentorPageVisitsDaily: db.prepare(`
-    SELECT DATE(timestamp) as date, COUNT(DISTINCT session_id) as count
-    FROM events 
-    WHERE event_name = 'page_view' 
-    AND page_path LIKE '%/mentor%'
-    AND timestamp >= ?
-    GROUP BY DATE(timestamp)
-    ORDER BY date
-  `),
+  // Test di connettività
+  testConnection: async () => {
+    try {
+      const result = await executeQuery(`SELECT 1 as test`);
+      return { success: true, result };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  },
 
-  // Query per utilizzo funzionalità giornaliero
-  getFunctionalityUsageDaily: db.prepare(`
-    SELECT DATE(timestamp) as date, params as functionality, COUNT(DISTINCT session_id) as count
-    FROM events 
-    WHERE event_name IN ('popup_click', 'conversion')
-    AND timestamp >= ?
-    GROUP BY DATE(timestamp), params
-    ORDER BY date, functionality
-  `),
-
-  // Query per utilizzo funzionalità settimanale
-  getFunctionalityUsageWeekly: db.prepare(`
-    SELECT strftime('%Y-W%W', timestamp) as week, params as functionality, COUNT(DISTINCT session_id) as count
-    FROM events 
-    WHERE event_name IN ('popup_click', 'conversion')
-    AND timestamp >= ?
-    GROUP BY strftime('%Y-W%W', timestamp), params
-    ORDER BY week, functionality
-  `),
-
-  // Query per utilizzo funzionalità mensile
-  getFunctionalityUsageMonthly: db.prepare(`
-    SELECT strftime('%Y-%m', timestamp) as month, params as functionality, COUNT(DISTINCT session_id) as count
-    FROM events 
-    WHERE event_name IN ('popup_click', 'conversion')
-    AND timestamp >= ?
-    GROUP BY strftime('%Y-%m', timestamp), params
-    ORDER BY month, functionality
-  `),
-
-  // Query per sorgenti pagina black giornaliere
-  getBlackPageSourcesDaily: db.prepare(`
-    SELECT DATE(e1.timestamp) as date, e1.params as source, COUNT(DISTINCT e1.session_id) as count
-    FROM events e1
-    JOIN events e2 ON e1.session_id = e2.session_id 
-    WHERE e1.event_name = 'popup_click'
-    AND e2.event_name = 'page_view' 
-    AND e2.page_path LIKE '%/black%'
-    AND e2.timestamp > e1.timestamp
-    AND e2.timestamp - e1.timestamp < 300000
-    AND e1.timestamp >= ?
-    GROUP BY DATE(e1.timestamp), e1.params
-    ORDER BY date, source
-  `),
-
-  // Query per sorgenti pagina black settimanali
-  getBlackPageSourcesWeekly: db.prepare(`
-    SELECT strftime('%Y-W%W', e1.timestamp) as week, e1.params as source, COUNT(DISTINCT e1.session_id) as count
-    FROM events e1
-    JOIN events e2 ON e1.session_id = e2.session_id 
-    WHERE e1.event_name = 'popup_click'
-    AND e2.event_name = 'page_view' 
-    AND e2.page_path LIKE '%/black%'
-    AND e2.timestamp > e1.timestamp
-    AND e2.timestamp - e1.timestamp < 300000
-    AND e1.timestamp >= ?
-    GROUP BY strftime('%Y-W%W', e1.timestamp), e1.params
-    ORDER BY week, source
-  `),
-
-  // Query per sorgenti pagina black mensili
-  getBlackPageSourcesMonthly: db.prepare(`
-    SELECT strftime('%Y-%m', e1.timestamp) as month, e1.params as source, COUNT(DISTINCT e1.session_id) as count
-    FROM events e1
-    JOIN events e2 ON e1.session_id = e2.session_id 
-    WHERE e1.event_name = 'popup_click'
-    AND e2.event_name = 'page_view' 
-    AND e2.page_path LIKE '%/black%'
-    AND e2.timestamp > e1.timestamp
-    AND e2.timestamp - e1.timestamp < 300000
-    AND e1.timestamp >= ?
-    GROUP BY strftime('%Y-%m', e1.timestamp), e1.params
-    ORDER BY month, source
-  `),
-
-  // Query per statistiche quiz - Start studente vs genitore
-  getQuizStartStats: db.prepare(`
-    SELECT 
-      CASE 
-        WHEN page_path LIKE '%/start-studente%' THEN 'student'
-        WHEN page_path LIKE '%/start-genitore%' THEN 'parent'
-        ELSE 'other'
-      END as quiz_type,
-      COUNT(DISTINCT session_id) as count
-    FROM events 
-    WHERE event_name = 'page_view' 
-    AND (page_path LIKE '%/start-studente%' OR page_path LIKE '%/start-genitore%')
-    AND timestamp >= ?
-    GROUP BY quiz_type
-  `),
-
-  // Query per completion rate quiz
-  getQuizCompletionStats: db.prepare(`
-    SELECT 
-      CASE 
-        WHEN e1.page_path LIKE '%/start-studente%' THEN 'student'
-        WHEN e1.page_path LIKE '%/start-genitore%' THEN 'parent'
-        ELSE 'other'
-      END as quiz_type,
-      COUNT(DISTINCT e1.session_id) as started,
-      COUNT(DISTINCT e2.session_id) as completed
-    FROM events e1
-    LEFT JOIN events e2 ON e1.session_id = e2.session_id 
-      AND e2.event_name = 'conversion'
-      AND e2.params LIKE '%quiz_completed%'
-      AND e2.timestamp > e1.timestamp
-    WHERE e1.event_name = 'page_view'
-    AND (e1.page_path LIKE '%/start-studente%' OR e1.page_path LIKE '%/start-genitore%')
-    AND e1.timestamp >= ?
-    GROUP BY quiz_type
-  `),
-
-  // Query per click sui piani assegnati
-  getPlanClickStats: db.prepare(`
-    SELECT 
-      CASE 
-        WHEN e1.page_path LIKE '%/start-studente%' THEN 'student'
-        WHEN e1.page_path LIKE '%/start-genitore%' THEN 'parent'
-        ELSE 'other'
-      END as quiz_type,
-      COUNT(DISTINCT e2.session_id) as plan_clicks
-    FROM events e1
-    JOIN events e2 ON e1.session_id = e2.session_id 
-    WHERE e1.event_name = 'page_view'
-    AND (e1.page_path LIKE '%/start-studente%' OR e1.page_path LIKE '%/start-genitore%')
-    AND e2.event_name = 'conversion'
-    AND e2.params LIKE '%plan_click%'
-    AND e2.timestamp > e1.timestamp
-    AND e1.timestamp >= ?
-    GROUP BY quiz_type
-  `),
-
-  // Query per utenti più attivi per email
-  getActiveUsersByEmail: db.prepare(`
-    SELECT 
-      COALESCE(s.user_id, 'anonymous') as email,
-      COUNT(DISTINCT e.session_id) as total_visits,
-      MAX(e.timestamp) as last_visit,
-      CASE WHEN EXISTS(
-        SELECT 1 FROM events e2 
-        WHERE e2.session_id = e.session_id 
-        AND e2.page_path LIKE '%/black%'
-      ) THEN 1 ELSE 0 END as is_black_user
-    FROM events e
-    LEFT JOIN sessions s ON e.session_id = s.id
-    WHERE e.event_name = 'page_view'
-    AND e.timestamp >= ?
-    GROUP BY COALESCE(s.user_id, e.session_id)
-    HAVING total_visits > 1
-    ORDER BY total_visits DESC, last_visit DESC
-    LIMIT 50
-  `),
-
-  // Query per log visite utenti Black con email (include anche anonimi per debug)
-  getBlackUserVisitLogs: db.prepare(`
-    SELECT 
-      COALESCE(s.user_id, 'anonymous_' || SUBSTR(e.session_id, 1, 8)) as email,
-      COUNT(DISTINCT e.session_id) as page_visits,
-      MAX(e.timestamp) as last_visit,
-      CASE WHEN s.user_id IS NOT NULL THEN 1 ELSE 0 END as is_authenticated
-    FROM events e
-    LEFT JOIN sessions s ON e.session_id = s.id
-    WHERE e.event_name = 'page_view'
-    AND e.page_path LIKE '%/black%'
-    AND e.timestamp >= ?
-    GROUP BY COALESCE(s.user_id, e.session_id)
-    ORDER BY 
-      CASE WHEN s.user_id IS NOT NULL THEN 1 ELSE 0 END DESC,
-      COUNT(DISTINCT e.session_id) DESC, 
-      MAX(e.timestamp) DESC
-    LIMIT 50
-  `),
-
-  // Query per Buy Clicks sulla pagina Black
-  getBlackBuyClicks: db.prepare(`
-    SELECT COUNT(*) as buy_clicks
-    FROM events 
-    WHERE event_name = 'subscribe_click'
-    AND session_id IN (
-      SELECT DISTINCT session_id FROM events 
-      WHERE page_path LIKE '%/black%' 
-      AND event_name = 'page_view'
-    )
-    AND timestamp >= ?
-  `),
-
-  getBlackBuyClicksDaily: db.prepare(`
-    SELECT DATE(timestamp) as date, COUNT(*) as count
-    FROM events 
-    WHERE event_name = 'subscribe_click'
-    AND session_id IN (
-      SELECT DISTINCT session_id FROM events 
-      WHERE page_path LIKE '%/black%' 
-      AND event_name = 'page_view'
-    )
-    AND timestamp >= ?
-    GROUP BY DATE(timestamp)
-    ORDER BY date
-  `),
-
-  getBlackBuyClicksByPlan: db.prepare(`
-    SELECT 
-      JSON_EXTRACT(params, '$.plan') as plan,
-      JSON_EXTRACT(params, '$.price') as price,
-      COUNT(*) as clicks
-    FROM events 
-    WHERE event_name = 'subscribe_click'
-    AND session_id IN (
-      SELECT DISTINCT session_id FROM events 
-      WHERE page_path LIKE '%/black%' 
-      AND event_name = 'page_view'
-    )
-    AND timestamp >= ?
-    GROUP BY JSON_EXTRACT(params, '$.plan'), JSON_EXTRACT(params, '$.price')
-    ORDER BY clicks DESC
-  `)
+  // Debug info
+  getTableInfo: async () => {
+    try {
+      if (localDB) {
+        return {
+          type: 'local_sqlite',
+          tables: localDB.prepare("SELECT name FROM sqlite_master WHERE type='table'").all()
+        };
+      } else if (cloudDB) {
+        const tables = await cloudDB.execute("SELECT name FROM sqlite_master WHERE type='table'");
+        return {
+          type: 'turso_cloud',
+          tables: tables.rows
+        };
+      }
+      return { type: 'none', tables: [] };
+    } catch (error) {
+      return { type: 'error', error: error instanceof Error ? error.message : String(error) };
+    }
+  }
 };
 
-export default db;
+export default analyticsDB;

@@ -12,6 +12,7 @@
     "optimize-images": "node scripts/optimize-images.mjs"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.15",
     "@lumenlabs/lumen-brain": "^1.2.2",
     "@portabletext/react": "^3.2.1",
     "@sanity/client": "^7.8.1",
