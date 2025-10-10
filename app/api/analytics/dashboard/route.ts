@@ -1,367 +1,211 @@
 import { NextRequest, NextResponse } from "next/server";
-import { analyticsDB } from "@/lib/analyticsDB";
 import { adminAuth } from "@/lib/firebaseAdmin";
+import { analyticsDB } from "@/lib/analyticsDB";
 
 export async function GET(request: NextRequest) {
   try {
-    // Verifica autenticazione - sistema ibrido per produzione/dev
-    const authHeader = request.headers.get("Authorization");
+    console.log(`[Analytics API] Starting dashboard request`);
 
-    // Metodo 1: Token Firebase (per sviluppo)
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.split("Bearer ")[1];
-      try {
-        const decodedToken = await adminAuth.verifyIdToken(token);
-        if (decodedToken.email !== "luigi.miraglia006@gmail.com") {
-          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Autenticazione - verifica API key per production
+    const apiKey = request.headers.get("x-api-key");
+    const authHeader = request.headers.get("authorization");
+
+    if (process.env.NODE_ENV === "production") {
+      // In production, usa API key come fallback
+      if (!apiKey || apiKey !== process.env.ANALYTICS_API_KEY) {
+        if (!authHeader?.startsWith("Bearer ")) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-      } catch {
-        // Fallback al metodo 2 se Firebase fallisce
+
+        try {
+          const token = authHeader.split("Bearer ")[1];
+          const decodedToken = await adminAuth.verifyIdToken(token);
+          
+          // Verifica che sia luigi.miraglia006@gmail.com
+          if (decodedToken.email !== "luigi.miraglia006@gmail.com") {
+            return NextResponse.json({ error: "Access denied" }, { status: 403 });
+          }
+        } catch (error) {
+          console.error("[Analytics API] Token verification failed:", error);
+          return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+        }
       }
     }
 
-    // Metodo 2: Chiave API semplice (per produzione quando Firebase non funziona)
-    else if (authHeader?.startsWith("ApiKey ")) {
-      const apiKey = authHeader.split("ApiKey ")[1];
-      const expectedKey = process.env.ANALYTICS_API_KEY;
-      if (!expectedKey || apiKey !== expectedKey) {
-        return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
-      }
-    }
-
-    // Nessuna autenticazione valida
-    else {
-      return NextResponse.json(
-        { error: "Unauthorized - no valid auth method" },
-        { status: 401 }
-      );
-    }
-
+    // Parametri query
     const { searchParams } = new URL(request.url);
-    const days = parseInt(searchParams.get("days") || "7", 10);
+    const daysParam = searchParams.get("days");
+    const days = daysParam ? parseInt(daysParam) : 7;
 
-    console.log(`[Analytics API] Fetching data for ${days} days`);
-
-    // Calcola date range
+    // Date range
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    startDate.setDate(endDate.getDate() - days);
 
     const startDateStr = startDate.toISOString().split("T")[0];
     const endDateStr = endDate.toISOString().split("T")[0];
 
     console.log(`[Analytics API] Date range: ${startDateStr} to ${endDateStr}`);
 
-    // Ottieni statistiche giornaliere
-    const dailyStats = analyticsDB.getDailyStatsRange.all(
-      startDateStr,
-      endDateStr
-    );
+    // Test connessione database
+    const connectionTest = await analyticsDB.testConnection();
+    if (!connectionTest.success) {
+      console.error(`[Analytics API] Database connection failed:`, connectionTest.error);
+      return NextResponse.json(
+        { error: "Database connection failed", details: connectionTest.error },
+        { status: 500 }
+      );
+    }
 
-    // Ottieni funnel conversioni
-    const conversionFunnel = analyticsDB.getConversionFunnel.all(
-      startDate.toISOString()
-    );
+    console.log(`[Analytics API] Database connected successfully`);
 
-    // Ottieni pagine più visitate
-    const topPages = analyticsDB.getTopPages.all(startDate.toISOString());
-
-    // Ottieni statistiche sessioni
-    const sessionStats = analyticsDB.getSessionStats.all(
-      startDate.toISOString()
-    );
-
-    // Eventi recenti
-    const recentEvents = analyticsDB.getRecentEvents.all(
-      startDate.toISOString()
-    );
-
-    // NUOVI DATI SPECIFICI RICHIESTI
-
-    // 1. Funnel entries (/start) con trend
-    const funnelEntriesDaily = analyticsDB.getFunnelEntriesDaily.all(
-      startDate.toISOString()
-    );
-    const funnelEntriesTotal = funnelEntriesDaily.reduce(
-      (sum: number, day: any) => sum + day.count,
-      0
-    );
-
-    // 2. Visite totali con trend
-    const totalVisitsDaily = analyticsDB.getTotalVisitsDaily.all(
-      startDate.toISOString()
-    );
-    const totalVisitsTotal = totalVisitsDaily.reduce(
-      (sum: number, day: any) => sum + day.count,
-      0
-    );
-
-    // 3. Visite pagina Black
-    const blackPageVisitsDaily = analyticsDB.getBlackPageVisitsDaily.all(
-      startDate.toISOString()
-    );
-    const blackPageVisitsTotal = blackPageVisitsDaily.reduce(
-      (sum: number, day: any) => sum + day.count,
-      0
-    );
-
-    // 4. Visite pagina Mentor
-    const mentorPageVisitsDaily = analyticsDB.getMentorPageVisitsDaily.all(
-      startDate.toISOString()
-    );
-    const mentorPageVisitsTotal = mentorPageVisitsDaily.reduce(
-      (sum: number, day: any) => sum + day.count,
-      0
-    );
-
-    // 5. Utilizzo funzionalità per periodo
-    const functionalityUsageDaily = analyticsDB.getFunctionalityUsageDaily.all(
-      startDate.toISOString()
-    );
-    const functionalityUsageWeekly =
-      analyticsDB.getFunctionalityUsageWeekly.all(startDate.toISOString());
-    const functionalityUsageMonthly =
-      analyticsDB.getFunctionalityUsageMonthly.all(startDate.toISOString());
-
-    // 6. Sorgenti pagina Black per periodo
-    const blackPageSourcesDaily = analyticsDB.getBlackPageSourcesDaily.all(
-      startDate.toISOString()
-    );
-    const blackPageSourcesWeekly = analyticsDB.getBlackPageSourcesWeekly.all(
-      startDate.toISOString()
-    );
-    const blackPageSourcesMonthly = analyticsDB.getBlackPageSourcesMonthly.all(
-      startDate.toISOString()
-    );
-
-    // Calcola trend settimanali (confronto con periodo precedente)
-    const prevStartDate = new Date(startDate);
-    prevStartDate.setDate(prevStartDate.getDate() - days);
-
-    const prevFunnelEntries = analyticsDB.getFunnelEntriesDaily
-      .all(prevStartDate.toISOString())
-      .reduce((sum: number, day: any) => sum + day.count, 0);
-    const prevTotalVisits = analyticsDB.getTotalVisitsDaily
-      .all(prevStartDate.toISOString())
-      .reduce((sum: number, day: any) => sum + day.count, 0);
-    const prevBlackPageVisits = analyticsDB.getBlackPageVisitsDaily
-      .all(prevStartDate.toISOString())
-      .reduce((sum: number, day: any) => sum + day.count, 0);
-    const prevMentorPageVisits = analyticsDB.getMentorPageVisitsDaily
-      .all(prevStartDate.toISOString())
-      .reduce((sum: number, day: any) => sum + day.count, 0);
-
-    const funnelTrend =
-      prevFunnelEntries > 0
-        ? ((funnelEntriesTotal - prevFunnelEntries) / prevFunnelEntries) * 100
-        : 0;
-    const visitsTrend =
-      prevTotalVisits > 0
-        ? ((totalVisitsTotal - prevTotalVisits) / prevTotalVisits) * 100
-        : 0;
-    const blackTrend =
-      prevBlackPageVisits > 0
-        ? ((blackPageVisitsTotal - prevBlackPageVisits) / prevBlackPageVisits) *
-          100
-        : 0;
-    const mentorTrend =
-      prevMentorPageVisits > 0
-        ? ((mentorPageVisitsTotal - prevMentorPageVisits) /
-            prevMentorPageVisits) *
-          100
-        : 0;
-
-    // NUOVE STATISTICHE BUSINESS SPECIFICHE
-
-    // 1. Quiz Start Stats (Studente vs Genitore)
-    const quizStartStats = analyticsDB.getQuizStartStats.all(
-      startDate.toISOString()
-    ) as any[];
-    const studentStarts =
-      quizStartStats.find((s: any) => s.quiz_type === "student")?.count || 0;
-    const parentStarts =
-      quizStartStats.find((s: any) => s.quiz_type === "parent")?.count || 0;
-    const totalStarts = studentStarts + parentStarts;
-
-    // 2. Quiz Completion Stats
-    const quizCompletionStats = analyticsDB.getQuizCompletionStats.all(
-      startDate.toISOString()
-    ) as any[];
-    const studentCompletion = quizCompletionStats.find(
-      (s: any) => s.quiz_type === "student"
-    ) || { started: 0, completed: 0 };
-    const parentCompletion = quizCompletionStats.find(
-      (s: any) => s.quiz_type === "parent"
-    ) || { started: 0, completed: 0 };
-
-    // 3. Plan Click Stats
-    const planClickStats = analyticsDB.getPlanClickStats.all(
-      startDate.toISOString()
-    ) as any[];
-    const studentPlanClicks =
-      planClickStats.find((s: any) => s.quiz_type === "student")?.plan_clicks ||
-      0;
-    const parentPlanClicks =
-      planClickStats.find((s: any) => s.quiz_type === "parent")?.plan_clicks ||
-      0;
-
-    // 4. Active Users by Email
-    const activeUsers = analyticsDB.getActiveUsersByEmail.all(
-      startDate.toISOString()
-    ) as any[];
-
-    // 5. Black User Visit Logs
-    const blackUserLogs = analyticsDB.getBlackUserVisitLogs.all(
-      startDate.toISOString()
-    ) as any[];
-
-    // 6. Black Buy Clicks Stats
-    const blackBuyClicksTotal =
-      (analyticsDB.getBlackBuyClicks.get(startDate.toISOString()) as any)
-        ?.buy_clicks || 0;
-    const blackBuyClicksDaily = analyticsDB.getBlackBuyClicksDaily.all(
-      startDate.toISOString()
-    ) as any[];
-    const blackBuyClicksByPlan = analyticsDB.getBlackBuyClicksByPlan.all(
-      startDate.toISOString()
-    ) as any[];
-
-    // Calcola percentuale di conversione per la pagina Black
-    const blackPageViewsTotal = blackPageVisitsTotal;
-    const blackBuyConversionRate =
-      blackPageViewsTotal > 0
-        ? Math.round((blackBuyClicksTotal / blackPageViewsTotal) * 100)
-        : 0;
-
-    // Calcola totali
-    const totals = (dailyStats as any[]).reduce(
-      (acc: any, day: any) => ({
-        unique_visitors: acc.unique_visitors + (day.unique_visitors || 0),
-        total_pageviews: acc.total_pageviews + (day.total_pageviews || 0),
-        new_sessions: acc.new_sessions + (day.new_sessions || 0),
-        quiz_parent_clicks:
-          acc.quiz_parent_clicks + (day.quiz_parent_clicks || 0),
-        quiz_student_clicks:
-          acc.quiz_student_clicks + (day.quiz_student_clicks || 0),
-        black_page_visits: acc.black_page_visits + (day.black_page_visits || 0),
-        popup_clicks: acc.popup_clicks + (day.popup_clicks || 0),
-        conversions: acc.conversions + (day.conversions || 0),
-      }),
-      {
-        unique_visitors: 0,
-        total_pageviews: 0,
-        new_sessions: 0,
-        quiz_parent_clicks: 0,
-        quiz_student_clicks: 0,
-        black_page_visits: 0,
-        popup_clicks: 0,
-        conversions: 0,
-      }
-    );
-
-    return NextResponse.json({
-      success: true,
-      period: { days, startDate: startDateStr, endDate: endDateStr },
-      totals,
-      dailyStats,
+    // Ottieni statistiche base
+    const [
       conversionFunnel,
       topPages,
       sessionStats,
       recentEvents,
-      // Nuovi dati specifici
-      funnelEntries: {
-        daily: funnelEntriesDaily,
-        total: funnelEntriesTotal,
-        weeklyTrend: funnelTrend,
-      },
-      totalVisits: {
-        daily: totalVisitsDaily,
-        total: totalVisitsTotal,
-        weeklyTrend: visitsTrend,
-      },
-      blackPageVisits: {
-        daily: blackPageVisitsDaily,
-        total: blackPageVisitsTotal,
-        weeklyTrend: blackTrend,
-      },
-      mentorPageVisits: {
-        daily: mentorPageVisitsDaily,
-        total: mentorPageVisitsTotal,
-        weeklyTrend: mentorTrend,
-      },
-      functionalityUsage: {
-        daily: functionalityUsageDaily,
-        weekly: functionalityUsageWeekly,
-        monthly: functionalityUsageMonthly,
-      },
-      blackPageSources: {
-        daily: blackPageSourcesDaily,
-        weekly: blackPageSourcesWeekly,
-        monthly: blackPageSourcesMonthly,
-      },
+      funnelEntriesDaily,
+      totalVisitsDaily,
+      blackPageVisitsDaily,
+      buyClicksDaily
+    ] = await Promise.all([
+      analyticsDB.getConversionFunnel(startDateStr, endDateStr),
+      analyticsDB.getTopPages(startDateStr, endDateStr),
+      analyticsDB.getSessionStats(startDateStr, endDateStr),
+      analyticsDB.getRecentEvents(100),
+      analyticsDB.getFunnelEntriesDaily(startDateStr, endDateStr),
+      analyticsDB.getTotalVisitsDaily(startDateStr, endDateStr),
+      analyticsDB.getBlackPageVisitsDaily(startDateStr, endDateStr),
+      analyticsDB.getBuyClicksDaily(startDateStr, endDateStr)
+    ]);
 
-      // Quiz & Business Metrics
-      quizMetrics: {
-        startStats: {
-          student: studentStarts,
-          parent: parentStarts,
-          total: totalStarts,
-          studentPercentage:
-            totalStarts > 0
-              ? Math.round((studentStarts / totalStarts) * 100)
-              : 0,
-          parentPercentage:
-            totalStarts > 0
-              ? Math.round((parentStarts / totalStarts) * 100)
-              : 0,
-        },
-        completionStats: {
-          student: {
-            started: studentCompletion.started,
-            completed: studentCompletion.completed,
-            completionRate:
-              studentCompletion.started > 0
-                ? Math.round(
-                    (studentCompletion.completed / studentCompletion.started) *
-                      100
-                  )
-                : 0,
-          },
-          parent: {
-            started: parentCompletion.started,
-            completed: parentCompletion.completed,
-            completionRate:
-              parentCompletion.started > 0
-                ? Math.round(
-                    (parentCompletion.completed / parentCompletion.started) *
-                      100
-                  )
-                : 0,
-          },
-        },
-        planClicks: {
-          student: studentPlanClicks,
-          parent: parentPlanClicks,
-          total: studentPlanClicks + parentPlanClicks,
-        },
-      },
+    console.log(`[Analytics API] Data retrieved successfully`);
 
-      activeUsers: activeUsers,
-      blackUserLogs: blackUserLogs,
+    // Calcola totali
+    const funnelEntriesTotal = funnelEntriesDaily.reduce(
+      (sum: number, day: any) => sum + (day.quiz_parent_clicks + day.quiz_student_clicks + day.popup_clicks),
+      0
+    );
 
-      // Black Buy Clicks Metrics
-      blackBuyMetrics: {
-        totalClicks: blackBuyClicksTotal,
-        dailyClicks: blackBuyClicksDaily,
-        clicksByPlan: blackBuyClicksByPlan,
-        conversionRate: blackBuyConversionRate,
-        pageViews: blackPageViewsTotal,
+    const totalVisitsTotal = totalVisitsDaily.reduce(
+      (sum: number, day: any) => sum + day.total_visits,
+      0
+    );
+
+    const blackPageVisitsTotal = blackPageVisitsDaily.reduce(
+      (sum: number, day: any) => sum + day.black_page_visits,
+      0
+    );
+
+    const buyClicksTotal = buyClicksDaily.reduce(
+      (sum: number, day: any) => sum + day.buy_clicks,
+      0
+    );
+
+    // Calcola percentuale di conversione (buy clicks / visite pagina Black)
+    const blackPageConversionRate = blackPageVisitsTotal > 0 
+      ? ((buyClicksTotal / blackPageVisitsTotal) * 100)
+      : 0;
+
+    // Statistiche periodo precedente per trend
+    const prevStartDate = new Date(startDate);
+    prevStartDate.setDate(prevStartDate.getDate() - days);
+    const prevEndDate = new Date(startDate);
+    
+    const prevStartDateStr = prevStartDate.toISOString().split("T")[0];
+    const prevEndDateStr = prevEndDate.toISOString().split("T")[0];
+
+    const [
+      prevTotalVisits,
+      prevBlackPageVisits,
+      prevBuyClicks
+    ] = await Promise.all([
+      analyticsDB.getTotalVisitsDaily(prevStartDateStr, prevEndDateStr),
+      analyticsDB.getBlackPageVisitsDaily(prevStartDateStr, prevEndDateStr),
+      analyticsDB.getBuyClicksDaily(prevStartDateStr, prevEndDateStr)
+    ]);
+
+    const prevTotalVisitsSum = prevTotalVisits.reduce((sum: number, day: any) => sum + day.total_visits, 0);
+    const prevBlackPageVisitsSum = prevBlackPageVisits.reduce((sum: number, day: any) => sum + day.black_page_visits, 0);
+    const prevBuyClicksSum = prevBuyClicks.reduce((sum: number, day: any) => sum + day.buy_clicks, 0);
+
+    // Calcola trend percentuali
+    const visitorsTrend = prevTotalVisitsSum > 0
+      ? ((totalVisitsTotal - prevTotalVisitsSum) / prevTotalVisitsSum) * 100
+      : 0;
+
+    const blackTrend = prevBlackPageVisitsSum > 0
+      ? ((blackPageVisitsTotal - prevBlackPageVisitsSum) / prevBlackPageVisitsSum) * 100
+      : 0;
+
+    const buyClicksTrend = prevBuyClicksSum > 0
+      ? ((buyClicksTotal - prevBuyClicksSum) / prevBuyClicksSum) * 100
+      : 0;
+
+    // Risposta strutturata
+    const response = {
+      success: true,
+      timeRange: {
+        startDate: startDateStr,
+        endDate: endDateStr,
+        days: days
       },
-    });
+      database: {
+        type: connectionTest.result?.type || 'unknown',
+        status: 'connected'
+      },
+      overview: {
+        totalVisitors: {
+          current: totalVisitsTotal,
+          trend: Math.round(visitorsTrend * 100) / 100
+        },
+        funnelEntries: {
+          current: funnelEntriesTotal,
+          breakdown: {
+            quiz_parent: funnelEntriesDaily.reduce((sum: number, day: any) => sum + day.quiz_parent_clicks, 0),
+            quiz_student: funnelEntriesDaily.reduce((sum: number, day: any) => sum + day.quiz_student_clicks, 0),
+            popup_clicks: funnelEntriesDaily.reduce((sum: number, day: any) => sum + day.popup_clicks, 0)
+          }
+        },
+        blackPageVisits: {
+          current: blackPageVisitsTotal,
+          trend: Math.round(blackTrend * 100) / 100
+        },
+        buyClicks: {
+          current: buyClicksTotal,
+          trend: Math.round(buyClicksTrend * 100) / 100,
+          conversionRate: Math.round(blackPageConversionRate * 100) / 100
+        }
+      },
+      charts: {
+        dailyVisits: totalVisitsDaily,
+        funnelEntries: funnelEntriesDaily,
+        blackPageVisits: blackPageVisitsDaily,
+        buyClicks: buyClicksDaily,
+        conversionFunnel: conversionFunnel,
+        topPages: topPages
+      },
+      sessionStats: sessionStats,
+      recentEvents: recentEvents.slice(0, 20), // Limita a 20 eventi recenti
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        version: "2.0.0-turso"
+      }
+    };
+
+    console.log(`[Analytics API] Response prepared successfully`);
+
+    return NextResponse.json(response);
+
   } catch (error) {
-    console.error("Errore API dashboard:", error);
+    console.error("[Analytics API] Dashboard error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        error: "Failed to fetch analytics data", 
+        details: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }

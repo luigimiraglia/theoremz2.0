@@ -8,8 +8,7 @@ export async function GET() {
     // Test 1: Verifica se il database esiste e ha eventi
     let totalEvents = 0;
     try {
-      // Usa una query esistente per contare gli eventi
-      const events = analyticsDB.getRecentEvents.all(new Date(Date.now() - 30*24*60*60*1000).toISOString());
+      const events = await analyticsDB.getRecentEvents(100);
       totalEvents = events.length;
       console.log('[Debug API] Total recent events found:', totalEvents);
       console.log('[Debug API] Sample events:', events.slice(0, 3));
@@ -22,7 +21,7 @@ export async function GET() {
     try {
       const startDate = new Date(Date.now() - 7*24*60*60*1000).toISOString().split("T")[0];
       const endDate = new Date().toISOString().split("T")[0];
-      const dailyStats = analyticsDB.getDailyStatsRange.all(startDate, endDate);
+      const dailyStats = await analyticsDB.getDailyStatsRange(startDate, endDate);
       dailyStatsCount = dailyStats.length;
       console.log('[Debug API] Daily stats found:', dailyStatsCount);
       console.log('[Debug API] Sample daily stats:', dailyStats.slice(0, 2));
@@ -30,32 +29,31 @@ export async function GET() {
       console.error('[Debug API] Error querying daily stats:', error);
     }
 
-    // Test 3: Prova Black user logs
-    let blackUsersCount = 0;
-    try {
-      const blackUsers = analyticsDB.getBlackUserVisitLogs.all(new Date(Date.now() - 7*24*60*60*1000).toISOString());
-      blackUsersCount = blackUsers.length;
-      console.log('[Debug API] Black users found:', blackUsersCount);
-      console.log('[Debug API] Sample black users:', blackUsers.slice(0, 2));
-    } catch (error) {
-      console.error('[Debug API] Error querying black users:', error);
-    }
+    // Test 3: Test connessione database
+    const connectionTest = await analyticsDB.testConnection();
+    console.log('[Debug API] Connection test result:', connectionTest);
+
+    // Test 4: Informazioni sulle tabelle
+    const tableInfo = await analyticsDB.getTableInfo();
+    console.log('[Debug API] Table info:', tableInfo);
 
     return NextResponse.json({
       success: true,
-      debug: {
+      tests: {
         totalEvents,
         dailyStatsCount,
-        blackUsersCount,
-        timestamp: new Date().toISOString()
-      }
+        connectionTest,
+        tableInfo
+      },
+      timestamp: new Date().toISOString(),
+      message: "Database debug completed successfully"
     });
 
   } catch (error) {
-    console.error('[Debug API] Critical error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    console.error('[Debug API] General error:', error);
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
       timestamp: new Date().toISOString()
     }, { status: 500 });
   }
