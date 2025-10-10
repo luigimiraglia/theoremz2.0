@@ -1,8 +1,21 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // SOLO Supabase PostgreSQL - database hostato affidabile
-console.log(`[Analytics DB] Environment: ${process.env.NODE_ENV}`);
-console.log(`[Analytics DB] Using ONLY Supabase PostgreSQL database`);
+console.log(`[Analytics DB] Environment: ${process.env.NODE_ENV}`)      .select('page_url')
+      .gte('created_at', startDate)
+      .lte('created_at', endDate)
+      .not('page_url', 'is', null);
+    
+    if (error) throw error;
+    
+    // Raggruppa per pagina
+    const pageCounts: Record<string, number> = {};
+    data?.forEach((row: any) => {
+      pageCounts[row.page_url] = (pageCounts[row.page_url] || 0) + 1;
+    });
+    
+    return Object.entries(pageCounts)
+      .map(([page_url, visits]) => ({ page_url, visits }))[Analytics DB] Using ONLY Supabase PostgreSQL database`);
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.error(`[Analytics DB] ERRORE: Variabili Supabase mancanti!`);
@@ -58,19 +71,17 @@ verifyDatabaseSchema();
 
 // Funzioni di utilità per PostgreSQL
 export const analyticsDB = {
-  // Esponi client supabase per query dirette
-  supabase,
-
   // Inserisci evento
   insertEvent: async (eventName: string, pagePath?: string, userId?: string, sessionId?: string, anonId?: string, params?: string, userAgent?: string, ipAddress?: string) => {
     const { data, error } = await supabase
       .from('events')
       .insert({
-        event_type: eventName,
+        event_name: eventName,
         page_url: pagePath,
         user_id: userId,
         session_id: sessionId,
-        event_data: params ? JSON.parse(params) : null,
+        anon_id: anonId,
+        params: params,
         user_agent: userAgent,
         ip_address: ipAddress
       });
@@ -80,29 +91,30 @@ export const analyticsDB = {
   },
 
   // Inserisci sessione
-  insertSession: async (id: string, userId?: string, userAgent?: string, ipAddress?: string, referrer?: string, landingPage?: string) => {
+  insertSession: async (id: string, userId?: string, anonId?: string, landingPage?: string, referrer?: string, userAgent?: string, ipAddress?: string) => {
     const { data, error } = await supabase
       .from('sessions')
       .insert({
-        id,
+        id: id,
         user_id: userId,
+        anon_id: anonId,
+        landing_page: landingPage,
+        referrer: referrer,
         user_agent: userAgent,
-        ip_address: ipAddress,
-        referrer,
-        landing_page: landingPage
+        ip_address: ipAddress
       });
     
     if (error) throw error;
     return data;
   },
 
-  // Update sessione
+  // Aggiorna sessione
   updateSession: async (id: string, pagesVisited: number, durationSeconds: number) => {
     const { data, error } = await supabase
       .from('sessions')
       .update({
-        end_time: new Date().toISOString(),
-        page_views: pagesVisited,
+        ended_at: new Date().toISOString(),
+        pages_visited: pagesVisited,
         duration_seconds: durationSeconds
       })
       .eq('id', id);
@@ -119,8 +131,9 @@ export const analyticsDB = {
         conversion_type: conversionType,
         session_id: sessionId,
         user_id: userId,
-        conversion_value: conversionValue ? parseFloat(conversionValue) : null,
-        conversion_data: pagePath ? { page_url: pagePath } : null
+        anon_id: anonId,
+        conversion_value: conversionValue,
+        page_url: pagePath
       });
     
     if (error) throw error;
@@ -130,44 +143,21 @@ export const analyticsDB = {
   // Update daily stats - versione semplificata per Supabase
   updateDailyStats: async (date: string, field: string, increment: number = 1) => {
     try {
-      // Controlla se esiste già un record per questa data
-      const { data: existingData, error: selectError } = await supabase
+      // Prima prova a fare update
+      const { data: updateData, error: updateError } = await supabase
         .from('daily_stats')
-        .select('*')
+        .update({ [field]: supabase.rpc('increment_field', { current_value: increment }) })
         .eq('date', date)
-        .single();
+        .select();
       
-      if (selectError && selectError.code !== 'PGRST116') {
-        console.error(`[Analytics DB] Failed to check daily stats:`, selectError);
-        return null;
-      }
-      
-      if (existingData) {
-        // Update record esistente
-        const newValue = (existingData[field] || 0) + increment;
-        const { data: updateData, error: updateError } = await supabase
-          .from('daily_stats')
-          .update({ 
-            [field]: newValue,
-            updated_at: new Date().toISOString()
-          })
-          .eq('date', date)
-          .select();
-        
-        if (updateError) {
-          console.error(`[Analytics DB] Failed to update daily stats:`, updateError);
-          return null;
-        }
-        return updateData;
-      } else {
-        // Inserisci nuovo record
+      // Se non esiste, inserisci nuovo record
+      if (!updateData || updateData.length === 0) {
         const { data: insertData, error: insertError } = await supabase
           .from('daily_stats')
           .insert({
             date: date,
             [field]: increment
-          })
-          .select();
+          });
         
         if (insertError) {
           console.error(`[Analytics DB] Failed to insert daily stats:`, insertError);
@@ -175,6 +165,12 @@ export const analyticsDB = {
         }
         return insertData;
       }
+      
+      if (updateError) {
+        console.error(`[Analytics DB] Failed to update daily stats:`, updateError);
+        return null;
+      }
+      return updateData;
     } catch (error) {
       console.error(`[Analytics DB] Daily stats operation failed:`, error);
       return null;
@@ -186,118 +182,70 @@ export const analyticsDB = {
     const { data, error } = await supabase
       .from('conversions')
       .select('conversion_type')
-      .gte('created_at', startDate)
-      .lte('created_at', endDate);
+      .gte('timestamp', startDate)
+      .lte('timestamp', endDate);
     
     if (error) throw error;
     
     // Raggruppa i risultati
+    const funnel: any[] = [];
     const counts: Record<string, number> = {};
     
     data?.forEach((row: any) => {
       counts[row.conversion_type] = (counts[row.conversion_type] || 0) + 1;
     });
     
-    return Object.entries(counts).map(([conversion_type, count]) => ({ conversion_type, count }));
+    Object.entries(counts).forEach(([type, count]) => {
+      funnel.push({ conversion_type: type, count });
+    });
+    
+    return funnel;
   },
 
   // Get top pages
   getTopPages: async (startDate: string, endDate: string, limit: number = 10) => {
     const { data, error } = await supabase
       .from('events')
-      .select('page_url')
+      .select('page_path')
       .gte('created_at', startDate)
       .lte('created_at', endDate)
-      .not('page_url', 'is', null);
+      .not('page_path', 'is', null);
     
     if (error) throw error;
     
-    // Raggruppa per pagina
+    // Raggruppa e conta
     const pageCounts: Record<string, number> = {};
     data?.forEach((row: any) => {
-      pageCounts[row.page_url] = (pageCounts[row.page_url] || 0) + 1;
+      pageCounts[row.page_path] = (pageCounts[row.page_path] || 0) + 1;
     });
     
     return Object.entries(pageCounts)
-      .map(([page_url, visits]) => ({ page_url, visits }))
+      .map(([page_path, visits]) => ({ page_path, visits }))
       .sort((a, b) => b.visits - a.visits)
       .slice(0, limit);
-  },
-
-  // Get buy clicks per day
-  getBuyClicksPerDay: async (startDate: string, endDate: string) => {
-    const { data, error } = await supabase
-      .from('events')
-      .select('created_at')
-      .eq('event_type', 'buy_click')
-      .gte('created_at', startDate)
-      .lte('created_at', endDate);
-    
-    if (error) throw error;
-    
-    // Raggruppa per giorno
-    const dailyCounts: Record<string, number> = {};
-    data?.forEach((row: any) => {
-      const date = new Date(row.created_at).toISOString().split('T')[0];
-      dailyCounts[date] = (dailyCounts[date] || 0) + 1;
-    });
-    
-    return Object.entries(dailyCounts)
-      .map(([date, buy_clicks]) => ({ date, buy_clicks }))
-      .sort((a, b) => a.date.localeCompare(b.date));
   },
 
   // Get session stats
   getSessionStats: async (startDate: string, endDate: string) => {
     const { data, error } = await supabase
       .from('sessions')
-      .select('duration_seconds, page_views')
-      .gte('start_time', startDate)
-      .lte('start_time', endDate);
+      .select('anon_id, duration_seconds, pages_visited')
+      .gte('started_at', startDate)
+      .lte('started_at', endDate);
     
     if (error) throw error;
     
-    if (!data || data.length === 0) {
-      return {
-        totalSessions: 0,
-        avgDuration: 0,
-        avgPageViews: 0
-      };
-    }
+    const uniqueVisitors = new Set(data?.map((s: any) => s.anon_id)).size;
+    const totalSessions = data?.length || 0;
+    const avgDuration = data?.reduce((sum: number, s: any) => sum + (s.duration_seconds || 0), 0) / totalSessions || 0;
+    const avgPages = data?.reduce((sum: number, s: any) => sum + (s.pages_visited || 0), 0) / totalSessions || 0;
     
-    const totalSessions = data.length;
-    const avgDuration = data.reduce((sum, session) => sum + (session.duration_seconds || 0), 0) / totalSessions;
-    const avgPageViews = data.reduce((sum, session) => sum + (session.page_views || 0), 0) / totalSessions;
-    
-    return {
-      totalSessions,
-      avgDuration: Math.round(avgDuration),
-      avgPageViews: Math.round(avgPageViews * 10) / 10
-    };
-  },
-
-  // Get recent events
-  getRecentEvents: async (limit: number = 100) => {
-    const { data, error } = await supabase
-      .from('events')
-      .select('event_type, page_url, created_at, user_id')
-      .order('created_at', { ascending: false })
-      .limit(limit);
-    
-    if (error) throw error;
-    return data || [];
-  },
-
-  // Get daily stats
-  getDailyStats: async (date: string) => {
-    const { data, error } = await supabase
-      .from('daily_stats')
-      .select('*')
-      .eq('date', date)
-      .limit(1);
-    
-    if (error) throw error;
-    return data || [];
+    return [{
+      total_sessions: totalSessions,
+      unique_visitors: uniqueVisitors,
+      avg_duration: avgDuration,
+      avg_pages_per_session: avgPages
+    }];
   },
 
   // Get daily stats range
@@ -307,7 +255,19 @@ export const analyticsDB = {
       .select('*')
       .gte('date', startDate)
       .lte('date', endDate)
-      .order('date', { ascending: true });
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Get recent events
+  getRecentEvents: async (limit: number = 100) => {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
     
     if (error) throw error;
     return data || [];
@@ -316,74 +276,63 @@ export const analyticsDB = {
   // Get funnel entries daily
   getFunnelEntriesDaily: async (startDate: string, endDate: string) => {
     const { data, error } = await supabase
-      .from('conversions')
-      .select('created_at')
-      .gte('created_at', startDate)
-      .lte('created_at', endDate);
+      .from('daily_stats')
+      .select('date, quiz_parent_clicks, quiz_student_clicks, popup_clicks')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true });
     
     if (error) throw error;
-    
-    // Raggruppa per giorno
-    const dailyCounts: Record<string, number> = {};
-    data?.forEach((row: any) => {
-      const date = new Date(row.created_at).toISOString().split('T')[0];
-      dailyCounts[date] = (dailyCounts[date] || 0) + 1;
-    });
-    
-    return Object.entries(dailyCounts)
-      .map(([date, funnel_entries]) => ({ date, funnel_entries }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    return data || [];
   },
 
   // Get total visits daily
   getTotalVisitsDaily: async (startDate: string, endDate: string) => {
     const { data, error } = await supabase
-      .from('sessions')
-      .select('start_time')
-      .gte('start_time', startDate)
-      .lte('start_time', endDate);
+      .from('daily_stats')
+      .select('date, total_pageviews')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true });
     
     if (error) throw error;
-    
-    // Raggruppa per giorno
-    const dailyCounts: Record<string, number> = {};
-    data?.forEach((row: any) => {
-      const date = new Date(row.start_time).toISOString().split('T')[0];
-      dailyCounts[date] = (dailyCounts[date] || 0) + 1;
-    });
-    
-    return Object.entries(dailyCounts)
-      .map(([date, visits]) => ({ date, visits }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    return data?.map((row: any) => ({ date: row.date, total_visits: row.total_pageviews })) || [];
   },
 
   // Get black page visits daily
   getBlackPageVisitsDaily: async (startDate: string, endDate: string) => {
     const { data, error } = await supabase
+      .from('daily_stats')
+      .select('date, black_page_visits')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Get buy clicks daily
+  getBuyClicksDaily: async (startDate: string, endDate: string) => {
+    const { data, error } = await supabase
       .from('events')
       .select('created_at')
-      .eq('event_type', 'page_view')
-      .like('page_url', '%/black%')
+      .eq('event_name', 'subscribe_click')
       .gte('created_at', startDate)
       .lte('created_at', endDate);
     
     if (error) throw error;
     
-    // Raggruppa per giorno
+    // Raggruppa per data
     const dailyCounts: Record<string, number> = {};
     data?.forEach((row: any) => {
-      const date = new Date(row.created_at).toISOString().split('T')[0];
+      const date = row.created_at.split('T')[0];
       dailyCounts[date] = (dailyCounts[date] || 0) + 1;
     });
     
     return Object.entries(dailyCounts)
-      .map(([date, black_page_visits]) => ({ date, black_page_visits }))
+      .map(([date, buy_clicks]) => ({ date, buy_clicks }))
       .sort((a, b) => a.date.localeCompare(b.date));
-  },
-
-  // Get buy clicks daily - nuovo nome per la funzione che già esisteva
-  getBuyClicksDaily: async (startDate: string, endDate: string) => {
-    return analyticsDB.getBuyClicksPerDay(startDate, endDate);
   },
 
   // Test connection
@@ -426,9 +375,12 @@ export const analyticsDB = {
       };
     } catch (error) {
       return { 
-        type: 'supabase_postgresql', 
+        type: 'supabase_postgresql_error', 
+        tables: [], 
         error: error instanceof Error ? error.message : String(error) 
       };
     }
   }
 };
+
+export default analyticsDB;

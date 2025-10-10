@@ -76,11 +76,10 @@ export async function POST(request: NextRequest) {
             await analyticsDB.insertSession(
               sessionId,
               userId || null,
-              anonId || null,
-              params?.landing_page || page || "",
-              params?.referrer || "",
               userAgent,
-              ip
+              ip,
+              params?.referrer || "",
+              params?.landing_page || page || ""
             );
             await updateDailyStatsCounter(today, "new_sessions");
           } catch {
