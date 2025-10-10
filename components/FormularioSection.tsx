@@ -1,6 +1,7 @@
 "use client";
 import { useAuth } from "@/lib/AuthContext";
 import { useState, type ComponentType, memo } from "react";
+import { trackConversion } from "@/lib/analytics";
 import Icon from "./Icon";
 import AnimatedButtonWrapper from "./AnimatedButtonWrapper";
 
@@ -13,11 +14,24 @@ const FormularioSection = memo(function FormularioSection({ url }: { url: string
     e.preventDefault();
     e.stopPropagation();
     
-    if (isSubscribed) {
+    // Verifica se l'utente è autenticato e abbonato
+    const { getAuth } = await import("firebase/auth");
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    
+    if (currentUser && isSubscribed) {
       window.location.assign(url);
       return;
     }
     
+    // Traccia click popup per formulario
+    trackConversion("popup_click", "formulario", {
+      popup_type: "formulario",
+      location: "lesson_header",
+      user_status: !currentUser ? "not_logged" : "not_subscribed"
+    });
+    
+    // Se non è loggato o non è abbonato, mostra popup
     if (!Popup) {
       const mod = await import("@/components/BlackPopup");
       setPopup(() => mod.default ?? mod);
@@ -42,12 +56,9 @@ const FormularioSection = memo(function FormularioSection({ url }: { url: string
       {state === "popup" && (
         <div
           onClick={closePopup}
-          className="fixed inset-0 z-9 backdrop-blur-md flex justify-center items-center"
+          className="fixed inset-0 z-50 backdrop-blur-md flex justify-center items-center"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className=" p-6 rounded-xl max-w-md w-full"
-          >
+          <div onClick={(e) => e.stopPropagation()}>
             {Popup ? <Popup /> : null}
           </div>
         </div>

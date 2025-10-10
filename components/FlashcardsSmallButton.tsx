@@ -1,14 +1,39 @@
 "use client";
-import { useCallback, memo } from "react";
-import { track } from "@/lib/analytics";
+import { useCallback, memo, useState } from "react";
+import { useAuth } from "@/lib/AuthContext";
+import { track, trackConversion } from "@/lib/analytics";
 import Icon from "./Icon";
 import AnimatedButtonWrapper from "./AnimatedButtonWrapper";
+import BlackPopup from "./BlackPopup";
 
 const FlashcardsSmallButton = memo(function FlashcardsSmallButton() {
-  const clickHandle = useCallback(() => {
+  const { isSubscribed } = useAuth();
+  const [showPopup, setShowPopup] = useState(false);
+
+  const clickHandle = useCallback(async () => {
     try {
       track("flashcards_cta_click", { where: "lesson_header" });
     } catch {}
+
+    // Verifica se l'utente è autenticato e abbonato
+    const { getAuth } = await import("firebase/auth");
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    
+    if (!currentUser || !isSubscribed) {
+      // Traccia click popup per flashcards
+      trackConversion("popup_click", "flashcards_header", {
+        popup_type: "flashcards",
+        location: "lesson_header",
+        user_status: !currentUser ? "not_logged" : "not_subscribed"
+      });
+      
+      // Se non è loggato o non è abbonato, mostra popup
+      setShowPopup(true);
+      return;
+    }
+
+    // Se è abbonato, continua con lo scroll normale
     const SELECTOR = "#lesson-flashcards-cta, [data-flashcards-cta]";
     const prefersReduced =
       typeof window !== "undefined" &&
@@ -38,18 +63,33 @@ const FlashcardsSmallButton = memo(function FlashcardsSmallButton() {
 
     // Safety: chiudi l'osservatore dopo 3s se non trova nulla
     setTimeout(() => mo.disconnect(), 3000);
-  }, []);
+  }, [isSubscribed]);
+
+  const closePopup = () => setShowPopup(false);
 
   return (
-    <AnimatedButtonWrapper delay={0}>
-      <button
-        onClick={clickHandle}
-        className="min-w-0 flex-shrink py-1.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold sm:font-bold shadow-md bg-gradient-to-r from-emerald-500 to-teal-400 text-white rounded-lg hover:brightness-110 hover:scale-105 transition-all duration-500 whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
-      >
-        <Icon name="cards" size="sm" />
-        <span className="truncate">Flashcards</span>
-      </button>
-    </AnimatedButtonWrapper>
+    <>
+      <AnimatedButtonWrapper delay={0}>
+        <button
+          onClick={clickHandle}
+          className="min-w-0 flex-shrink py-1.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold sm:font-bold shadow-md bg-gradient-to-r from-emerald-500 to-teal-400 text-white rounded-lg hover:brightness-110 hover:scale-105 transition-all duration-500 whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
+        >
+          <Icon name="cards" size="sm" />
+          <span className="truncate">Flashcards</span>
+        </button>
+      </AnimatedButtonWrapper>
+      
+      {showPopup && (
+        <div
+          onClick={closePopup}
+          className="fixed inset-0 z-50 backdrop-blur-md flex justify-center items-center"
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <BlackPopup />
+          </div>
+        </div>
+      )}
+    </>
   );
 });
 

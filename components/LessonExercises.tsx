@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
+import { trackConversion } from "@/lib/analytics";
 import ExerciseCard from "@/components/ExerciseCard";
 import BlackPopup from "@/components/BlackPopup";
-import Link from "next/link";
 import { PortableTextBlock } from "sanity";
 
 type ExerciseDoc = {
@@ -38,19 +38,18 @@ export default function LessonExercises({
       const auth = getAuth();
       const currentUser = auth.currentUser;
 
-      if (!currentUser) {
-        // Se non c'è utente Firebase, vai al login
-        window.location.href = "/register";
-        return;
-      }
-
-      // Se l'utente è loggato ma non abbonato, mostra popup
-      if (!isSubscribed) {
-        setState("popup");
-        return;
-      }
-
-      // Se tutto ok, carica gli esercizi
+    if (!currentUser || !isSubscribed) {
+      // Traccia click popup per esercizi (bottone in fondo)
+      trackConversion("popup_click", "exercises_bottom", {
+        popup_type: "exercises",
+        location: "lesson_bottom",
+        user_status: !currentUser ? "not_logged" : "not_subscribed"
+      });
+      
+      // Se non c'è utente Firebase o non è abbonato, mostra popup
+      setState("popup");
+      return;
+    }      // Se tutto ok, carica gli esercizi
       setError(null);
       const res = await fetch(
         `/api/exercises?lessonId=${encodeURIComponent(lessonId)}`,
@@ -91,15 +90,16 @@ export default function LessonExercises({
         authReady: true,
       });
 
-      if (!currentUser) {
-        console.log("No current user, redirecting to register");
-        window.location.href = "/register";
-        return;
-      }
-
-      // Se l'utente è loggato ma non abbonato, mostra popup
-      if (!isSubscribed) {
-        console.log("User logged but not subscribed, showing popup");
+      if (!currentUser || !isSubscribed) {
+        // Traccia click popup per simula verifica
+        trackConversion("popup_click", "simula_verifica", {
+          popup_type: "simula_verifica",
+          location: "lesson_bottom",
+          user_status: !currentUser ? "not_logged" : "not_subscribed"
+        });
+        
+        // Se non c'è utente o non è abbonato, mostra popup
+        console.log("User not logged or not subscribed, showing popup");
         setState("popup");
         return;
       }
@@ -110,8 +110,46 @@ export default function LessonExercises({
       router.push(url);
     } catch (error) {
       console.error("Errore verifica auth:", error);
-      // In caso di errore, vai al login per sicurezza
-      window.location.href = "/register";
+      // In caso di errore, mostra popup per sicurezza
+      setState("popup");
+    }
+  };
+
+  const handleFlashcardsClick = async () => {
+    try {
+      // Verifica direttamente se Firebase ha un utente autenticato
+      const { getAuth } = await import("firebase/auth");
+      const auth = getAuth();
+
+      // Aspetta che Firebase Auth si inizializzi completamente
+      await new Promise((resolve) => {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+          unsubscribe();
+          resolve(user);
+        });
+      });
+
+      const currentUser = auth.currentUser;
+
+      if (!currentUser || !isSubscribed) {
+        // Traccia click popup per flashcards (bottone in fondo)
+        trackConversion("popup_click", "flashcards_bottom", {
+          popup_type: "flashcards",
+          location: "lesson_bottom",
+          user_status: !currentUser ? "not_logged" : "not_subscribed"
+        });
+        
+        // Se non c'è utente o non è abbonato, mostra popup
+        setState("popup");
+        return;
+      }
+
+      // Se tutto ok, vai alle flashcards
+      const url = `/flashcards?lesson=${encodeURIComponent(lessonId)}`;
+      router.push(url);
+    } catch (error) {
+      console.error("Errore verifica auth flashcards:", error);
+      setState("popup");
     }
   };
 
@@ -138,12 +176,12 @@ export default function LessonExercises({
           <span className="truncate">Simula verifica</span>
         </button>
 
-        <Link
-          href={`/flashcards?lesson=${lessonId}`}
+        <button
+          onClick={handleFlashcardsClick}
           className="w-full sm:w-auto flex-shrink min-w-0 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 px-4 sm:px-6 py-3 text-sm sm:text-base font-extrabold text-white hover:brightness-110"
         >
           <span className="truncate">Flashcards</span>
-        </Link>
+        </button>
       </div>
 
       {error && (
@@ -222,10 +260,7 @@ export default function LessonExercises({
           onClick={closePopup}
           className="fixed inset-0 z-50 backdrop-blur-md flex justify-center items-center"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="p-6 rounded-xl max-w-md w-full"
-          >
+          <div onClick={(e) => e.stopPropagation()}>
             <BlackPopup />
           </div>
         </div>

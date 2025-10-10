@@ -2,56 +2,161 @@
 
 import { getAnonId } from "./anonId";
 
-declare global {
-  interface Window {
-    dataLayer?: any[];
-    gtag?: (...args: any[]) => void;
+// Genera session ID univoco
+function getSessionId(): string {
+  if (typeof window === "undefined") return "";
+  
+  let sessionId = sessionStorage.getItem("tz_session_id");
+  if (!sessionId) {
+    sessionId = `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem("tz_session_id", sessionId);
+  }
+  return sessionId;
+}
+
+// Ottieni user ID se disponibile
+function getUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  
+  // Puoi personalizzare questa logica in base al tuo sistema di auth
+  try {
+    const userData = localStorage.getItem("user_data");
+    if (userData) {
+      const parsed = JSON.parse(userData);
+      return parsed.id || parsed.uid || null;
+    }
+  } catch {}
+  return null;
+}
+
+// Invia evento al nostro sistema analytics interno
+async function sendToAnalytics(eventData: any) {
+  try {
+    await fetch("/api/analytics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(eventData),
+    });
+  } catch (error) {
+    console.error("Errore invio analytics:", error);
   }
 }
 
-const MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "";
-
-function hasGtag() {
-  return typeof window !== "undefined" && typeof window.gtag === "function" && !!MEASUREMENT_ID;
-}
-
-// Queue a page view
+// Traccia pageview
 export function pageview(path: string) {
   try {
-    if (!hasGtag()) return;
-    window.gtag!("event", "page_view", {
-      page_path: path,
-      page_title: document?.title || undefined,
-    });
-  } catch {}
+    const eventData = {
+      event: "page_view",
+      page: path,
+      sessionId: getSessionId(),
+      userId: getUserId(),
+      anonId: getAnonId(),
+      params: {
+        page_title: document?.title || undefined,
+        referrer: document?.referrer || undefined,
+      },
+    };
+    
+    sendToAnalytics(eventData);
+  } catch (error) {
+    console.error("Errore pageview:", error);
+  }
 }
 
-// Generic event tracker — lightweight and safe if GA not configured
+// Traccia evento generico
 export function track(event: string, params?: Record<string, any>) {
   try {
-    if (!hasGtag()) return;
-    const anon = getAnonId();
-    const payload = { ...(params || {}), tz_anon_id: anon || undefined };
-    window.gtag!("event", event, payload);
-  } catch {}
+    const eventData = {
+      event,
+      page: window.location.pathname,
+      sessionId: getSessionId(),
+      userId: getUserId(),
+      anonId: getAnonId(),
+      params: params || {},
+    };
+    
+    sendToAnalytics(eventData);
+  } catch (error) {
+    console.error("Errore track:", error);
+  }
 }
 
-// Identify logged-in users (sets GA user_id)
+// Traccia conversione
+export function trackConversion(type: string, value?: string, params?: Record<string, any>) {
+  try {
+    const eventData = {
+      event: "conversion",
+      page: window.location.pathname,
+      sessionId: getSessionId(),
+      userId: getUserId(),
+      anonId: getAnonId(),
+      params: {
+        conversion_type: type,
+        conversion_value: value,
+        ...params,
+      },
+    };
+    
+    sendToAnalytics(eventData);
+  } catch (error) {
+    console.error("Errore trackConversion:", error);
+  }
+}
+
+// Identifica utente loggato
 export function identify(userId: string | null | undefined) {
   try {
-    if (!hasGtag()) return;
-    const uid = (userId || "").toString().trim();
-    if (!uid) return;
-    // user_id is configured on config per GA4 guidance
-    window.gtag!("config", MEASUREMENT_ID, { user_id: uid });
-  } catch {}
+    if (!userId) return;
+    
+    // Salva user ID per sessioni future
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user_data", JSON.stringify({ id: userId }));
+    }
+    
+    track("user_identified", { user_id: userId });
+  } catch (error) {
+    console.error("Errore identify:", error);
+  }
 }
 
-// Set custom user properties (visible in GA as user-scoped dimensions if configured)
-export function setUserProps(props: Record<string, any>) {
+// Traccia inizio sessione
+export function startSession() {
   try {
-    if (!hasGtag()) return;
-    window.gtag!("set", "user_properties", props);
-  } catch {}
+    const sessionData = {
+      event: "session_start",
+      page: window.location.pathname,
+      sessionId: getSessionId(),
+      userId: getUserId(),
+      anonId: getAnonId(),
+      params: {
+        landing_page: window.location.pathname,
+        referrer: document?.referrer || undefined,
+        user_agent: navigator?.userAgent || undefined,
+      },
+    };
+    
+    sendToAnalytics(sessionData);
+  } catch (error) {
+    console.error("Errore startSession:", error);
+  }
+}
+
+// Inizializza tracking automatico
+if (typeof window !== "undefined") {
+  // Inizia sessione al primo caricamento
+  document.addEventListener("DOMContentLoaded", () => {
+    startSession();
+  });
+  
+  // Traccia cambio pagina (per SPA)
+  let currentPath = window.location.pathname;
+  const observer = new MutationObserver(() => {
+    if (window.location.pathname !== currentPath) {
+      currentPath = window.location.pathname;
+      pageview(currentPath);
+    }
+  });
+  
+  observer.observe(document.body, { childList: true, subtree: true });
 }
 

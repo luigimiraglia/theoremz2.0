@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, memo } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { track } from "@/lib/analytics";
+import { track, trackConversion } from "@/lib/analytics";
 import Icon from "./Icon";
 import AnimatedButtonWrapper from "./AnimatedButtonWrapper";
+import BlackPopup from "./BlackPopup";
 
 // Defer heavy react-pdf imports until viewer opens
 const ReactPdf: {
@@ -71,11 +72,33 @@ const LessonNotes = memo(function LessonNotes({
   }, [currentPdf]);
 
   const handleOpen = async () => {
-    if (!isSubscribed) {
-      const BlackPopup = (await import("./BlackPopup")).default;
+    // Verifica se l'utente è autenticato e abbonato
+    const { getAuth } = await import("firebase/auth");
+    const auth = getAuth();
+    
+    // Aspetta che Firebase Auth si inizializzi completamente
+    await new Promise((resolve) => {
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        unsubscribe();
+        resolve(user);
+      });
+    });
+    
+    const currentUser = auth.currentUser;
+    
+    if (!currentUser || !isSubscribed) {
+      // Traccia click popup per appunti
+      trackConversion("popup_click", "appunti", {
+        popup_type: "appunti",
+        location: "lesson_header",
+        user_status: !currentUser ? "not_logged" : "not_subscribed"
+      });
+      
+      // Se non è loggato o non è abbonato, mostra popup
       setShowPopup(true);
       return;
     }
+    
     // Lazy import react-pdf only when opening the viewer
     if (!pdfReady) {
       try {
@@ -477,14 +500,11 @@ const LessonNotes = memo(function LessonNotes({
       {/* BlackPopup per non abbonati */}
       {showPopup && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50"
           onClick={() => setShowPopup(false)}
+          className="fixed inset-0 z-50 backdrop-blur-md flex justify-center items-center"
         >
-          <div
-            className="w-full max-w-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* BlackPopup sarà caricato dinamicamente */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <BlackPopup />
           </div>
         </div>
       )}
