@@ -1,89 +1,147 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 
-// Inizializza database SQLite
-const dbPath = path.join(process.cwd(), 'analytics.db');
-const db = new Database(dbPath);
+// Determina il percorso del database basato sull'ambiente
+const isProduction = process.env.NODE_ENV === 'production';
+let dbPath: string;
 
-// Abilita WAL mode per performance migliori
-db.pragma('journal_mode = WAL');
+if (isProduction) {
+  // In produzione, prova diversi percorsi
+  const tempDir = process.env.VERCEL_TEMP_DIR || process.env.TMPDIR || '/tmp';
+  dbPath = path.join(tempDir, 'analytics.db');
+  console.log(`[Analytics DB] Production mode - temp dir: ${tempDir}`);
+} else {
+  // In sviluppo, usa la directory del progetto
+  dbPath = path.join(process.cwd(), 'analytics.db');
+}
+
+console.log(`[Analytics DB] Environment: ${process.env.NODE_ENV}`);
+console.log(`[Analytics DB] Using database path: ${dbPath}`);
+
+let db: Database.Database;
+
+try {
+  db = new Database(dbPath);
+  console.log(`[Analytics DB] Database initialized successfully`);
+  
+  // Abilita WAL mode per performance migliori (solo se supportato)
+  try {
+    db.pragma('journal_mode = WAL');
+  } catch (error) {
+    console.warn(`[Analytics DB] WAL mode not supported:`, error);
+    // Fallback a DELETE mode
+    db.pragma('journal_mode = DELETE');
+  }
+} catch (error) {
+  console.error(`[Analytics DB] Failed to initialize database:`, error);
+  // Fallback: database in memoria se tutto fallisce
+  console.log(`[Analytics DB] Falling back to in-memory database`);
+  db = new Database(':memory:');
+}
 
 // Schema database
 const initDB = () => {
-  // Tabella eventi analytics
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-      event_name TEXT NOT NULL,
-      page_path TEXT,
-      user_id TEXT,
-      session_id TEXT,
-      anon_id TEXT,
-      params TEXT, -- JSON string
-      user_agent TEXT,
-      ip_address TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  try {
+    console.log(`[Analytics DB] Initializing database schema...`);
+    
+    // Tabella eventi analytics
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        event_name TEXT NOT NULL,
+        page_path TEXT,
+        user_id TEXT,
+        session_id TEXT,
+        anon_id TEXT,
+        params TEXT, -- JSON string
+        user_agent TEXT,
+        ip_address TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log(`[Analytics DB] Events table created/verified`);
+  } catch (error) {
+    console.error(`[Analytics DB] Error creating events table:`, error);
+  }
 
-  // Tabella sessioni
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      id TEXT PRIMARY KEY,
-      user_id TEXT,
-      anon_id TEXT,
-      started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      ended_at DATETIME,
-      pages_visited INTEGER DEFAULT 0,
-      duration_seconds INTEGER DEFAULT 0,
-      referrer TEXT,
-      landing_page TEXT,
-      user_agent TEXT,
-      ip_address TEXT
-    );
-  `);
+  try {
+    // Tabella sessioni
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT,
+        anon_id TEXT,
+        started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        ended_at DATETIME,
+        pages_visited INTEGER DEFAULT 0,
+        duration_seconds INTEGER DEFAULT 0,
+        referrer TEXT,
+        landing_page TEXT,
+        user_agent TEXT,
+        ip_address TEXT
+      );
+    `);
+    console.log(`[Analytics DB] Sessions table created/verified`);
+  } catch (error) {
+    console.error(`[Analytics DB] Error creating sessions table:`, error);
+  }
 
-  // Tabella conversioni (per trackare il funnel)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS conversions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id TEXT,
-      user_id TEXT,
-      anon_id TEXT,
-      conversion_type TEXT NOT NULL, -- 'quiz_parent', 'quiz_student', 'black_page_visit', 'popup_click', 'purchase'
-      conversion_value TEXT, -- dettagli specifici
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-      page_path TEXT,
-      FOREIGN KEY (session_id) REFERENCES sessions(id)
-    );
-  `);
+  try {
+    // Tabella conversioni (per trackare il funnel)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS conversions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT,
+        user_id TEXT,
+        anon_id TEXT,
+        conversion_type TEXT NOT NULL, -- 'quiz_parent', 'quiz_student', 'black_page_visit', 'popup_click', 'purchase'
+        conversion_value TEXT, -- dettagli specifici
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        page_path TEXT,
+        FOREIGN KEY (session_id) REFERENCES sessions(id)
+      );
+    `);
+    console.log(`[Analytics DB] Conversions table created/verified`);
+  } catch (error) {
+    console.error(`[Analytics DB] Error creating conversions table:`, error);
+  }
 
-  // Tabella statistiche giornaliere (per performance)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS daily_stats (
-      date TEXT PRIMARY KEY, -- YYYY-MM-DD
-      unique_visitors INTEGER DEFAULT 0,
-      total_pageviews INTEGER DEFAULT 0,
-      new_sessions INTEGER DEFAULT 0,
-      quiz_parent_clicks INTEGER DEFAULT 0,
-      quiz_student_clicks INTEGER DEFAULT 0,
-      black_page_visits INTEGER DEFAULT 0,
-      popup_clicks INTEGER DEFAULT 0,
-      conversions INTEGER DEFAULT 0,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  try {
+    // Tabella statistiche giornaliere (per performance)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS daily_stats (
+        date TEXT PRIMARY KEY, -- YYYY-MM-DD
+        unique_visitors INTEGER DEFAULT 0,
+        total_pageviews INTEGER DEFAULT 0,
+        new_sessions INTEGER DEFAULT 0,
+        quiz_parent_clicks INTEGER DEFAULT 0,
+        quiz_student_clicks INTEGER DEFAULT 0,
+        black_page_visits INTEGER DEFAULT 0,
+        popup_clicks INTEGER DEFAULT 0,
+        conversions INTEGER DEFAULT 0,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log(`[Analytics DB] Daily stats table created/verified`);
+  } catch (error) {
+    console.error(`[Analytics DB] Error creating daily stats table:`, error);
+  }
 
-  // Indici per performance
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
-    CREATE INDEX IF NOT EXISTS idx_events_event_name ON events(event_name);
-    CREATE INDEX IF NOT EXISTS idx_events_session_id ON events(session_id);
-    CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON sessions(started_at);
-    CREATE INDEX IF NOT EXISTS idx_conversions_timestamp ON conversions(timestamp);
-    CREATE INDEX IF NOT EXISTS idx_conversions_type ON conversions(conversion_type);
-  `);
+  try {
+    // Indici per performance
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_events_event_name ON events(event_name);
+      CREATE INDEX IF NOT EXISTS idx_events_session_id ON events(session_id);
+      CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON sessions(started_at);
+      CREATE INDEX IF NOT EXISTS idx_conversions_timestamp ON conversions(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_conversions_type ON conversions(conversion_type);
+    `);
+    console.log(`[Analytics DB] Database indices created/verified`);
+  } catch (error) {
+    console.error(`[Analytics DB] Error creating database indices:`, error);
+  }
 };
 
 // Inizializza database
@@ -383,25 +441,24 @@ export const analyticsDB = {
     LIMIT 50
   `),
 
-  // Query per log visite utenti Black con email
+  // Query per log visite utenti Black con email (include anche anonimi per debug)
   getBlackUserVisitLogs: db.prepare(`
     SELECT 
-      COALESCE(s.user_id, 'anonymous') as email,
-      e.timestamp as visit_time,
-      e.page_path as page,
-      e.session_id
+      COALESCE(s.user_id, 'anonymous_' || SUBSTR(e.session_id, 1, 8)) as email,
+      COUNT(DISTINCT e.session_id) as page_visits,
+      MAX(e.timestamp) as last_visit,
+      CASE WHEN s.user_id IS NOT NULL THEN 1 ELSE 0 END as is_authenticated
     FROM events e
     LEFT JOIN sessions s ON e.session_id = s.id
     WHERE e.event_name = 'page_view'
-    AND e.session_id IN (
-      SELECT DISTINCT session_id FROM events 
-      WHERE page_path LIKE '%/black%' 
-      AND event_name = 'page_view'
-    )
-    AND s.user_id IS NOT NULL
+    AND e.page_path LIKE '%/black%'
     AND e.timestamp >= ?
-    ORDER BY e.timestamp DESC
-    LIMIT 100
+    GROUP BY COALESCE(s.user_id, e.session_id)
+    ORDER BY 
+      CASE WHEN s.user_id IS NOT NULL THEN 1 ELSE 0 END DESC,
+      COUNT(DISTINCT e.session_id) DESC, 
+      MAX(e.timestamp) DESC
+    LIMIT 50
   `),
 
   // Query per Buy Clicks sulla pagina Black

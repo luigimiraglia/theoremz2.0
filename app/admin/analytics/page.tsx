@@ -101,6 +101,7 @@ type DashboardData = {
     email: string;
     page_visits: number;
     last_visit: string;
+    is_authenticated: number; // 1 for authenticated, 0 for anonymous
   }[];
   blackBuyMetrics: {
     totalClicks: number;
@@ -124,24 +125,26 @@ export default function AnalyticsDashboard() {
     if (!hasAccess || !user) return;
     setLoading(true);
     try {
-      // Ottieni il token di autenticazione - lazy loading per non impattare le performance
-      let token = '';
+      // Prova prima Firebase Auth, poi fallback ad API key
+      let authHeader = '';
+      
       try {
         const { auth } = await import('@/lib/firebase');
         if (auth.currentUser) {
-          token = await auth.currentUser.getIdToken();
+          const token = await auth.currentUser.getIdToken();
+          authHeader = `Bearer ${token}`;
         } else {
           throw new Error('No authenticated user');
         }
       } catch (authError) {
-        console.error('Error getting auth token:', authError);
-        setLoading(false);
-        return;
+        console.warn('Firebase Auth failed, using API key fallback:', authError);
+        // Fallback: usa API key per produzione
+        authHeader = 'ApiKey analytics_luigi_2024';
       }
 
       const response = await fetch(`/api/analytics/dashboard?days=${days}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': authHeader
         }
       });
       const result = await response.json();
@@ -1274,11 +1277,21 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-8">
             <div className="px-6 py-4 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">
-                Log Utenti Black
+                Visitatori Pagina Black
               </h3>
               <p className="text-sm text-gray-500">
-                Utenti che hanno visitato la pagina Black con email
+                Tutti gli utenti che hanno visitato la pagina Black (autenticati e anonimi)
               </p>
+              <div className="flex items-center gap-4 mt-2 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-gray-600">Utenti con email</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                  <span className="text-gray-600">Utenti anonimi</span>
+                </div>
+              </div>
             </div>
             <div className="p-6">
               <div className="overflow-x-auto">
@@ -1286,7 +1299,7 @@ export default function AnalyticsDashboard() {
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
-                        Email
+                        Utente
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
                         Visite Pagina
@@ -1297,13 +1310,25 @@ export default function AnalyticsDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.blackUserLogs.slice(0, 10).map((log, index) => (
+                    {data.blackUserLogs.slice(0, 20).map((log, index) => (
                       <tr
                         key={index}
-                        className="border-b border-gray-100 hover:bg-gray-50"
+                        className={`border-b border-gray-100 hover:bg-gray-50 ${log.is_authenticated ? 'bg-blue-50' : ''}`}
                       >
-                        <td className="py-3 px-4 text-sm text-gray-900">
-                          {log.email}
+                        <td className="py-3 px-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            {log.is_authenticated ? (
+                              <>
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span className="text-gray-900 font-medium">{log.email}</span>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                                <span className="text-gray-600 italic">{log.email}</span>
+                              </>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-900">
                           {log.page_visits}
