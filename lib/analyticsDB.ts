@@ -14,10 +14,19 @@ let cloudDB: Client | null = null;
 if (useCloudDatabase) {
   // Usa Turso in produzione
   console.log(`[Analytics DB] Using Turso cloud database`);
-  cloudDB = createClient({
-    url: process.env.TURSO_DATABASE_URL!,
-    authToken: process.env.TURSO_AUTH_TOKEN!,
-  });
+  console.log(`[Analytics DB] Turso URL: ${process.env.TURSO_DATABASE_URL}`);
+  console.log(`[Analytics DB] Auth token present: ${!!process.env.TURSO_AUTH_TOKEN}`);
+  
+  try {
+    cloudDB = createClient({
+      url: process.env.TURSO_DATABASE_URL!,
+      authToken: process.env.TURSO_AUTH_TOKEN!,
+    });
+    console.log(`[Analytics DB] Turso client created successfully`);
+  } catch (error) {
+    console.error(`[Analytics DB] Failed to create Turso client:`, error);
+    throw error;
+  }
 } else {
   // Usa SQLite locale in sviluppo o come fallback
   const dbPath = path.join(process.cwd(), 'analytics.db');
@@ -45,19 +54,30 @@ if (useCloudDatabase) {
 
 // Helper function per eseguire query
 const executeQuery = async (sql: string, params?: any[]): Promise<any> => {
-  if (cloudDB) {
-    const result = await cloudDB.execute(sql, params);
-    return result;
-  } else if (localDB) {
-    if (sql.toLowerCase().includes('select')) {
-      const stmt = localDB.prepare(sql);
-      return params ? stmt.all(...params) : stmt.all();
-    } else {
-      const stmt = localDB.prepare(sql);
-      return params ? stmt.run(...params) : stmt.run();
+  try {
+    if (cloudDB) {
+      console.log(`[Analytics DB] Executing cloud query: ${sql.substring(0, 50)}...`);
+      const result = await cloudDB.execute(sql, params);
+      return result;
+    } else if (localDB) {
+      console.log(`[Analytics DB] Executing local query: ${sql.substring(0, 50)}...`);
+      if (sql.toLowerCase().includes('select')) {
+        const stmt = localDB.prepare(sql);
+        return params ? stmt.all(...params) : stmt.all();
+      } else {
+        const stmt = localDB.prepare(sql);
+        return params ? stmt.run(...params) : stmt.run();
+      }
     }
+    throw new Error('No database connection available');
+  } catch (error) {
+    console.error(`[Analytics DB] Query execution failed:`, {
+      sql: sql.substring(0, 100),
+      params: params,
+      error: error
+    });
+    throw error;
   }
-  throw new Error('No database connection available');
 };
 
 // Schema database
