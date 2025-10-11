@@ -55,6 +55,22 @@ async function checkDatabaseData() {
       console.log(`Found ${events.length} events:`);
       if (events.length > 0) {
         console.log('Sample event:', JSON.stringify(events[0], null, 2));
+        
+        // Group events by type
+        const eventTypes = {};
+        events.forEach(event => {
+          eventTypes[event.event_type] = (eventTypes[event.event_type] || 0) + 1;
+        });
+        console.log('Event types breakdown:', eventTypes);
+        
+        // Group by page_url for page_view events
+        const pageViews = events.filter(e => e.event_type === 'page_view');
+        const pageUrls = {};
+        pageViews.forEach(event => {
+          const url = event.page_url || 'unknown';
+          pageUrls[url] = (pageUrls[url] || 0) + 1;
+        });
+        console.log('Page views by URL:', pageUrls);
       }
     }
 

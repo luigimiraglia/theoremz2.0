@@ -78,6 +78,7 @@ export default function AnalyticsDashboard() {
             quiz_parent_clicks: result.summary.funnelEntries || 0,
             quiz_student_clicks: result.summary.buyClicks || 0,
             black_page_visits: result.summary.blackPageVisits || 0,
+            mentor_page_visits: result.summary.mentorPageVisits || 0,
             popup_clicks: result.summary.buyClicks || 0,
             conversions: result.summary.conversions || 0
           },
@@ -98,8 +99,26 @@ export default function AnalyticsDashboard() {
           // Mappa anche altri campi per compatibilità
           topPages: result.charts?.topPages || [],
           conversionFunnel: result.charts?.conversionFunnel || [],
-          activeUsers: [],
-          blackUserLogs: [],
+          functionalityFunnel: result.charts?.functionalityFunnel || [],
+          activeUsers: result.activeUsers || [],
+          blackUserLogs: result.blackUserLogs || [],
+          mentorUserLogs: result.mentorUserLogs || [],
+          // Aggiungi dati per i grafici giornalieri
+          funnelEntries: {
+            daily: result.charts?.funnelEntries || []
+          },
+          dailyVisits: {
+            daily: result.charts?.dailyVisits || []
+          },
+          blackPageVisits: {
+            daily: result.charts?.blackPageVisits || []
+          },
+          mentorPageVisits: {
+            daily: result.charts?.mentorPageVisits || []
+          },
+          buyClicks: {
+            daily: result.charts?.buyClicks || []
+          },
           blackBuyMetrics: {
             totalClicks: result.summary.buyClicks || 0,
             dailyClicks: result.charts?.buyClicks || [],
@@ -451,7 +470,7 @@ export default function AnalyticsDashboard() {
                   Visite Pagina Mentor
                 </p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {data.mentorPageVisits?.total?.toLocaleString() || "0"}
+                  {data.summary?.mentorPageVisits?.toLocaleString() || "0"}
                 </p>
                 <p
                   className={`text-xs font-medium mt-1 ${
@@ -506,7 +525,7 @@ export default function AnalyticsDashboard() {
                     <Tooltip />
                     <Line
                       type="monotone"
-                      dataKey="count"
+                      dataKey="entries"
                       stroke="#3B82F6"
                       strokeWidth={2}
                     />
@@ -529,14 +548,14 @@ export default function AnalyticsDashboard() {
             <div className="p-6">
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.totalVisits?.daily || []}>
+                  <LineChart data={data.dailyVisits?.daily || []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
                     <YAxis />
                     <Tooltip />
                     <Line
                       type="monotone"
-                      dataKey="count"
+                      dataKey="visits"
                       stroke="#10B981"
                       strokeWidth={2}
                     />
@@ -566,7 +585,7 @@ export default function AnalyticsDashboard() {
                     <Tooltip />
                     <Line
                       type="monotone"
-                      dataKey="count"
+                      dataKey="visits"
                       stroke="#8B5CF6"
                       strokeWidth={2}
                     />
@@ -596,7 +615,7 @@ export default function AnalyticsDashboard() {
                     <Tooltip />
                     <Line
                       type="monotone"
-                      dataKey="count"
+                      dataKey="visits"
                       stroke="#F59E0B"
                       strokeWidth={2}
                     />
@@ -621,95 +640,82 @@ export default function AnalyticsDashboard() {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-orange-100/50 rounded-lg border border-orange-200">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                      1
-                    </div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">
-                      Quiz Genitore
-                    </span>
+                {data.conversionFunnel && data.conversionFunnel.length > 0 ? (
+                  data.conversionFunnel.map((step: any, index: number) => {
+                    const colors = [
+                      { bg: 'from-blue-50 to-blue-100/50', border: 'border-blue-200', text: 'text-blue-600', circle: 'bg-blue-500' },
+                      { bg: 'from-orange-50 to-orange-100/50', border: 'border-orange-200', text: 'text-orange-600', circle: 'bg-orange-500' },
+                      { bg: 'from-purple-50 to-purple-100/50', border: 'border-purple-200', text: 'text-purple-600', circle: 'bg-purple-500' },
+                      { bg: 'from-amber-50 to-amber-100/50', border: 'border-amber-200', text: 'text-amber-600', circle: 'bg-amber-500' },
+                      { bg: 'from-green-50 to-green-100/50', border: 'border-green-200', text: 'text-green-600', circle: 'bg-green-500' }
+                    ];
+                    const color = colors[index] || colors[0];
+                    
+                    return (
+                      <div key={index} className={`flex items-center justify-between p-4 bg-gradient-to-r ${color.bg} rounded-lg border ${color.border}`}>
+                        <div className="flex items-center">
+                          <div className={`w-8 h-8 ${color.circle} rounded-full flex items-center justify-center text-white text-sm font-bold`}>
+                            {index + 1}
+                          </div>
+                          <div className="ml-3">
+                            <span className="text-sm font-medium text-gray-900">
+                              {step.step}
+                            </span>
+                            {step.previous_step_conversion && index > 0 && (
+                              <div className={`text-xs ${color.text} mt-1`}>
+                                {step.previous_step_conversion}% dal passaggio precedente
+                              </div>
+                            )}
+                            {/* Breakdown per Black/Mentor */}
+                            {step.breakdown && (
+                              <div className="flex gap-2 mt-2">
+                                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                                  Black: {step.breakdown.black}
+                                </span>
+                                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">
+                                  Mentor: {step.breakdown.mentor}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-lg font-bold ${color.text}`}>
+                            {step.count}
+                          </div>
+                          <div className={`text-xs ${color.text}`}>
+                            {step.conversion_rate}% del totale
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    Nessun dato del funnel disponibile
                   </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-orange-600">
-                      {data.summary?.funnelEntries || 0}
-                    </div>
-                    <div className="text-xs text-orange-600">
-                      entrate funnel
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100/50 rounded-lg border border-green-200">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                      2
-                    </div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">
-                      Quiz Studente
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-green-600">
-                      {data.summary?.buyClicks || 0}
-                    </div>
-                    <div className="text-xs text-green-600">engagement</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-purple-100/50 rounded-lg border border-purple-200">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                      3
-                    </div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">
-                      Pagine Black
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-purple-600">
-                      {data.summary?.blackPageVisits || 0}
-                    </div>
-                    <div className="text-xs text-purple-600">
-                      interesse alto
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-lg border border-blue-200">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                      4
-                    </div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">
-                      Click Popup
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-blue-600">
-                      {data.summary?.buyClicks || 0}
-                    </div>
-                    <div className="text-xs text-blue-600">conversioni</div>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Tasso conversione */}
               <div className="mt-6 pt-4 border-t border-gray-100">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">
-                    Tasso conversione complessivo
-                  </span>
-                  <span className="text-lg font-bold text-gray-900">
-                    {data.summary?.totalVisits > 0
-                      ? (
-                          (data.summary?.buyClicks /
-                            data.summary?.totalVisits) *
-                          100
-                        ).toFixed(2)
-                      : 0}
-                    %
-                  </span>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600">
+                      Tasso conversione complessivo
+                    </span>
+                    <span className="text-lg font-bold text-gray-900">
+                      {data.summary?.conversionRate || 0}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500">
+                      Da visite totali a conversioni
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {data.summary?.buyClicks || 0} su {data.summary?.totalVisits || 0} visite
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -759,6 +765,206 @@ export default function AnalyticsDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Metriche Dettagliate Conversioni */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-8">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900">
+              📊 Analisi Conversioni Step-by-Step
+            </h3>
+            <p className="text-sm text-gray-500">
+              Percentuali di conversione dettagliate per ogni passaggio del funnel
+            </p>
+          </div>
+          <div className="p-6">
+            {data.conversionFunnel && data.conversionFunnel.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {data.conversionFunnel.map((step: any, index: number) => (
+                  <div key={index} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center">
+                        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                          {index + 1}
+                        </div>
+                        <span className="ml-2 text-sm font-medium text-gray-900">
+                          Step {index + 1}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500">Conversione</div>
+                        <div className="text-lg font-bold text-blue-600">
+                          {step.conversion_rate}%
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        {step.step}
+                      </h4>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {step.count.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        utenti in questo step
+                      </div>
+                      
+                      {/* Breakdown Black/Mentor per lo step 3 */}
+                      {step.breakdown && (
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <div className="bg-purple-50 rounded-lg p-2 text-center">
+                            <div className="text-sm font-bold text-purple-700">
+                              {step.breakdown.black}
+                            </div>
+                            <div className="text-xs text-purple-600">
+                              Black
+                            </div>
+                          </div>
+                          <div className="bg-amber-50 rounded-lg p-2 text-center">
+                            <div className="text-sm font-bold text-amber-700">
+                              {step.breakdown.mentor}
+                            </div>
+                            <div className="text-xs text-amber-600">
+                              Mentor
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {step.previous_step_conversion && index > 0 && (
+                      <div className="border-t border-gray-200 pt-3 mt-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-600">
+                            Dal passo precedente:
+                          </span>
+                          <span className="text-sm font-semibold text-green-600">
+                            {step.previous_step_conversion}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {index < data.conversionFunnel.length - 1 && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                            style={{ width: `${step.conversion_rate}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                Nessun dato di conversione disponibile
+              </div>
+            )}
+            
+            {/* FUNNEL 2: Funzionalità → Black */}
+            {data.functionalityFunnel && data.functionalityFunnel.length > 0 && (
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  🎯 Funnel Funzionalità → Black
+                </h4>
+                <p className="text-sm text-gray-500 mb-6">
+                  Conversioni dall&apos;uso delle funzionalità alla pagina Black
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {data.functionalityFunnel.map((step: any, index: number) => (
+                    <div key={index} className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center">
+                          <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                            {index + 1}
+                          </div>
+                          <span className="ml-2 text-sm font-medium text-gray-900">
+                            Step {index + 1}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-500">Conversione</div>
+                          <div className="text-lg font-bold text-purple-600">
+                            {step.conversion_rate}%
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                          {step.step}
+                        </h4>
+                        <div className="text-2xl font-bold text-gray-900">
+                          {step.count.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          utenti in questo step
+                        </div>
+                      </div>
+
+                      {step.previous_step_conversion && index > 0 && (
+                        <div className="border-t border-purple-200 pt-3 mt-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-600">
+                              Dal passo precedente:
+                            </span>
+                            <span className="text-sm font-semibold text-green-600">
+                              {step.previous_step_conversion}%
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {index < data.functionalityFunnel.length - 1 && (
+                        <div className="mt-3 pt-3 border-t border-purple-200">
+                          <div className="w-full bg-purple-200 rounded-full h-2">
+                            <div 
+                              className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
+                              style={{ width: `${step.conversion_rate}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Summary conversioni */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {data.summary?.totalVisits || 0}
+                  </div>
+                  <div className="text-sm text-blue-600 font-medium">
+                    Visite Totali
+                  </div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {((data.summary?.blackPageVisits || 0) + (data.summary?.mentorPageVisits || 0))}
+                  </div>
+                  <div className="text-sm text-green-600 font-medium">
+                    Interesse (Black + Mentor)
+                  </div>
+                </div>
+                <div className="bg-orange-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {data.summary?.buyClicks || 0}
+                  </div>
+                  <div className="text-sm text-orange-600 font-medium">
+                    Conversioni Finali
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1216,10 +1422,10 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-8">
             <div className="px-6 py-4 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">
-                Utenti Più Attivi
+                Classifica Utenti Loggati
               </h3>
               <p className="text-sm text-gray-500">
-                Breakdown utenti più attivi per email
+                Top 10 utenti per numero di login e ultimo accesso
               </p>
             </div>
             <div className="p-6">
@@ -1228,13 +1434,16 @@ export default function AnalyticsDashboard() {
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
+                        #
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">
                         Email
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
-                        Visite
+                        Login Count
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
-                        Ultima Visita
+                        Ultimo Login
                       </th>
                     </tr>
                   </thead>
@@ -1244,16 +1453,21 @@ export default function AnalyticsDashboard() {
                         key={index}
                         className="border-b border-gray-100 hover:bg-gray-50"
                       >
+                        <td className="py-3 px-4 text-sm font-semibold text-gray-900">
+                          #{index + 1}
+                        </td>
                         <td className="py-3 px-4 text-sm text-gray-900">
                           {user.email}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-900">
-                          {user.visit_count}
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {user.login_count || 0} login
+                          </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-500">
-                          {new Date(user.last_visit).toLocaleDateString(
+                          {user.last_login ? new Date(user.last_login).toLocaleDateString(
                             "it-IT"
-                          )}
+                          ) : "N/A"}
                         </td>
                       </tr>
                     ))}
