@@ -83,7 +83,7 @@ export default function BlackPage() {
       "@type": "AggregateOffer",
       offerCount: 3,
       lowPrice: "3.90",
-      highPrice: "64.90",
+      highPrice: "89.00",
       priceCurrency: "EUR",
       offers: [
         {
@@ -97,7 +97,7 @@ export default function BlackPage() {
         {
           "@type": "Offer",
           name: "Piano Base",
-          price: "6.90",
+          price: "9.90",
           priceCurrency: "EUR",
           availability: "https://schema.org/InStock",
           url: "https://buy.stripe.com/cN29E66j97PPbG84gT",
@@ -105,7 +105,7 @@ export default function BlackPage() {
         {
           "@type": "Offer",
           name: "Annuale",
-          price: "64.90",
+          price: "89.00",
           priceCurrency: "EUR",
           availability: "https://schema.org/InStock",
           url: "https://buy.stripe.com/6oE3fIfTJ6LL11u9Be",
@@ -475,11 +475,11 @@ export default function BlackPage() {
               {/* Halo fucsia dietro la card Base */}
               <div className="relative z-10">
                 <PriceCard
-                  price="6,90€"
-                  regularPrice="9,90€"
+                  price="9,90€"
+                  regularPrice="13,90€"
                   unit=" /mese"
                   infoHref="https://wa.link/4ogl5q"
-                  buyHref="https://buy.stripe.com/cN29E66j97PPbG84gT"
+                  buyHref="https://buy.stripe.com/aFa6oH1Wc7Mr3Rn1n0c7u0K"
                   features={[
                     // Differenziatori principali
                     ["pink", "Assistenza via chat illimitata"],
@@ -513,10 +513,10 @@ export default function BlackPage() {
             </div>
 
             <PriceCard
-              price="64,90€"
+              price="89,00€"
               unit=" /anno"
               infoHref="https://wa.link/rwbkqd"
-              buyHref="https://buy.stripe.com/6oE3fIfTJ6LL11u9Be"
+              buyHref="https://buy.stripe.com/8x2eVd1WcaYDfA56Hkc7u0L"
               features={[
                 // Differenziatori principali
                 ["pink", "Assistenza via chat illimitata"],
@@ -651,8 +651,8 @@ function PriceCard({
 }) {
   return (
     <div className="relative mt-3 overflow-hidden rounded-2xl border border-white/15 bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_-30px_rgba(15,23,42,0.45)]">
-      {regularPrice == "9,90€" ? (
-        <CountdownTimer targetDate="2025-10-13T23:59:59" />
+      {regularPrice == "13,90€" ? (
+        <CountdownTimer targetDate="2025-11-01T23:59:59" />
       ) : (
         ""
       )}
@@ -731,7 +731,7 @@ function PriceCard({
               unit.includes("anno")
                 ? "Annuale"
                 : unit.includes("mese")
-                  ? price.includes("6,90")
+                  ? price.includes("9,90")
                     ? "Base Mensile"
                     : price.includes("3,90")
                       ? "Essential Mensile"
