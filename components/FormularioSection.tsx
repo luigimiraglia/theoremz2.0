@@ -5,7 +5,11 @@ import { trackConversion } from "@/lib/analytics";
 import Icon from "./Icon";
 import AnimatedButtonWrapper from "./AnimatedButtonWrapper";
 
-const FormularioSection = memo(function FormularioSection({ url }: { url: string }) {
+const FormularioSection = memo(function FormularioSection({
+  url,
+}: {
+  url: string;
+}) {
   const { isSubscribed } = useAuth();
   const [state, setState] = useState<"idle" | "popup">("idle");
   const [Popup, setPopup] = useState<ComponentType | null>(null);
@@ -13,24 +17,24 @@ const FormularioSection = memo(function FormularioSection({ url }: { url: string
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Verifica se l'utente è autenticato e abbonato
     const { getAuth } = await import("firebase/auth");
     const auth = getAuth();
     const currentUser = auth.currentUser;
-    
+
     if (currentUser && isSubscribed) {
       window.location.assign(url);
       return;
     }
-    
+
     // Traccia click popup per formulario
     trackConversion("popup_click", "formulario", {
       popup_type: "formulario",
       location: "lesson_header",
-      user_status: !currentUser ? "not_logged" : "not_subscribed"
+      user_status: !currentUser ? "not_logged" : "not_subscribed",
     });
-    
+
     // Se non è loggato o non è abbonato, mostra popup
     if (!Popup) {
       const mod = await import("@/components/BlackPopup");

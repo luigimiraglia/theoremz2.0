@@ -19,15 +19,15 @@ const FlashcardsSmallButton = memo(function FlashcardsSmallButton() {
     const { getAuth } = await import("firebase/auth");
     const auth = getAuth();
     const currentUser = auth.currentUser;
-    
+
     if (!currentUser || !isSubscribed) {
       // Traccia click popup per flashcards
       trackConversion("popup_click", "flashcards_header", {
         popup_type: "flashcards",
         location: "lesson_header",
-        user_status: !currentUser ? "not_logged" : "not_subscribed"
+        user_status: !currentUser ? "not_logged" : "not_subscribed",
       });
-      
+
       // Se non è loggato o non è abbonato, mostra popup
       setShowPopup(true);
       return;
@@ -78,7 +78,7 @@ const FlashcardsSmallButton = memo(function FlashcardsSmallButton() {
           <span className="truncate">Flashcards</span>
         </button>
       </AnimatedButtonWrapper>
-      
+
       {showPopup && (
         <div
           onClick={closePopup}

@@ -1,6 +1,7 @@
 "use client";
 
 import SaveLessonButton from "@/components/SaveLessonButton";
+import ThemeToggle from "@/components/ThemeToggle";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
@@ -211,18 +212,15 @@ export default function LessonClient({
   // Performance: preconnect a risorse critiche
   useEffect(() => {
     const preconnectResources = () => {
-      const links = [
-        'https://fonts.gstatic.com',
-        'https://cdn.sanity.io'
-      ];
-      
-      links.forEach(href => {
+      const links = ["https://fonts.gstatic.com", "https://cdn.sanity.io"];
+
+      links.forEach((href) => {
         const existing = document.querySelector(`link[href="${href}"]`);
         if (!existing) {
-          const link = document.createElement('link');
-          link.rel = 'preconnect';
+          const link = document.createElement("link");
+          link.rel = "preconnect";
           link.href = href;
-          link.crossOrigin = 'anonymous';
+          link.crossOrigin = "anonymous";
           document.head.appendChild(link);
         }
       });
@@ -291,7 +289,7 @@ export default function LessonClient({
       <header className="rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 text-center pt-3 pb-3">
         <div className="flex justify-between mx-3 items-center gap-2">
           <div className="flex items-center gap-2">
-            {/* Rimosso il bottone esercizi da qui */}
+            <ThemeToggle position="relative" />
           </div>
           <SaveLessonButton lessonSlug={lezione} />
         </div>
@@ -304,14 +302,16 @@ export default function LessonClient({
           </h2>
         )}
 
-        <div className="mt-4 flex items-center justify-center gap-1 sm:gap-2 overflow-hidden px-2">
-          <FlashcardsSmallButton />
-          <EserciziSmallButton />
-          <LessonNotesClient
-            lessonTitle={lesson.title}
-            lessonSlug={lesson.slug}
-          />
-          <FormularioSection url={lesson.resources?.formulario ?? ""} />
+        <div className="mt-4 flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto overflow-y-hidden px-2 pb-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+          <div className="flex items-center gap-1 sm:gap-2 min-w-max">
+            <FlashcardsSmallButton />
+            <EserciziSmallButton />
+            <LessonNotesClient
+              lessonTitle={lesson.title}
+              lessonSlug={lesson.slug}
+            />
+            <FormularioSection url={lesson.resources?.formulario ?? ""} />
+          </div>
         </div>
       </header>
 

@@ -75,7 +75,7 @@ const LessonNotes = memo(function LessonNotes({
     // Verifica se l'utente è autenticato e abbonato
     const { getAuth } = await import("firebase/auth");
     const auth = getAuth();
-    
+
     // Aspetta che Firebase Auth si inizializzi completamente
     await new Promise((resolve) => {
       const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -83,22 +83,22 @@ const LessonNotes = memo(function LessonNotes({
         resolve(user);
       });
     });
-    
+
     const currentUser = auth.currentUser;
-    
+
     if (!currentUser || !isSubscribed) {
       // Traccia click popup per appunti
       trackConversion("popup_click", "appunti", {
         popup_type: "appunti",
         location: "lesson_header",
-        user_status: !currentUser ? "not_logged" : "not_subscribed"
+        user_status: !currentUser ? "not_logged" : "not_subscribed",
       });
-      
+
       // Se non è loggato o non è abbonato, mostra popup
       setShowPopup(true);
       return;
     }
-    
+
     // Lazy import react-pdf only when opening the viewer
     if (!pdfReady) {
       try {
@@ -114,7 +114,10 @@ const LessonNotes = memo(function LessonNotes({
     }
     setOpen(true);
     try {
-      track("notes_open_click", { lesson_slug: lessonSlug, lesson_title: lessonTitle });
+      track("notes_open_click", {
+        lesson_slug: lessonSlug,
+        lesson_title: lessonTitle,
+      });
     } catch {}
   };
 

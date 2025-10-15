@@ -19,15 +19,15 @@ const EserciziSmallButton = memo(function EserciziSmallButton() {
     const { getAuth } = await import("firebase/auth");
     const auth = getAuth();
     const currentUser = auth.currentUser;
-    
+
     if (!currentUser || !isSubscribed) {
       // Traccia click popup per esercizi
       trackConversion("popup_click", "exercises_header", {
         popup_type: "exercises",
         location: "lesson_header",
-        user_status: !currentUser ? "not_logged" : "not_subscribed"
+        user_status: !currentUser ? "not_logged" : "not_subscribed",
       });
-      
+
       // Se non è loggato o non è abbonato, mostra popup
       setShowPopup(true);
       return;
@@ -78,7 +78,7 @@ const EserciziSmallButton = memo(function EserciziSmallButton() {
           <span className="truncate">Esercizi</span>
         </button>
       </AnimatedButtonWrapper>
-      
+
       {showPopup && (
         <div
           onClick={closePopup}

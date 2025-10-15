@@ -40,8 +40,8 @@ export default function SaveLessonButton({
     savedLessons && Array.isArray(savedLessons) && savedLessons.includes(slug);
 
   const toggle = async () => {
-    // Gating: serve abbonamento
-    if (!isSubscribed) {
+    // Gating: serve utente loggato e abbonamento
+    if (!user || !isSubscribed) {
       if (!Popup) {
         const mod = await import("@/components/BlackPopup");
         setPopup(() => mod.default ?? (mod as any));
@@ -50,7 +50,7 @@ export default function SaveLessonButton({
       return;
     }
 
-    if (!user || !isValid || busy) return;
+    if (!isValid || busy) return;
     setBusy(true);
     try {
       const ref = doc(db, "users", user.uid);
@@ -74,7 +74,7 @@ export default function SaveLessonButton({
     <>
       <button
         onClick={toggle}
-        disabled={!user || !isValid || busy}
+        disabled={!isValid || busy}
         className={`inline-flex shadow-md items-center font-semibold gap-1 px-2 py-1 text-sm rounded-lg transition-all duration-300 border 
         ${
           isSaved
