@@ -20,9 +20,9 @@ import {
 
 // ---------- METADATA SEO ----------
 const TITLE =
-  "Theoremz Black — Assistenza via chat, esercizi illimitati e videolezioni";
+  "Theoremz Black — Mentoring didattico, esercizi illimitati e videolezioni";
 const DESC =
-  "Sblocca tutto Theoremz: assistenza via chat, esercizi risolti, formulari, appunti e videolezioni. Piani da 3,90€/mese. Soddisfatti o rimborsati.";
+  "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Piani da 3,90€/mese. Soddisfatti o rimborsati.";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
 const CANONICAL = `${SITE}/black`;
 
@@ -83,7 +83,7 @@ export default function BlackPage() {
       "@type": "AggregateOffer",
       offerCount: 3,
       lowPrice: "3.90",
-      highPrice: "89.00",
+      highPrice: "199.00",
       priceCurrency: "EUR",
       offers: [
         {
@@ -97,7 +97,7 @@ export default function BlackPage() {
         {
           "@type": "Offer",
           name: "Piano Base",
-          price: "9.90",
+          price: "19.90",
           priceCurrency: "EUR",
           availability: "https://schema.org/InStock",
           url: "https://buy.stripe.com/cN29E66j97PPbG84gT",
@@ -105,7 +105,7 @@ export default function BlackPage() {
         {
           "@type": "Offer",
           name: "Annuale",
-          price: "89.00",
+          price: "199.00",
           priceCurrency: "EUR",
           availability: "https://schema.org/InStock",
           url: "https://buy.stripe.com/6oE3fIfTJ6LL11u9Be",
@@ -201,10 +201,10 @@ export default function BlackPage() {
             {/* Testo */}
             <div>
               <h1 className="font-black leading-tight text-[36px] sm:text-[44px] lg:text-[54px]">
-                Studia la matematica in modo
+                Mai più solo davanti alla
                 <span className="italic font-extrabold text-sky-300">
                   {" "}
-                  semplice.
+                  matematica.
                 </span>
               </h1>
 
@@ -213,9 +213,9 @@ export default function BlackPage() {
                 <span className="inline-block bg-[linear-gradient(90deg,#38bdf8,#bae6fd,#38bdf8)] bg-[length:200%_100%] bg-clip-text text-transparent animate-shimmer font-extrabold">
                   Theoremz Black
                 </span>{" "}
-                studi con lezioni chiare, esercizi guidati e un{" "}
-                <span className="font-bold">tutor</span> pronto ad aiutarti ogni
-                giorno.
+                hai un <span className="font-bold">tutor</span> che ti segue 1:1
+                ogni giorno, tutte le risorse di Theoremz e molto altro.{" "}
+                <span className="inline-block bg-[linear-gradient(90deg,#00FFD1,#bae6fd,#EC9B3B)] bg-[length:200%_100%] bg-clip-text text-transparent animate-shimmer font-extrabold"></span>
               </p>
 
               <div className="mt-8 flex items-center gap-4">
@@ -295,43 +295,45 @@ export default function BlackPage() {
         </h2>
         <div className="mt-4 max-w-3xl space-y-4 text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/90 font-medium">
           <p>
-            <span className="font-semibold text-white">Theoremz Black</span> ti
-            offre un
+            <span className="font-semibold text-white">Theoremz Black</span> è
             <span className="font-semibold text-sky-200">
               {" "}
-              modo nuovo di studiare
+              il tuo mentore didattico personale
             </span>
-            : ogni giorno, un{" "}
-            <span className="font-semibold text-white">insegnante</span> ti
-            segue via chat e ti aiuta a capire ogni argomento passo dopo passo.
+            : un insegnante dedicato ti accompagna nel tuo percorso di studio,
+            costruendo con te un piano personalizzato e adattandolo ai tuoi
+            ritmi e obiettivi.
           </p>
           <p>
-            Oltre al supporto personale, hai accesso a
+            Non aspettiamo che tu abbia dubbi: ti forniamo
             <span className="font-semibold text-white">
               {" "}
-              tutte le risorse di Theoremz
+              materiale mirato ogni settimana
             </span>
-            : esercizi spiegati, quiz, appunti e videolezioni per ogni lezione.
+            , ti prepariamo attivamente per le verifiche e ti insegniamo
+            strategie di studio efficaci. Allo stesso tempo, puoi sempre
+            scriverci per qualsiasi domanda o difficoltà.
           </p>
           <p>
             <span className="font-semibold text-sky-200">
-              Tutto in un solo posto
-            </span>
-            , per studiare meglio, con costanza e sicurezza.
+              Un approccio proattivo
+            </span>{" "}
+            che ti fa sentire sempre preparato e sicuro, trasformando lo studio
+            da fatica a crescita costante.
           </p>
         </div>
         <ul className="mt-5 grid gap-3 text-[14.5px] font-semibold text-white/85 sm:grid-cols-3">
           <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <MessageCircle className="h-5 w-5 text-sky-300" aria-hidden />
-            Tutor via chat ogni giorno
+            Mentore didattico personale
           </li>
           <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <ListChecks className="h-5 w-5 text-cyan-300" aria-hidden />
-            Esercizi pronti e spiegati passo passo
+            Preparazione attiva alle verifiche
           </li>
           <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <Sparkles className="h-5 w-5 text-emerald-300" aria-hidden />
-            Accesso immediato a tutte le risorse
+            Strategie di studio personalizzate
           </li>
         </ul>
       </section>
@@ -344,15 +346,15 @@ export default function BlackPage() {
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <IncludeCard
-            title="Assistenza Costante via Chat"
+            title="Mentoring Didattico Personalizzato"
             items={[
               [
-                "Supporto Giornaliero",
-                "Lo studente ha sempre a disposizione un insegnante a cui porre domande o chiedere materiale aggiuntivo.",
+                "Piano di Studio ",
+                "Il tuo mentore crea un percorso su misura basato sui tuoi obiettivi, punti di forza e aree di miglioramento.",
               ],
               [
-                "Aiuto compiti",
-                "In caso di difficoltà con gli esercizi, lo studente viene seguito passo passo nella risoluzione.",
+                "Supporto Costante via Chat",
+                "Puoi scrivere in qualsiasi momento per ogni dubbio o difficoltà. Il tuo mentore ti risponde sempre e ti guida passo passo.",
               ],
             ]}
           />
@@ -367,6 +369,10 @@ export default function BlackPage() {
               [
                 "Già Risolti e Spiegati",
                 "Spiegazioni passo passo, con immagini; possibilità di rispiegazione privata su richiesta.",
+              ],
+              [
+                "Flashcards Interattive",
+                "Schede di ripasso personalizzate per memorizzare formule, teoremi e concetti chiave.",
               ],
             ]}
           />
@@ -385,35 +391,16 @@ export default function BlackPage() {
             ]}
           />
 
-          {/* Bonus & claim affiancati su desktop */}
-          <div className="flex flex-col gap-6 lg:col-span-2 lg:flex-row">
-            <div className="flex-1">
-              <IncludeCard
-                title="Bonus e Premi per gli Iscritti"
-                items={[
-                  [
-                    "Sempre al primo posto",
-                    "Accesso prioritario alle nuove funzionalità e alle offerte esclusive.",
-                  ],
-                  [
-                    "La tua opinione conta",
-                    "Puoi richiedere funzionalità o argomenti non ancora presenti sul sito.",
-                  ],
-                ]}
-              />
-            </div>
-            <div className="flex-1">
-              <div className="h-full rounded-2xl border border-white/20 bg-gradient-to-br from-cyan-500/90 via-sky-500/80 to-blue-600/80 px-6 py-9 text-center text-2xl sm:text-3xl lg:text-4xl font-black text-white shadow-[0_20px_45px_-28px_rgba(14,165,233,0.9)]">
-                <span className="block text-sm font-semibold uppercase tracking-[0.35em] text-white/80">
-                  Garanzia totale
-                </span>
-                <span className="mt-4 block">
-                  +100% Soddisfatti o Rimborsati
-                </span>
-                <span className="mt-3 block text-base font-semibold text-white/90">
-                  Cambia idea quando vuoi
-                </span>
-              </div>
+          {/* Garanzia */}
+          <div className="lg:col-span-2">
+            <div className="rounded-2xl border border-white/20 bg-gradient-to-br from-cyan-500/90 via-sky-500/80 to-blue-600/80 px-6 py-9 text-center text-2xl sm:text-3xl lg:text-4xl font-black text-white shadow-[0_20px_45px_-28px_rgba(14,165,233,0.9)]">
+              <span className="block text-sm font-semibold uppercase tracking-[0.35em] text-white/80">
+                Garanzia totale
+              </span>
+              <span className="mt-4 block">+100% Soddisfatti o Rimborsati</span>
+              <span className="mt-3 block text-base font-semibold text-white/90">
+                Cambia idea quando vuoi
+              </span>
             </div>
           </div>
         </div>
@@ -453,7 +440,7 @@ export default function BlackPage() {
                 ["ok", "Tutte le funzionalità Theoremz"],
                 // Garanzia
                 ["ok", "100% soddisfatti o rimborsati"],
-                ["no", "Assistenza via chat illimitata"],
+                ["no", "Mentoring didattico illimitato"],
                 ["no", "Aiuto compiti giornaliero"],
                 ["no", "Sconto del 10% sulle ripetizioni"],
               ]}
@@ -476,13 +463,13 @@ export default function BlackPage() {
               <div className="relative z-10">
                 <PriceCard
                   price="9,90€"
-                  regularPrice="13,90€"
+                  regularPrice="19,90€"
                   unit=" /mese"
                   infoHref="https://wa.link/4ogl5q"
                   buyHref="https://buy.stripe.com/aFa6oH1Wc7Mr3Rn1n0c7u0K"
                   features={[
                     // Differenziatori principali
-                    ["pink", "Assistenza via chat illimitata"],
+                    ["pink", "Mentoring didattico illimitato"],
                     ["pink", "Aiuto compiti giornaliero"],
                     // Contenuti principali
                     ["ok", "Centinaia di esercizi risolti"],
@@ -513,13 +500,14 @@ export default function BlackPage() {
             </div>
 
             <PriceCard
-              price="89,00€"
+              price="99€"
+              regularPrice="199€"
               unit=" /anno"
               infoHref="https://wa.link/rwbkqd"
-              buyHref="https://buy.stripe.com/8x2eVd1WcaYDfA56Hkc7u0L"
+              buyHref="https://buy.stripe.com/6oU9ATfN2giX2Nj4zcc7u0M"
               features={[
                 // Differenziatori principali
-                ["pink", "Assistenza via chat illimitata"],
+                ["pink", "Mentoring didattico illimitato"],
                 ["pink", "Aiuto compiti giornaliero"],
                 // Contenuti principali
                 ["ok", "Centinaia di esercizi risolti"],
@@ -651,8 +639,8 @@ function PriceCard({
 }) {
   return (
     <div className="relative mt-3 overflow-hidden rounded-2xl border border-white/15 bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_-30px_rgba(15,23,42,0.45)]">
-      {regularPrice == "13,90€" ? (
-        <CountdownTimer targetDate="2025-11-01T23:59:59" />
+      {regularPrice == "19,90€" || regularPrice == "199€" ? (
+        <CountdownTimer targetDate="2025-10-20T23:59:59" />
       ) : (
         ""
       )}
@@ -666,7 +654,7 @@ function PriceCard({
                   {unit}
                 </span>
                 <span className="text-sm font-semibold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded">
-                  -30%
+                  -50% per sempre
                 </span>
               </div>
             )}
@@ -759,16 +747,16 @@ function PriceCard({
 /* ---------- FAQ data ---------- */
 const FAQS = [
   {
-    q: "L'assistenza è attiva il weekend?",
-    a: "Certo, l'assistenza è attiva ogni giorno, tranne in occasione di festività nazionali.",
+    q: "Il tutor è disponibile il weekend?",
+    a: "Certo, il servizio di mentoring è attivo ogni giorno, tranne in occasione di festività nazionali.",
   },
   {
-    q: "A che ora si può contattare l'assistenza?",
+    q: "A che ora si può contattare il tutor?",
     a: "In generale a qualsiasi orario ma potrebbe capitare che i messaggi ricevuti in tarda notte vengano visualizzati la mattina dopo.",
   },
   {
     q: "Tutto questo vale per matematica e fisica?",
-    a: "Sì, l'abbonamento include tutte le risorse di matematica e fisica e lo stesso vale per l'assistenza.",
+    a: "Sì, l'abbonamento include tutte le risorse di matematica e fisica e lo stesso vale per il mentoring didattico.",
   },
   {
     q: "È anche per studenti delle medie?",
@@ -784,7 +772,7 @@ const FAQS = [
   },
   {
     q: "In cosa consiste l'aiuto compiti?",
-    a: "Lo studente ha a disposizione il tutor ogni giorno e può chiedergli aiuto per svolgere i compiti via chat.",
+    a: "Puoi scrivere in qualsiasi momento per ogni dubbio o difficoltà. Il tutor ti risponde sempre e ti guida nell'apprendimento, spiegandoti come affrontare gli esercizi e aiutandoti a capire i metodi e la logica di risoluzione.",
   },
   {
     q: "E se provo e non sono convinto?",

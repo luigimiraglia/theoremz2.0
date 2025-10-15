@@ -43,12 +43,12 @@ export const THEOREMZ_BLACK_DATA = {
 
   pricing: {
     monthly: {
-      price: "9.90",
+      price: "19.90",
       currency: "EUR",
       period: "mese",
     },
     yearly: {
-      price: "89.00",
+      price: "199.00",
       currency: "EUR",
       period: "anno",
     },

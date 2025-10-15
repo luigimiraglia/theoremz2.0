@@ -150,31 +150,31 @@ const BENEFITS: Record<
   }
 > = {
   ads: {
-    title: "Zero pubblicità ✋",
-    lead: "Studia senza distrazioni",
-    desc: "Con Black navighi Theoremz senza annunci né interruzioni. Focus totale su spiegazioni, indici e appunti.",
-    icon: "🚫",
+    title: "Assistenza via chat illimitata 💬",
+    lead: "Un tutor personale sempre con te",
+    desc: "Con Black hai assistenza costante via chat: un insegnante ti segue 1:1 ogni giorno per aiutarti con i compiti e rispondere a ogni dubbio.",
+    icon: "👨‍🏫",
     Illustration: ({ play }) => <AdsLottie play={!!play} />,
   },
   quiz: {
-    title: "Esercizi e quiz 🍒",
-    lead: "Allenati e verifica subito",
-    desc: "Collezioni di esercizi, spiegazioni passo-passo e quiz a risposta immediata per fissare i concetti.",
-    icon: "🧮",
+    title: "Theoremz AI Avanzato 🤖",
+    lead: "Intelligenza artificiale al tuo servizio",
+    desc: "AI tutor che conosce il tuo percorso, crea quiz personalizzati, simula verifiche e ti prepara con consigli mirati sui tuoi punti deboli.",
+    icon: "🧠",
     Illustration: () => <ImgIllo kind="quiz" />,
   },
   tutor: {
-    title: "Aiuto compiti 💬",
-    lead: "Un boost quando serve",
-    desc: "Invia l’esercizio: lo risolviamo e ti diamo una spiegazione chiara, pronta per essere ricordata.",
-    icon: "📨",
+    title: "Aiuto compiti giornaliero 📚",
+    lead: "Supporto costante per ogni materia",
+    desc: "Ogni giorno un tutor ti segue passo passo nella risoluzione degli esercizi, con spiegazioni dettagliate e personalizzate per te.",
+    icon: "📝",
     Illustration: () => <ImgIllo kind="tutor" />,
   },
   dark: {
-    title: "Dark Mode 🌙",
-    lead: "Occhi riposati, batteria felice",
-    desc: "Tema scuro su tutto il sito, perfetto per lo studio serale e i monitor OLED. Cambi con un tap.",
-    icon: "🌙",
+    title: "Tutte le risorse Theoremz ✨",
+    lead: "Accesso completo alla piattaforma",
+    desc: "Centinaia di esercizi risolti, videolezioni, formulari, quiz, dark mode e sconto del 10% sulle ripetizioni individuali.",
+    icon: "🎯",
     Illustration: () => <ImgIllo kind="dark" />,
   },
 };
@@ -190,7 +190,7 @@ export default function BlackPromo() {
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="max-w-2xl">
           <h2 className="text-[28px] font-bold leading-tight text-slate-900 [.dark_&]:text-white sm:text-[32px]">
-            Scopri <span className="text-sky-600">Theoremz Black</span>!
+            Mai più solo con la <span className="text-sky-600">matematica</span>!
           </h2>
 
           <p className="mt-8 text-[18px] leading-relaxed text-slate-800 [.dark_&]:text-slate-200">
@@ -205,7 +205,7 @@ export default function BlackPromo() {
               href="/black"
               className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-6 py-4 text-[18px] font-extrabold text-white shadow-[0_6px_0_#0f172a] transition active:translate-y-[1px] active:shadow-[0_5px_0_#0f172a] [.dark_&]:bg-white [.dark_&]:text-slate-900 [.dark_&]:shadow-[0_6px_0_#e5e7eb]"
             >
-              Passa a black!
+              Scopri Theoremz Black
               <svg
                 className="ml-2 h-5 w-5"
                 viewBox="0 0 24 24"
@@ -235,10 +235,10 @@ export default function BlackPromo() {
       <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {(
           [
-            ["ads", "No pubblicità"] as const,
-            ["quiz", "Esercizi e quiz"] as const,
+            ["ads", "Chat illimitata"] as const,
+            ["quiz", "Theoremz AI"] as const,
             ["tutor", "Aiuto compiti"] as const,
-            ["dark", "Dark Mode"] as const,
+            ["dark", "Tutte le risorse"] as const,
           ] satisfies ReadonlyArray<readonly [BenefitKey, string]>
         ).map(([key, label]) => {
           const activeNow = active === key;
