@@ -65,9 +65,9 @@ export default function MatematicaClient({
 }) {
   const [query, setQuery] = useState("");
   const dq = useDeferredValue(query); // input più fluido senza jank
-  const [interfaceMode, setInterfaceMode] = useState<"medie" | "superiori" | null>(
-    null
-  );
+  const [interfaceMode, setInterfaceMode] = useState<
+    "medie" | "superiori" | null
+  >(null);
   const [selectedClasse, setSelectedClasse] = useState<string | null>(null);
 
   const [lessons] = useState<Lesson[]>(() => initialLessons); // immutabile
@@ -163,12 +163,15 @@ export default function MatematicaClient({
       (l) => (l.materia || "").toLowerCase() === "matematica"
     );
     if (!interfaceMode && !selectedClasse) return onlyMat;
-    const validClassi = interfaceMode === "medie" ? CLASSI_MEDIE : CLASSI_SUPERIORI;
+    const validClassi =
+      interfaceMode === "medie" ? CLASSI_MEDIE : CLASSI_SUPERIORI;
     return onlyMat.filter((lesson) => {
       const inInterface = interfaceMode
         ? lesson.classe.some((c) => validClassi.includes(c))
         : true;
-      const inClasse = selectedClasse ? lesson.classe.includes(selectedClasse) : true;
+      const inClasse = selectedClasse
+        ? lesson.classe.includes(selectedClasse)
+        : true;
       return inInterface && inClasse;
     });
   }, [filteredLessons, dq, interfaceMode, selectedClasse]);
@@ -236,7 +239,7 @@ export default function MatematicaClient({
               setSelectedClasse(null);
               setExpandedCats(new Set());
             }}
-            className="rounded-xl border border-slate-200 bg-white px-2 py-1 text-[13px]"
+            className="rounded-xl mb-1 border border-white border-r-6 bg-white px-2 py-1 text-[13px]"
             aria-label="Selettore ciclo"
           >
             <option value="">Tutti i cicli</option>
@@ -255,12 +258,14 @@ export default function MatematicaClient({
             }}
             disabled={!interfaceMode}
             className={[
-              "rounded-xl border border-slate-200 bg-white px-2 py-1 text-[13px]",
+              "rounded-xl border mb-1 border-white border-r-6 bg-white px-2 py-1 text-[13px]",
               "disabled:opacity-60 disabled:cursor-not-allowed",
             ].join(" ")}
             aria-label="Filtra per classe"
           >
-            <option value="">{interfaceMode ? "Tutte le classi" : "Classe (opzionale)"}</option>
+            <option value="">
+              {interfaceMode ? "Tutte le classi" : "Classe (opzionale)"}
+            </option>
             {visibleClassi.map((classe) => (
               <option key={classe} value={classe}>
                 {classe}
@@ -296,7 +301,11 @@ export default function MatematicaClient({
             {filteredByInterface.map((lesson) => {
               const lcp = lesson.slug.current === firstVisibleSlug;
               return (
-                <Link href={`/${lesson.slug.current}`} key={lesson._id} prefetch={false}>
+                <Link
+                  href={`/${lesson.slug.current}`}
+                  key={lesson._id}
+                  prefetch={false}
+                >
                   <div className="rounded-2xl bg-gray-100/60 min-w-[320px] border-2 border-slate-800 hover:shadow-[-5px_6px_0_0_#2b7fff] hover:translate-x-1 hover:-translate-y-1 transition-all cursor-pointer">
                     <div className="h-36 overflow-hidden rounded-t-2xl bg-white">
                       <Image
@@ -338,10 +347,16 @@ export default function MatematicaClient({
                         key={`${s.lessonId}-${anchor}`}
                         className="group rounded-xl bg-white ring-1 ring-slate-200 hover:ring-blue-400/70 hover:shadow-[0_8px_20px_-10px_rgba(30,58,138,0.35)] transition overflow-hidden"
                       >
-                        <Link href={`/${s.lessonSlug}#${anchor}`} prefetch={false} className="flex items-stretch gap-0">
+                        <Link
+                          href={`/${s.lessonSlug}#${anchor}`}
+                          prefetch={false}
+                          className="flex items-stretch gap-0"
+                        >
                           <div className="w-28 h-20 bg-slate-50 flex items-center justify-center shrink-0">
                             <Image
-                              src={s.lessonThumb || "/images/thumb/in-arrivo.webp"}
+                              src={
+                                s.lessonThumb || "/images/thumb/in-arrivo.webp"
+                              }
                               alt={s.lessonTitle}
                               width={160}
                               height={90}
@@ -355,7 +370,10 @@ export default function MatematicaClient({
                               {s.heading}
                             </div>
                             <div className="mt-0.5 text-[12px] text-slate-600 truncate">
-                              in <span className="text-[#1a5fd6] group-hover:underline">{s.lessonTitle}</span>
+                              in{" "}
+                              <span className="text-[#1a5fd6] group-hover:underline">
+                                {s.lessonTitle}
+                              </span>
                             </div>
                           </div>
                         </Link>
