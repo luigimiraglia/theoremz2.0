@@ -7,9 +7,9 @@ export default function BlackPopup() {
         Hai scoperto un vantaggio Black
       </h1>
       <p className="font-medium mx-4">
-        Iscriviti per usifruire di questa e molte altre funzioni esclusive
+        Iscriviti per accedere a questa e tutte le altre funzioni esclusive
       </p>
-      <ul className="pl-15">
+      <ul className="pl-12">
         <li className="flex">
           <span className="bg-emerald-400 text-white rounded-full h-[22px] w-[22px] mr-1.5">
             <svg
@@ -27,7 +27,7 @@ export default function BlackPopup() {
             </svg>
           </span>
           <span className="h-10">
-            <strong>Niente</strong> pubblicità
+            Insegnante <strong>dedicato</strong>
           </span>
         </li>
         <li className="flex">
@@ -47,7 +47,7 @@ export default function BlackPopup() {
             </svg>
           </span>
           <span className="h-10">
-            Assistenza <strong>illimitata</strong>
+            <strong>3000+</strong> esercizi risolti
           </span>
         </li>
         <li className="flex ">
@@ -69,9 +69,22 @@ export default function BlackPopup() {
           <span className="h-10">Tanto altro ancora</span>
         </li>
       </ul>
-      <Link href="/black" className="bg-black font-bold py-2 rounded-lg text-white mx-4 mt-2">
-        Scopri di più
+      <Link
+        href="/black"
+        className="relative overflow-hidden bg-gradient-to-r from-gray-900 via-black to-gray-900 font-bold py-3 px-6 rounded-lg text-white mx-4 mt-2 hover:from-gray-800 hover:via-gray-900 hover:to-gray-800 transition-all duration-300 transform hover:scale-105 active:scale-95 before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:translate-x-[-100%] before:animate-[shimmer_2s_infinite] before:skew-x-12"
+      >
+        <span className="relative z-10">🚀 Sblocca tutto ora!</span>
       </Link>
+      <style jsx>{`
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%) skewX(12deg);
+          }
+          100% {
+            transform: translateX(200%) skewX(12deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }

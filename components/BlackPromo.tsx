@@ -190,7 +190,8 @@ export default function BlackPromo() {
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="max-w-2xl">
           <h2 className="text-[28px] font-bold leading-tight text-slate-900 [.dark_&]:text-white sm:text-[32px]">
-            Mai più solo con la <span className="text-sky-600">matematica</span>!
+            Mai più solo con la <span className="text-sky-600">matematica</span>
+            !
           </h2>
 
           <p className="mt-8 text-[18px] leading-relaxed text-slate-800 [.dark_&]:text-slate-200">
