@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# lighthouse reports
+lighthouse-*.json
+lighthouse-*.html
+
+# local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# temporary files and scripts
+/tmp/
+create-tables.js
+create-tables.sql
+performance-test.js
