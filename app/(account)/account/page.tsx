@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { getAuth } from "firebase/auth";
+import NewsletterSettings from "@/components/NewsletterSettings";
 import dynamic from "next/dynamic";
 const GradesChartRecharts = dynamic(
   () => import("@/components/GradesChartRecharts"),
@@ -383,6 +384,9 @@ export default function AccountPage() {
           {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
         </button>
       </Card>
+
+      {/* NEWSLETTER */}
+      <NewsletterSettings />
     </main>
   );
 }

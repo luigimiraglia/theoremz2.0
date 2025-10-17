@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import Script from "next/script";
 // Note: avoid server cookies here to keep layout static and reduce FAC usage
 import { AuthProvider } from "@/lib/AuthContext";
+import { ToastProvider } from "@/components/Toast";
 import "./globals.css";
 // Import solo il CSS critico
 import "./critical.css";
@@ -12,8 +13,6 @@ import Providers from "./providers";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BlackPromoBanner from "@/components/BlackPromoBanner";
-import AnalyticsListener from "@/components/AnalyticsListener";
-import ClientAnalytics from "@/components/ClientAnalytics";
 import CookieBanner from "@/components/CookieBanner";
 import KatexFonts from "@/components/KatexFonts";
 
@@ -70,7 +69,6 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   return (
     <html
       lang="it"
@@ -93,7 +91,6 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://www.googleapis.com" />
         {/* DNS only for resources that may be gated by consent */}
         <link rel="dns-prefetch" href="https://www.gstatic.com" />
-        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         {process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ? (
           <>
             <link
@@ -148,22 +145,6 @@ export default async function RootLayout({
           }}
         />
 
-        {/* Consent Mode default (deny) – injected as early as possible */}
-        <Script id="consent-default" strategy="beforeInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);} 
-            gtag('consent', 'default', {
-              'ad_storage': 'denied',
-              'ad_user_data': 'denied',
-              'ad_personalization': 'denied',
-              'analytics_storage': 'denied',
-              'functionality_storage': 'denied',
-              'security_storage': 'granted'
-            });
-          `}
-        </Script>
-
         {/* Theme init (no-flash, resolves Android/system vs site selection) */}
         <Script id="theme-init" strategy="beforeInteractive">
           {`
@@ -177,45 +158,37 @@ export default async function RootLayout({
             } catch {}
           `}
         </Script>
-
-        {/* GA is loaded client-side only when consent is present */}
       </head>
 
       <body className="antialiased min-h-dvh bg-background text-foreground overflow-x-hidden">
-        <AuthProvider>
-          {/* Non bloccare il paint del contenuto server-rendered */}
-          <Suspense fallback={null}>
-            <Providers>
-              <Suspense fallback={null}>
-                <Header />
-              </Suspense>
+        <ToastProvider>
+          <AuthProvider>
+            {/* Non bloccare il paint del contenuto server-rendered */}
+            <Suspense fallback={null}>
+              <Providers>
+                <Suspense fallback={null}>
+                  <Header />
+                </Suspense>
 
-              {/* Banner Black (client) — mostra solo se non abbonato; escluso /black, /mentor e /contatto-rapido */}
-              <Suspense fallback={null}>
-                <BlackPromoBanner />
-              </Suspense>
+                {/* Banner Black (client) — mostra solo se non abbonato; escluso /black, /mentor e /contatto-rapido */}
+                <Suspense fallback={null}>
+                  <BlackPromoBanner />
+                </Suspense>
 
-              {children}
+                {children}
 
-              <Suspense fallback={null}>
-                <Footer />
-              </Suspense>
+                <Suspense fallback={null}>
+                  <Footer />
+                </Suspense>
 
-              {/* Client analytics bootstrap + SPA pageviews (no server cookies) */}
-              <Suspense fallback={null}>
-                <ClientAnalytics />
-              </Suspense>
-              <Suspense fallback={null}>
-                <AnalyticsListener />
-              </Suspense>
-
-              {/* GDPR consent banner */}
-              <Suspense fallback={null}>
-                <CookieBanner />
-              </Suspense>
-            </Providers>
-          </Suspense>
-        </AuthProvider>
+                {/* GDPR consent banner */}
+                <Suspense fallback={null}>
+                  <CookieBanner />
+                </Suspense>
+              </Providers>
+            </Suspense>
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   );

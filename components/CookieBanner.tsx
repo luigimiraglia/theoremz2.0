@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { getAnonId } from "@/lib/anonId";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -19,27 +20,6 @@ type StoredConsent = {
 
 const CONSENT_KEY = "tz_consent_v2";
 const VERSION = process.env.NEXT_PUBLIC_CONSENT_VERSION || "v1";
-
-declare global {
-  interface Window {
-    dataLayer?: any[];
-    gtag?: (...args: any[]) => void;
-  }
-}
-
-function updateConsentMode(cat: ConsentCategories) {
-  try {
-    const base: Record<string, "granted" | "denied"> = {
-      ad_storage: "denied",
-      ad_user_data: "denied",
-      ad_personalization: "denied",
-      analytics_storage: cat.analytics ? "granted" : "denied",
-      functionality_storage: cat.preferences ? "granted" : "denied",
-      security_storage: "granted", // strictly necessary
-    };
-    window.gtag?.("consent", "update", base);
-  } catch {}
-}
 
 function readStored(): StoredConsent | null {
   try {
@@ -79,15 +59,17 @@ export default function CookieBanner() {
     preferences: false,
   });
   const { user } = useAuth();
+  const pathname = usePathname();
 
-  // Open on first visit or when requested
+  // Open on first visit or when requested (but not on /start page)
   useEffect(() => {
     const stored = readStored();
-    if (!stored) setOpen(true);
+    const isStartPage = pathname === "/start";
+    if (!stored && !isStartPage) setOpen(true);
     const onOpen = () => setOpen(true);
     window.addEventListener("tz:open-cookie-manager", onOpen);
     return () => window.removeEventListener("tz:open-cookie-manager", onOpen);
-  }, []);
+  }, [pathname]);
 
   // Restore switches when showing prefs
   useEffect(() => {
@@ -119,47 +101,6 @@ export default function CookieBanner() {
         document.cookie = `tz_consent=${encodeURIComponent(
           JSON.stringify({ v: payload.v, t: payload.t, c: c })
         )}; path=/; expires=${expires}; samesite=lax`;
-      } catch {}
-
-      // Consent Mode update
-      updateConsentMode(c);
-
-      // If analytics granted and GA is not loaded yet, load it on demand
-      try {
-        const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID as
-          | string
-          | undefined;
-        const hasGtag =
-          typeof window !== "undefined" &&
-          typeof (window as any).gtag === "function";
-        if (c.analytics && GA_ID && !hasGtag) {
-          // init dataLayer + gtag
-          (window as any).dataLayer = (window as any).dataLayer || [];
-          (window as any).gtag = (...args: any[]) => {
-            (window as any).dataLayer.push(args);
-          };
-          // load script
-          const s = document.createElement("script");
-          s.async = true;
-          s.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-          document.head.appendChild(s);
-          // init config
-          (window as any).gtag("js", new Date());
-          (window as any).gtag("config", GA_ID, {
-            anonymize_ip: true,
-            send_page_view: false,
-          });
-          // Send initial page_view after consent is granted so Real‑Time shows immediately
-          try {
-            const path =
-              window.location.pathname +
-              (window.location.search ? window.location.search : "");
-            (window as any).gtag("event", "page_view", {
-              page_path: path,
-              page_title: document?.title || undefined,
-            });
-          } catch {}
-        }
       } catch {}
 
       // Log decision

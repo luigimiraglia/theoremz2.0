@@ -25,7 +25,8 @@ export default function SaveLessonButton({
   lessonSlug: string | undefined;
   className?: string;
 }) {
-  const { user, savedLessons, refreshSavedLessons, isSubscribed } = useAuth() as AuthReturn & { isSubscribed?: boolean | null };
+  const { user, savedLessons, refreshSavedLessons, isSubscribed } =
+    useAuth() as AuthReturn & { isSubscribed?: boolean | null };
   const [busy, setBusy] = useState(false);
   const [Popup, setPopup] = useState<ComponentType | null>(null);
   const [state, setState] = useState<"idle" | "popup">("idle");

@@ -9,7 +9,9 @@ interface ThemeToggleProps {
   position?: "absolute" | "relative";
 }
 
-export default function ThemeToggle({ position = "absolute" }: ThemeToggleProps) {
+export default function ThemeToggle({
+  position = "absolute",
+}: ThemeToggleProps) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -18,10 +20,12 @@ export default function ThemeToggle({ position = "absolute" }: ThemeToggleProps)
   const isDark =
     theme === "dark" || (theme === "system" && resolvedTheme === "dark");
 
-  const baseClasses = "inline-flex items-center justify-center rounded-xl w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm transition-all duration-300";
-  const positionClasses = position === "absolute" 
-    ? "absolute top-26 right-4 md:top-26 md:right-4" 
-    : "";
+  const baseClasses =
+    "inline-flex items-center justify-center rounded-xl w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm transition-all duration-300";
+  const positionClasses =
+    position === "absolute"
+      ? "absolute top-26 right-4 md:top-26 md:right-4"
+      : "";
 
   return (
     <button

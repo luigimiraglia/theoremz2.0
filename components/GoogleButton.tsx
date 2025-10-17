@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -10,11 +11,14 @@ interface GoogleButtonProps {
   disabled?: boolean;
   /** Facoltativo: callback eseguita al termine del login  */
   onSuccess?: () => void;
+  /** Redirect personalizzato dopo il login (default: /) */
+  redirectTo?: string;
 }
 
-export function GoogleButton({ disabled, onSuccess }: GoogleButtonProps) {
+export function GoogleButton({ disabled, onSuccess, redirectTo = "/" }: GoogleButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   async function handleGoogle() {
     setError(null);
@@ -22,6 +26,12 @@ export function GoogleButton({ disabled, onSuccess }: GoogleButtonProps) {
       setLoading(true);
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
+      
+      // Redirect personalizzato
+      if (redirectTo !== "/") {
+        router.push(redirectTo);
+      }
+      
       onSuccess?.(); // facoltativo
     } catch (err: any) {
       setError(err.message ?? "Errore di autenticazione Google");

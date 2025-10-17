@@ -6,18 +6,18 @@ export default {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     screens: {
-      'xs': '380px',
-      'sm': '640px',
-      'md': '768px',
-      'lg': '1024px',
-      'xl': '1280px',
-      '2xl': '1536px',
+      xs: "380px",
+      sm: "640px",
+      md: "768px",
+      lg: "1024px",
+      xl: "1280px",
+      "2xl": "1536px",
       // Max breakpoints
-      'max-xs': { 'max': '379px' },
-      'max-sm': { 'max': '639px' },
-      'max-md': { 'max': '767px' },
-      'max-lg': { 'max': '1023px' },
-      'max-xl': { 'max': '1279px' },
+      "max-xs": { max: "379px" },
+      "max-sm": { max: "639px" },
+      "max-md": { max: "767px" },
+      "max-lg": { max: "1023px" },
+      "max-xl": { max: "1279px" },
     },
     extend: {
       keyframes: {

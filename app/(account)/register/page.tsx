@@ -21,7 +21,7 @@ export default function Register() {
 
   /* redirect se già loggato */
   useEffect(() => {
-    if (user) router.replace("/");
+    if (user) router.replace("/account");
   }, [user, router]);
 
   /* submit */
@@ -43,7 +43,7 @@ export default function Register() {
         /* REGISTER */
         await createUserWithEmailAndPassword(auth, email, password);
       }
-      router.replace("/"); // redirect home
+      router.replace("/account"); // redirect account invece che home
     } catch (err: any) {
       setError(err.message ?? "Qualcosa è andato storto.");
     } finally {
@@ -60,7 +60,7 @@ export default function Register() {
         </h1>
 
         {/* Google */}
-        <GoogleButton disabled={loading} />
+        <GoogleButton disabled={loading} redirectTo="/account" />
 
         <div className="my-4 flex items-center gap-2">
           <hr className="flex-grow border-slate-300" />
