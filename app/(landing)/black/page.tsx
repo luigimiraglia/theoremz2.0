@@ -640,7 +640,7 @@ function PriceCard({
   return (
     <div className="relative mt-3 overflow-hidden rounded-2xl border border-white/15 bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_-30px_rgba(15,23,42,0.45)]">
       {regularPrice == "19,90€" || regularPrice == "199€" ? (
-        <CountdownTimer targetDate="2025-10-20T23:59:59" />
+        <CountdownTimer targetDate="2025-10-31T23:59:59" />
       ) : (
         ""
       )}
