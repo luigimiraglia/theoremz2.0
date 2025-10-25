@@ -1,0 +1,123 @@
+// lib/temp-access.ts
+/**
+ * Sistema per gestire accessi temporanei hardcodati alle features subscribed
+ * Le email vengono configurate con una data di scadenza
+ */
+
+export type TempAccessEntry = {
+  email: string;
+  expiresAt: string; // ISO string date
+  reason?: string; // motivo dell'accesso temporaneo
+  grantedAt?: string; // quando è stato concesso
+};
+
+// Email hardcodate con accesso temporaneo (14 giorni di default)
+const TEMP_ACCESS_EMAILS: TempAccessEntry[] = [
+  // Esempio attivo per testing (rimuovi dopo il test)
+  {
+    email: "theoremz.team@gmail.com",
+    expiresAt: "2025-11-08T18:40:18.699Z",
+    reason: "Theoremz Mentor Prova",
+    grantedAt: "2025-10-25T18:40:18.699Z",
+  },
+  {
+    email: "amerubini@gmail.com",
+    expiresAt: "2025-11-08T18:39:40.325Z",
+    reason: "Theoremz Mentor Prova",
+    grantedAt: "2025-10-25T18:39:40.325Z",
+  },
+
+  // Aggiungi qui nuove email generate dal pannello admin:
+  // (usa il componente TempAccessAdmin in /admin/analytics per generare il codice)
+];
+
+/**
+ * Verifica se un'email ha accesso temporaneo valido
+ */
+export function hasTempAccess(email: string | null | undefined): boolean {
+  if (!email) return false;
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const now = new Date();
+
+  return TEMP_ACCESS_EMAILS.some((entry) => {
+    if (entry.email.toLowerCase() !== normalizedEmail) return false;
+
+    const expiresAt = new Date(entry.expiresAt);
+    return now <= expiresAt;
+  });
+}
+
+/**
+ * Ottiene le informazioni di accesso temporaneo per un'email
+ */
+export function getTempAccessInfo(
+  email: string | null | undefined
+): TempAccessEntry | null {
+  if (!email) return null;
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const now = new Date();
+
+  const entry = TEMP_ACCESS_EMAILS.find(
+    (entry) => entry.email.toLowerCase() === normalizedEmail
+  );
+
+  if (!entry) return null;
+
+  const expiresAt = new Date(entry.expiresAt);
+  if (now > expiresAt) return null; // Scaduto
+
+  return entry;
+}
+
+/**
+ * Ottiene tutte le email con accesso temporaneo (incluse quelle scadute)
+ */
+export function getAllTempAccessEmails(): TempAccessEntry[] {
+  return [...TEMP_ACCESS_EMAILS];
+}
+
+/**
+ * Ottiene solo le email con accesso temporaneo ancora valido
+ */
+export function getActiveTempAccessEmails(): TempAccessEntry[] {
+  const now = new Date();
+  return TEMP_ACCESS_EMAILS.filter((entry) => {
+    const expiresAt = new Date(entry.expiresAt);
+    return now <= expiresAt;
+  });
+}
+
+/**
+ * Helper per aggiungere facilmente una nuova email con accesso temporaneo
+ * (da usare manualmente nel codice)
+ */
+export function createTempAccessEntry(
+  email: string,
+  daysFromNow: number = 14,
+  reason?: string
+): TempAccessEntry {
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + daysFromNow * 24 * 60 * 60 * 1000);
+
+  return {
+    email: email.toLowerCase().trim(),
+    expiresAt: expiresAt.toISOString(),
+    reason,
+    grantedAt: now.toISOString(),
+  };
+}
+
+/**
+ * Helper per formattare la data di scadenza
+ */
+export function formatExpiryDate(isoString: string): string {
+  return new Date(isoString).toLocaleDateString("it-IT", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}

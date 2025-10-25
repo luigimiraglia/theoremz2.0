@@ -4,10 +4,13 @@ import { track } from "@/lib/analytics";
 
 // Crea client Supabase per operazioni newsletter
 function getSupabaseClient() {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('Supabase credentials not found');
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.SUPABASE_SERVICE_ROLE_KEY
+  ) {
+    throw new Error("Supabase credentials not found");
   }
-  
+
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -17,25 +20,28 @@ function getSupabaseClient() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
+    const {
       user_id,
       email,
-      subscribed, 
-      frequenza = 'weekly',
-      tipo_contenuti = ['lezioni', 'esercizi'],
+      subscribed,
+      frequenza = "weekly",
+      tipo_contenuti = ["lezioni", "esercizi"],
       materie_interesse = [],
-      source = 'profile',
+      source = "profile",
       // Dati del profilo utente
       nome,
       cognome,
       classe,
       anno_scolastico,
-      scuola
+      scuola,
     } = body;
 
     // Validazione base
     if (!user_id || !email) {
-      return NextResponse.json({ error: "User ID e email sono richiesti" }, { status: 400 });
+      return NextResponse.json(
+        { error: "User ID e email sono richiesti" },
+        { status: 400 }
+      );
     }
 
     const supabase = getSupabaseClient();
@@ -54,82 +60,81 @@ export async function POST(request: NextRequest) {
         tipo_contenuti,
         materie_interesse,
         source,
-        user_agent: request.headers.get('user-agent'),
-        ip_address: request.headers.get('x-forwarded-for') || 
-                   request.headers.get('x-real-ip') || 
-                   'unknown',
-        is_active: true
+        user_agent: request.headers.get("user-agent"),
+        ip_address:
+          request.headers.get("x-forwarded-for") ||
+          request.headers.get("x-real-ip") ||
+          "unknown",
+        is_active: true,
       };
 
       const { data, error } = await supabase
-        .from('newsletter_subscriptions')
-        .upsert(subscriptionData, { onConflict: 'user_id' })
+        .from("newsletter_subscriptions")
+        .upsert(subscriptionData, { onConflict: "user_id" })
         .select()
         .single();
 
       if (error) {
-        console.error('Newsletter subscription error:', error);
+        console.error("Newsletter subscription error:", error);
         return NextResponse.json(
-          { error: "Errore nell'iscrizione alla newsletter" }, 
+          { error: "Errore nell'iscrizione alla newsletter" },
           { status: 500 }
         );
       }
 
       // Analytics tracking
       try {
-        track('newsletter_subscribe', {
+        track("newsletter_subscribe", {
           user_id,
           email,
           frequenza,
-          tipo_contenuti: tipo_contenuti.join(','),
-          materie_interesse: materie_interesse.join(','),
-          source
+          tipo_contenuti: tipo_contenuti.join(","),
+          materie_interesse: materie_interesse.join(","),
+          source,
         });
       } catch {}
 
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         message: "Iscrizione alla newsletter completata!",
-        data 
+        data,
       });
-
     } else {
       // Disiscrizione dalla newsletter
       const { error } = await supabase
-        .from('newsletter_subscriptions')
-        .update({ 
+        .from("newsletter_subscriptions")
+        .update({
           is_active: false,
-          unsubscribed_at: new Date().toISOString()
+          unsubscribed_at: new Date().toISOString(),
         })
-        .eq('user_id', user_id);
+        .eq("user_id", user_id);
 
       if (error) {
-        console.error('Newsletter unsubscribe error:', error);
+        console.error("Newsletter unsubscribe error:", error);
         return NextResponse.json(
-          { error: "Errore nella disiscrizione" }, 
+          { error: "Errore nella disiscrizione" },
           { status: 500 }
         );
       }
 
       // Analytics tracking
       try {
-        track('newsletter_unsubscribe', {
+        track("newsletter_unsubscribe", {
           user_id,
           email,
-          source
+          source,
         });
       } catch {}
 
-      return NextResponse.json({ 
-        success: true, 
-        message: "Disiscrizione completata" 
+      return NextResponse.json({
+        success: true,
+        message: "Disiscrizione completata",
       });
     }
-
   } catch (error) {
-    console.error('Newsletter API error:', error);
+    console.error("Newsletter API error:", error);
     return NextResponse.json(
-      { error: "Errore interno del server" }, 
+      { error: "Errore interno del server" },
       { status: 500 }
     );
   }
@@ -138,7 +143,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const user_id = searchParams.get('user_id');
+    const user_id = searchParams.get("user_id");
 
     if (!user_id) {
       return NextResponse.json({ error: "User ID richiesto" }, { status: 400 });
@@ -148,29 +153,29 @@ export async function GET(request: NextRequest) {
 
     // Ottieni stato iscrizione corrente
     const { data, error } = await supabase
-      .from('newsletter_subscriptions')
-      .select('*')
-      .eq('user_id', user_id)
-      .eq('is_active', true)
+      .from("newsletter_subscriptions")
+      .select("*")
+      .eq("user_id", user_id)
+      .eq("is_active", true)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Newsletter get error:', error);
+    if (error && error.code !== "PGRST116") {
+      // PGRST116 = no rows returned
+      console.error("Newsletter get error:", error);
       return NextResponse.json(
-        { error: "Errore nel recupero dati" }, 
+        { error: "Errore nel recupero dati" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       subscribed: !!data,
-      subscription: data || null
+      subscription: data || null,
     });
-
   } catch (error) {
-    console.error('Newsletter GET error:', error);
+    console.error("Newsletter GET error:", error);
     return NextResponse.json(
-      { error: "Errore interno del server" }, 
+      { error: "Errore interno del server" },
       { status: 500 }
     );
   }

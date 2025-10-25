@@ -83,11 +83,23 @@ export default async function RootLayout({
         <meta name="color-scheme" content="light dark" />
         {/* DNS prefetch leggero per immagini da Sanity; evita connessioni TCP/TLS inutili */}
         <link rel="dns-prefetch" href="https://cdn.sanity.io" />
-        <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://cdn.sanity.io"
+          crossOrigin="anonymous"
+        />
         {/* Hint early connections used by auth/Google APIs (saves ~300ms on mobile) */}
-        <link rel="preconnect" href="https://apis.google.com" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://apis.google.com"
+          crossOrigin="anonymous"
+        />
         <link rel="dns-prefetch" href="https://apis.google.com" />
-        <link rel="preconnect" href="https://www.googleapis.com" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://www.googleapis.com"
+          crossOrigin="anonymous"
+        />
         <link rel="dns-prefetch" href="https://www.googleapis.com" />
         {/* DNS only for resources that may be gated by consent */}
         <link rel="dns-prefetch" href="https://www.gstatic.com" />
@@ -130,12 +142,14 @@ export default async function RootLayout({
                   potentialAction: [
                     {
                       "@type": "SearchAction",
-                      target: "https://theoremz.com/matematica?q={search_term_string}",
+                      target:
+                        "https://theoremz.com/matematica?q={search_term_string}",
                       "query-input": "required name=search_term_string",
                     },
                     {
                       "@type": "SearchAction",
-                      target: "https://theoremz.com/fisica?q={search_term_string}",
+                      target:
+                        "https://theoremz.com/fisica?q={search_term_string}",
                       "query-input": "required name=search_term_string",
                     },
                   ],

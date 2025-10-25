@@ -15,7 +15,11 @@ interface GoogleButtonProps {
   redirectTo?: string;
 }
 
-export function GoogleButton({ disabled, onSuccess, redirectTo = "/" }: GoogleButtonProps) {
+export function GoogleButton({
+  disabled,
+  onSuccess,
+  redirectTo = "/",
+}: GoogleButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -26,12 +30,12 @@ export function GoogleButton({ disabled, onSuccess, redirectTo = "/" }: GoogleBu
       setLoading(true);
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      
+
       // Redirect personalizzato
       if (redirectTo !== "/") {
         router.push(redirectTo);
       }
-      
+
       onSuccess?.(); // facoltativo
     } catch (err: any) {
       setError(err.message ?? "Errore di autenticazione Google");

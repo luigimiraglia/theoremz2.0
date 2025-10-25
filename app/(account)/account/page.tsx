@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { getAuth } from "firebase/auth";
 import NewsletterSettings from "@/components/NewsletterSettings";
+import TempAccessInfo from "@/components/TempAccessInfo";
 import dynamic from "next/dynamic";
 const GradesChartRecharts = dynamic(
   () => import("@/components/GradesChartRecharts"),
@@ -271,6 +272,9 @@ export default function AccountPage() {
           </div>
         </div>
       </section>
+
+      {/* Temp Access Info */}
+      <TempAccessInfo />
 
       {/* Avatar picker rimosso */}
 
@@ -1519,88 +1523,93 @@ function ScheduledExamsCard() {
             Programma la tua prima verifica
           </button>
 
-          {firstOpen && <FirstExamPortal>
-            <div
-              className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="first-exam-title"
-              onClick={() => setFirstOpen(false)}
-            >
+          {firstOpen && (
+            <FirstExamPortal>
               <div
-                className="w-full max-w-md sm:rounded-2xl rounded-t-2xl border border-slate-200 [.dark_&]:border-white/10 bg-white [.dark_&]:bg-slate-900 shadow-2xl p-4 max-h-[85vh] overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
+                className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="first-exam-title"
+                onClick={() => setFirstOpen(false)}
               >
-                <div className="flex items-center justify-between">
-                  <h3 id="first-exam-title" className="text-base font-semibold">
-                    Scegli una data
-                  </h3>
-                  <button
-                    onClick={() => setFirstOpen(false)}
-                    className="rounded-md px-2 py-1 text-sm bg-slate-100 [.dark_&]:bg-white/10 hover:bg-slate-200 [.dark_&]:hover:bg-white/15"
-                    aria-label="Chiudi"
-                  >
-                    Chiudi
-                  </button>
-                </div>
-                <p className="mt-1 mb-2 text-[12px] text-slate-600 [.dark_&]:text-white/70">
-                  Tocca un giorno nel calendario per selezionarlo.
-                </p>
-                <CalendarView
-                  year={viewYear}
-                  month={viewMonth}
-                  onPrev={() => {
-                    const m = viewMonth - 1;
-                    if (m < 0) {
-                      setViewMonth(11);
-                      setViewYear(viewYear - 1);
-                    } else setViewMonth(m);
-                  }}
-                  onNext={() => {
-                    const m = viewMonth + 1;
-                    if (m > 11) {
-                      setViewMonth(0);
-                      setViewYear(viewYear + 1);
-                    } else setViewMonth(m);
-                  }}
-                  today={today}
-                  selected={firstDate}
-                  onSelect={(ds) => setFirstDate(ds)}
-                />
-                <label className="mt-3 block text-[12px] font-medium text-slate-700 [.dark_&]:text-white/80">
-                  Materia (facoltativa)
-                  <input
-                    type="text"
-                    placeholder="Es. Matematica, Fisica"
-                    value={firstSubject}
-                    onChange={(e) => setFirstSubject(e.target.value)}
-                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
-                  />
-                </label>
-                <div className="mt-3 flex justify-end gap-2">
-                  <button
-                    onClick={() => setFirstOpen(false)}
-                    className="rounded-lg border px-3 py-1.5 text-sm border-slate-300 [.dark_&]:border-white/20"
-                  >
-                    Annulla
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!firstDate) return;
-                      await addExam(firstDate, firstSubject);
-                      setFirstOpen(false);
-                      setFirstDate("");
-                      setFirstSubject("");
+                <div
+                  className="w-full max-w-md sm:rounded-2xl rounded-t-2xl border border-slate-200 [.dark_&]:border-white/10 bg-white [.dark_&]:bg-slate-900 shadow-2xl p-4 max-h-[85vh] overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3
+                      id="first-exam-title"
+                      className="text-base font-semibold"
+                    >
+                      Scegli una data
+                    </h3>
+                    <button
+                      onClick={() => setFirstOpen(false)}
+                      className="rounded-md px-2 py-1 text-sm bg-slate-100 [.dark_&]:bg-white/10 hover:bg-slate-200 [.dark_&]:hover:bg-white/15"
+                      aria-label="Chiudi"
+                    >
+                      Chiudi
+                    </button>
+                  </div>
+                  <p className="mt-1 mb-2 text-[12px] text-slate-600 [.dark_&]:text-white/70">
+                    Tocca un giorno nel calendario per selezionarlo.
+                  </p>
+                  <CalendarView
+                    year={viewYear}
+                    month={viewMonth}
+                    onPrev={() => {
+                      const m = viewMonth - 1;
+                      if (m < 0) {
+                        setViewMonth(11);
+                        setViewYear(viewYear - 1);
+                      } else setViewMonth(m);
                     }}
-                    disabled={!firstDate}
-                    className="rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] text-white px-4 py-1.5 text-sm font-semibold disabled:opacity-60"
-                  >
-                    Conferma
-                  </button>
+                    onNext={() => {
+                      const m = viewMonth + 1;
+                      if (m > 11) {
+                        setViewMonth(0);
+                        setViewYear(viewYear + 1);
+                      } else setViewMonth(m);
+                    }}
+                    today={today}
+                    selected={firstDate}
+                    onSelect={(ds) => setFirstDate(ds)}
+                  />
+                  <label className="mt-3 block text-[12px] font-medium text-slate-700 [.dark_&]:text-white/80">
+                    Materia (facoltativa)
+                    <input
+                      type="text"
+                      placeholder="Es. Matematica, Fisica"
+                      value={firstSubject}
+                      onChange={(e) => setFirstSubject(e.target.value)}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
+                    />
+                  </label>
+                  <div className="mt-3 flex justify-end gap-2">
+                    <button
+                      onClick={() => setFirstOpen(false)}
+                      className="rounded-lg border px-3 py-1.5 text-sm border-slate-300 [.dark_&]:border-white/20"
+                    >
+                      Annulla
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!firstDate) return;
+                        await addExam(firstDate, firstSubject);
+                        setFirstOpen(false);
+                        setFirstDate("");
+                        setFirstSubject("");
+                      }}
+                      disabled={!firstDate}
+                      className="rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] text-white px-4 py-1.5 text-sm font-semibold disabled:opacity-60"
+                    >
+                      Conferma
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </FirstExamPortal>}
+            </FirstExamPortal>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -2,7 +2,10 @@
 
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { GoogleButton } from "@/components/GoogleButton"; // ← se lo hai già
 import { useAuth } from "@/lib/AuthContext";
@@ -70,7 +73,9 @@ export default function Register() {
 
         {/* form email / pw */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <label htmlFor="reg-email" className="sr-only">Email</label>
+          <label htmlFor="reg-email" className="sr-only">
+            Email
+          </label>
           <input
             id="reg-email"
             name="email"
@@ -83,7 +88,9 @@ export default function Register() {
             required
           />
 
-          <label htmlFor="reg-password" className="sr-only">Password</label>
+          <label htmlFor="reg-password" className="sr-only">
+            Password
+          </label>
           <input
             id="reg-password"
             name="password"
@@ -97,7 +104,10 @@ export default function Register() {
           />
 
           {!isLogin && (
-            <label htmlFor="accept-terms" className="flex cursor-pointer items-start gap-2 text-sm">
+            <label
+              htmlFor="accept-terms"
+              className="flex cursor-pointer items-start gap-2 text-sm"
+            >
               <input
                 id="accept-terms"
                 name="acceptTerms"

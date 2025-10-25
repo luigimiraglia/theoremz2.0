@@ -30,12 +30,15 @@ export default function SmartPrefetch({
   // 3. Non siamo su mobile con batteria scarica
   const shouldPrefetch = () => {
     if (typeof navigator === "undefined") return false;
-    
+
     // Check connection quality
     const connection = (navigator as any).connection;
     if (connection) {
       // Non prefetchare su connessioni lente
-      if (connection.effectiveType === "slow-2g" || connection.effectiveType === "2g") {
+      if (
+        connection.effectiveType === "slow-2g" ||
+        connection.effectiveType === "2g"
+      ) {
         return false;
       }
       // Rispetta la preferenza saveData dell'utente
@@ -60,9 +63,9 @@ export default function SmartPrefetch({
 
   const doPrefetch = useCallback(() => {
     if (prefetchedRef.current || !shouldPrefetch()) return;
-    
+
     prefetchedRef.current = true;
-    
+
     // Usa router.prefetch di Next.js che è già ottimizzato
     // Non fa richieste duplicate e usa il cache appropriato
     router.prefetch(href);
@@ -70,11 +73,11 @@ export default function SmartPrefetch({
 
   const handleMouseEnter = () => {
     if (!hoverOnly && prefetchedRef.current) return;
-    
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     timeoutRef.current = setTimeout(() => {
       doPrefetch();
     }, delay);
@@ -106,9 +109,9 @@ export default function SmartPrefetch({
             }
           });
         },
-        { 
+        {
           rootMargin: "50px", // Prefetch quando è vicino al viewport
-          threshold: 0.1 
+          threshold: 0.1,
         }
       );
 

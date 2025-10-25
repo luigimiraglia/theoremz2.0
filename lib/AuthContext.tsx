@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import type { User as FirebaseUser } from "firebase/auth";
 import { track } from "@/lib/analytics";
+import { hasTempAccess, getTempAccessInfo } from "@/lib/temp-access";
 
 /* =========================
    Tipi
@@ -22,10 +23,21 @@ export type AppUser = {
   createdAt?: number;
 };
 
+type SubscriptionInfo = {
+  isSubscribed: boolean;
+  source: 'stripe' | 'override' | 'temp_access';
+  tempAccessInfo?: {
+    expiresAt: string;
+    reason?: string;
+    grantedAt?: string;
+  };
+};
+
 type AuthContextType = {
   user: AppUser | null;
   loading: boolean; // lasciamo false per non bloccare l'UI
   isSubscribed: boolean | null; // null = non ancora determinato
+  subscriptionInfo: SubscriptionInfo | null; // informazioni dettagliate sulla subscription
   savedLessons: string[];
   refreshSavedLessons: () => Promise<void>;
   forceRefreshSubscription: () => Promise<void>;
@@ -51,6 +63,7 @@ const runWhenIdle = (cb: () => void) => {
    Subscription overrides
    - Nessun hard-code in production!
    - Env: NEXT_PUBLIC_SUB_OVERRIDES="a@b.com,c@d.com"
+   - Temp access: hardcoded emails con scadenza
 ========================= */
 const LOCAL_SUB_OVERRIDES =
   process.env.NODE_ENV === "development" ? ["ermatto@gmail.com"] : [];
@@ -64,8 +77,15 @@ const ALL_OVERRIDES = new Set(
   [...LOCAL_SUB_OVERRIDES, ...ENV_SUB_OVERRIDES].map((e) => e.toLowerCase())
 );
 
-const isEmailOverridden = (email?: string | null) =>
-  !!email && ALL_OVERRIDES.has(email.toLowerCase());
+const isEmailOverridden = (email?: string | null) => {
+  if (!email) return false;
+  
+  // Check permanent overrides (env vars)
+  if (ALL_OVERRIDES.has(email.toLowerCase())) return true;
+  
+  // Check temporary access with expiration
+  return hasTempAccess(email);
+};
 
 /* =========================
    Cache versionata
@@ -81,6 +101,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: false,
   isSubscribed: null,
+  subscriptionInfo: null,
   savedLessons: [],
   refreshSavedLessons: async () => {},
   forceRefreshSubscription: async () => {},
@@ -91,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading] = useState(false); // niente spinner globale
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [savedLessons, setSavedLessons] = useState<string[]>([]);
   const [reportedSubForEmail, setReportedSubForEmail] = useState<string | null>(null);
 
@@ -126,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!fbUser) {
             setUser(null);
             setIsSubscribed(false);
+            setSubscriptionInfo(null);
             setSavedLessons([]);
             return;
           }
@@ -168,7 +191,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unsubscribe?.();
       } catch {}
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // When subscription becomes active for a user, send a one-time analytics event per session
@@ -189,6 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (!emailNullable) {
         setIsSubscribed(false);
+        setSubscriptionInfo(null);
         return;
       }
 
@@ -210,9 +233,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch {}
       }
 
-      // Override attivo → true immediato + cache
-      if (isEmailOverridden(email)) {
+      // Check temp access prima degli override permanenti
+      const tempAccessInfo = getTempAccessInfo(email);
+      if (tempAccessInfo) {
+        const subscriptionInfo: SubscriptionInfo = {
+          isSubscribed: true,
+          source: 'temp_access',
+          tempAccessInfo: {
+            expiresAt: tempAccessInfo.expiresAt,
+            reason: tempAccessInfo.reason,
+            grantedAt: tempAccessInfo.grantedAt
+          }
+        };
         setIsSubscribed(true);
+        setSubscriptionInfo(subscriptionInfo);
+        sessionStorage.setItem(
+          key,
+          JSON.stringify({ 
+            v: true, 
+            t: Date.now(), 
+            src: "temp_access",
+            tempInfo: tempAccessInfo 
+          })
+        );
+        return;
+      }
+
+      // Override permanenti (env vars)
+      if (ALL_OVERRIDES.has(email)) {
+        const subscriptionInfo: SubscriptionInfo = {
+          isSubscribed: true,
+          source: 'override'
+        };
+        setIsSubscribed(true);
+        setSubscriptionInfo(subscriptionInfo);
         sessionStorage.setItem(
           key,
           JSON.stringify({ v: true, t: Date.now(), src: "override" })
@@ -224,9 +278,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cachedRaw = sessionStorage.getItem(key);
       if (cachedRaw) {
         try {
-          const { v, t } = JSON.parse(cachedRaw) as { v: boolean; t: number };
-          if (Date.now() - t < 10 * 60 * 1000) {
-            setIsSubscribed(v);
+          const cached = JSON.parse(cachedRaw) as { 
+            v: boolean; 
+            t: number; 
+            src?: string;
+            tempInfo?: any;
+          };
+          if (Date.now() - cached.t < 10 * 60 * 1000) {
+            setIsSubscribed(cached.v);
+            
+            // Ricostruisci subscriptionInfo dalla cache
+            if (cached.v) {
+              const subscriptionInfo: SubscriptionInfo = {
+                isSubscribed: true,
+                source: cached.src as any || 'stripe',
+                ...(cached.tempInfo && cached.src === 'temp_access' && {
+                  tempAccessInfo: {
+                    expiresAt: cached.tempInfo.expiresAt,
+                    reason: cached.tempInfo.reason,
+                    grantedAt: cached.tempInfo.grantedAt
+                  }
+                })
+              };
+              setSubscriptionInfo(subscriptionInfo);
+            } else {
+              setSubscriptionInfo({ isSubscribed: false, source: 'stripe' });
+            }
             return;
           }
         } catch {}
@@ -245,12 +322,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!resp.ok) {
         console.error("Stripe endpoint error", resp.status);
         setIsSubscribed(false);
+        setSubscriptionInfo({ isSubscribed: false, source: 'stripe' });
         return;
       }
 
       const data = await resp.json();
       const v = !!data.isSubscribed;
       setIsSubscribed(v);
+      setSubscriptionInfo({ isSubscribed: v, source: 'stripe' });
       sessionStorage.setItem(
         key,
         JSON.stringify({ v, t: Date.now(), src: "stripe" })
@@ -258,6 +337,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Stripe status fetch error", err);
       setIsSubscribed(false);
+      setSubscriptionInfo({ isSubscribed: false, source: 'stripe' });
     }
   };
 
@@ -286,6 +366,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
     setUser(null);
     setIsSubscribed(false);
+    setSubscriptionInfo(null);
     setSavedLessons([]);
 
     try {
@@ -299,6 +380,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         isSubscribed,
+        subscriptionInfo,
         savedLessons,
         refreshSavedLessons,
         forceRefreshSubscription,

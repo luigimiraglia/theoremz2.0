@@ -6,7 +6,7 @@ import { useToast } from "./Toast";
 
 type NewsletterData = {
   subscribed: boolean;
-  frequenza: 'daily' | 'weekly' | 'monthly';
+  frequenza: "daily" | "weekly" | "monthly";
   tipo_contenuti: string[];
   materie_interesse: string[];
 };
@@ -16,9 +16,9 @@ export default function NewsletterSettings() {
   const { success, error: showError } = useToast();
   const [data, setData] = useState<NewsletterData>({
     subscribed: false,
-    frequenza: 'weekly',
-    tipo_contenuti: ['lezioni', 'esercizi', 'tips', 'news'], // Tutto selezionato di default
-    materie_interesse: ['matematica', 'fisica'] // Solo matematica e fisica
+    frequenza: "weekly",
+    tipo_contenuti: ["lezioni", "esercizi", "tips", "news"], // Tutto selezionato di default
+    materie_interesse: ["matematica", "fisica"], // Solo matematica e fisica
   });
   const [loading, setLoading] = useState(false);
 
@@ -34,14 +34,17 @@ export default function NewsletterSettings() {
           if (result.subscribed && result.subscription) {
             setData({
               subscribed: true,
-              frequenza: result.subscription.frequenza || 'weekly',
-              tipo_contenuti: result.subscription.tipo_contenuti || ['lezioni', 'esercizi'],
-              materie_interesse: result.subscription.materie_interesse || []
+              frequenza: result.subscription.frequenza || "weekly",
+              tipo_contenuti: result.subscription.tipo_contenuti || [
+                "lezioni",
+                "esercizi",
+              ],
+              materie_interesse: result.subscription.materie_interesse || [],
             });
           }
         }
       } catch (error) {
-        console.error('Errore caricamento stato newsletter:', error);
+        console.error("Errore caricamento stato newsletter:", error);
       }
     };
 
@@ -55,11 +58,11 @@ export default function NewsletterSettings() {
     try {
       // Ottieni dati profilo dal localStorage o dal contesto auth
       const profileData = {
-        nome: user.displayName?.split(' ')[0] || '',
-        cognome: user.displayName?.split(' ').slice(1).join(' ') || '',
-        classe: '', // Potresti avere questi dati nel contesto
+        nome: user.displayName?.split(" ")[0] || "",
+        cognome: user.displayName?.split(" ").slice(1).join(" ") || "",
+        classe: "", // Potresti avere questi dati nel contesto
         anno_scolastico: new Date().getFullYear().toString(),
-        scuola: ''
+        scuola: "",
       };
 
       const payload = {
@@ -69,31 +72,40 @@ export default function NewsletterSettings() {
         frequenza: data.frequenza,
         tipo_contenuti: data.tipo_contenuti,
         materie_interesse: data.materie_interesse,
-        source: 'profile',
-        ...profileData
+        source: "profile",
+        ...profileData,
       };
 
-      const response = await fetch('/api/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const response = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
-        setData(prev => ({ ...prev, subscribed }));
-        
+        setData((prev) => ({ ...prev, subscribed }));
+
         // Mostra notifica di successo
         if (subscribed) {
-          success("Newsletter attivata!", "Riceverai le nostre lezioni settimanali");
+          success(
+            "Newsletter attivata!",
+            "Riceverai le nostre lezioni settimanali"
+          );
         } else {
-          success("Newsletter disattivata", "Non riceverai più le nostre email");
+          success(
+            "Newsletter disattivata",
+            "Non riceverai più le nostre email"
+          );
         }
       } else {
-        throw new Error('Errore nell\'operazione');
+        throw new Error("Errore nell'operazione");
       }
     } catch (error) {
-      console.error('Errore newsletter:', error);
-      showError("Errore", "Non è stato possibile aggiornare le preferenze. Riprova.");
+      console.error("Errore newsletter:", error);
+      showError(
+        "Errore",
+        "Non è stato possibile aggiornare le preferenze. Riprova."
+      );
     } finally {
       setLoading(false);
     }
@@ -107,10 +119,11 @@ export default function NewsletterSettings() {
             Newsletter Theoremz
           </h3>
           <p className="text-sm text-slate-600 [.dark_&]:text-slate-400 mt-1">
-            Ricevi aggiornamenti settimanali su nuove lezioni e contenuti personalizzati
+            Ricevi aggiornamenti settimanali su nuove lezioni e contenuti
+            personalizzati
           </p>
         </div>
-        
+
         <label className="relative inline-flex items-center cursor-pointer">
           <input
             type="checkbox"
