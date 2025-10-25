@@ -51,9 +51,6 @@ lighthouse-*.html
 
 # temporary files and scripts
 /tmp/
-scripts/
-docs/
-exports/
 create-tables.js
 create-tables.sql
 performance-test.js

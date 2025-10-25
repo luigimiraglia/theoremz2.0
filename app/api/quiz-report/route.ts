@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { adminDb } from "@/lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,38 +81,6 @@ export async function POST(req: Request) {
     submittedAtReadable = new Date(submittedAtIso).toLocaleString("it-IT", { timeZone: "Europe/Rome" });
   } catch {
     submittedAtReadable = submittedAtIso;
-  }
-
-  const headers = new Headers(req.headers);
-  const uaHeader = headers.get("user-agent");
-  const refererHeader = headers.get("referer");
-  const ipHeader = headers.get("x-forwarded-for");
-  const ua = uaHeader ? uaHeader.slice(0, 400) : null;
-  const referer = refererHeader ? refererHeader.slice(0, 400) : null;
-  const ip = ipHeader?.split(",")[0]?.trim() || null;
-
-  try {
-    const planDoc = {
-      name: plan.name ?? null,
-      description: plan.description ?? null,
-      highlight: plan.highlight ?? null,
-    };
-
-    await adminDb.collection("quizReports").add({
-      quiz,
-      quizLabel,
-      phone,
-      plan: planDoc,
-      responses,
-      submittedAtIso,
-      submittedAtReadable,
-      ts: Date.now(),
-      ua,
-      referer,
-      ip,
-    });
-  } catch (firestoreError) {
-    console.error("quiz-report firestore error", firestoreError);
   }
 
   const textLines = [
