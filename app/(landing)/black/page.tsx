@@ -194,6 +194,20 @@ export default function BlackPage() {
         }}
       />
 
+      {/* Stili CSS per l'animazione shimmer */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes shimmer {
+            0% {
+              transform: translateX(-100%) skewX(12deg);
+            }
+            100% {
+              transform: translateX(200%) skewX(12deg);
+            }
+          }
+        `
+      }} />
+
       {/* ============ HERO (2 colonne da md+) ============ */}
       <section className="relative mx-auto max-w-6xl px-5 pt-12 pb-12 sm:px-8 lg:px-12">
         <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-br from-[#0a101d] via-[#111827] to-[#020312] px-6 py-10 shadow-[0_22px_60px_-25px_rgba(14,165,233,0.7)] sm:px-10 lg:px-16">
@@ -424,8 +438,8 @@ export default function BlackPage() {
             <PriceCard
               price="3,90€"
               unit=" /mese"
-              infoHref="https://wa.link/mkxv41"
               buyHref="https://buy.stripe.com/7sIaIa5f5b21dOgcNo"
+              infoHref="https://wa.link/mkxv41"
               features={[
                 // Contenuti principali
                 ["ok", "Centinaia di esercizi risolti"],
@@ -465,8 +479,8 @@ export default function BlackPage() {
                   price="9,90€"
                   regularPrice="19,90€"
                   unit=" /mese"
-                  infoHref="https://wa.link/4ogl5q"
                   buyHref="https://buy.stripe.com/aFa6oH1Wc7Mr3Rn1n0c7u0K"
+                  infoHref="https://wa.link/4ogl5q"
                   features={[
                     // Differenziatori principali
                     ["pink", "Mentoring didattico illimitato"],
@@ -503,8 +517,8 @@ export default function BlackPage() {
               price="99€"
               regularPrice="199€"
               unit=" /anno"
-              infoHref="https://wa.link/rwbkqd"
               buyHref="https://buy.stripe.com/6oU9ATfN2giX2Nj4zcc7u0M"
+              infoHref="https://wa.link/rwbkqd"
               features={[
                 // Differenziatori principali
                 ["pink", "Mentoring didattico illimitato"],
@@ -627,15 +641,15 @@ function PriceCard({
   regularPrice,
   unit,
   features,
-  infoHref,
   buyHref,
+  infoHref,
 }: {
   price: string;
   regularPrice?: string;
   unit: string;
   features: [variant: "ok" | "no" | "pink", text: string][];
-  infoHref: string;
   buyHref: string;
+  infoHref: string;
 }) {
   return (
     <div className="relative mt-3 overflow-hidden rounded-2xl border border-white/15 bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_-30px_rgba(15,23,42,0.45)]">
@@ -644,7 +658,7 @@ function PriceCard({
       ) : (
         ""
       )}
-      <div className="relative px-6 py-6 lg:px-8 lg:py-8">
+      <div className="relative px-6 pt-6 pb-3 lg:px-8 lg:pt-8 lg:pb-4">
         <div className="relative inline-block">
           <div className="flex flex-col items-center">
             {regularPrice && (
@@ -699,45 +713,40 @@ function PriceCard({
 
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+        <BuyLink
+          href={buyHref}
+          plan={
+            unit.includes("anno")
+              ? "Annuale"
+              : unit.includes("mese")
+                ? price.includes("9,90")
+                  ? "Base Mensile"
+                  : price.includes("3,90")
+                    ? "Essential Mensile"
+                    : "Mensile"
+                : ""
+          }
+          price={price}
+          aria-label={`Acquista il piano ${
+            unit.includes("anno")
+              ? "Annuale"
+              : unit.includes("mese")
+                ? "Mensile"
+                : ""
+          }`}
+          className="relative overflow-hidden mt-8 w-full rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 px-8 py-5 text-center font-extrabold text-white transition-all duration-300 hover:from-sky-500 hover:via-cyan-400 hover:to-sky-500 text-xl shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 flex items-center justify-center min-h-[60px] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:translate-x-[-100%] before:animate-[shimmer_2s_infinite] before:skew-x-12"
+        >
+          <span className="relative z-10">Acquista ora 👉</span>
+        </BuyLink>
+        
+        {/* Link discreto per richiedi informazioni */}
+        <div className="mt-1 text-center">
           <Link
             href={infoHref}
-            aria-label={`Chiedi informazioni sul piano ${
-              unit.includes("anno")
-                ? "Annuale"
-                : unit.includes("mese")
-                  ? "Mensile"
-                  : ""
-            }`}
-            className="w-full rounded-xl bg-black px-4 py-3 text-center font-bold text-white transition hover:bg-slate-800 lg:whitespace-nowrap"
+            className="text-xs text-slate-500 hover:text-slate-700 transition-colors duration-200 underline decoration-dotted underline-offset-2"
           >
-            Chiedi informazioni 💬
+            Oppure richiedi più informazioni
           </Link>
-          <BuyLink
-            href={buyHref}
-            plan={
-              unit.includes("anno")
-                ? "Annuale"
-                : unit.includes("mese")
-                  ? price.includes("9,90")
-                    ? "Base Mensile"
-                    : price.includes("3,90")
-                      ? "Essential Mensile"
-                      : "Mensile"
-                  : ""
-            }
-            price={price}
-            aria-label={`Acquista il piano ${
-              unit.includes("anno")
-                ? "Annuale"
-                : unit.includes("mese")
-                  ? "Mensile"
-                  : ""
-            }`}
-            className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-cyan-400 px-4 py-3 text-center font-extrabold text-white transition hover:from-sky-500 hover:to-sky-400 lg:whitespace-nowrap"
-          >
-            Acquista ora 👉
-          </BuyLink>
         </div>
       </div>
     </div>
