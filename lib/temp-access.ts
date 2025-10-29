@@ -26,16 +26,24 @@ const TEMP_ACCESS_EMAILS_RAW: TempAccessEntry[] = [
     reason: "Theoremz Mentor Prova",
     grantedAt: "2025-10-25T18:39:40.325Z",
   },
+  {
+    email: "difrusciamarisa@gmail.com",
+    expiresAt: "2025-11-28T18:26:59.106Z",
+    reason: "Abbonamento black",
+    grantedAt: "2025-10-29T18:26:59.106Z",
+  },
 
   // Aggiungi qui nuove email generate dal pannello admin:
   // (usa il componente TempAccessAdmin in /admin/analytics per generare il codice)
 ];
 
 // Normalizza tutte le email in lowercase per garantire confronti case-insensitive
-const TEMP_ACCESS_EMAILS: TempAccessEntry[] = TEMP_ACCESS_EMAILS_RAW.map(entry => ({
-  ...entry,
-  email: entry.email.toLowerCase().trim()
-}));
+const TEMP_ACCESS_EMAILS: TempAccessEntry[] = TEMP_ACCESS_EMAILS_RAW.map(
+  (entry) => ({
+    ...entry,
+    email: entry.email.toLowerCase().trim(),
+  })
+);
 
 /**
  * Verifica se un'email ha accesso temporaneo valido
