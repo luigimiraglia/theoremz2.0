@@ -6,6 +6,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
 import type { User as FirebaseUser } from "firebase/auth";
@@ -25,7 +26,7 @@ export type AppUser = {
 
 type SubscriptionInfo = {
   isSubscribed: boolean;
-  source: 'stripe' | 'override' | 'temp_access';
+  source: "stripe" | "override" | "temp_access";
   tempAccessInfo?: {
     expiresAt: string;
     reason?: string;
@@ -41,6 +42,7 @@ type AuthContextType = {
   savedLessons: string[];
   refreshSavedLessons: () => Promise<void>;
   forceRefreshSubscription: () => Promise<void>;
+  checkNewSubscription: () => Promise<void>; // per controllare dopo un nuovo acquisto
   logout: () => Promise<void>;
 };
 
@@ -79,10 +81,10 @@ const ALL_OVERRIDES = new Set(
 
 const isEmailOverridden = (email?: string | null) => {
   if (!email) return false;
-  
+
   // Check permanent overrides (env vars)
   if (ALL_OVERRIDES.has(email.toLowerCase())) return true;
-  
+
   // Check temporary access with expiration
   return hasTempAccess(email);
 };
@@ -90,9 +92,25 @@ const isEmailOverridden = (email?: string | null) => {
 /* =========================
    Cache versionata
    - Bump NEXT_PUBLIC_CACHE_VERSION per invalidare le cache client
+   - v2: Improved case-insensitive email handling (Oct 29, 2025)
 ========================= */
-const CACHE_NS = process.env.NEXT_PUBLIC_CACHE_VERSION || "v1";
+const CACHE_NS = process.env.NEXT_PUBLIC_CACHE_VERSION || "v2";
 const subKey = (email: string) => `sub:${email}:${CACHE_NS}`;
+
+// Utility per debugging cache (disponibile in console del browser)
+if (typeof window !== "undefined") {
+  (window as any).clearAllSubscriptionCache = () => {
+    const keys = Object.keys(sessionStorage);
+    const subKeys = keys.filter(k => k.startsWith('sub:'));
+    subKeys.forEach(key => sessionStorage.removeItem(key));
+    console.log(`Cleared ${subKeys.length} subscription cache entries:`, subKeys);
+  };
+  
+  // Utility per testare il controllo di nuovi abbonamenti
+  (window as any).checkNewSubscription = () => {
+    console.log("Use useAuth().checkNewSubscription() instead");
+  };
+}
 
 /* =========================
    Context
@@ -105,6 +123,7 @@ const AuthContext = createContext<AuthContextType>({
   savedLessons: [],
   refreshSavedLessons: async () => {},
   forceRefreshSubscription: async () => {},
+  checkNewSubscription: async () => {},
   logout: async () => {},
 });
 
@@ -112,9 +131,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading] = useState(false); // niente spinner globale
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
-  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
+  const [subscriptionInfo, setSubscriptionInfo] =
+    useState<SubscriptionInfo | null>(null);
   const [savedLessons, setSavedLessons] = useState<string[]>([]);
-  const [reportedSubForEmail, setReportedSubForEmail] = useState<string | null>(null);
+  const [reportedSubForEmail, setReportedSubForEmail] = useState<string | null>(
+    null
+  );
 
   /* ---------- Preferiti ---------- */
   const refreshSavedLessons = async () => {
@@ -233,27 +255,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch {}
       }
 
+      // Pulizia cache stale: se l'email originale è diversa da quella normalizzata,
+      // rimuovi eventuali cache per l'email originale per evitare conflitti
+      if (emailNullable !== email) {
+        const originalKey = subKey(emailNullable);
+        sessionStorage.removeItem(originalKey);
+      }
+
       // Check temp access prima degli override permanenti
       const tempAccessInfo = getTempAccessInfo(email);
       if (tempAccessInfo) {
         const subscriptionInfo: SubscriptionInfo = {
           isSubscribed: true,
-          source: 'temp_access',
+          source: "temp_access",
           tempAccessInfo: {
             expiresAt: tempAccessInfo.expiresAt,
             reason: tempAccessInfo.reason,
-            grantedAt: tempAccessInfo.grantedAt
-          }
+            grantedAt: tempAccessInfo.grantedAt,
+          },
         };
         setIsSubscribed(true);
         setSubscriptionInfo(subscriptionInfo);
         sessionStorage.setItem(
           key,
-          JSON.stringify({ 
-            v: true, 
-            t: Date.now(), 
+          JSON.stringify({
+            v: true,
+            t: Date.now(),
             src: "temp_access",
-            tempInfo: tempAccessInfo 
+            tempInfo: tempAccessInfo,
           })
         );
         return;
@@ -263,7 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (ALL_OVERRIDES.has(email)) {
         const subscriptionInfo: SubscriptionInfo = {
           isSubscribed: true,
-          source: 'override'
+          source: "override",
         };
         setIsSubscribed(true);
         setSubscriptionInfo(subscriptionInfo);
@@ -274,35 +303,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Cache valida (10 min)
+      // Cache valida - ma con logica migliorata per nuovi abbonamenti
       const cachedRaw = sessionStorage.getItem(key);
       if (cachedRaw) {
         try {
-          const cached = JSON.parse(cachedRaw) as { 
-            v: boolean; 
-            t: number; 
+          const cached = JSON.parse(cachedRaw) as {
+            v: boolean;
+            t: number;
             src?: string;
             tempInfo?: any;
           };
-          if (Date.now() - cached.t < 10 * 60 * 1000) {
+          
+          const cacheAge = Date.now() - cached.t;
+          
+          // Cache per abbonamenti attivi: 10 minuti
+          // Cache per non-abbonamenti: solo 2 minuti (per rilevare nuovi abbonamenti più velocemente)
+          const maxCacheTime = cached.v ? 10 * 60 * 1000 : 2 * 60 * 1000;
+          
+          if (cacheAge < maxCacheTime) {
             setIsSubscribed(cached.v);
-            
+
             // Ricostruisci subscriptionInfo dalla cache
             if (cached.v) {
               const subscriptionInfo: SubscriptionInfo = {
                 isSubscribed: true,
-                source: cached.src as any || 'stripe',
-                ...(cached.tempInfo && cached.src === 'temp_access' && {
-                  tempAccessInfo: {
-                    expiresAt: cached.tempInfo.expiresAt,
-                    reason: cached.tempInfo.reason,
-                    grantedAt: cached.tempInfo.grantedAt
-                  }
-                })
+                source: (cached.src as any) || "stripe",
+                ...(cached.tempInfo &&
+                  cached.src === "temp_access" && {
+                    tempAccessInfo: {
+                      expiresAt: cached.tempInfo.expiresAt,
+                      reason: cached.tempInfo.reason,
+                      grantedAt: cached.tempInfo.grantedAt,
+                    },
+                  }),
               };
               setSubscriptionInfo(subscriptionInfo);
             } else {
-              setSubscriptionInfo({ isSubscribed: false, source: 'stripe' });
+              setSubscriptionInfo({ isSubscribed: false, source: "stripe" });
             }
             return;
           }
@@ -322,14 +359,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!resp.ok) {
         console.error("Stripe endpoint error", resp.status);
         setIsSubscribed(false);
-        setSubscriptionInfo({ isSubscribed: false, source: 'stripe' });
+        setSubscriptionInfo({ isSubscribed: false, source: "stripe" });
         return;
       }
 
       const data = await resp.json();
       const v = !!data.isSubscribed;
       setIsSubscribed(v);
-      setSubscriptionInfo({ isSubscribed: v, source: 'stripe' });
+      setSubscriptionInfo({ isSubscribed: v, source: "stripe" });
       sessionStorage.setItem(
         key,
         JSON.stringify({ v, t: Date.now(), src: "stripe" })
@@ -337,7 +374,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Stripe status fetch error", err);
       setIsSubscribed(false);
-      setSubscriptionInfo({ isSubscribed: false, source: 'stripe' });
+      setSubscriptionInfo({ isSubscribed: false, source: "stripe" });
     }
   };
 
@@ -346,12 +383,125 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const email = user?.email?.toLowerCase();
       if (!email) return;
+      
+      // Rimuovi la cache per l'email normalizzata
       sessionStorage.removeItem(subKey(email));
+      
+      // Rimuovi anche possibili cache per varianti dell'email con case diverso
+      // Questo risolve problemi dove l'utente potrebbe aver fatto login in passato
+      // con case diverso e avere cache stale
+      const originalEmail = user?.email;
+      if (originalEmail && originalEmail !== email) {
+        sessionStorage.removeItem(subKey(originalEmail.toLowerCase()));
+      }
+      
       await computeSubscription(email);
     } catch {
       // no-op
     }
   };
+
+  /* ---------- Check new subscription (dopo acquisti) ---------- */
+  const checkNewSubscription = useCallback(async () => {
+    try {
+      const email = user?.email?.toLowerCase();
+      if (!email) return;
+      
+      // Invalida sempre la cache per forzare una verifica fresca
+      sessionStorage.removeItem(subKey(email));
+      
+      // Rimuovi anche cache per varianti dell'email
+      const originalEmail = user?.email;
+      if (originalEmail && originalEmail !== email) {
+        sessionStorage.removeItem(subKey(originalEmail.toLowerCase()));
+      }
+      
+      // Forza un controllo immediato su Stripe (salta temp access e override)
+      await computeSubscription(email);
+    } catch (err) {
+      console.error("Error checking new subscription:", err);
+    }
+  }, [user?.email]);
+
+  // Rilevamento ritorno sulla pagina - per ricontrollare abbonamenti dopo acquisti su Stripe
+  useEffect(() => {
+    let lastVisibilityTime = Date.now();
+    let wasHidden = false;
+    
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Pagina nascosta - l'utente potrebbe essere andato su Stripe
+        wasHidden = true;
+        lastVisibilityTime = Date.now();
+      } else if (wasHidden && user?.email) {
+        // Pagina di nuovo visibile dopo essere stata nascosta
+        const now = Date.now();
+        const hiddenDuration = now - lastVisibilityTime;
+        
+        // Controlla se l'utente ha fatto un tentativo di acquisto di recente
+        const lastPurchaseAttempt = sessionStorage.getItem('last_purchase_attempt');
+        const recentPurchaseAttempt = lastPurchaseAttempt && 
+          (now - parseInt(lastPurchaseAttempt)) < 10 * 60 * 1000; // negli ultimi 10 minuti
+        
+        // Se è stata nascosta per più di 10 secondi, probabilmente è tornato da Stripe
+        if (hiddenDuration > 10 * 1000) {
+          console.log(`Page was hidden for ${Math.round(hiddenDuration/1000)}s, checking for new subscription...`);
+          
+          // Se attualmente NON ha un abbonamento, ricontrolla sempre
+          if (!isSubscribed) {
+            const email = user.email.toLowerCase();
+            sessionStorage.removeItem(subKey(email));
+            computeSubscription(email);
+          }
+          // Se ha tentato un acquisto di recente, ricontrolla anche se ha già un abbonamento
+          // (potrebbe essere un upgrade/downgrade)
+          else if (recentPurchaseAttempt) {
+            console.log('Recent purchase attempt detected, rechecking subscription...');
+            checkNewSubscription();
+          }
+          // Anche se ha già un abbonamento, dopo 60+ secondi ricontrolla (per upgrade/downgrade)
+          else if (hiddenDuration > 60 * 1000) {
+            checkNewSubscription();
+          }
+        }
+        wasHidden = false;
+      }
+    };
+
+    // Controlla anche al focus della finestra (per sicurezza)
+    const handleFocus = () => {
+      if (wasHidden && user?.email && !isSubscribed) {
+        console.log('Window focused after being away, checking subscription...');
+        checkNewSubscription();
+        wasHidden = false;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user?.email, isSubscribed, checkNewSubscription]);
+
+  // Listener per eventi di storage - in caso di comunicazione cross-tab
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // Se viene settato un flag di nuovo acquisto, ricontrolla l'abbonamento
+      if (e.key === 'new_purchase_completed' && e.newValue === 'true' && user?.email) {
+        sessionStorage.removeItem('new_purchase_completed');
+        checkNewSubscription();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [user?.email, checkNewSubscription]);
 
   /* ---------- Logout ---------- */
   const logout = async () => {
@@ -384,6 +534,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         savedLessons,
         refreshSavedLessons,
         forceRefreshSubscription,
+        checkNewSubscription,
         logout,
       }}
     >

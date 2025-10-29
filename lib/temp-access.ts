@@ -12,13 +12,13 @@ export type TempAccessEntry = {
 };
 
 // Email hardcodate con accesso temporaneo (14 giorni di default)
-const TEMP_ACCESS_EMAILS: TempAccessEntry[] = [
+const TEMP_ACCESS_EMAILS_RAW: TempAccessEntry[] = [
   // Esempio attivo per testing (rimuovi dopo il test)
   {
     email: "theoremz.team@gmail.com",
     expiresAt: "2025-11-08T18:40:18.699Z",
     reason: "Theoremz Mentor Prova",
-    grantedAt: "2025-10-25T18:40:18.699Z",
+    grantedAt: "2025-10-25T18:39:40.699Z",
   },
   {
     email: "amerubini@gmail.com",
@@ -31,6 +31,12 @@ const TEMP_ACCESS_EMAILS: TempAccessEntry[] = [
   // (usa il componente TempAccessAdmin in /admin/analytics per generare il codice)
 ];
 
+// Normalizza tutte le email in lowercase per garantire confronti case-insensitive
+const TEMP_ACCESS_EMAILS: TempAccessEntry[] = TEMP_ACCESS_EMAILS_RAW.map(entry => ({
+  ...entry,
+  email: entry.email.toLowerCase().trim()
+}));
+
 /**
  * Verifica se un'email ha accesso temporaneo valido
  */
@@ -41,7 +47,8 @@ export function hasTempAccess(email: string | null | undefined): boolean {
   const now = new Date();
 
   return TEMP_ACCESS_EMAILS.some((entry) => {
-    if (entry.email.toLowerCase() !== normalizedEmail) return false;
+    // Le email nell'array sono già normalizzate, quindi confronto diretto
+    if (entry.email !== normalizedEmail) return false;
 
     const expiresAt = new Date(entry.expiresAt);
     return now <= expiresAt;
@@ -60,7 +67,8 @@ export function getTempAccessInfo(
   const now = new Date();
 
   const entry = TEMP_ACCESS_EMAILS.find(
-    (entry) => entry.email.toLowerCase() === normalizedEmail
+    // Le email nell'array sono già normalizzate, quindi confronto diretto
+    (entry) => entry.email === normalizedEmail
   );
 
   if (!entry) return null;

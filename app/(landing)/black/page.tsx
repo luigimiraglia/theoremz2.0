@@ -195,8 +195,9 @@ export default function BlackPage() {
       />
 
       {/* Stili CSS per l'animazione shimmer */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
           @keyframes shimmer {
             0% {
               transform: translateX(-100%) skewX(12deg);
@@ -205,8 +206,9 @@ export default function BlackPage() {
               transform: translateX(200%) skewX(12deg);
             }
           }
-        `
-      }} />
+        `,
+        }}
+      />
 
       {/* ============ HERO (2 colonne da md+) ============ */}
       <section className="relative mx-auto max-w-6xl px-5 pt-12 pb-12 sm:px-8 lg:px-12">
@@ -738,7 +740,7 @@ function PriceCard({
         >
           <span className="relative z-10">Acquista ora 👉</span>
         </BuyLink>
-        
+
         {/* Link discreto per richiedi informazioni */}
         <div className="mt-1 text-center">
           <Link

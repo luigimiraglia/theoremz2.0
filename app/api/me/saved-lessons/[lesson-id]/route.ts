@@ -15,12 +15,12 @@ async function getUid(req: Request) {
 
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ lessonId: string }> }
+  { params }: { params: Promise<{ "lesson-id": string }> }
 ) {
   const uid = await getUid(req);
   if (!uid)
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const { lessonId } = await params;
+  const { "lesson-id": lessonId } = await params;
 
   await adminDb.doc(`users/${uid}/savedLessons/${lessonId}`).delete();
   return NextResponse.json({ ok: true });

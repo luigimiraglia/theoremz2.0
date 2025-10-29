@@ -2,27 +2,33 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  getAllTempAccessEmails, 
+import {
+  getAllTempAccessEmails,
   getActiveTempAccessEmails,
   formatExpiryDate,
   createTempAccessEntry,
-  type TempAccessEntry 
+  type TempAccessEntry,
 } from "@/lib/temp-access";
 
 export default function TempAccessAdmin() {
   const [allEmails] = useState<TempAccessEntry[]>(getAllTempAccessEmails());
-  const [activeEmails] = useState<TempAccessEntry[]>(getActiveTempAccessEmails());
-  
+  const [activeEmails] = useState<TempAccessEntry[]>(
+    getActiveTempAccessEmails()
+  );
+
   const [newEmail, setNewEmail] = useState("");
   const [newDays, setNewDays] = useState(14);
   const [newReason, setNewReason] = useState("");
 
   const generateNewEntry = () => {
     if (!newEmail.trim()) return;
-    
-    const entry = createTempAccessEntry(newEmail, newDays, newReason || undefined);
-    
+
+    const entry = createTempAccessEntry(
+      newEmail,
+      newDays,
+      newReason || undefined
+    );
+
     // Copia il codice negli appunti
     const code = `{
   email: "${entry.email}",
@@ -30,10 +36,12 @@ export default function TempAccessAdmin() {
   reason: "${entry.reason || "Accesso temporaneo"}",
   grantedAt: "${entry.grantedAt}"
 }`;
-    
+
     navigator.clipboard.writeText(code);
-    alert("Codice copiato negli appunti! Aggiungilo manualmente al file temp-access.ts");
-    
+    alert(
+      "Codice copiato negli appunti! Aggiungilo manualmente al file temp-access.ts"
+    );
+
     // Reset form
     setNewEmail("");
     setNewDays(14);
@@ -44,8 +52,10 @@ export default function TempAccessAdmin() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold mb-4">Gestione Accessi Temporanei</h2>
-      
+      <h2 className="text-xl font-semibold mb-4">
+        Gestione Accessi Temporanei
+      </h2>
+
       {/* Form per generare nuovo accesso */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
         <h3 className="text-lg font-medium mb-3">Genera Nuovo Accesso</h3>
@@ -105,24 +115,37 @@ export default function TempAccessAdmin() {
           Accessi Attivi ({activeEmails.length})
         </h3>
         {activeEmails.length === 0 ? (
-          <p className="text-gray-500 italic">Nessun accesso temporaneo attivo</p>
+          <p className="text-gray-500 italic">
+            Nessun accesso temporaneo attivo
+          </p>
         ) : (
           <div className="space-y-2">
             {activeEmails.map((entry, index) => {
               const expiresAt = new Date(entry.expiresAt);
-              const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-              
+              const daysLeft = Math.ceil(
+                (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+              );
+
               return (
-                <div key={index} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg"
+                >
                   <div>
-                    <span className="font-medium text-green-800">{entry.email}</span>
+                    <span className="font-medium text-green-800">
+                      {entry.email}
+                    </span>
                     {entry.reason && (
-                      <span className="ml-2 text-sm text-green-600">({entry.reason})</span>
+                      <span className="ml-2 text-sm text-green-600">
+                        ({entry.reason})
+                      </span>
                     )}
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-medium text-green-700">
-                      {daysLeft > 0 ? `${daysLeft} giorni rimanenti` : 'Scade oggi'}
+                      {daysLeft > 0
+                        ? `${daysLeft} giorni rimanenti`
+                        : "Scade oggi"}
                     </div>
                     <div className="text-xs text-green-600">
                       Scade: {formatExpiryDate(entry.expiresAt)}
@@ -141,39 +164,52 @@ export default function TempAccessAdmin() {
           Tutti gli Accessi ({allEmails.length})
         </h3>
         {allEmails.length === 0 ? (
-          <p className="text-gray-500 italic">Nessun accesso temporaneo configurato</p>
+          <p className="text-gray-500 italic">
+            Nessun accesso temporaneo configurato
+          </p>
         ) : (
           <div className="space-y-2">
             {allEmails.map((entry, index) => {
               const expiresAt = new Date(entry.expiresAt);
               const isExpired = now > expiresAt;
-              const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-              
+              const daysLeft = Math.ceil(
+                (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+              );
+
               return (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className={`flex items-center justify-between p-3 rounded-lg border ${
-                    isExpired 
-                      ? 'bg-red-50 border-red-200' 
-                      : 'bg-gray-50 border-gray-200'
+                    isExpired
+                      ? "bg-red-50 border-red-200"
+                      : "bg-gray-50 border-gray-200"
                   }`}
                 >
                   <div>
-                    <span className={`font-medium ${isExpired ? 'text-red-800' : 'text-gray-800'}`}>
+                    <span
+                      className={`font-medium ${isExpired ? "text-red-800" : "text-gray-800"}`}
+                    >
                       {entry.email}
                     </span>
                     {entry.reason && (
-                      <span className={`ml-2 text-sm ${isExpired ? 'text-red-600' : 'text-gray-600'}`}>
+                      <span
+                        className={`ml-2 text-sm ${isExpired ? "text-red-600" : "text-gray-600"}`}
+                      >
                         ({entry.reason})
                       </span>
                     )}
                   </div>
                   <div className="text-right">
-                    <div className={`text-sm font-medium ${isExpired ? 'text-red-700' : 'text-gray-700'}`}>
-                      {isExpired ? 'SCADUTO' : `${daysLeft} giorni rimanenti`}
+                    <div
+                      className={`text-sm font-medium ${isExpired ? "text-red-700" : "text-gray-700"}`}
+                    >
+                      {isExpired ? "SCADUTO" : `${daysLeft} giorni rimanenti`}
                     </div>
-                    <div className={`text-xs ${isExpired ? 'text-red-600' : 'text-gray-600'}`}>
-                      {isExpired ? 'Scaduto' : 'Scade'}: {formatExpiryDate(entry.expiresAt)}
+                    <div
+                      className={`text-xs ${isExpired ? "text-red-600" : "text-gray-600"}`}
+                    >
+                      {isExpired ? "Scaduto" : "Scade"}:{" "}
+                      {formatExpiryDate(entry.expiresAt)}
                     </div>
                   </div>
                 </div>
@@ -188,9 +224,17 @@ export default function TempAccessAdmin() {
         <h4 className="font-medium text-blue-800 mb-2">Come usare:</h4>
         <ol className="text-sm text-blue-700 space-y-1">
           <li>1. Compila il form sopra con email, giorni e motivo</li>
-          <li>2. Clicca &quot;Genera Codice&quot; per copiare il codice negli appunti</li>
-          <li>3. Incolla il codice nell&apos;array TEMP_ACCESS_EMAILS in lib/temp-access.ts</li>
-          <li>4. Fai il deploy o riavvia l&apos;app per applicare le modifiche</li>
+          <li>
+            2. Clicca &quot;Genera Codice&quot; per copiare il codice negli
+            appunti
+          </li>
+          <li>
+            3. Incolla il codice nell&apos;array TEMP_ACCESS_EMAILS in
+            lib/temp-access.ts
+          </li>
+          <li>
+            4. Fai il deploy o riavvia l&apos;app per applicare le modifiche
+          </li>
         </ol>
       </div>
     </div>
