@@ -27,13 +27,16 @@ export async function POST(req: Request) {
 
     // Cerca prima con l'email normalizzata (lowercase)
     let customers = await stripe.customers.list({ email: e, limit: 100 });
-    
+
     // Se non trova risultati con lowercase, prova anche con l'email originale
     // per gestire casi dove Stripe potrebbe aver salvato l'email con case diverso
     if (!customers.data.length && email && email !== e) {
-      customers = await stripe.customers.list({ email: email.trim(), limit: 100 });
+      customers = await stripe.customers.list({
+        email: email.trim(),
+        limit: 100,
+      });
     }
-    
+
     if (!customers.data.length)
       return NextResponse.json({ isSubscribed: false, reason: "no_customer" });
 

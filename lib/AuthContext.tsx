@@ -101,11 +101,14 @@ const subKey = (email: string) => `sub:${email}:${CACHE_NS}`;
 if (typeof window !== "undefined") {
   (window as any).clearAllSubscriptionCache = () => {
     const keys = Object.keys(sessionStorage);
-    const subKeys = keys.filter(k => k.startsWith('sub:'));
-    subKeys.forEach(key => sessionStorage.removeItem(key));
-    console.log(`Cleared ${subKeys.length} subscription cache entries:`, subKeys);
+    const subKeys = keys.filter((k) => k.startsWith("sub:"));
+    subKeys.forEach((key) => sessionStorage.removeItem(key));
+    console.log(
+      `Cleared ${subKeys.length} subscription cache entries:`,
+      subKeys
+    );
   };
-  
+
   // Utility per testare il controllo di nuovi abbonamenti
   (window as any).checkNewSubscription = () => {
     console.log("Use useAuth().checkNewSubscription() instead");
@@ -313,13 +316,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             src?: string;
             tempInfo?: any;
           };
-          
+
           const cacheAge = Date.now() - cached.t;
-          
+
           // Cache per abbonamenti attivi: 10 minuti
           // Cache per non-abbonamenti: solo 2 minuti (per rilevare nuovi abbonamenti più velocemente)
           const maxCacheTime = cached.v ? 10 * 60 * 1000 : 2 * 60 * 1000;
-          
+
           if (cacheAge < maxCacheTime) {
             setIsSubscribed(cached.v);
 
@@ -383,10 +386,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const email = user?.email?.toLowerCase();
       if (!email) return;
-      
+
       // Rimuovi la cache per l'email normalizzata
       sessionStorage.removeItem(subKey(email));
-      
+
       // Rimuovi anche possibili cache per varianti dell'email con case diverso
       // Questo risolve problemi dove l'utente potrebbe aver fatto login in passato
       // con case diverso e avere cache stale
@@ -394,7 +397,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (originalEmail && originalEmail !== email) {
         sessionStorage.removeItem(subKey(originalEmail.toLowerCase()));
       }
-      
+
       await computeSubscription(email);
     } catch {
       // no-op
@@ -406,16 +409,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const email = user?.email?.toLowerCase();
       if (!email) return;
-      
+
       // Invalida sempre la cache per forzare una verifica fresca
       sessionStorage.removeItem(subKey(email));
-      
+
       // Rimuovi anche cache per varianti dell'email
       const originalEmail = user?.email;
       if (originalEmail && originalEmail !== email) {
         sessionStorage.removeItem(subKey(originalEmail.toLowerCase()));
       }
-      
+
       // Forza un controllo immediato su Stripe (salta temp access e override)
       await computeSubscription(email);
     } catch (err) {
@@ -427,7 +430,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let lastVisibilityTime = Date.now();
     let wasHidden = false;
-    
+
     const handleVisibilityChange = () => {
       if (document.hidden) {
         // Pagina nascosta - l'utente potrebbe essere andato su Stripe
@@ -437,16 +440,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Pagina di nuovo visibile dopo essere stata nascosta
         const now = Date.now();
         const hiddenDuration = now - lastVisibilityTime;
-        
+
         // Controlla se l'utente ha fatto un tentativo di acquisto di recente
-        const lastPurchaseAttempt = sessionStorage.getItem('last_purchase_attempt');
-        const recentPurchaseAttempt = lastPurchaseAttempt && 
-          (now - parseInt(lastPurchaseAttempt)) < 10 * 60 * 1000; // negli ultimi 10 minuti
-        
+        const lastPurchaseAttempt = sessionStorage.getItem(
+          "last_purchase_attempt"
+        );
+        const recentPurchaseAttempt =
+          lastPurchaseAttempt &&
+          now - parseInt(lastPurchaseAttempt) < 10 * 60 * 1000; // negli ultimi 10 minuti
+
         // Se è stata nascosta per più di 10 secondi, probabilmente è tornato da Stripe
         if (hiddenDuration > 10 * 1000) {
-          console.log(`Page was hidden for ${Math.round(hiddenDuration/1000)}s, checking for new subscription...`);
-          
+          console.log(
+            `Page was hidden for ${Math.round(hiddenDuration / 1000)}s, checking for new subscription...`
+          );
+
           // Se attualmente NON ha un abbonamento, ricontrolla sempre
           if (!isSubscribed) {
             const email = user.email.toLowerCase();
@@ -456,7 +464,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Se ha tentato un acquisto di recente, ricontrolla anche se ha già un abbonamento
           // (potrebbe essere un upgrade/downgrade)
           else if (recentPurchaseAttempt) {
-            console.log('Recent purchase attempt detected, rechecking subscription...');
+            console.log(
+              "Recent purchase attempt detected, rechecking subscription..."
+            );
             checkNewSubscription();
           }
           // Anche se ha già un abbonamento, dopo 60+ secondi ricontrolla (per upgrade/downgrade)
@@ -471,18 +481,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Controlla anche al focus della finestra (per sicurezza)
     const handleFocus = () => {
       if (wasHidden && user?.email && !isSubscribed) {
-        console.log('Window focused after being away, checking subscription...');
+        console.log(
+          "Window focused after being away, checking subscription..."
+        );
         checkNewSubscription();
         wasHidden = false;
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
     };
   }, [user?.email, isSubscribed, checkNewSubscription]);
 
@@ -490,16 +502,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       // Se viene settato un flag di nuovo acquisto, ricontrolla l'abbonamento
-      if (e.key === 'new_purchase_completed' && e.newValue === 'true' && user?.email) {
-        sessionStorage.removeItem('new_purchase_completed');
+      if (
+        e.key === "new_purchase_completed" &&
+        e.newValue === "true" &&
+        user?.email
+      ) {
+        sessionStorage.removeItem("new_purchase_completed");
         checkNewSubscription();
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    
+    window.addEventListener("storage", handleStorageChange);
+
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, [user?.email, checkNewSubscription]);
 
