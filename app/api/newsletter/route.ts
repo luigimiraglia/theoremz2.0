@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       subscribed,
       frequenza = "weekly",
       tipo_contenuti = ["lezioni", "esercizi"],
+      ciclo = ["medie", "superiori"],
       materie_interesse = [],
       source = "profile",
       // Dati del profilo utente
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
         frequenza,
         tipo_contenuti,
         materie_interesse,
+        ciclo,
         source,
         user_agent: request.headers.get("user-agent"),
         ip_address:
@@ -68,14 +70,35 @@ export async function POST(request: NextRequest) {
         is_active: true,
       };
 
-      const { data, error } = await supabase
+      // Prima prova ad aggiornare il record esistente
+      const { data: updateData, error: updateError } = await supabase
         .from("newsletter_subscriptions")
-        .upsert(subscriptionData, { onConflict: "user_id" })
+        .update(subscriptionData)
+        .eq("user_id", user_id)
         .select()
-        .single();
+        .maybeSingle();
+
+      let data, error;
+
+      // Se l'update non ha trovato nulla, fai INSERT
+      if (!updateData) {
+        console.log("🆕 Record non trovato, creo nuovo record");
+        const insertResult = await supabase
+          .from("newsletter_subscriptions")
+          .insert(subscriptionData)
+          .select()
+          .single();
+
+        data = insertResult.data;
+        error = insertResult.error;
+      } else {
+        data = updateData;
+        error = updateError;
+      }
 
       if (error) {
         console.error("Newsletter subscription error:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
         return NextResponse.json(
           { error: "Errore nell'iscrizione alla newsletter" },
           { status: 500 }
