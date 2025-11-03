@@ -149,7 +149,28 @@ export default function AccountPage() {
   };
 
   const handleUpgrade = async () => {
-    window.location.href = "/black";
+    if (isSubscribed) {
+      // Se è già abbonato, apri il Customer Portal di Stripe
+      try {
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) return;
+        
+        const response = await fetch("/api/create-portal-session", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        const data = await response.json();
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      } catch (error) {
+        console.error("Errore apertura portal:", error);
+      }
+    } else {
+      // Se non è abbonato, vai alla pagina Black
+      window.location.href = "/black";
+    }
   };
 
   // Profile for tracks/year badge

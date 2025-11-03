@@ -4,6 +4,7 @@ import Link from "next/link";
 import BuyLink from "@/components/BuyLink";
 import SenjaEmbed from "@/components/SenjaEmbed";
 import CountdownTimer from "@/components/CountdownTimer";
+import BlackPageGuard from "@/components/BlackPageGuard";
 import type { LucideIcon } from "lucide-react";
 import {
   MessageCircle,
@@ -183,6 +184,9 @@ export default function BlackPage() {
 
   return (
     <main className="bg-black text-white">
+      {/* Guard per utenti già abbonati */}
+      <BlackPageGuard />
+      
       {/* JSON-LD (single @graph) */}
       <script
         type="application/ld+json"
