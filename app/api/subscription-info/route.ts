@@ -40,24 +40,34 @@ export async function GET(request: NextRequest) {
 
     const customerId = customers.data[0].id;
 
-    // Recupera le subscription attive
+    // Recupera le subscription (anche quelle in trialing, past_due, etc.)
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
-      limit: 1,
+      limit: 10, // Aumentiamo per vedere tutte le sub
     });
 
-    if (!subscriptions.data.length) {
+    console.log("📊 Subscriptions trovate:", subscriptions.data.length);
+    subscriptions.data.forEach((sub) => {
+      console.log(`  - Status: ${sub.status}, Created: ${new Date(sub.created * 1000).toISOString()}`);
+    });
+
+    // Cerca una subscription attiva o in trial
+    const activeSub = subscriptions.data.find((s) =>
+      ["active", "trialing", "past_due"].includes(s.status)
+    );
+
+    if (!activeSub) {
+      console.log("❌ Nessuna subscription attiva trovata");
       return NextResponse.json({ subscribed: false, startDate: null });
     }
 
-    const subscription = subscriptions.data[0];
-    const startDate = new Date(subscription.created * 1000).toISOString();
+    const startDate = new Date(activeSub.created * 1000).toISOString();
+    console.log("✅ Subscription trovata:", { status: activeSub.status, startDate });
 
     return NextResponse.json({
       subscribed: true,
       startDate,
-      status: subscription.status,
+      status: activeSub.status,
     });
   } catch (error) {
     console.error("Errore recupero subscription info:", error);

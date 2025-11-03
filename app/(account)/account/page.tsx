@@ -101,8 +101,11 @@ export default function AccountPage() {
         });
         
         const data = await res.json();
+        console.log("📅 Subscription info:", data);
         if (data.subscribed && data.startDate) {
-          setSubscriptionStartMs(new Date(data.startDate).getTime());
+          const ms = new Date(data.startDate).getTime();
+          console.log("📅 Setting subscription start:", new Date(ms));
+          setSubscriptionStartMs(ms);
         }
       } catch (error) {
         console.error("Errore caricamento info abbonamento:", error);
@@ -297,13 +300,13 @@ export default function AccountPage() {
               )}
               {isSubscribed ? (
                 <span 
-                  className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-white/20 px-2.5 py-1 rounded-full"
-                  title={subscriptionStartDate ? `Dal ${subscriptionStartDate}` : undefined}
+                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm bg-gradient-to-r from-slate-800 to-black px-3 py-1.5 rounded-full border border-white/20 shadow-lg"
+                  title={subscriptionStartDate ? `Abbonato dal ${subscriptionStartDate}` : undefined}
                 >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Attivo
+                  <Sparkles className="h-4 w-4 text-yellow-400" />
+                  <span className="font-bold text-white">Black</span>
                   {subscriptionDuration && (
-                    <span className="opacity-90">da {subscriptionDuration}</span>
+                    <span className="text-white/80 font-medium ml-0.5">· {subscriptionDuration}</span>
                   )}
                 </span>
               ) : (
