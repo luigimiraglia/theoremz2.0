@@ -278,78 +278,90 @@ export default function AccountPage() {
     "U"
   ).toUpperCase();
 
+  // Badges component per riutilizzo
+  const BadgesRow = () => (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {/* Year badge if set */}
+      {profile?.year && (
+        <span className="inline-flex items-center gap-1 text-xs bg-white/20 px-2.5 py-1 rounded-full">
+          🎓 {formatClass(profile)}
+        </span>
+      )}
+      {isSubscribed ? (
+        <span 
+          className="inline-flex items-center gap-1.5 text-xs bg-gradient-to-r from-slate-800 to-black px-2.5 py-1 rounded-full border border-white/20 shadow-lg"
+          title={subscriptionStartDate ? `Abbonato dal ${subscriptionStartDate}` : undefined}
+        >
+          <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
+          <span className="font-bold text-white">Black</span>
+          {subscriptionDuration && (
+            <span className="text-white/80 font-medium ml-0.5">· {subscriptionDuration}</span>
+          )}
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1 text-xs bg-black/20 px-2.5 py-1 rounded-full">
+          <Lock className="h-3.5 w-3.5" />
+          Free
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <main className="mx-auto max-w-6xl p-4 sm:p-6 space-y-6">
       {/* HERO */}
       <section className="relative overflow-hidden rounded-2xl border border-indigo-200/50 bg-gradient-to-br from-cyan-600 via-blue-600 to-sky-600 text-white shadow-[0_10px_40px_rgba(37,99,235,0.35)]">
         <div className="absolute inset-0 opacity-25 mix-blend-overlay bg-[radial-gradient(ellipse_at_top_left,white,transparent_50%)]" />
-        <div className="relative p-5 sm:p-8 flex items-center gap-4">
-          <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-white/20 flex items-center justify-center text-xl sm:text-2xl font-bold">
-            {avatarLetter}
+        <div className="relative p-5 sm:p-8">
+          {/* Badges in alto a sinistra - visibili solo su mobile */}
+          <div className="sm:hidden mb-2 -mt-2 -ml-1">
+            <BadgesRow />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold truncate">
-                Ciao, {friendlyName}!
-              </h1>
-              {/* Year badge if set */}
-              {profile?.year && (
-                <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-white/20 px-2.5 py-1 rounded-full">
-                  🎓 {formatClass(profile)}
-                </span>
-              )}
-              {isSubscribed ? (
-                <span 
-                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm bg-gradient-to-r from-slate-800 to-black px-3 py-1.5 rounded-full border border-white/20 shadow-lg"
-                  title={subscriptionStartDate ? `Abbonato dal ${subscriptionStartDate}` : undefined}
-                >
-                  <Sparkles className="h-4 w-4 text-yellow-400" />
-                  <span className="font-bold text-white">Black</span>
-                  {subscriptionDuration && (
-                    <span className="text-white/80 font-medium ml-0.5">· {subscriptionDuration}</span>
-                  )}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-black/20 px-2.5 py-1 rounded-full">
-                  <Lock className="h-3.5 w-3.5" />
-                  Free
-                </span>
-              )}
-              {typeof streak === "number" && (
-                <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-white/15 px-2.5 py-1 rounded-full">
-                  🔥 Streak {streak}g
-                </span>
-              )}
+          
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-white/20 flex items-center justify-center text-xl sm:text-2xl font-bold">
+              {avatarLetter}
             </div>
-            <p className="text-white/90 text-xs sm:text-sm mt-1 truncate">
-              {user.email}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                onClick={handleUpgrade}
-                className="rounded-lg bg-white/15  hover:bg-white/25 px-3 py-1.5 text-sm"
-              >
-                {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
-              </button>
-              <button
-                onClick={() => router.push("/simula-verifica")}
-                className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
-              >
-                Simula verifica
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await doLogout();
-                    router.push("/");
-                  } catch (e) {
-                    console.error(e);
-                  }
-                }}
-                className="rounded-lg bg-black/20 hover:bg-black/30 px-3 py-1.5 text-sm"
-              >
-                Esci
-              </button>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold truncate">
+                  Ciao, {friendlyName}!
+                </h1>
+                {/* Badges visibili solo su desktop */}
+                <div className="hidden sm:flex items-center gap-3 flex-wrap">
+                  <BadgesRow />
+                </div>
+              </div>
+              <p className="text-white/90 text-xs sm:text-sm mt-1 truncate">
+                {user.email}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={handleUpgrade}
+                  className="rounded-lg bg-white/15  hover:bg-white/25 px-3 py-1.5 text-sm"
+                >
+                  {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
+                </button>
+                <button
+                  onClick={() => router.push("/simula-verifica")}
+                  className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
+                >
+                  Simula verifica
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await doLogout();
+                      router.push("/");
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }}
+                  className="rounded-lg bg-black/20 hover:bg-black/30 px-3 py-1.5 text-sm"
+                >
+                  Esci
+                </button>
+              </div>
             </div>
           </div>
         </div>
