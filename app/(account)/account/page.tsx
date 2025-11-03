@@ -85,12 +85,36 @@ export default function AccountPage() {
     return u.username || u.displayName || u.email?.split?.("@")[0] || "utente";
   }, [user]);
 
+  // Fetch subscription start date from Stripe
+  const [subscriptionStartMs, setSubscriptionStartMs] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isSubscribed || !user?.uid) return;
+    
+    const fetchSubscriptionInfo = async () => {
+      try {
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) return;
+        
+        const res = await fetch("/api/subscription-info", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        
+        const data = await res.json();
+        if (data.subscribed && data.startDate) {
+          setSubscriptionStartMs(new Date(data.startDate).getTime());
+        }
+      } catch (error) {
+        console.error("Errore caricamento info abbonamento:", error);
+      }
+    };
+    
+    fetchSubscriptionInfo();
+  }, [isSubscribed, user?.uid]);
+
   /* ------------ FIX robusto per subscriptionSince / daysSubscribed ------------ */
   // 1) Normalizza qualsiasi cosa tu abbia in user.createdAt
-  const subscriptionSinceMs = useMemo(
-    () => toMs(user?.createdAt),
-    [user?.createdAt]
-  );
+  const subscriptionSinceMs = subscriptionStartMs;
 
   // 2) Deriva Date (se serve per il rendering) e giorni
   const subscriptionSince = useMemo(
@@ -104,6 +128,37 @@ export default function AccountPage() {
       Math.floor((Date.now() - subscriptionSinceMs) / 86_400_000) + 1; // inclusivo del primo giorno
     return Math.max(1, diffDays);
   }, [isSubscribed, subscriptionSinceMs]);
+
+  // Formatta la durata dell'abbonamento in modo leggibile
+  const subscriptionDuration = useMemo(() => {
+    if (!daysSubscribed) return null;
+    
+    const days = daysSubscribed;
+    const years = Math.floor(days / 365);
+    const months = Math.floor((days % 365) / 30);
+    const weeks = Math.floor((days % 30) / 7);
+    const remainingDays = days % 7;
+
+    if (years > 0) {
+      return months > 0 ? `${years}a ${months}m` : `${years}a`;
+    }
+    if (months > 0) {
+      return weeks > 0 ? `${months}m ${weeks}sett` : `${months}m`;
+    }
+    if (weeks > 0) {
+      return remainingDays > 0 ? `${weeks}sett ${remainingDays}g` : `${weeks}sett`;
+    }
+    return `${days}g`;
+  }, [daysSubscribed]);
+
+  const subscriptionStartDate = useMemo(() => {
+    if (!subscriptionSince) return null;
+    return subscriptionSince.toLocaleDateString('it-IT', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  }, [subscriptionSince]);
   /* --------------------------------------------------------------------------- */
 
   // UI state: none (pagina unica, sezioni verticali)
@@ -241,12 +296,15 @@ export default function AccountPage() {
                 </span>
               )}
               {isSubscribed ? (
-                <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-white/20 px-2.5 py-1 rounded-full">
+                <span 
+                  className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-white/20 px-2.5 py-1 rounded-full"
+                  title={subscriptionStartDate ? `Dal ${subscriptionStartDate}` : undefined}
+                >
                   <Sparkles className="h-3.5 w-3.5" />
                   Attivo
-                  {daysSubscribed ? (
-                    <span className="opacity-90">da {daysSubscribed}g</span>
-                  ) : null}
+                  {subscriptionDuration && (
+                    <span className="opacity-90">da {subscriptionDuration}</span>
+                  )}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-black/20 px-2.5 py-1 rounded-full">

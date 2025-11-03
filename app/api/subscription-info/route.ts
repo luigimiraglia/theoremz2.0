@@ -6,7 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-08-27.basil",
 });
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -35,25 +35,34 @@ export async function POST(request: NextRequest) {
     });
 
     if (!customers.data.length) {
-      return NextResponse.json(
-        { error: "Nessun abbonamento trovato per questa email" },
-        { status: 404 }
-      );
+      return NextResponse.json({ subscribed: false, startDate: null });
     }
 
     const customerId = customers.data[0].id;
 
-    // Crea sessione Customer Portal
-    const session = await stripe.billingPortal.sessions.create({
+    // Recupera le subscription attive
+    const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/account`,
+      status: "active",
+      limit: 1,
     });
 
-    return NextResponse.json({ url: session.url });
+    if (!subscriptions.data.length) {
+      return NextResponse.json({ subscribed: false, startDate: null });
+    }
+
+    const subscription = subscriptions.data[0];
+    const startDate = new Date(subscription.created * 1000).toISOString();
+
+    return NextResponse.json({
+      subscribed: true,
+      startDate,
+      status: subscription.status,
+    });
   } catch (error) {
-    console.error("Errore creazione portal session:", error);
+    console.error("Errore recupero subscription info:", error);
     return NextResponse.json(
-      { error: "Errore nella creazione della sessione" },
+      { error: "Errore nel recupero delle informazioni" },
       { status: 500 }
     );
   }
