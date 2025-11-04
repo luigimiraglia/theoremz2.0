@@ -336,12 +336,14 @@ export default function AccountPage() {
                 {user.email}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  onClick={handleUpgrade}
-                  className="rounded-lg bg-white/15  hover:bg-white/25 px-3 py-1.5 text-sm"
-                >
-                  {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
-                </button>
+                {!isSubscribed && (
+                  <button
+                    onClick={handleUpgrade}
+                    className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
+                  >
+                    Passa a Black
+                  </button>
+                )}
                 <button
                   onClick={() => router.push("/simula-verifica")}
                   className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
