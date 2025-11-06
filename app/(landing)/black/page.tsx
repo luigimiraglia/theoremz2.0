@@ -6,6 +6,7 @@ import SenjaEmbed from "@/components/SenjaEmbed";
 import CountdownTimer from "@/components/CountdownTimer";
 import BlackPageGuard from "@/components/BlackPageGuard";
 import type { LucideIcon } from "lucide-react";
+import { Check, X } from "lucide-react";
 import {
   MessageCircle,
   ClipboardCheck,
@@ -470,7 +471,7 @@ export default function BlackPage() {
           {/* Colonna 2 – Base mensile */}
           <div>
             <div className="rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 py-2 text-center font-bold text-white">
-              Il più venduto 👇
+              Il più popolare 👇
             </div>
             <div className="mt-2 rounded-xl bg-white py-2 text-center font-bold text-slate-900">
               Piano Base
@@ -689,20 +690,30 @@ function PriceCard({
 
         <ul className="mt-4 grid gap-2 text-[16px] font-semibold lg:text-[15.5px]">
           {features.map(([variant, text], i) => {
-            const color =
+            const strike = variant === "no";
+            const pink = variant === "pink";
+            const colorClass =
               variant === "no"
                 ? "text-rose-500"
                 : variant === "pink"
-                  ? "bg-clip-text bg-gradient-to-r text-transparent from-purple-500 to-pink-500"
-                  : "text-black";
-            const strike = variant === "no";
-            const pink = variant === "pink";
+                  ? "text-pink-500"
+                  : "text-slate-900";
 
             return (
               <li key={i} className="flex items-start  gap-2">
-                <span className={`${color} text-2xl`}>
-                  {variant === "no" ? "✗" : "✓"}
-                </span>
+                {variant === "no" ? (
+                  <X
+                    className={`${colorClass} mt-[5px] h-[22px] w-[22px]`}
+                    strokeWidth={3.2}
+                    aria-hidden
+                  />
+                ) : (
+                  <Check
+                    className={`${colorClass} mt-[3px] h-[22px] w-[22px]`}
+                    strokeWidth={3.2}
+                    aria-hidden
+                  />
+                )}
                 <span
                   className={`${
                     pink

@@ -185,7 +185,7 @@ export default function BlackPromo() {
   const data = useMemo(() => BENEFITS[active], [active]);
 
   return (
-    <section className="mx-6 my-6 max-w-screen-xl xl:mx-auto rounded-[24px] bg-gray-100/60 px-4 py-6  [.dark_&]:bg-slate-800 sm:mx-6 sm:px-8 sm:py-8">
+    <section className="mx-6 my-6 max-w-screen-xl xl:mx-auto rounded-[24px] bg-white/10 px-4 py-6 backdrop-blur-lg border border-white/15 shadow-[0_20px_40px_-28px_rgba(15,23,42,0.45)] sm:mx-6 sm:px-8 sm:py-8">
       {/* Header */}
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="max-w-2xl">
@@ -225,7 +225,7 @@ export default function BlackPromo() {
 
         {/* Illustrazione dinamica */}
         <div className="mx-auto w-full max-w-[520px] md:mx-0">
-          <div className="rounded-2xl bg-white/80 p-6 ring-1 ring-black/5 transition-colors [.dark_&]:bg-slate-900/50 [.dark_&]:ring-white/10">
+          <div className="rounded-2xl bg-white/16 p-6 ring-1 ring-white/20 backdrop-blur transition-colors [.dark_&]:bg-slate-900/40 [.dark_&]:ring-white/15">
             {/* play solo se la pill attiva è "ads" */}
             <data.Illustration play={active === "ads"} />
           </div>
@@ -250,14 +250,18 @@ export default function BlackPromo() {
               className={`group flex items-center justify-between rounded-2xl border-2 px-4 py-3 text-[16px] font-semibold transition
                 ${
                   activeNow
-                    ? "border-sky-500 bg-white text-sky-700 shadow-sm [.dark_&]:bg-slate-900 [.dark_&]:text-sky-300"
-                    : "border-slate-300/80 bg-white/80 text-slate-700 hover:border-slate-400 hover:bg-white [.dark_&]:bg-slate-900/60 [.dark_&]:border-slate-600 [.dark_&]:text-slate-200"
+                    ? "border-blue-500 bg-white/60 text-blue-700 shadow-[0_10px_24px_-16px_rgba(59,130,246,0.55)] backdrop-blur [.dark_&]:bg-slate-900/60 [.dark_&]:text-blue-300"
+                    : "border-white/20 bg-white/10 text-slate-100 hover:border-white/40 hover:bg-white/16 backdrop-blur-sm [.dark_&]:bg-slate-900/50 [.dark_&]:text-slate-200"
                 }`}
               aria-pressed={activeNow}
             >
               <span className="flex items-center gap-2">
                 <span
-                  className={`grid h-6 w-6 place-items-center rounded-full text-[15px] ${activeNow ? "bg-sky-100 text-sky-700 [.dark_&]:bg-sky-900/30 [.dark_&]:text-sky-300" : "bg-slate-100 text-slate-700 [.dark_&]:bg-slate-700/60 [.dark_&]:text-slate-200"}`}
+                  className={`grid h-6 w-6 place-items-center rounded-full text-[15px] ${
+                    activeNow
+                      ? "bg-blue-100 text-blue-700 [.dark_&]:bg-blue-900/30 [.dark_&]:text-blue-300"
+                      : "bg-white/20 text-slate-700 [.dark_&]:bg-slate-700/60 [.dark_&]:text-slate-200"
+                  }`}
                 >
                   {BENEFITS[key].icon}
                 </span>

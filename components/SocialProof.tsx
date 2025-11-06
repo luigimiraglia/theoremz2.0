@@ -1,4 +1,7 @@
 // components/SocialProof.tsx  (SERVER, niente "use client")
+import Image from "next/image";
+import { FaHeart, FaStar, FaCommentDots } from "react-icons/fa";
+
 export default function SocialProof() {
   return (
     <section
@@ -10,8 +13,22 @@ export default function SocialProof() {
         <p>
           <span className="text-blue-500">45K+</span> studenti iscritti
         </p>
-        <div className="flex flex-row opacity-80 gap-2 text-4xl mx-auto w-fit mt-2 text-slate-900 [.dark_&]:text-white">
-          👩🏼‍🎓👨🏻‍🎓👩🏽‍🎓
+        <div className="flex flex-row opacity-90 gap-1.5 mx-auto w-fit mt-2">
+          {[
+            "test-student1.webp",
+            "test-student2.webp",
+            "test-student3.webp",
+          ].map((img, idx) => (
+            <Image
+              key={img}
+              src={`/images/${img}`}
+              alt={`Studente ${idx + 1}`}
+              width={48}
+              height={48}
+              className="h-10 w-10 "
+              priority={idx === 0}
+            />
+          ))}
         </div>
       </div>
 
@@ -23,7 +40,10 @@ export default function SocialProof() {
         <p>
           <span className="text-blue-500">330K+</span> like e commenti positivi
         </p>
-        <span className="text-3xl">💬</span>
+        <span className="mt-2 flex items-center justify-center gap-3">
+          <FaHeart className="h-9 w-9 text-white" aria-hidden />
+          <FaCommentDots className="h-9 w-9 text-white" aria-hidden />
+        </span>
       </div>
 
       {/* Divider */}
@@ -35,7 +55,13 @@ export default function SocialProof() {
           &quot;Theoremz mi ha salvato la vita, grazie ragazzi&quot;
         </p>
         <div className="flex text-3xl justify-center mt-2 gap-1 text-yellow-400">
-          ⭐️⭐️⭐️⭐️⭐️
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <FaStar
+              key={idx}
+              className="h-7 w-7 text-amber-300"
+              aria-hidden
+            />
+          ))}
         </div>
       </div>
     </section>

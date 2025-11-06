@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import MentorPricing from "@/components/MentorPricing";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { CheckCircle2, Sparkles, Star } from "lucide-react";
 export const metadata = {
   title: "Theoremz Mentor — Tutor personale per verifiche ed esami",
   description:
@@ -141,8 +141,14 @@ function Hero() {
                   </svg>
                 </a>
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/12 px-4 py-3 text-[12.5px] font-semibold text-white/85">
-                  <Sparkles className="h-4 w-4 text-sky-300" aria-hidden />
-                  ⭐️⭐️⭐️⭐️⭐️ <span>Valutazione media 4,9</span>
+                  <span className="flex items-center gap-1 text-white/90">
+                    <Star className="h-3.5 w-3.5 text-amber-300" aria-hidden />
+                    <Star className="h-3.5 w-3.5 text-amber-300" aria-hidden />
+                    <Star className="h-3.5 w-3.5 text-amber-300" aria-hidden />
+                    <Star className="h-3.5 w-3.5 text-amber-300" aria-hidden />
+                    <Star className="h-3.5 w-3.5 text-amber-300" aria-hidden />
+                  </span>
+                  <span>Valutazione media 4,9</span>
                 </div>
               </div>
 
@@ -450,9 +456,11 @@ function Reviews() {
                   <div className="text-xs text-white/60">{r.class}</div>
                 </div>
               </div>
-              <div className="mt-3 text-sky-300">
-                {"⭐️".repeat(r.stars)}
-                <span className="ml-2 align-middle text-[12px] text-white/60">
+              <div className="mt-3 flex items-center gap-1">
+                {Array.from({ length: r.stars }).map((_, i) => (
+                  <Star key={i} className="h-4 w-4 text-amber-300" fill="currentColor" strokeWidth={0} aria-hidden />
+                ))}
+                <span className="ml-1 align-middle text-[12px] text-white/60">
                   ({r.stars}.0)
                 </span>
               </div>

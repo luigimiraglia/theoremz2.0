@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import BuyLink from "./BuyLink";
+import { MessageCircle, Rocket } from "lucide-react";
 
 type BillingMode = "monthly" | "weekly";
 
@@ -194,13 +195,19 @@ export default function MentorPricing() {
             plan={currentBasePricing.planLabel}
             className="mt-8 inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-6 py-3 text-[16px] font-extrabold text-white transition hover:from-sky-400 hover:to-cyan-400"
           >
-            Voglio iniziare subito 🚀
+            <span className="flex items-center gap-2">
+              Voglio iniziare subito
+              <Rocket className="h-5 w-5" aria-hidden />
+            </span>
           </BuyLink>
           <a
             href="https://wa.link/yofiy8"
             className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-[13px] font-semibold text-white/80 transition hover:bg-white/10"
           >
-            Chiedi informazioni 💬
+            <span className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" aria-hidden />
+              Chiedi informazioni
+            </span>
           </a>
         </div>
 
@@ -300,13 +307,19 @@ function ToggleExtraPlan({ plan }: { plan: ToggleablePlan }) {
         plan={pricing.planLabel}
         className="mt-6 inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-6 py-3 text-[16px] font-extrabold text-white transition hover:from-sky-400 hover:to-cyan-400"
       >
-        Voglio iniziare subito 🚀
+        <span className="flex items-center gap-2">
+          Voglio iniziare subito
+          <Rocket className="h-5 w-5" aria-hidden />
+        </span>
       </BuyLink>
       <a
         href={plan.waLink}
         className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-[13px] font-semibold text-white/80 transition hover:bg-white/10"
       >
-        Chiedi informazioni 💬
+        <span className="flex items-center gap-2">
+          <MessageCircle className="h-4 w-4" aria-hidden />
+          Chiedi informazioni
+        </span>
       </a>
     </div>
   );
