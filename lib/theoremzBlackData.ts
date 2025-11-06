@@ -42,10 +42,23 @@ export const THEOREMZ_BLACK_DATA = {
   ],
 
   pricing: {
-    monthly: {
-      price: "19.90",
+    essential: {
+      price: "5.90",
       currency: "EUR",
       period: "mese",
+      paymentLink: "https://buy.stripe.com/14A3cv1Wc0jZdrX0iWc7u0P",
+    },
+    standard: {
+      price: "14.90",
+      originalPrice: "19.90",
+      currency: "EUR",
+      period: "mese",
+      paymentLink: "https://buy.stripe.com/8x214ndEU7MrafL0iWc7u0Q",
+      discount: {
+        expires: "2025-11-15T23:59:59+01:00",
+        percent: 25,
+        active: true
+      }
     },
     yearly: {
       price: "199.00",
@@ -73,6 +86,21 @@ export const THEOREMZ_BLACK_DATA = {
 export function getTheoremzBlackInfo(): string {
   const data = THEOREMZ_BLACK_DATA;
 
+  // Calcolo timer e sconto per il piano standard
+  const now = new Date();
+  const discount = data.pricing.standard.discount;
+  let discountInfo = "";
+  if (discount && discount.active) {
+    const expires = new Date(discount.expires);
+    if (now < expires) {
+      const percent = Math.round(
+        (1 - parseFloat(data.pricing.standard.price) / parseFloat(data.pricing.standard.originalPrice)) * 100
+      );
+      const timeLeft = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      discountInfo = `\n• Sconto ${percent}% valido fino al ${expires.toLocaleDateString()} (${timeLeft} giorni rimanenti)`;
+    }
+  }
+
   return `
 **Theoremz Black** è ${data.slogan.toLowerCase()}.
 
@@ -85,7 +113,8 @@ ${Object.entries(data.includes)
 ${data.quickFeatures.map((feature) => `• ${feature}`).join("\n")}
 
 **Prezzi:**
-• Piano mensile: €${data.pricing.monthly.price}/${data.pricing.monthly.period}
+• Piano Essential: €${data.pricing.essential.price}/${data.pricing.essential.period} [Pagamento](${data.pricing.essential.paymentLink})
+• Piano Black Standard: ~~€${data.pricing.standard.originalPrice}~~ **€${data.pricing.standard.price}**/${data.pricing.standard.period} [Pagamento](${data.pricing.standard.paymentLink})${discountInfo}
 • Piano annuale: €${data.pricing.yearly.price}/${data.pricing.yearly.period}
 
 **Valutazioni:** ${data.ratings.score}/${data.ratings.outOf} - ${data.ratings.totalStudents}

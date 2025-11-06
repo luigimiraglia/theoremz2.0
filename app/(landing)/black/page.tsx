@@ -23,7 +23,7 @@ import {
 const TITLE =
   "Theoremz Black — Mentoring didattico, esercizi illimitati e videolezioni";
 const DESC =
-  "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Piani da 3,90€/mese. Soddisfatti o rimborsati.";
+  "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Piani da 5,90€/mese. Soddisfatti o rimborsati.";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
 const CANONICAL = `${SITE}/black`;
 
@@ -186,7 +186,7 @@ export default function BlackPage() {
     <main className="bg-black text-white">
       {/* Guard per utenti già abbonati */}
       <BlackPageGuard />
-      
+
       {/* JSON-LD (single @graph) */}
       <script
         type="application/ld+json"
@@ -442,9 +442,9 @@ export default function BlackPage() {
             </div>
 
             <PriceCard
-              price="3,90€"
+              price="5,90€"
               unit=" /mese"
-              buyHref="https://buy.stripe.com/7sIaIa5f5b21dOgcNo"
+              buyHref="https://buy.stripe.com/14A3cv1Wc0jZdrX0iWc7u0P"
               infoHref="https://wa.link/mkxv41"
               features={[
                 // Contenuti principali
@@ -482,10 +482,10 @@ export default function BlackPage() {
               {/* Halo fucsia dietro la card Base */}
               <div className="relative z-10">
                 <PriceCard
-                  price="9,90€"
+                  price="14,90€"
                   regularPrice="19,90€"
                   unit=" /mese"
-                  buyHref="https://buy.stripe.com/aFa6oH1Wc7Mr3Rn1n0c7u0K"
+                  buyHref="https://buy.stripe.com/00w9AT44k7Mr4Vr3v8c7u0S"
                   infoHref="https://wa.link/4ogl5q"
                   features={[
                     // Differenziatori principali
@@ -520,10 +520,10 @@ export default function BlackPage() {
             </div>
 
             <PriceCard
-              price="99€"
+              price="149€"
               regularPrice="199€"
               unit=" /anno"
-              buyHref="https://buy.stripe.com/6oU9ATfN2giX2Nj4zcc7u0M"
+              buyHref="https://buy.stripe.com/bJe28r6csc2H3Rnd5Ic7u0R"
               infoHref="https://wa.link/rwbkqd"
               features={[
                 // Differenziatori principali
@@ -660,7 +660,7 @@ function PriceCard({
   return (
     <div className="relative mt-3 overflow-hidden rounded-2xl border border-white/15 bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_-30px_rgba(15,23,42,0.45)]">
       {regularPrice == "19,90€" || regularPrice == "199€" ? (
-        <CountdownTimer targetDate="2025-10-31T23:59:59" />
+        <CountdownTimer targetDate="2025-11-15T14:59:59" />
       ) : (
         ""
       )}
@@ -674,7 +674,7 @@ function PriceCard({
                   {unit}
                 </span>
                 <span className="text-sm font-semibold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded">
-                  -50% per sempre
+                  -25% per sempre
                 </span>
               </div>
             )}
@@ -725,9 +725,9 @@ function PriceCard({
             unit.includes("anno")
               ? "Annuale"
               : unit.includes("mese")
-                ? price.includes("9,90")
-                  ? "Base Mensile"
-                  : price.includes("3,90")
+                ? price.includes("14,90")
+                  ? "Black Standard Mensile"
+                  : price.includes("5,90")
                     ? "Essential Mensile"
                     : "Mensile"
                 : ""

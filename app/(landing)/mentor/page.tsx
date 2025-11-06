@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import BuyLink from "@/components/BuyLink";
+import MentorPricing from "@/components/MentorPricing";
 import { CheckCircle2, Sparkles } from "lucide-react";
 export const metadata = {
   title: "Theoremz Mentor — Tutor personale per verifiche ed esami",
@@ -106,20 +106,8 @@ export default function MentorPage() {
 function Hero() {
   return (
     <section className="relative overflow-hidden bg-slate-950 text-white">
-      <div
-        className="pointer-events-none absolute inset-x-0 top-[-18rem] h-[420px] bg-gradient-to-b from-slate-900/45 via-slate-900/18 to-transparent blur-3xl"
-        aria-hidden
-      />
       <div className="mx-auto max-w-6xl px-5 pt-12 pb-8 sm:px-8 lg:px-12">
-        <div className="relative overflow-hidden rounded-[28px] border border-white/12 bg-white/10 px-6 py-10 shadow-[0_45px_120px_-60px_rgba(14,165,233,0.5)] backdrop-blur sm:px-10 lg:px-16">
-          <div
-            className="pointer-events-none absolute -right-20 top-12 h-64 w-64 rounded-full bg-cyan-300/25 blur-3xl sm:-right-24 sm:top-6"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute -bottom-24 left-8 h-56 w-56 rounded-full bg-sky-400/20 blur-3xl sm:-bottom-28 sm:left-16"
-            aria-hidden
-          />
+        <div className="relative overflow-hidden rounded-[28px] border border-white/12 bg-white/10 px-6 py-10 backdrop-blur sm:px-10 lg:px-16">
 
           <div className="relative grid gap-12 lg:grid-cols-[1.15fr,0.85fr] lg:items-center">
             {/* Testo */}
@@ -152,7 +140,7 @@ function Hero() {
                     <path d="m12 5 7 7-7 7" />
                   </svg>
                 </a>
-                <div className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/12 px-4 py-3 text-[12.5px] font-semibold text-white/85 shadow-sm">
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/12 px-4 py-3 text-[12.5px] font-semibold text-white/85">
                   <Sparkles className="h-4 w-4 text-sky-300" aria-hidden />
                   ⭐️⭐️⭐️⭐️⭐️ <span>Valutazione media 4,9</span>
                 </div>
@@ -170,7 +158,7 @@ function Hero() {
 
             {/* Card laterale */}
             <div className="hidden lg:order-none lg:block">
-              <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-white/10 px-6 py-6 text-white shadow-[0_35px_90px_-50px_rgba(56,189,248,0.55)] backdrop-blur">
+              <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-white/10 px-6 py-6 text-white backdrop-blur">
                 <div
                   className="pointer-events-none absolute -top-16 right-12 h-44 w-44 rounded-full bg-cyan-400/35 blur-3xl"
                   aria-hidden
@@ -208,14 +196,10 @@ function Hero() {
 function AboutAndTeachers() {
   return (
     <section className="relative border-t border-white/10 bg-slate-950">
-      <div
-        className="pointer-events-none absolute inset-x-0 top-[-10rem] h-[260px] bg-gradient-to-b from-sky-900/40 via-slate-950/60 to-transparent blur-3xl"
-        aria-hidden
-      />
       <div className="relative mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-12">
         <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
           {/* about */}
-          <div className="rounded-[26px] border border-white/10 bg-white/5 px-6 py-7 text-white shadow-[0_40px_90px_-55px_rgba(56,189,248,0.45)] backdrop-blur">
+          <div className="rounded-[26px] border border-white/10 bg-white/5 px-6 py-7 text-white backdrop-blur">
             <h3 className="text-[26px] sm:text-[30px] font-black text-white">
               Di cosa si tratta?
             </h3>
@@ -229,7 +213,7 @@ function AboutAndTeachers() {
 
           {/* teachers */}
           <div className="space-y-4">
-            <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3 text-center text-[13px] font-semibold uppercase tracking-[0.3em] text-white/70 shadow-sm backdrop-blur">
+            <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3 text-center text-[13px] font-semibold uppercase tracking-[0.3em] text-white/70 backdrop-blur">
               I nostri migliori insegnanti
             </div>
             <div className="space-y-4">
@@ -265,7 +249,7 @@ function TeacherCard({
   link: string;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_24px_60px_-40px_rgba(56,189,248,0.45)] backdrop-blur">
+    <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
       <img
         alt={name}
         src={img}
@@ -277,7 +261,7 @@ function TeacherCard({
       </div>
       <a
         href={link}
-        className="rounded-xl bg-gradient-to-r from-sky-600 to-cyan-500 px-3 py-2 text-[13px] font-bold text-white shadow-[0_5px_16px_-8px_rgba(37,99,235,0.75)] transition hover:from-sky-500 hover:to-cyan-400"
+        className="rounded-xl bg-gradient-to-r from-sky-600 to-cyan-500 px-3 py-2 text-[13px] font-bold text-white transition hover:from-sky-500 hover:to-cyan-400"
       >
         Prenota ora
       </a>
@@ -289,7 +273,6 @@ function TeacherCard({
 function IncludesGrid() {
   return (
     <section className="relative border-t border-white/10 bg-slate-950">
-      <div className="pointer-events-none absolute inset-x-0 top-[-12rem] h-[300px] bg-gradient-to-b from-slate-900/60 via-slate-950/50 to-transparent blur-3xl" aria-hidden />
       <div className="relative mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-12">
         <h3 className="text-[26px] sm:text-[30px] font-black text-white">
           Cosa include?
@@ -362,7 +345,7 @@ function IncludeBlock({
   points: [string, string][];
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 shadow-[0_35px_90px_-55px_rgba(56,189,248,0.45)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_45px_110px_-50px_rgba(56,189,248,0.55)] backdrop-blur">
+    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 transition-transform duration-300 hover:-translate-y-1 backdrop-blur">
       <span
         className="pointer-events-none absolute inset-x-6 top-0 h-[2px] rounded-full bg-gradient-to-r from-sky-500/80 via-cyan-400/60 to-transparent opacity-90"
         aria-hidden
@@ -392,9 +375,8 @@ function IncludeBlock({
 function SatisfactionBanner() {
   return (
     <section className="relative border-t border-white/10 bg-slate-950">
-      <div className="pointer-events-none absolute inset-x-0 top-[-8rem] h-[220px] bg-gradient-to-b from-emerald-500/30 via-slate-950/40 to-transparent blur-3xl" aria-hidden />
       <div className="relative mx-auto max-w-6xl px-5 pb-0 pt-10 sm:px-8 lg:px-12">
-        <div className="overflow-hidden rounded-[26px] border border-emerald-400/60 bg-gradient-to-br from-emerald-500 via-teal-500 to-sky-500 px-6 py-9 text-center text-white shadow-[0_45px_110px_-50px_rgba(16,185,129,0.75)]">
+        <div className="overflow-hidden rounded-[26px] border border-emerald-400/60 bg-gradient-to-br from-emerald-500 via-teal-500 to-sky-500 px-6 py-9 text-center text-white">
           <div className="mx-auto max-w-3xl text-[26px] font-black leading-tight sm:text-[30px]">
             +100% Soddisfatti o Rimborsati
           </div>
@@ -410,127 +392,11 @@ function SatisfactionBanner() {
 /* ------------- PRICING (orizzontale su desktop) ------------- */
 function Pricing() {
   return (
-    <section id="pricing" className="relative border-t border-white/10 bg-slate-950">
-      <div className="pointer-events-none absolute inset-x-0 top-[-10rem] h-[260px] bg-gradient-to-b from-sky-900/40 via-slate-950/50 to-transparent blur-3xl" aria-hidden />
-      <div className="relative mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-12">
-      <TierTag> Piano Base 👇 </TierTag>
-      <Plan
-        price="89,90€ /mese"
-        bullets={[
-          "Tutor dedicato per lo studente",
-          "Aiuto compiti via chat giornaliero",
-          "1h di lezione a settimana",
-          "Esercizi personalizzati di rinforzo",
-          "Accesso a tutte le risorse di Theoremz",
-          "Orari flessibili anche il weekend",
-          "Report per i genitori",
-          "Piano di studio personalizzato",
-          "100% soddisfatti o rimborsati",
-        ]}
-        stripeLink={"https://buy.stripe.com/4gweYq5f5da925y00x"}
-        waLink={"https://wa.link/yofiy8"}
-      />
-
-      <TierTag> Piano Accelerato 👇 </TierTag>
-      <Plan
-        price="149€ /mese"
-        bullets={[
-          "Tutor dedicato per lo studente",
-          "Aiuto compiti via chat giornaliero",
-          "2h di lezione a settimana",
-          "Esercizi personalizzati di rinforzo",
-          "Accesso a tutte le risorse di Theoremz",
-          "Orari flessibili anche il weekend",
-          "Report per i genitori",
-          "Piano di studio personalizzato",
-          "100% soddisfatti o rimborsati",
-        ]}
-        stripeLink={"https://buy.stripe.com/eVa3fIbDt9XXcKc00B"}
-        waLink={"https://wa.link/1nnh4k"}
-      />
-
-      <TierTag> Intero Quadrimestre 👇 </TierTag>
-      <Plan
-        price="329€ /4 mesi"
-        bullets={[
-          "Tutor dedicato per lo studente",
-          "Aiuto compiti via chat giornaliero",
-          "1h di lezione a settimana",
-          "Esercizi personalizzati di rinforzo",
-          "Accesso a tutte le risorse di Theoremz",
-          "Orari flessibili anche il weekend",
-          "Report per i genitori",
-          "Piano di studio personalizzato",
-          "100% soddisfatti o rimborsati",
-        ]}
-        stripeLink={"https://buy.stripe.com/6oEeYq6j9fih11ubJg"}
-        waLink={"https://wa.link/tzu43l"}
-      />
+    <section id="pricing" className="border-t border-white/10 bg-slate-950">
+      <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-12">
+        <MentorPricing />
       </div>
     </section>
-  );
-}
-
-function TierTag({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-4 inline-flex rounded-2xl border border-white/15 bg-white/10 px-4 py-1.5 text-center text-[12.5px] font-semibold uppercase tracking-[0.25em] text-white/70 shadow-sm">
-      {children}
-    </div>
-  );
-}
-
-function Plan({
-  price,
-  bullets,
-  stripeLink,
-  waLink,
-}: {
-  price: string;
-  bullets: string[];
-  waLink: string;
-  stripeLink: string;
-}) {
-  return (
-    <div className="mb-8 overflow-hidden rounded-3xl border border-white/15 bg-white/5 px-6 py-7 shadow-[0_45px_110px_-55px_rgba(56,189,248,0.45)] backdrop-blur">
-      <div className="relative inline-flex items-baseline gap-1">
-        <span
-          className="pointer-events-none absolute inset-0 -translate-y-2 scale-110 rounded-full bg-gradient-to-r from-sky-500/30 to-cyan-300/30 blur-xl"
-          aria-hidden
-        />
-        <span className="relative text-[32px] font-black leading-none text-white sm:text-[38px] lg:text-[44px]">
-          {price}
-        </span>
-      </div>
-
-      <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-
-      <ul className="mt-4 space-y-2 text-[15px] font-semibold text-white/85">
-        {bullets.map((b) => (
-          <li key={b} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-            <span className="mt-[2px] text-emerald-400">✓</span>
-            <span className="leading-snug text-white/80">{b}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <a
-          href={waLink}
-          className="inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-black px-6 py-3 text-[15px] font-extrabold text-white transition hover:bg-slate-800"
-        >
-          Chiedi informazioni 💬
-        </a>
-        <BuyLink
-          href={stripeLink}
-          plan={price}
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-sky-600 to-cyan-500 px-6 py-3 text-[15px] font-extrabold text-white shadow-[0_12px_30px_-18px_rgba(37,99,235,0.65)] transition hover:from-sky-500 hover:to-cyan-400"
-        >
-          Acquista ora 👉
-        </BuyLink>
-      </div>
-    </div>
   );
 }
 
@@ -570,7 +436,7 @@ function Reviews() {
           {data.map((r) => (
             <div
               key={r.name}
-              className="rounded-2xl border border-white/10 bg-white/5 p-5 text-white shadow-[0_30px_90px_-55px_rgba(56,189,248,0.45)] backdrop-blur"
+              className="rounded-2xl border border-white/10 bg-white/5 p-5 text-white backdrop-blur"
             >
               <div className="flex items-center gap-4">
                 {/* <img
@@ -611,7 +477,7 @@ function FAQ() {
           {FAQS.map((f) => (
             <details
               key={f.q}
-              className="group rounded-2xl border border-white/10 bg-white/5 text-white shadow-[0_25px_80px_-50px_rgba(56,189,248,0.4)] backdrop-blur"
+              className="group rounded-2xl border border-white/10 bg-white/5 text-white backdrop-blur"
             >
               <summary className="cursor-pointer px-4 py-3 text-[15.5px] font-bold text-white">
                 {f.q}
