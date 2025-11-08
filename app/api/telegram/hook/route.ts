@@ -56,9 +56,9 @@ async function lookupStudentByEmail(db: any, email: string) {
   const normalized = email.trim().toLowerCase();
 const selectFields =
   "student_id, student_name, school_cycle, class_section, student_email, parent_email, user_id";
-  const { data: directMatches, error: directError } = await db
-    .from("black_student_card")
-    .select(selectFields)
+const { data: directMatches, error: directError } = await db
+  .from("black_student_card")
+  .select(selectFields)
     .or(
       `student_email.ilike.${escapeOrValue(normalized)},parent_email.ilike.${escapeOrValue(
         normalized,
@@ -168,6 +168,31 @@ async function cmdN({ db, chatId, text }: CmdCtx) {
   });
   if (error) return send(chatId, `❌ Errore: ${error.message}`);
   await send(chatId, `✅ Nota aggiunta a *${name}* e scheda aggiornata.`);
+}
+
+/** /desc <nome/email> <testo...> → aggiorna overview manuale */
+async function cmdDESC({ db, chatId, text }: CmdCtx) {
+  const m = text.match(/^\/desc(?:@\w+)?\s+(\S+)(?:\s+([\s\S]+))?$/i);
+  if (!m) return send(chatId, "Uso: `/desc cognome testo_overview`");
+  const [, q, body] = m;
+  if (!body)
+    return send(
+      chatId,
+      "Serve anche il testo, es: `/desc rossi seconda scientifico con difficoltà in trigonometria`",
+    );
+
+  const r = await resolveStudentId(db, q);
+  if ((r as any).err) return send(chatId, (r as any).err);
+  const { id, name } = r as any;
+
+  const { error } = await db
+    .from("black_students")
+    .update({ ai_description: body, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return send(chatId, `❌ Errore overview: ${error.message}`);
+
+  await db.rpc("refresh_black_brief", { _student: id });
+  await send(chatId, `✅ Overview aggiornata per *${name}*.`);
 }
 
 /** /v <nome> <materia> <voto>/<max> [data=YYYY-MM-DD] */
@@ -305,6 +330,7 @@ export async function POST(req: Request) {
           "`/n cognome testo...` — aggiungi nota",
           "`/v cognome materia 7.5/10 [YYYY-MM-DD]` — aggiungi voto",
           "`/ass cognome YYYY-MM-DD materia [topics]` — nuova verifica",
+          "`/desc cognome testo...` — aggiorna overview studente",
         ].join("\n")
       );
     } else if (/^\/oggi/i.test(text)) {
@@ -317,6 +343,8 @@ export async function POST(req: Request) {
       await cmdV(ctx);
     } else if (/^\/ass(\s|@)/i.test(text)) {
       await cmdASS(ctx);
+    } else if (/^\/desc(\s|@)/i.test(text)) {
+      await cmdDESC(ctx);
     } else {
       await send(chatId, "Comando non riconosciuto. Scrivi `/start`.");
     }
