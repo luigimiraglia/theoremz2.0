@@ -5,7 +5,7 @@ const TG = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const ALLOWED = new Set(
   (process.env.ALLOWED_CHAT_IDS || "")
     .split(",")
-    .map((s) => s.trim())
+    .map((s) => s.split("#")[0]?.trim())
     .filter(Boolean)
 );
 
