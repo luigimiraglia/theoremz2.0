@@ -55,11 +55,12 @@ async function lookupStudentByName(db: any, query: string) {
 
 async function lookupStudentByEmail(db: any, email: string) {
   const normalized = email.trim().toLowerCase();
-const selectFields =
-  "student_id, student_name, school_cycle, class_section, student_email, parent_email, user_id";
-const { data: directMatches, error: directError } = await db
-  .from("black_student_card")
-  .select(selectFields)
+  const selectFields =
+    "id, user_id, student_email, parent_email, year_class, profiles:profiles!inner(full_name)";
+
+  const { data: directMatches, error: directError } = await db
+    .from("black_students")
+    .select(selectFields)
     .or(
       `student_email.ilike.${escapeOrValue(normalized)},parent_email.ilike.${escapeOrValue(
         normalized,
@@ -98,7 +99,14 @@ const { data: directMatches, error: directError } = await db
   }
 
   const row = matches[0];
-  return { id: row.student_id, name: row.student_name || row.student_email || email };
+  return {
+    id: row.id,
+    name:
+      row.profiles?.full_name ||
+      row.student_email ||
+      row.parent_email ||
+      email,
+  };
 }
 
 function escapeOrValue(value: string) {
@@ -110,8 +118,16 @@ function formatMatchList(matches: any[], prefix = "") {
     .slice(0, 6)
     .map((match) => {
       const meta =
-        [match.school_cycle, match.class_section].filter(Boolean).join(" ") || null;
-      return `• ${match.student_name || "Senza nome"}${meta ? ` (${meta})` : ""}`;
+        [match.school_cycle, match.class_section, match.year_class]
+          .filter(Boolean)
+          .join(" ") || null;
+      const name =
+        (match.student_name as string) ||
+        match?.profiles?.full_name ||
+        match.student_email ||
+        match.parent_email ||
+        "Senza nome";
+      return `• ${name}${meta ? ` (${meta})` : ""}`;
     })
     .join("\n");
   return `${prefix}${list}\n\nRaffina la ricerca.`;
