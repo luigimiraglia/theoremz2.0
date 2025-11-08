@@ -54,13 +54,13 @@ async function lookupStudentByName(db: any, query: string) {
 
 async function lookupStudentByEmail(db: any, email: string) {
   const normalized = email.trim().toLowerCase();
-  const selectFields =
-    "student_id, student_name, school_cycle, class_section, student_email, parent_email, user_id";
+const selectFields =
+  "student_id, student_name, school_cycle, class_section, student_email, parent_email, user_id";
   const { data: directMatches, error: directError } = await db
     .from("black_student_card")
     .select(selectFields)
     .or(
-      `student_email.eq.${escapeOrValue(normalized)},parent_email.eq.${escapeOrValue(
+      `student_email.ilike.${escapeOrValue(normalized)},parent_email.ilike.${escapeOrValue(
         normalized,
       )}`,
     )
@@ -101,7 +101,7 @@ async function lookupStudentByEmail(db: any, email: string) {
 }
 
 function escapeOrValue(value: string) {
-  return value.replace(/,/g, "\\,");
+  return value.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
 function formatMatchList(matches: any[], prefix = "") {
