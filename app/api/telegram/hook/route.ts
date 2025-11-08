@@ -56,7 +56,7 @@ async function lookupStudentByName(db: any, query: string) {
 async function lookupStudentByEmail(db: any, email: string) {
   const normalized = email.trim().toLowerCase();
   const selectFields =
-    "id, user_id, student_email, parent_email, year_class, profiles:profiles!inner(full_name)";
+    "id, user_id, student_email, parent_email, year_class, profiles:profiles!black_students_user_id_fkey(full_name)";
 
   const { data: directMatches, error: directError } = await db
     .from("black_students")
@@ -346,7 +346,7 @@ async function cmdNUOVI({ db, chatId }: CmdCtx) {
   const { data, error } = await db
     .from("black_students")
     .select(
-      "id, user_id, year_class, start_date, parent_email, parent_phone, parent_name, student_email, student_phone, status, profiles:profiles!inner(full_name, stripe_price_id)",
+      "id, user_id, year_class, start_date, parent_email, parent_phone, parent_name, student_email, student_phone, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id)",
     )
     .eq("status", "active")
     .gte("start_date", since)
@@ -384,6 +384,73 @@ async function cmdNUOVI({ db, chatId }: CmdCtx) {
           }
         : undefined;
     await send(chatId, lines, replyMarkup);
+  }
+}
+
+async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
+  const m = text.match(/^\/checked(?:@\w+)?\s+(\S+)/i);
+  if (!m) return send(chatId, "Uso: `/checked cognome` oppure `/checked email@example.com`");
+  const [, q] = m;
+  const r = await resolveStudentId(db, q);
+  if ((r as any).err) return send(chatId, (r as any).err);
+  const { id, name } = r as any;
+
+  const { data, error } = await db
+    .from("black_students")
+    .select("readiness")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) return send(chatId, `❌ Errore update: ${error.message}`);
+  const current = Number(data?.readiness ?? 0);
+  const updated = Math.min(100, current + 5);
+  const { error: updErr } = await db
+    .from("black_students")
+    .update({ readiness: updated, last_active_at: new Date().toISOString() })
+    .eq("id", id);
+  if (updErr) return send(chatId, `❌ Errore update: ${updErr.message}`);
+
+  await db.rpc("refresh_black_brief", { _student: id }).catch(() => {});
+  await send(chatId, `✅ Contatto registrato per *${name}*. Readiness: ${updated}/100`);
+}
+
+async function cmdDaContattare({ db, chatId }: CmdCtx) {
+  const { data, error } = await db
+    .from("black_students")
+    .select(
+      "id, user_id, readiness, parent_email, parent_phone, student_email, student_phone, year_class, profiles:profiles!black_students_user_id_fkey(full_name)",
+    )
+    .eq("status", "active")
+    .lt("readiness", 90)
+    .order("readiness", { ascending: true })
+    .limit(20);
+  if (error) return send(chatId, `❌ Errore elenco: ${error.message}`);
+  if (!data?.length) return send(chatId, "Tutti aggiornati ✅");
+  for (const row of data) {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const name = profile?.full_name || row.student_email || row.parent_email || "Studente";
+    const readiness = row.readiness ?? 0;
+    const email = row.student_email || row.parent_email || "—";
+    const phone = row.student_phone || row.parent_phone || "—";
+    const meta = row.year_class ? `Classe: ${row.year_class}\n` : "";
+    const text = `*${name}*\n${meta}Readiness: ${readiness}/100\nEmail: ${email}\nTelefono: ${phone}`;
+    const markup =
+      email && email !== "—"
+        ? {
+            inline_keyboard: [
+              [
+                {
+                  text: "Apri scheda",
+                  switch_inline_query_current_chat: `/s ${email}`,
+                },
+                {
+                  text: "Segna come contattato",
+                  switch_inline_query_current_chat: `/checked ${email}`,
+                },
+              ],
+            ],
+          }
+        : undefined;
+    await send(chatId, text, markup);
   }
 }
 
