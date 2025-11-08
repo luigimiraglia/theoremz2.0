@@ -409,7 +409,11 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     .eq("id", id);
   if (updErr) return send(chatId, `❌ Errore update: ${updErr.message}`);
 
-  await db.rpc("refresh_black_brief", { _student: id }).catch(() => {});
+  try {
+    await db.rpc("refresh_black_brief", { _student: id });
+  } catch {
+    // best effort
+  }
   await send(chatId, `✅ Contatto registrato per *${name}*. Readiness: ${updated}/100`);
 }
 
