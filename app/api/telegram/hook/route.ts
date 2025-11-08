@@ -28,7 +28,16 @@ type CmdCtx = {
   text: string;
 };
 
-async function resolveStudentId(db: any, query: string) {
+async function resolveStudentId(db: any, input: string) {
+  const query = input.trim();
+  if (!query) return { err: "❌ Specifica un nome o una email." };
+  if (query.includes("@")) {
+    return lookupStudentByEmail(db, query.toLowerCase());
+  }
+  return lookupStudentByName(db, query);
+}
+
+async function lookupStudentByName(db: any, query: string) {
   const { data, error } = await db.rpc("search_black_student", { q: query });
   if (error) throw new Error(error.message);
   if (!data || data.length === 0)
@@ -41,6 +50,71 @@ async function resolveStudentId(db: any, query: string) {
     return { err: `⚠️ Più risultati:\n${list}\n\nRaffina la ricerca.` };
   }
   return { id: data[0].student_id, name: data[0].student_name };
+}
+
+async function lookupStudentByEmail(db: any, email: string) {
+  const normalized = email.trim().toLowerCase();
+  const selectFields =
+    "student_id, student_name, school_cycle, class_section, student_email, parent_email, user_id";
+
+  const { data: directMatches, error: directError } = await db
+    .from("black_student_card")
+    .select(selectFields)
+    .or(
+      `student_email.ilike.${escapeOrValue(normalized)},parent_email.ilike.${escapeOrValue(
+        normalized,
+      )}`,
+    )
+    .limit(6);
+  if (directError) throw new Error(directError.message);
+
+  let matches = directMatches ?? [];
+
+  if (!matches.length) {
+    const { data: profiles, error: profileError } = await db
+      .from("profiles")
+      .select("id")
+      .ilike("email", normalized)
+      .limit(6);
+    if (profileError) throw new Error(profileError.message);
+    const userIds = (profiles ?? []).map((p: any) => p.id);
+    if (userIds.length) {
+      const { data: viaUid, error: viaUidError } = await db
+        .from("black_student_card")
+        .select(selectFields)
+        .in("user_id", userIds)
+        .limit(6);
+      if (viaUidError) throw new Error(viaUidError.message);
+      matches = viaUid ?? [];
+    }
+  }
+
+  if (!matches.length)
+    return { err: `❌ Nessuno studente trovato per: *${email}*` };
+  if (matches.length > 1) {
+    return {
+      err: formatMatchList(matches, `⚠️ Più risultati per ${email}:\n`),
+    };
+  }
+
+  const row = matches[0];
+  return { id: row.student_id, name: row.student_name || row.student_email || email };
+}
+
+function escapeOrValue(value: string) {
+  return value.replace(/,/g, "\\,");
+}
+
+function formatMatchList(matches: any[], prefix = "") {
+  const list = matches
+    .slice(0, 6)
+    .map((match) => {
+      const meta =
+        [match.school_cycle, match.class_section].filter(Boolean).join(" ") || null;
+      return `• ${match.student_name || "Senza nome"}${meta ? ` (${meta})` : ""}`;
+    })
+    .join("\n");
+  return `${prefix}${list}\n\nRaffina la ricerca.`;
 }
 
 /** /s <nome> → invia scheda (brief) */
