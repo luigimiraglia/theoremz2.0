@@ -56,12 +56,11 @@ async function lookupStudentByEmail(db: any, email: string) {
   const normalized = email.trim().toLowerCase();
   const selectFields =
     "student_id, student_name, school_cycle, class_section, student_email, parent_email, user_id";
-
   const { data: directMatches, error: directError } = await db
     .from("black_student_card")
     .select(selectFields)
     .or(
-      `student_email.ilike.${escapeOrValue(normalized)},parent_email.ilike.${escapeOrValue(
+      `student_email.eq.${escapeOrValue(normalized)},parent_email.eq.${escapeOrValue(
         normalized,
       )}`,
     )
@@ -120,7 +119,7 @@ function formatMatchList(matches: any[], prefix = "") {
 /** /s <nome> → invia scheda (brief) */
 async function cmdS({ db, chatId, text }: CmdCtx) {
   const q = text.replace(/^\/s(@\w+)?\s*/i, "").trim();
-  if (!q) return send(chatId, "Uso: `/s cognome`");
+  if (!q) return send(chatId, "Uso: `/s cognome` oppure `/s email@example.com`");
   const r = await resolveStudentId(db, q);
   if ((r as any).err) return send(chatId, (r as any).err);
   const { id, name } = r as any;
@@ -302,6 +301,7 @@ export async function POST(req: Request) {
           "Comandi:",
           "`/oggi` — digest rapido",
           "`/s cognome` — scheda",
+          "`/s email@example.com` — scheda via email",
           "`/n cognome testo...` — aggiungi nota",
           "`/v cognome materia 7.5/10 [YYYY-MM-DD]` — aggiungi voto",
           "`/ass cognome YYYY-MM-DD materia [topics]` — nuova verifica",

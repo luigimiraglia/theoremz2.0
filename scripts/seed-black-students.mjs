@@ -104,6 +104,8 @@ function buildBrief(student) {
     `Classe: ${student.year_class || "N/A"}   Track: ${student.track || "entrambi"}`,
     `Tutor: ${student.tutor_id || "—"}`,
     "",
+    `Piano: ${student.plan_label || "Black"} · Iscritto dal ${student.start_date || "?"}`,
+    "",
     "Contatti",
     `Genitore: ${student.parent_name || "—"} — ${student.parent_phone || "—"} — ${
       student.parent_email || "—"
@@ -124,6 +126,21 @@ function mapYear(doc) {
   const indirizzo = (doc?.indirizzo || "").toLowerCase();
   if (indirizzo.includes("liceo")) return `${year}°Liceo`;
   return `${year}°Superiore`;
+}
+
+function mapPlan(price) {
+  if (!price) return "Black";
+  const nickname = price.nickname?.toLowerCase() || "";
+  const lookupKey = price.lookup_key?.toLowerCase() || "";
+  const priceId = price.id?.toLowerCase() || "";
+  const match = (needle) =>
+    nickname.includes(needle) || lookupKey.includes(needle) || priceId.includes(needle);
+
+  if (match("essential")) return "Black Essential";
+  if (match("standard") || match("std")) return "Black Standard";
+  if (match("ann") || match("year") || match("annual")) return "Black Annuale";
+  if (nickname.length) return `Black ${price.nickname}`;
+  return "Black";
 }
 
 async function getFirestoreMeta(uid) {
@@ -172,6 +189,7 @@ async function main() {
     if (createdProfile) SUMMARY.profilesCreated += 1;
 
     const firestoreMeta = await getFirestoreMeta(uid);
+    const planLabel = mapPlan(sub.items?.data?.[0]?.price ?? sub.plan ?? null);
     const studentPayload = {
       user_id: uid,
       year_class: mapYear(firestoreMeta),
@@ -231,6 +249,7 @@ async function main() {
 
     const brief = buildBrief({
       ...studentPayload,
+      plan_label: planLabel,
       full_name: profilePayload.full_name,
     });
     const briefRes = await supabase
