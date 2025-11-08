@@ -9,7 +9,7 @@ const ALLOWED = new Set(
     .filter(Boolean)
 );
 
-async function send(chat_id: number | string, text: string) {
+async function send(chat_id: number | string, text: string, replyMarkup?: any) {
   await fetch(`${TG}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -18,6 +18,7 @@ async function send(chat_id: number | string, text: string) {
       text,
       parse_mode: "Markdown",
       disable_web_page_preview: true,
+      reply_markup: replyMarkup,
     }),
   });
 }
@@ -114,6 +115,31 @@ function formatMatchList(matches: any[], prefix = "") {
     })
     .join("\n");
   return `${prefix}${list}\n\nRaffina la ricerca.`;
+}
+
+const PLAN_LABELS: Record<string, string> = {
+  price_1SQIy3HuThKalaHI4pli489T: "Black Standard",
+  price_1SGtQvHuThKalaHIr1d9ua0D: "Black Standard",
+  price_1Ptv7qHuThKalaHIO45IqjKL: "Black Essential",
+  price_1SII2UHuThKalaHI1g3CgFSb: "Black Annuale",
+};
+
+function planLabelFromPriceId(priceId?: string | null, fallback?: string | null) {
+  if (!priceId) return fallback || "Black";
+  return PLAN_LABELS[priceId] || fallback || "Black";
+}
+
+function formatDate(date?: string | null) {
+  if (!date) return "—";
+  try {
+    return new Date(date).toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return date;
+  }
 }
 
 /** /s <nome> → invia scheda (brief) */
@@ -299,6 +325,51 @@ async function cmdOGGI({ db, chatId }: CmdCtx) {
   await send(chatId, txt || "Nessun dato.");
 }
 
+async function cmdNUOVI({ db, chatId }: CmdCtx) {
+  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const { data, error } = await db
+    .from("black_students")
+    .select(
+      "id, user_id, year_class, start_date, parent_email, parent_phone, parent_name, student_email, student_phone, status, profiles:profiles!inner(full_name, stripe_price_id)",
+    )
+    .eq("status", "active")
+    .gte("start_date", since)
+    .order("start_date", { ascending: false })
+    .limit(50);
+  if (error) return send(chatId, `❌ Errore elenco: ${error.message}`);
+  if (!data?.length) return send(chatId, "Nessun nuovo abbonato negli ultimi 30 giorni.");
+
+  for (const row of data) {
+    const name = row.profiles?.full_name || row.parent_name || "Studente";
+    const plan = planLabelFromPriceId(row.profiles?.stripe_price_id);
+    const when = formatDate(row.start_date);
+    const email = row.student_email || row.parent_email || null;
+    const phone = row.student_phone || row.parent_phone || "—";
+    const lines = [
+      `*${name}*`,
+      `Classe: ${row.year_class || "—"}`,
+      `Piano: ${plan}`,
+      `Iscritto il: ${when}`,
+      `Email: ${email || "—"}`,
+      `Telefono: ${phone}`,
+    ].join("\n");
+    const replyMarkup =
+      email && email !== "—"
+        ? {
+            inline_keyboard: [
+              [
+                {
+                  text: "Apri scheda",
+                  switch_inline_query_current_chat: `/s ${email}`,
+                },
+              ],
+            ],
+          }
+        : undefined;
+    await send(chatId, lines, replyMarkup);
+  }
+}
+
 export async function POST(req: Request) {
   const update = await req.json().catch(() => null);
   // base sanity
@@ -330,6 +401,7 @@ export async function POST(req: Request) {
           "`/n cognome testo...` — aggiungi nota",
           "`/v cognome materia 7.5/10 [YYYY-MM-DD]` — aggiungi voto",
           "`/ass cognome YYYY-MM-DD materia [topics]` — nuova verifica",
+          "`/nuovi` — iscritti ultimi 30 giorni",
           "`/desc cognome testo...` — aggiorna overview studente",
         ].join("\n")
       );
@@ -345,6 +417,8 @@ export async function POST(req: Request) {
       await cmdASS(ctx);
     } else if (/^\/desc(\s|@)/i.test(text)) {
       await cmdDESC(ctx);
+    } else if (/^\/nuovi/i.test(text)) {
+      await cmdNUOVI(ctx);
     } else {
       await send(chatId, "Comando non riconosciuto. Scrivi `/start`.");
     }
