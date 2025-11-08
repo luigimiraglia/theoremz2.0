@@ -356,8 +356,9 @@ async function cmdNUOVI({ db, chatId }: CmdCtx) {
   if (!data?.length) return send(chatId, "Nessun nuovo abbonato negli ultimi 30 giorni.");
 
   for (const row of data) {
-    const name = row.profiles?.full_name || row.parent_name || "Studente";
-    const plan = planLabelFromPriceId(row.profiles?.stripe_price_id);
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const name = profile?.full_name || row.parent_name || "Studente";
+    const plan = planLabelFromPriceId(profile?.stripe_price_id);
     const when = formatDate(row.start_date);
     const email = row.student_email || row.parent_email || null;
     const phone = row.student_phone || row.parent_phone || "—";
