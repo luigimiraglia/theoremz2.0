@@ -1,8 +1,9 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
-import { Montserrat } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import Script from "next/script";
+import { montserrat } from "@/lib/fonts";
 // Note: avoid server cookies here to keep layout static and reduce FAC usage
 import { AuthProvider } from "@/lib/AuthContext";
 import { ToastProvider } from "@/components/Toast";
@@ -48,15 +49,6 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },
 };
-
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  display: "swap",
-  adjustFontFallback: true,
-  preload: true,
-  fallback: ["system-ui", "Segoe UI", "Helvetica", "Arial", "sans-serif"],
-});
 
 export const viewport: Viewport = {
   width: "device-width",

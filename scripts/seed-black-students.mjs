@@ -202,7 +202,7 @@ async function main() {
     if (createdProfile) SUMMARY.profilesCreated += 1;
 
     const firestoreMeta = await getFirestoreMeta(uid);
-    const planLabel = mapPlan(sub.items?.data?.[0]?.price ?? sub.plan ?? null);
+    const planLabel = mapPlan(sub.items?.data?.[0]?.price ?? null);
     const studentPayload = {
       user_id: uid,
       year_class: mapYear(firestoreMeta),

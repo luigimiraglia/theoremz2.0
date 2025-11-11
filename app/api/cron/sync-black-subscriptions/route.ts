@@ -51,21 +51,23 @@ async function handle(req: Request) {
           typeof sub.customer === "object" && sub.customer && !("deleted" in sub.customer)
             ? (sub.customer as Stripe.Customer)
             : await resolveStripeCustomer(stripe, sub.customer as any);
+        const subscriptionPrice = sub.items?.data?.[0]?.price || null;
 
         try {
           const result = await syncBlackSubscriptionRecord({
             source: `cron:${sub.id}`,
-            planName: mapPlan(
-              sub.items?.data?.[0]?.price || sub.plan || null,
-              sub.items?.data?.[0]?.price?.nickname ||
-                sub.plan?.nickname ||
-                "Theoremz Black",
-            ),
+            planName:
+              mapPlan(
+                subscriptionPrice,
+                subscriptionPrice?.nickname ||
+                  subscriptionPrice?.lookup_key ||
+                  "Theoremz Black",
+              ) || "Theoremz Black",
             subscription: sub,
             stripeCustomer: customer || null,
             metadata: (sub.metadata || {}) as Stripe.Metadata,
             customerDetails: customerToDetails(customer || null),
-            lineItem: sub.items?.data?.[0],
+            lineItem: undefined,
           });
           if (result.status === "synced") stats.synced += 1;
           else stats.skipped += 1;

@@ -107,7 +107,6 @@ export async function syncBlackSubscriptionRecord({
     mapPlan(
       subscription?.items?.data?.[0]?.price ||
         lineItem?.price ||
-        subscription?.plan ||
         null,
       planName,
     ) || planName;

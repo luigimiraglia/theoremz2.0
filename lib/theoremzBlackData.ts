@@ -57,8 +57,8 @@ export const THEOREMZ_BLACK_DATA = {
       discount: {
         expires: "2025-11-15T23:59:59+01:00",
         percent: 25,
-        active: true
-      }
+        active: true,
+      },
     },
     yearly: {
       price: "199.00",
@@ -94,9 +94,14 @@ export function getTheoremzBlackInfo(): string {
     const expires = new Date(discount.expires);
     if (now < expires) {
       const percent = Math.round(
-        (1 - parseFloat(data.pricing.standard.price) / parseFloat(data.pricing.standard.originalPrice)) * 100
+        (1 -
+          parseFloat(data.pricing.standard.price) /
+            parseFloat(data.pricing.standard.originalPrice)) *
+          100
       );
-      const timeLeft = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const timeLeft = Math.ceil(
+        (expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
       discountInfo = `\n• Sconto ${percent}% valido fino al ${expires.toLocaleDateString()} (${timeLeft} giorni rimanenti)`;
     }
   }
