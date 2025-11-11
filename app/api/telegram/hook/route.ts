@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
-import { syncPendingStripeSignups } from "@/lib/black/manualStripeSync";
+import {
+  syncActiveStripeSubscriptions,
+  syncPendingStripeSignups,
+  type StripeSignupSyncResult,
+} from "@/lib/black/manualStripeSync";
 
 const TG = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 type AllowedEntry = { id: string; label: string | null };
@@ -495,24 +499,16 @@ async function cmdSYNCSTRIPE({ db, chatId, text }: CmdCtx) {
   const limit = match?.[1] ? Number(match[1]) : undefined;
   await send(chatId, "⏳ Sync Stripe in corso...");
   try {
-    const result = await syncPendingStripeSignups({ limit, db });
-    const stats = result.stats;
-    const summary = [
-      "*Sync Stripe completata*",
-      `Processati: ${stats.processed}`,
-      `Synced: ${stats.synced}`,
-      `Skipped: ${stats.skipped}`,
-      stats.errors ? `Errori: ${stats.errors}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const detailLines = result.details
+    const pendingResult = await syncPendingStripeSignups({ limit, db });
+    const activeResult = await syncActiveStripeSubscriptions({ limit });
+    const summary = formatSyncSummary(pendingResult.stats, activeResult.stats);
+    const combinedDetails = [...pendingResult.details, ...activeResult.details];
+    const detailLines = combinedDetails
       .slice(0, 10)
       .map(formatSyncDetail)
       .join("\n");
     const detailNote =
-      result.details.length > 10 ? `…altri ${result.details.length - 10}` : null;
+      combinedDetails.length > 10 ? `…altri ${combinedDetails.length - 10}` : null;
     const message = [summary, detailLines || null, detailNote]
       .filter(Boolean)
       .join("\n\n");
@@ -522,25 +518,34 @@ async function cmdSYNCSTRIPE({ db, chatId, text }: CmdCtx) {
   }
 }
 
-function formatSyncDetail(detail: {
-  status: "synced" | "skipped" | "error";
-  plan?: string;
-  email?: string | null;
-  name?: string | null;
-  id: string;
-  reason?: string;
-}) {
+function formatSyncSummary(
+  pending: StripeSignupSyncResult["stats"],
+  active: StripeSignupSyncResult["stats"],
+) {
+  return [
+    "*Sync Stripe completata*",
+    `Inbox (pending) → Processati: ${pending.processed} · Synced: ${pending.synced} · Skipped: ${pending.skipped}` +
+      (pending.errors ? ` · Errori: ${pending.errors}` : ""),
+    `Abbonati attivi → Processati: ${active.processed} · Synced: ${active.synced} · Skipped: ${active.skipped}` +
+      (active.errors ? ` · Errori: ${active.errors}` : ""),
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function formatSyncDetail(detail: StripeSignupSyncResult["details"][number]) {
   const label = detail.name || detail.email || detail.id;
   const plan = detail.plan ? ` (${detail.plan})` : "";
   const reason = detail.reason ? ` — ${detail.reason}` : "";
+  const scope = detail.source === "active" ? "[attivo]" : "[pending]";
   switch (detail.status) {
     case "synced":
-      return `✅ ${label}${plan}`;
+      return `✅ ${scope} ${label}${plan}`;
     case "skipped":
-      return `⚠️ ${label}${plan}${reason}`;
+      return `⚠️ ${scope} ${label}${plan}${reason}`;
     case "error":
     default:
-      return `❌ ${label}${plan}${reason}`;
+      return `❌ ${scope} ${label}${plan}${reason}`;
   }
 }
 

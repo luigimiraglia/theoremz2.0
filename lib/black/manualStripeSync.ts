@@ -31,6 +31,7 @@ export type StripeSignupSyncResult = {
     plan?: string;
     email?: string | null;
     name?: string | null;
+    source?: "pending" | "active";
   }>;
 };
 
@@ -90,6 +91,7 @@ export async function syncPendingStripeSignups(
           plan: row.plan_label || row.plan_name || undefined,
           email: row.customer_email,
           name: row.customer_name,
+          source: "pending",
         });
         continue;
       }
@@ -131,6 +133,7 @@ export async function syncPendingStripeSignups(
           plan: planName,
           email: row.customer_email,
           name: row.customer_name,
+          source: "pending",
         });
       } else {
         stats.skipped += 1;
@@ -141,6 +144,7 @@ export async function syncPendingStripeSignups(
           plan: planName,
           email: row.customer_email,
           name: row.customer_name,
+          source: "pending",
         });
       }
     } catch (err: any) {
@@ -152,12 +156,141 @@ export async function syncPendingStripeSignups(
         plan: row.plan_label || row.plan_name || undefined,
         email: row.customer_email,
         name: row.customer_name,
+        source: "pending",
       });
       console.error("[manual-sync] errore durante il sync", identifier, err);
     }
   }
 
   return { stats, details };
+}
+
+const ACTIVE_SUBSCRIPTION_STATUSES: Array<Stripe.Subscription.Status> = [
+  "active",
+  "trialing",
+  "past_due",
+  "unpaid",
+];
+
+export type ActiveStripeSyncOptions = {
+  limit?: number;
+  statuses?: Array<Stripe.Subscription.Status>;
+};
+
+export async function syncActiveStripeSubscriptions(
+  options: ActiveStripeSyncOptions = {},
+): Promise<StripeSignupSyncResult> {
+  if (!stripe) {
+    throw new Error("Stripe non è configurato (STRIPE_SECRET_KEY mancante)");
+  }
+  const limit = normalizeLimit(options.limit);
+  const statuses = new Set(options.statuses ?? ACTIVE_SUBSCRIPTION_STATUSES);
+  const subscriptions = await fetchActiveStripeSubscriptions(limit, statuses);
+  if (!subscriptions.length) {
+    return {
+      stats: { processed: 0, synced: 0, skipped: 0, errors: 0 },
+      details: [],
+    };
+  }
+
+  const stats = { processed: subscriptions.length, synced: 0, skipped: 0, errors: 0 };
+  const details: StripeSignupSyncResult["details"] = [];
+
+  for (const sub of subscriptions) {
+    const identifier = sub.id;
+    const planName =
+      mapPlan(sub.items?.data?.[0]?.price || null, "Theoremz Black") || "Theoremz Black";
+    try {
+      const stripeCustomer = await getSubscriptionCustomer(sub);
+      const result = await syncBlackSubscriptionRecord({
+        source: `active:${identifier}`,
+        planName,
+        subscription: sub,
+        stripeCustomer,
+        metadata: sub.metadata,
+        customerDetails: null,
+        lineItem: undefined,
+      });
+      if (result.status === "synced") {
+        stats.synced += 1;
+        details.push({
+          id: identifier,
+          status: "synced",
+          plan: planName,
+          email: stripeCustomer?.email ?? null,
+          name: stripeCustomer?.name ?? null,
+          source: "active",
+        });
+      } else {
+        stats.skipped += 1;
+        details.push({
+          id: identifier,
+          status: "skipped",
+          reason: result.reason,
+          plan: planName,
+          email: stripeCustomer?.email ?? null,
+          name: stripeCustomer?.name ?? null,
+          source: "active",
+        });
+      }
+    } catch (err: any) {
+      stats.errors += 1;
+      console.error("[manual-sync] errore sync attivi", identifier, err);
+      details.push({
+        id: identifier,
+        status: "error",
+        reason: err?.message || "unknown_error",
+        plan: planName,
+        email: null,
+        name: null,
+        source: "active",
+      });
+    }
+  }
+
+  return { stats, details };
+}
+
+async function fetchActiveStripeSubscriptions(
+  limit: number,
+  statuses: Set<string>,
+): Promise<Stripe.Subscription[]> {
+  if (!stripe) return [];
+  const results: Stripe.Subscription[] = [];
+  let startingAfter: string | undefined;
+
+  while (results.length < limit) {
+    const page = await stripe.subscriptions.list({
+      status: "all",
+      limit: 100,
+      starting_after: startingAfter,
+      expand: ["data.customer"],
+    });
+    for (const sub of page.data) {
+      if (!statuses.has(sub.status)) continue;
+      results.push(sub);
+      if (results.length >= limit) break;
+    }
+    if (!page.has_more || !page.data.length) {
+      break;
+    }
+    startingAfter = page.data[page.data.length - 1]?.id;
+  }
+
+  return results;
+}
+
+async function getSubscriptionCustomer(
+  subscription: Stripe.Subscription,
+): Promise<Stripe.Customer | null> {
+  if (!stripe) return null;
+  if (subscription.customer && typeof subscription.customer === "object") {
+    return subscription.customer as Stripe.Customer;
+  }
+  if (subscription.customer) {
+    return resolveStripeCustomer(stripe, subscription.customer as string);
+  }
+  return null;
 }
 
 type StripeSignupRow = {
