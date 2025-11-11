@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
+import { syncPendingStripeSignups } from "@/lib/black/manualStripeSync";
 
 const TG = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const ALLOWED = new Set(
@@ -474,6 +475,60 @@ async function cmdNUOVI({ db, chatId }: CmdCtx) {
   }
 }
 
+async function cmdSYNCSTRIPE({ db, chatId, text }: CmdCtx) {
+  const match = text.match(/^\/syncstripe(?:@\w+)?(?:\s+(\d+))?/i);
+  const limit = match?.[1] ? Number(match[1]) : undefined;
+  await send(chatId, "⏳ Sync Stripe in corso...");
+  try {
+    const result = await syncPendingStripeSignups({ limit, db });
+    const stats = result.stats;
+    const summary = [
+      "*Sync Stripe completata*",
+      `Processati: ${stats.processed}`,
+      `Synced: ${stats.synced}`,
+      `Skipped: ${stats.skipped}`,
+      stats.errors ? `Errori: ${stats.errors}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const detailLines = result.details
+      .slice(0, 10)
+      .map(formatSyncDetail)
+      .join("\n");
+    const detailNote =
+      result.details.length > 10 ? `…altri ${result.details.length - 10}` : null;
+    const message = [summary, detailLines || null, detailNote]
+      .filter(Boolean)
+      .join("\n\n");
+    await send(chatId, message || summary);
+  } catch (error: any) {
+    await send(chatId, `❌ Sync Stripe fallita: ${error?.message || error}`);
+  }
+}
+
+function formatSyncDetail(detail: {
+  status: "synced" | "skipped" | "error";
+  plan?: string;
+  email?: string | null;
+  name?: string | null;
+  id: string;
+  reason?: string;
+}) {
+  const label = detail.name || detail.email || detail.id;
+  const plan = detail.plan ? ` (${detail.plan})` : "";
+  const reason = detail.reason ? ` — ${detail.reason}` : "";
+  switch (detail.status) {
+    case "synced":
+      return `✅ ${label}${plan}`;
+    case "skipped":
+      return `⚠️ ${label}${plan}${reason}`;
+    case "error":
+    default:
+      return `❌ ${label}${plan}${reason}`;
+  }
+}
+
 async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
   const m = text.match(/^\/checked(?:@\w+)?\s+(\S+)/i);
   if (!m)
@@ -587,6 +642,7 @@ export async function POST(req: Request) {
           "`/v cognome materia 7.5/10 [YYYY-MM-DD]` — aggiungi voto",
           "`/ass cognome YYYY-MM-DD materia [topics]` — nuova verifica",
           "`/nuovi` — iscritti ultimi 30 giorni",
+          "`/syncstripe [limite]` — forza il sync delle attivazioni Stripe",
           "`/desc cognome testo...` — aggiorna overview studente",
         ].join("\n")
       );
@@ -604,6 +660,8 @@ export async function POST(req: Request) {
       await cmdDESC(ctx);
     } else if (/^\/nuovi/i.test(text)) {
       await cmdNUOVI(ctx);
+    } else if (/^\/syncstripe/i.test(text)) {
+      await cmdSYNCSTRIPE(ctx);
     } else {
       await send(chatId, "Comando non riconosciuto. Scrivi `/start`.");
     }

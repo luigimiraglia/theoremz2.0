@@ -67,6 +67,7 @@ Rischio: yellow
 Prossima verifica: Matematica — 12/11/2025
 Media iniziale: 6.2 — Media attuale: 7.1 (5 voti)
 Ultimo voto: Fisica 7.5/10 (2025-11-02)
+Subscribed: true
 
 Descrizione (AI)
 ...
@@ -141,10 +142,11 @@ Inbox centralizzata per tutte le attivazioni Stripe, così il bot può mostrare 
 ## Bot Telegram (`/api/telegram/hook`)
 
 - Usa Supabase service role (`supabaseServer`) per interrogare `black_student_card`.
-- Comandi `/s`, `/n`, `/v`, `/ass`, `/oggi`.
+- Comandi `/s`, `/n`, `/v`, `/ass`, `/oggi`, `/nuovi`, `/syncstripe`.
 - `/s <term>` ora supporta lookup smart: se `<term>` contiene `@` cerca per email (studenti o genitori) e, in fallback, via `profiles.email`. Altrimenti usa l’RPC `search_black_student` (full-text sul nome).
 - Tutti i comandi loggano ed eventualmente rigenerano `brief_md` via RPC `refresh_black_brief`.
 - `/nuovi` mostra prima le attivazioni Stripe da `black_stripe_signups` con `status != 'synced'` (ultimi 30 giorni) e poi gli studenti già sincronizzati in `black_students`.
+- `/syncstripe [limite]` rilancia `syncPendingStripeSignups` direttamente dal bot (default 25).
 
 ---
 
@@ -157,6 +159,7 @@ Inbox centralizzata per tutte le attivazioni Stripe, così il bot può mostrare 
 2. **Firestore**: conserva attività (login, consegne, chat) indicizzate per UID. Replica i contatori necessari (ultimo accesso, messaggi ultimi 30 giorni) in Supabase o in una tabella `user_metrics`.
 3. **Cron giornaliero**:
    - chiama `GET /api/cron/sync-black-subscriptions?secret=XYZ` (Vercel Cron `0 0 * * *`) per riallineare Stripe → Supabase e rigenerare i brief; imposta `BLACK_CRON_SECRET`/`CRON_SECRET` per autorizzare la chiamata.
+   - per sincronie manuali usa `POST /api/cron/manual-sync-stripe-signups?secret=XYZ&limit=25`, che prende gli `black_stripe_signups` non `synced` e rilancia lo stesso flusso (`syncBlackSubscriptionRecord`).
    - aggiorna readiness/risk/brief.
    - valida che la view `black_student_card` rifletta gli ultimi voti (`black_grades`) e verifiche (`black_assessments`).
 

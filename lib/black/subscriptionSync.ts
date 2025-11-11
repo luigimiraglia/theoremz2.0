@@ -521,6 +521,8 @@ function buildBrief(student: BriefSource) {
     : PREMIUM_SUB_STATUSES.has(student.status)
       ? student.status
       : `❌ Disdetto (${student.status})`;
+  const subscribedFlag =
+    !student.status || PREMIUM_SUB_STATUSES.has(student.status) ? "true" : "false";
   return [
     `${student.full_name || "Studente"} — Theoremz Black`,
     "",
@@ -538,6 +540,7 @@ function buildBrief(student: BriefSource) {
     `Stato: ${statusLabel} · Readiness: ${student.readiness ?? 50}/100 (${
       student.risk_level || "yellow"
     })`,
+    `Subscribed: ${subscribedFlag}`,
     "",
     `Aggiornato: ${new Date().toISOString().slice(0, 10)}`,
   ].join("\n");
