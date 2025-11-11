@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import {
   customerToDetails,
+  linkStripeSignupToStudent,
   mapPlan,
   resolveStripeCustomer,
   syncBlackSubscriptionRecord,
@@ -69,8 +70,21 @@ async function handle(req: Request) {
             customerDetails: customerToDetails(customer || null),
             lineItem: undefined,
           });
-          if (result.status === "synced") stats.synced += 1;
-          else stats.skipped += 1;
+          if (result.status === "synced") {
+            stats.synced += 1;
+            try {
+              await linkStripeSignupToStudent({
+                subscriptionId: sub.id,
+                studentId: result.studentId,
+                studentUserId: result.userId,
+                status: "synced",
+              });
+            } catch (linkError) {
+              console.warn("[cron-sync] failed to mark signup synced", sub.id, linkError);
+            }
+          } else {
+            stats.skipped += 1;
+          }
         } catch (error) {
           stats.errors += 1;
           console.error("[cron-sync] subscription sync failed", sub.id, error);

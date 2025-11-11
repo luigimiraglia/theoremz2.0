@@ -110,19 +110,49 @@ Esegui un job giornaliero per aggiornare readiness/risk + `brief_md`, e lancialo
 
 ---
 
+## Tabella `black_stripe_signups`
+
+Inbox centralizzata per tutte le attivazioni Stripe, così il bot può mostrare i contatti anche prima che l'UID Firebase venga collegato.
+
+| Campo | Tipo | Note |
+| --- | --- | --- |
+| `session_id` | `text` | Checkout Session; unique con `subscription_id`. |
+| `subscription_id` | `text` | ID Stripe Subscription. |
+| `customer_id` | `text` | ID Stripe Customer. |
+| `plan_name`, `plan_label` | `text` | Snapshot del piano acquistato. |
+| `amount_total` | `bigint` | Importo in centesimi; usa `amount_currency`. |
+| `amount_currency`, `amount_display` | `text` | Valuta ISO e stringa pronta per UI. |
+| `customer_name`, `customer_email`, `customer_phone` | `text` | Contatti raccolti nel checkout. |
+| `persona`, `quiz_kind` | `text` | Metadati (es. `start-genitore`). |
+| `whatsapp_link`, `whatsapp_message` | `text` | CTA pronta per l'onboarding. |
+| `metadata` | `jsonb` | Copia raw dei metadata Stripe. |
+| `status` | `text` | `new`, `synced`, `skipped`, `error`. |
+| `student_user_id`, `student_id` | `text/uuid` | Popolati quando l'UID viene collegato a `black_students`. |
+| `source` | `text` | Es. `checkout_session:cs_test_...`. |
+| `event_created_at`, `created_at`, `updated_at`, `synced_at` | `timestamptz` | Timestamp Stripe + bookkeeping interno. |
+
+### Flusso
+
+1. Il webhook Stripe (`checkout.session.completed`) salva sia su Firestore (`stripe_subscriptions`) sia su `black_stripe_signups` con `status=new`.
+2. Quando `syncBlackSubscriptionRecord` riesce ad allineare `profiles`/`black_students`, la riga viene aggiornata (`status=synced`, `student_user_id`, `student_id`, `synced_at`).
+3. Il cron (`/api/cron/sync-black-subscriptions`) riprova la sincronizzazione e marca come `synced` anche gli storici.
+4. Il bot (`/nuovi`) legge questa tabella per elencare le attivazioni Stripe ancora da collegare.
+
 ## Bot Telegram (`/api/telegram/hook`)
 
 - Usa Supabase service role (`supabaseServer`) per interrogare `black_student_card`.
 - Comandi `/s`, `/n`, `/v`, `/ass`, `/oggi`.
 - `/s <term>` ora supporta lookup smart: se `<term>` contiene `@` cerca per email (studenti o genitori) e, in fallback, via `profiles.email`. Altrimenti usa l’RPC `search_black_student` (full-text sul nome).
 - Tutti i comandi loggano ed eventualmente rigenerano `brief_md` via RPC `refresh_black_brief`.
+- `/nuovi` mostra prima le attivazioni Stripe da `black_stripe_signups` con `status != 'synced'` (ultimi 30 giorni) e poi gli studenti già sincronizzati in `black_students`.
 
 ---
 
 ## Seeding & Sync (Stripe ↔ Firestore ↔ Supabase)
 
-1. **Stripe webhook (`app/api/stripe/webhook/route.ts`)** salva ogni attivazione in Firestore (`stripe_subscriptions`). Aggancia qui gli hook per creare/aggiornare `black_students`:
+1. **Stripe webhook (`app/api/stripe/webhook/route.ts`)** salva ogni attivazione in Firestore (`stripe_subscriptions`) e su Supabase (`black_stripe_signups`). Aggancia qui gli hook per creare/aggiornare `black_students`:
    - Risali al Firebase UID (metadati Checkout o lookup email→UID).
+   - Se l'UID non esiste ancora viene creato automaticamente in Firebase Admin partendo dall'email Stripe.
    - Popola i campi chiave (`subscription_status`, `stripe_customer_id`, contatti).
 2. **Firestore**: conserva attività (login, consegne, chat) indicizzate per UID. Replica i contatori necessari (ultimo accesso, messaggi ultimi 30 giorni) in Supabase o in una tabella `user_metrics`.
 3. **Cron giornaliero**:

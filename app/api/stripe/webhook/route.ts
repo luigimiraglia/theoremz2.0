@@ -5,6 +5,8 @@ import {
   resolveStripeCustomer,
   resolveStripeSubscription,
   syncBlackSubscriptionRecord,
+  recordStripeSignup,
+  linkStripeSignupToStudent,
 } from "@/lib/black/subscriptionSync";
 import { adminDb } from "@/lib/firebaseAdmin";
 
@@ -101,6 +103,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     typeof hydratedSession.amount_total === "number"
       ? formatAmount(hydratedSession.amount_total, hydratedSession.currency)
       : null;
+  const amountTotal =
+    typeof hydratedSession.amount_total === "number" ? hydratedSession.amount_total : null;
+  const amountCurrency = hydratedSession.currency || null;
 
   const whatsappMessage =
     buildPlanTemplateMessage({
@@ -109,6 +114,33 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     }) || buildFallbackWelcomeMessage(planName, isParent);
 
   const whatsappLink = phone ? buildWhatsAppLink(phone, whatsappMessage) : null;
+  const eventCreatedAt =
+    typeof hydratedSession.created === "number"
+      ? new Date(hydratedSession.created * 1000).toISOString()
+      : null;
+
+  await recordStripeSignup({
+    sessionId: session.id,
+    subscriptionId: subscription?.id || null,
+    customerId: stripeCustomer?.id || null,
+    planName,
+    planLabel: planName,
+    priceId: lineItem?.price?.id || null,
+    productId,
+    amountTotal,
+    amountCurrency,
+    amountFormatted: amount,
+    email,
+    phone,
+    customerName: name,
+    persona,
+    quizKind: isParent ? "start-genitore" : "start-studente",
+    whatsappLink,
+    whatsappMessage,
+    metadata,
+    source: `checkout_session:${session.id}`,
+    eventCreatedAt,
+  });
 
   await logSubscription({
     sessionId: session.id,
@@ -119,7 +151,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     amount,
   });
 
-  await syncBlackSubscriptionRecord({
+  const syncResult = await syncBlackSubscriptionRecord({
     source: `checkout_session:${session.id}`,
     planName,
     subscription,
@@ -128,6 +160,16 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     customerDetails,
     lineItem,
   });
+
+  if (syncResult.status === "synced") {
+    await linkStripeSignupToStudent({
+      sessionId: session.id,
+      subscriptionId: subscription?.id || null,
+      studentId: syncResult.studentId,
+      studentUserId: syncResult.userId,
+      status: "synced",
+    });
+  }
 
   await sendWelcomeEmail({
     planName,

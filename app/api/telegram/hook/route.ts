@@ -158,6 +158,34 @@ function formatDate(date?: string | null) {
   }
 }
 
+function formatDateTime(value?: string | null) {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return value;
+  }
+}
+
+function formatCurrency(amountCents?: number | null, currency?: string | null) {
+  if (!amountCents || !currency) return null;
+  try {
+    return new Intl.NumberFormat("it-IT", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+      maximumFractionDigits: 2,
+    }).format(amountCents / 100);
+  } catch {
+    return `${(amountCents / 100).toFixed(2)} ${currency.toUpperCase()}`;
+  }
+}
+
 /** /s <nome> → invia scheda (brief) */
 async function cmdS({ db, chatId, text }: CmdCtx) {
   const q = text.replace(/^\/s(@\w+)?\s*/i, "").trim();
@@ -343,26 +371,79 @@ async function cmdOGGI({ db, chatId }: CmdCtx) {
 }
 
 async function cmdNUOVI({ db, chatId }: CmdCtx) {
-  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000)
-    .toISOString()
-    .slice(0, 10);
-  const { data, error } = await db
-    .from("black_students")
-    .select(
-      "id, user_id, year_class, start_date, parent_email, parent_phone, parent_name, student_email, student_phone, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id)"
-    )
-    .eq("status", "active")
-    .gte("start_date", since)
-    .order("start_date", { ascending: false })
-    .limit(50);
-  if (error) return send(chatId, `❌ Errore elenco: ${error.message}`);
-  if (!data?.length)
-    return send(chatId, "Nessun nuovo abbonato negli ultimi 30 giorni.");
+  const sinceDate = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+  const sinceDay = sinceDate.toISOString().slice(0, 10);
+  const sinceTimestamp = sinceDate.toISOString();
 
-  for (const row of data) {
-    const profile = Array.isArray(row.profiles)
-      ? row.profiles[0]
-      : row.profiles;
+  const [studentsRes, signupsRes] = await Promise.all([
+    db
+      .from("black_students")
+      .select(
+        "id, user_id, year_class, start_date, parent_email, parent_phone, parent_name, student_email, student_phone, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id)"
+      )
+      .eq("status", "active")
+      .gte("start_date", sinceDay)
+      .order("start_date", { ascending: false })
+      .limit(50),
+    db
+      .from("black_stripe_signups")
+      .select(
+        "session_id, subscription_id, plan_name, plan_label, amount_display, amount_currency, amount_total, customer_email, customer_phone, customer_name, status, created_at, event_created_at, whatsapp_link, student_id"
+      )
+      .gte("created_at", sinceTimestamp)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
+
+  const { data: students, error: studentError } = studentsRes;
+  if (studentError) return send(chatId, `❌ Errore elenco: ${studentError.message}`);
+  const { data: signups, error: signupError } = signupsRes;
+  if (signupError) return send(chatId, `❌ Errore Stripe: ${signupError.message}`);
+
+  const pendingSignups =
+    signups?.filter((row: any) => !row.student_id || row.status !== "synced") ?? [];
+
+  if (pendingSignups.length) {
+    await send(chatId, `*🆕 Attivazioni Stripe da collegare (${pendingSignups.length})*`);
+    for (const row of pendingSignups) {
+      const plan = row.plan_label || row.plan_name || "Theoremz Black";
+      const email = row.customer_email || "—";
+      const phone = row.customer_phone || "—";
+      const createdAt = formatDateTime(row.event_created_at || row.created_at);
+      const amountDisplay =
+        row.amount_display ||
+        formatCurrency(
+          typeof row.amount_total === "number" ? row.amount_total : null,
+          row.amount_currency
+        ) ||
+        "—";
+      const emoji = row.status === "synced" && row.student_id ? "✅" : "🆕";
+      const lines = [
+        `${emoji} *${plan}*`,
+        `Creato: ${createdAt}`,
+        row.customer_name ? `Cliente: ${row.customer_name}` : null,
+        `Email: ${email}`,
+        `Telefono: ${phone}`,
+        amountDisplay ? `Importo: ${amountDisplay}` : null,
+        row.whatsapp_link ? `WhatsApp: ${row.whatsapp_link}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      await send(chatId, lines);
+    }
+  } else {
+    await send(chatId, "Nessuna nuova attivazione Stripe negli ultimi 30 giorni.");
+  }
+
+  if (!students?.length) {
+    if (!pendingSignups.length) {
+      await send(chatId, "Nessun nuovo abbonato negli ultimi 30 giorni.");
+    }
+    return;
+  }
+
+  for (const row of students) {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
     const name = profile?.full_name || row.parent_name || "Studente";
     const plan = planLabelFromPriceId(profile?.stripe_price_id);
     const when = formatDate(row.start_date);

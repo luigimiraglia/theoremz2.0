@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import crypto from "node:crypto";
 import type { UserRecord } from "firebase-admin/auth";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
@@ -7,6 +8,7 @@ const HAS_SUPABASE_ENV = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 const supabase = HAS_SUPABASE_ENV ? supabaseServer() : null;
+const STRIPE_SIGNUPS_TABLE = "black_stripe_signups";
 
 type StripeSubscriptionCompat = Stripe.Subscription & {
   current_period_end?: number | null;
@@ -56,6 +58,40 @@ type BriefSource = BlackStudentPayload & {
   full_name?: string | null;
 };
 
+type StripeSignupStatus = "new" | "synced" | "skipped" | "error";
+
+export type StripeSignupRecordInput = {
+  sessionId?: string | null;
+  subscriptionId?: string | null;
+  customerId?: string | null;
+  planName?: string | null;
+  planLabel?: string | null;
+  priceId?: string | null;
+  productId?: string | null;
+  amountTotal?: number | null;
+  amountCurrency?: string | null;
+  amountFormatted?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  customerName?: string | null;
+  persona?: string | null;
+  quizKind?: string | null;
+  whatsappLink?: string | null;
+  whatsappMessage?: string | null;
+  metadata?: Stripe.Metadata | Record<string, any> | null;
+  source?: string | null;
+  eventCreatedAt?: string | null;
+  status?: StripeSignupStatus;
+};
+
+export type StripeSignupLinkInput = {
+  sessionId?: string | null;
+  subscriptionId?: string | null;
+  studentUserId?: string | null;
+  studentId?: string | null;
+  status?: StripeSignupStatus;
+};
+
 export type SyncRecordInput = {
   source?: string;
   planName: string;
@@ -66,6 +102,84 @@ export type SyncRecordInput = {
   lineItem?: Stripe.LineItem;
 };
 
+type SyncBlackSubscriptionResult =
+  | { status: "synced"; studentId: string; userId: string }
+  | {
+      status: "skipped";
+      reason: "missing_supabase" | "missing_firebase" | "missing_student";
+      studentId?: null;
+      userId?: string | null;
+    };
+
+export async function recordStripeSignup(payload: StripeSignupRecordInput) {
+  if (!supabase) {
+    console.warn("[black-sync] skipping stripe signup logging: supabase not configured");
+    return { status: "skipped" as const, reason: "missing_supabase" as const };
+  }
+  if (!payload.sessionId && !payload.subscriptionId) {
+    console.warn("[black-sync] skipping stripe signup logging: missing identifiers");
+    return { status: "skipped" as const, reason: "missing_identifier" as const };
+  }
+  const nowIso = new Date().toISOString();
+  const row = {
+    session_id: payload.sessionId || null,
+    subscription_id: payload.subscriptionId || null,
+    customer_id: payload.customerId || null,
+    plan_name: payload.planName || null,
+    plan_label: payload.planLabel || payload.planName || null,
+    price_id: payload.priceId || null,
+    product_id: payload.productId || null,
+    amount_total: payload.amountTotal ?? null,
+    amount_currency: payload.amountCurrency || null,
+    amount_display: payload.amountFormatted || null,
+    customer_email: payload.email || null,
+    customer_phone: payload.phone || null,
+    customer_name: payload.customerName || null,
+    persona: payload.persona || null,
+    quiz_kind: payload.quizKind || null,
+    whatsapp_link: payload.whatsappLink || null,
+    whatsapp_message: payload.whatsappMessage || null,
+    metadata: cloneJson(payload.metadata),
+    source: payload.source || null,
+    status: payload.status || ("new" as StripeSignupStatus),
+    event_created_at: payload.eventCreatedAt || null,
+    updated_at: nowIso,
+  };
+  const { error } = await supabase
+    .from(STRIPE_SIGNUPS_TABLE)
+    .upsert(row, { onConflict: "session_id,subscription_id" });
+  if (error) {
+    throw new Error(`[black-sync] Stripe signup upsert failed: ${error.message}`);
+  }
+  return { status: "stored" as const };
+}
+
+export async function linkStripeSignupToStudent(payload: StripeSignupLinkInput) {
+  if (!supabase) {
+    return { status: "skipped" as const, reason: "missing_supabase" as const };
+  }
+  if (!payload.sessionId && !payload.subscriptionId) {
+    return { status: "skipped" as const, reason: "missing_identifier" as const };
+  }
+  const updatePayload: Record<string, any> = {
+    student_user_id: payload.studentUserId || null,
+    student_id: payload.studentId || null,
+    status: payload.status || ("synced" as StripeSignupStatus),
+    updated_at: new Date().toISOString(),
+  };
+  if ((payload.status || "synced") === "synced") {
+    updatePayload.synced_at = new Date().toISOString();
+  }
+  const query = supabase.from(STRIPE_SIGNUPS_TABLE).update(updatePayload);
+  if (payload.sessionId) query.eq("session_id", payload.sessionId);
+  if (payload.subscriptionId) query.eq("subscription_id", payload.subscriptionId);
+  const { error } = await query;
+  if (error) {
+    throw new Error(`[black-sync] Stripe signup link failed: ${error.message}`);
+  }
+  return { status: "updated" as const };
+}
+
 export async function syncBlackSubscriptionRecord({
   source,
   planName,
@@ -74,10 +188,10 @@ export async function syncBlackSubscriptionRecord({
   metadata,
   customerDetails,
   lineItem,
-}: SyncRecordInput) {
+}: SyncRecordInput): Promise<SyncBlackSubscriptionResult> {
   if (!supabase) {
     console.warn("[black-sync] Supabase client not configured, skipping subscription sync");
-    return { status: "skipped", reason: "missing_supabase" as const };
+    return { status: "skipped" as const, reason: "missing_supabase" };
   }
 
   const meta = (metadata || {}) as Stripe.Metadata;
@@ -95,17 +209,37 @@ export async function syncBlackSubscriptionRecord({
     details?.email,
     stripeCustomer?.email,
   );
-  const firebaseUser = await resolveFirebaseIdentity({
-    uid: firstNonEmptyString(meta.firebase_uid, meta.firebaseUid, meta.uid),
-    email: (studentEmailCandidate || parentEmailCandidate || null)?.toLowerCase() || null,
+  const fallbackUid = firstNonEmptyString(meta.firebase_uid, meta.firebaseUid, meta.uid);
+  const firebaseEmailCandidate =
+    (studentEmailCandidate || parentEmailCandidate || null)?.toLowerCase() || null;
+  let firebaseUser = await resolveFirebaseIdentity({
+    uid: fallbackUid,
+    email: firebaseEmailCandidate,
   });
+
+  if (!firebaseUser && firebaseEmailCandidate) {
+    firebaseUser = await ensureFirebaseUserFromStripe({
+      email: firebaseEmailCandidate,
+      displayName:
+        firstNonEmptyString(meta.student_name, meta.studentName) ||
+        stripeCustomer?.name ||
+        customerDetails?.name ||
+        null,
+    });
+    if (firebaseUser) {
+      console.info("[black-sync] Firebase user auto-created from Stripe", {
+        email: firebaseEmailCandidate,
+        source,
+      });
+    }
+  }
 
   if (!firebaseUser || !firebaseUser.email) {
     console.warn("[black-sync] Firebase user not found, skipping subscription sync", {
       source,
       email: studentEmailCandidate || parentEmailCandidate || null,
     });
-    return { status: "skipped", reason: "missing_firebase" as const };
+    return { status: "skipped" as const, reason: "missing_firebase", userId: null };
   }
 
   const planLabel =
@@ -204,7 +338,13 @@ export async function syncBlackSubscriptionRecord({
   };
 
   const studentId = await upsertBlackStudent(studentPayload);
-  if (!studentId) return { status: "skipped", reason: "missing_student" as const };
+  if (!studentId) {
+    return {
+      status: "skipped" as const,
+      reason: "missing_student",
+      userId: firebaseUser.uid,
+    };
+  }
 
   const brief = buildBrief({
     ...studentPayload,
@@ -213,7 +353,7 @@ export async function syncBlackSubscriptionRecord({
   });
   await upsertStudentBrief(studentId, brief);
 
-  return { status: "synced" as const, studentId };
+  return { status: "synced" as const, studentId, userId: firebaseUser.uid };
 }
 
 async function ensureProfile(payload: ProfilePayload) {
@@ -317,6 +457,43 @@ async function resolveFirebaseIdentity({
   return null;
 }
 
+async function ensureFirebaseUserFromStripe({
+  email,
+  displayName,
+}: {
+  email: string;
+  displayName?: string | null;
+}) {
+  if (!email) return null;
+  try {
+    return await adminAuth.createUser({
+      email,
+      password: generateTempPassword(),
+      displayName: displayName || undefined,
+      emailVerified: false,
+      disabled: false,
+    });
+  } catch (error: any) {
+    if (error?.errorInfo?.code === "auth/email-already-exists") {
+      try {
+        return await adminAuth.getUserByEmail(email);
+      } catch (lookupError) {
+        console.error("[black-sync] Failed to fetch existing Firebase user after conflict", {
+          email,
+          error: lookupError,
+        });
+        return null;
+      }
+    }
+    console.error("[black-sync] Firebase createUser failed", { email, error });
+    return null;
+  }
+}
+
+function generateTempPassword() {
+  return `Tmp${crypto.randomBytes(6).toString("hex")}`;
+}
+
 function fallbackName(
   firebaseUser: UserRecord,
   customer: Stripe.Customer | null,
@@ -398,6 +575,15 @@ function stringOrNull(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : null;
+}
+
+function cloneJson(input: Stripe.Metadata | Record<string, any> | null | undefined) {
+  if (!input) return null;
+  try {
+    return JSON.parse(JSON.stringify(input));
+  } catch {
+    return input;
+  }
 }
 
 function firstNonEmptyString(...values: Array<string | null | undefined>) {
