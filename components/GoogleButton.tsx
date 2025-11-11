@@ -50,7 +50,7 @@ export function GoogleButton({
         type="button"
         onClick={handleGoogle}
         disabled={disabled || loading}
-        className="flex w-full items-center justify-center gap-3 rounded border border-slate-300 bg-white py-2 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-3 rounded-[14px] border border-slate-300 bg-white py-2 font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
       >
         <Image
           src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"

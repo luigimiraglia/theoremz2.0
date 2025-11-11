@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
+import { Check } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { GoogleButton } from "@/components/GoogleButton";
 import { useAuth } from "@/lib/AuthContext";
@@ -99,7 +100,7 @@ export default function Register() {
             type="email"
             autoComplete="email"
             placeholder="Email"
-            className="w-full rounded-lg border p-3 text-slate-800"
+            className="w-full rounded-[14px] border border-slate-300 bg-white p-3 text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -114,7 +115,7 @@ export default function Register() {
             type="password"
             autoComplete={isLogin ? "current-password" : "new-password"}
             placeholder="Password"
-            className="w-full rounded-lg border p-3 text-slate-800"
+            className="w-full rounded-[14px] border border-slate-300 bg-white p-3 text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -122,19 +123,19 @@ export default function Register() {
 
           {!isLogin && (
             <div className="space-y-3 text-sm text-slate-800">
-              <label
-                htmlFor="accept-terms"
-                className="flex cursor-pointer items-start gap-2"
-              >
-                <input
-                  id="accept-terms"
-                  name="acceptTerms"
-                  type="checkbox"
-                  className="mt-1 rounded"
-                  checked={acceptTerms}
-                  onChange={(e) => setAcceptTerms(e.target.checked)}
-                />
-                <span>
+              <label className="flex cursor-pointer items-start gap-3">
+                <span className="relative mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center">
+                  <input
+                    id="accept-terms"
+                    name="acceptTerms"
+                    type="checkbox"
+                    className="peer absolute inset-0 h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-200 checked:border-blue-600 checked:bg-blue-600"
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                  />
+                  <Check className="pointer-events-none absolute h-3 w-3 text-white opacity-0 transition peer-checked:opacity-100" />
+                </span>
+                <span className="leading-tight flex-1">
                   Accetto i{" "}
                   <a
                     href="/termini-di-servizio"
@@ -146,19 +147,19 @@ export default function Register() {
                 </span>
               </label>
 
-              <label
-                htmlFor="newsletter-optin"
-                className="flex cursor-pointer items-start gap-2"
-              >
-                <input
-                  id="newsletter-optin"
-                  name="newsletterOptIn"
-                  type="checkbox"
-                  className="mt-1 rounded"
-                  checked={subscribeNewsletter}
-                  onChange={(e) => setSubscribeNewsletter(e.target.checked)}
-                />
-                <span>
+              <label className="flex cursor-pointer items-start gap-3">
+                <span className="relative mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center">
+                  <input
+                    id="newsletter-optin"
+                    name="newsletterOptIn"
+                    type="checkbox"
+                    className="peer absolute inset-0 h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-200 checked:border-blue-600 checked:bg-blue-600"
+                    checked={subscribeNewsletter}
+                    onChange={(e) => setSubscribeNewsletter(e.target.checked)}
+                  />
+                  <Check className="pointer-events-none absolute h-3 w-3 text-white opacity-0 transition peer-checked:opacity-100" />
+                </span>
+                <span className="leading-tight flex-1">
                   Ricevi consigli e materiale ogni settimana (opzionale).
                 </span>
               </label>
@@ -174,7 +175,7 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-600 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+            className="w-full rounded-[14px] bg-blue-600 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {loading ? "Attendere…" : isLogin ? "Accedi" : "Crea account"}
           </button>

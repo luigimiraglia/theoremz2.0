@@ -8,6 +8,11 @@ const HAS_SUPABASE_ENV = Boolean(
 );
 const supabase = HAS_SUPABASE_ENV ? supabaseServer() : null;
 
+type StripeSubscriptionCompat = Stripe.Subscription & {
+  current_period_end?: number | null;
+  start_date?: number | null;
+};
+
 export const PREMIUM_SUB_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
 
 type ProfilePayload = {
@@ -54,7 +59,7 @@ type BriefSource = BlackStudentPayload & {
 export type SyncRecordInput = {
   source?: string;
   planName: string;
-  subscription: Stripe.Subscription | null;
+  subscription: StripeSubscriptionCompat | null;
   stripeCustomer: Stripe.Customer | null;
   metadata?: Stripe.Metadata;
   customerDetails?: Stripe.Checkout.Session.CustomerDetails | null;

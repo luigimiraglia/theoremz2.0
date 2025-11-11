@@ -1,9 +1,8 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
-import type { Metadata, Viewport } from "next";
-import { Montserrat } from "next/font/google";
 import { Suspense } from "react";
 import Script from "next/script";
+import { Montserrat } from "next/font/google";
 // Note: avoid server cookies here to keep layout static and reduce FAC usage
 import { AuthProvider } from "@/lib/AuthContext";
 import { ToastProvider } from "@/components/Toast";
