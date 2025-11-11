@@ -16,13 +16,11 @@ export default function TheoremzAIAssistant({
   lessonTitle,
   initialPrompt,
   initialOpen,
-  hideLauncher,
 }: {
   lessonId?: string;
   lessonTitle?: string;
   initialPrompt?: string;
   initialOpen?: boolean;
-  hideLauncher?: boolean;
 }) {
   const { isSubscribed, user } = useAuth();
 
@@ -44,12 +42,13 @@ export default function TheoremzAIAssistant({
     if (endRef.current) endRef.current.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
 
-  const handleOpen = () => {
-    if (!isSubscribed) {
+  const toggleChat = (nextState?: boolean) => {
+    const target = typeof nextState === "boolean" ? nextState : !open;
+    if (target && !isSubscribed) {
       setShowBanner(true);
       return;
     }
-    setOpen((v) => !v);
+    setOpen(target);
   };
 
   const sendMessage = async () => {
@@ -115,140 +114,170 @@ export default function TheoremzAIAssistant({
     }
   };
 
+  const containerSize = open
+    ? "w-[92vw] max-w-md"
+    : "w-[52vw] min-w-[200px] max-w-[210px]";
+  const containerOffset = open
+    ? "bottom-16 sm:bottom-32"
+    : "bottom-16 sm:bottom-24";
+  const containerRight = open ? "right-3" : "right-3 sm:right-4";
+  const headerPadding = open ? "px-4 py-3" : "px-3 py-2";
+  const titleSize = open ? "text-lg" : "text-sm";
+  const iconWrapperSize = open ? "h-9 w-9" : "h-8 w-8";
+  const sparklesSize = open ? "h-5 w-5" : "h-4 w-4";
+  const statusDotSize = open ? "h-2.5 w-2.5" : "h-2 w-2";
+
   return (
     <>
-      {/* Floating button (optional) */}
-      {!hideLauncher && (
-        <button
-          onClick={handleOpen}
-          className="fixed bottom-16 sm:bottom-19 right-3 z-50 rounded-2xl px-5 py-2.5 text-white shadow-xl bg-gradient-to-r from-violet-700 to-purple-600 hover:from-violet-800 hover:to-purple-700 active:scale-95 transition-all flex items-center gap-2"
-          aria-label="Apri Theoremz AI"
+      <div
+        className={`fixed ${containerOffset} ${containerRight} z-50 ${containerSize} transition-all duration-300`}
+      >
+        <div
+          className={`rounded-2xl bg-white/85 backdrop-blur-2xl shadow-[0_10px_35px_rgba(110,65,255,0.25)] overflow-hidden transition-[box-shadow] duration-300 ${
+            open
+              ? "shadow-[0_15px_45px_rgba(110,65,255,0.35)]"
+              : "shadow-[0_8px_30px_rgba(110,65,255,0.15)]"
+          }`}
         >
-          <SparklesIcon className="h-5 w-5" />
-          <span className="font-semibold tracking-wide">Theoremz AI</span>
-        </button>
-      )}
-
-      {/* Chat window */}
-      {open && (
-        <div className="fixed bottom-16 sm:bottom-34 right-3 z-50 w-[92vw] max-w-md rounded-2xl border border-white/60 bg-white/80 backdrop-blur-xl shadow-[0_10px_40px_rgba(110,65,255,0.25)] overflow-hidden">
-          {/* Header */}
-          <div className="relative px-4 py-3 bg-gradient-to-r from-violet-600/90 to-fuchsia-600/90 text-white">
+          {/* Header always visible */}
+          <div
+            className={`relative ${headerPadding} bg-gradient-to-r from-violet-600/95 to-fuchsia-600/95 text-white ${
+              open ? "" : "cursor-pointer"
+            }`}
+            role={!open ? "button" : undefined}
+            tabIndex={!open ? 0 : undefined}
+            onClick={!open ? () => toggleChat(true) : undefined}
+            onKeyDown={
+              !open
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleChat(true);
+                    }
+                  }
+                : undefined
+            }
+          >
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center">
-                <SparklesIcon className="h-5 w-5" />
+              <div
+                className={`${iconWrapperSize} rounded-xl bg-white/20 flex items-center justify-center`}
+              >
+                <SparklesIcon className={sparklesSize} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold truncate">
-                    Theoremz AI Tutor
+                  <span
+                    className={`${titleSize} font-semibold tracking-wide truncate`}
+                  >
+                    Ai Tutor
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] bg-white/20 px-2 py-0.5 rounded-full">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
-                    Online
-                  </span>
+                  <span
+                    className={`inline-flex items-center justify-center rounded-full bg-emerald-300 animate-pulse shadow-[0_0_6px_rgba(110,255,183,0.8)] ${statusDotSize}`}
+                  />
                 </div>
-                <span className="block text-[11px] opacity-85 truncate">
-                  {lessonTitle
-                    ? `Lezione: ${lessonTitle}`
-                    : "Assistente didattico"}
-                </span>
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setMessages([])}
-                  className="text-[11px] px-2 py-1 rounded-md bg-white/15 hover:bg-white/25"
-                  title="Nuova chat"
+                  onClick={() => toggleChat()}
+                  className="inline-flex items-center justify-center rounded-lg p-2 bg-white/20 text-white hover:bg-white/30 transition"
+                  aria-label={open ? "Comprimi chat" : "Espandi chat"}
+                  aria-expanded={open}
+                  aria-controls="theoremz-ai-panel"
                 >
-                  Reset
+                  {open ? (
+                    <ExpandIcon className="h-4 w-4" />
+                  ) : (
+                    <CollapseIcon className="h-4 w-4" />
+                  )}
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Collapsible content */}
+          <div
+            id="theoremz-ai-panel"
+            className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out ${
+              open
+                ? "max-h-[70vh] opacity-100"
+                : "max-h-0 opacity-0 pointer-events-none"
+            }`}
+            aria-hidden={!open}
+          >
+            {/* Messages */}
+            <div className="p-3 max-h-[55vh] overflow-y-auto space-y-3 bg-gradient-to-b from-white/85 to-white">
+              {messages.length === 0 && (
+                <div className="text-sm text-gray-700">
+                  {initialPrompt ??
+                    "Chiedimi aiuto su questa lezione. Posso spiegare, generare esempi ed esercizi guidati."}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[
+                      "Spiegami i passaggi chiave",
+                      "Fammi 3 esempi con soluzioni",
+                      "Quiz veloce a risposta multipla",
+                      "Ricapitola la teoria in 5 punti",
+                    ].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setInput(s)}
+                        className="text-[11px] px-2 py-1 rounded-full border border-gray-200 hover:bg-gray-100"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {messages.map((m) => (
+                <MessageBubble
+                  key={m.id}
+                  role={m.role}
+                  content={m.content}
+                  createdAt={m.createdAt}
+                />
+              ))}
+
+              {typing && (
+                <div className="flex justify-start">
+                  <div className="flex items-center gap-2 bg-gray-100 text-gray-900 rounded-2xl rounded-bl-md px-3 py-2 text-sm shadow">
+                    <TypingDots />
+                  </div>
+                </div>
+              )}
+
+              <div ref={endRef} />
+            </div>
+
+            {/* Input */}
+            <div className="p-3 border-t bg-white">
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  placeholder="Scrivi un messaggio…"
+                  rows={1}
+                  className="flex-1 resize-none rounded-xl border px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-300 max-h-36"
+                />
                 <button
-                  onClick={() => setOpen(false)}
-                  className="p-1 rounded-md hover:bg-white/20"
-                  aria-label="Chiudi chat"
+                  onClick={sendMessage}
+                  disabled={sending}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  <CloseIcon className="h-5 w-5" />
+                  {sending ? "…" : "Invia"}
                 </button>
               </div>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="p-3 max-h-[55vh] overflow-y-auto space-y-3 bg-gradient-to-b from-white/80 to-white">
-            {messages.length === 0 && (
-              <div className="text-sm text-gray-700">
-                {initialPrompt ??
-                  "Chiedimi aiuto su questa lezione. Posso spiegare, generare esempi ed esercizi guidati."}
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {[
-                    "Spiegami i passaggi chiave",
-                    "Fammi 3 esempi con soluzioni",
-                    "Quiz veloce a risposta multipla",
-                    "Ricapitola la teoria in 5 punti",
-                  ].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setInput(s)}
-                      className="text-[11px] px-2 py-1 rounded-full border border-gray-200 hover:bg-gray-100"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {messages.map((m) => (
-              <MessageBubble
-                key={m.id}
-                role={m.role}
-                content={m.content}
-                createdAt={m.createdAt}
-              />
-            ))}
-
-            {typing && (
-              <div className="flex justify-start">
-                <div className="flex items-center gap-2 bg-gray-100 text-gray-900 rounded-2xl rounded-bl-md px-3 py-2 text-sm shadow">
-                  <TypingDots />
-                </div>
-              </div>
-            )}
-
-            <div ref={endRef} />
-          </div>
-
-          {/* Input */}
-          <div className="p-3 border-t bg-white">
-            <div className="flex items-end gap-2">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                placeholder="Scrivi un messaggio…"
-                rows={1}
-                className="flex-1 resize-none rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 max-h-36"
-              />
-              <button
-                onClick={sendMessage}
-                disabled={sending}
-                className="rounded-xl px-3 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
-              >
-                {sending ? "…" : "Invia"}
-              </button>
-            </div>
-            <div className="mt-1 text-[11px] text-gray-500">
-              Invio per inviare • Shift+Invio per andare a capo
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Banner per non abbonati */}
       {showBanner && (
@@ -279,14 +308,29 @@ function SparklesIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-function CloseIcon(props: React.SVGProps<SVGSVGElement>) {
+function ExpandIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" {...props}>
       <path
-        d="M6 6l12 12M18 6l-12 12"
+        d="M6 9l6 6 6-6"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CollapseIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" {...props}>
+      <path
+        d="M6 15l6-6 6 6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );

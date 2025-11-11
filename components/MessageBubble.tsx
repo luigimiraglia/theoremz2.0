@@ -25,11 +25,11 @@ export default function MessageBubble({
       <div
         className={`flex items-end gap-2 max-w-[88%] ${isUser ? "flex-row-reverse" : "flex-row"}`}
       >
-        <div
-          className={`h-7 w-7 rounded-full ${isUser ? "bg-purple-600" : "bg-gray-200"} flex items-center justify-center text-[10px] text-white`}
-        >
-          {isUser ? "TU" : "AI"}
-        </div>
+        {isUser && (
+          <div className="h-7 w-7 rounded-full bg-purple-600 flex items-center justify-center text-[10px] text-white">
+            TU
+          </div>
+        )}
         <div
           className={`relative rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words shadow ${
             isUser
