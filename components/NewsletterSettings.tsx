@@ -11,7 +11,15 @@ type NewsletterData = {
   materie_interesse: string[];
 };
 
-export default function NewsletterSettings() {
+type NewsletterSettingsProps = {
+  variant?: "default" | "compact";
+  className?: string;
+};
+
+export default function NewsletterSettings({
+  variant = "default",
+  className = "",
+}: NewsletterSettingsProps) {
   const { user } = useAuth();
   const { success, error: showError } = useToast();
   const [data, setData] = useState<NewsletterData>({
@@ -111,36 +119,70 @@ export default function NewsletterSettings() {
     }
   };
 
+  const isCompact = variant === "compact";
+  const containerClassName = [
+    isCompact
+      ? "rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-slate-900 text-sm shadow-none [.dark_&]:border-slate-700/60 [.dark_&]:bg-slate-900/80 [.dark_&]:text-white/90"
+      : "rounded-2xl border border-slate-200 bg-white p-6 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-900",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const descriptionClassName = isCompact
+    ? "text-xs font-semibold text-slate-700 [.dark_&]:text-slate-100"
+    : "text-sm text-slate-600 [.dark_&]:text-slate-400 mt-1";
+  const loadingClassName = isCompact
+    ? "mt-1 text-[11px] text-slate-500 [.dark_&]:text-slate-300"
+    : "mt-4 text-sm text-slate-500 [.dark_&]:text-slate-400";
+  const toggleTrackClassName = isCompact
+    ? "w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-[3px] peer-focus:ring-blue-200 [.dark_&]:peer-focus:ring-blue-900 rounded-full peer [.dark_&]:bg-slate-700 peer-checked:after:translate-x-[16px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all [.dark_&]:border-slate-600 peer-checked:bg-blue-600"
+    : "w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 [.dark_&]:peer-focus:ring-blue-800 rounded-full peer [.dark_&]:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all [.dark_&]:border-slate-600 peer-checked:bg-blue-600";
+  const toggleLabelClassName = [
+    "relative inline-flex items-center cursor-pointer shrink-0",
+    isCompact ? "self-start" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const toggleControl = (
+    <label className={toggleLabelClassName}>
+      <input
+        type="checkbox"
+        className="sr-only peer"
+        checked={data.subscribed}
+        disabled={loading}
+        onChange={(e) => handleSubscriptionChange(e.target.checked)}
+      />
+      <div className={toggleTrackClassName}></div>
+    </label>
+  );
+  const descriptionText = (
+    <>
+      Ricevi consigli e materiale
+      <br />
+      gratuitamente ogni settimana
+    </>
+  );
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-900">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900 [.dark_&]:text-white">
-            Newsletter Theoremz
-          </h3>
-          <p className="text-sm text-slate-600 [.dark_&]:text-slate-400 mt-1">
-            Ricevi aggiornamenti settimanali su nuove lezioni e contenuti
-            personalizzati
-          </p>
+    <div className={containerClassName}>
+      {isCompact ? (
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <span className={`${descriptionClassName} leading-snug sm:flex-1`}>{descriptionText}</span>
+          <div className="ml-auto">{toggleControl}</div>
         </div>
-
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            className="sr-only peer"
-            checked={data.subscribed}
-            disabled={loading}
-            onChange={(e) => handleSubscriptionChange(e.target.checked)}
-          />
-          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 [.dark_&]:peer-focus:ring-blue-800 rounded-full peer [.dark_&]:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all [.dark_&]:border-slate-600 peer-checked:bg-blue-600"></div>
-        </label>
-      </div>
-
-      {loading && (
-        <div className="mt-4 text-sm text-slate-500 [.dark_&]:text-slate-400">
-          Aggiornamento in corso...
+      ) : (
+        <div className="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900 [.dark_&]:text-white">
+              Newsletter Theoremz
+            </h3>
+            <p className={descriptionClassName}>{descriptionText}</p>
+          </div>
+          {toggleControl}
         </div>
       )}
+
+      {loading && <div className={loadingClassName}>Aggiornamento in corso...</div>}
     </div>
   );
 }

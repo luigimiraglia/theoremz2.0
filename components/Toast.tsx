@@ -143,28 +143,28 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
   // Schemi colore coerenti al design del sito
   const colorSchemes = {
     success: {
-      bg: "bg-emerald-50 dark:bg-emerald-950/30",
+      bg: "bg-emerald-100 dark:bg-emerald-950/60",
       border: "border-emerald-200 dark:border-emerald-800/50",
       text: "text-emerald-900 dark:text-emerald-200",
       icon: "text-emerald-600 dark:text-emerald-400",
       progress: "bg-emerald-500",
     },
     error: {
-      bg: "bg-red-50 dark:bg-red-950/30",
+      bg: "bg-red-100 dark:bg-red-950/60",
       border: "border-red-200 dark:border-red-800/50",
       text: "text-red-900 dark:text-red-200",
       icon: "text-red-600 dark:text-red-400",
       progress: "bg-red-500",
     },
     warning: {
-      bg: "bg-amber-50 dark:bg-amber-950/30",
+      bg: "bg-amber-100 dark:bg-amber-950/60",
       border: "border-amber-200 dark:border-amber-800/50",
       text: "text-amber-900 dark:text-amber-200",
       icon: "text-amber-600 dark:text-amber-400",
       progress: "bg-amber-500",
     },
     info: {
-      bg: "bg-blue-50 dark:bg-blue-950/30",
+      bg: "bg-blue-100 dark:bg-blue-950/60",
       border: "border-blue-200 dark:border-blue-800/50",
       text: "text-blue-900 dark:text-blue-200",
       icon: "text-blue-600 dark:text-blue-400",

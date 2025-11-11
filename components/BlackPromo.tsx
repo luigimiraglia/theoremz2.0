@@ -185,7 +185,7 @@ export default function BlackPromo() {
   const data = useMemo(() => BENEFITS[active], [active]);
 
   return (
-    <section className="mx-6 my-6 max-w-screen-xl xl:mx-auto rounded-[24px] bg-white/10 px-4 py-6 backdrop-blur-lg border border-white/15 shadow-[0_20px_40px_-28px_rgba(15,23,42,0.45)] sm:mx-6 sm:px-8 sm:py-8">
+    <section className="mx-6 my-6 max-w-screen-xl rounded-[24px] border border-slate-200/70 bg-white/95 px-4 py-6 text-slate-900 shadow-[0_20px_40px_-28px_rgba(15,23,42,0.45)] backdrop-blur xl:mx-auto sm:mx-6 sm:px-8 sm:py-8 [.dark_&]:border-white/15 [.dark_&]:bg-white/10 [.dark_&]:text-white">
       {/* Header */}
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="max-w-2xl">
@@ -225,7 +225,7 @@ export default function BlackPromo() {
 
         {/* Illustrazione dinamica */}
         <div className="mx-auto w-full max-w-[520px] md:mx-0">
-          <div className="rounded-2xl bg-white/16 p-6 ring-1 ring-white/20 backdrop-blur transition-colors [.dark_&]:bg-slate-900/40 [.dark_&]:ring-white/15">
+          <div className="rounded-2xl bg-white p-6 ring-1 ring-slate-200/70 transition-colors [.dark_&]:bg-slate-900/40 [.dark_&]:ring-white/15">
             {/* play solo se la pill attiva è "ads" */}
             <data.Illustration play={active === "ads"} />
           </div>
@@ -250,8 +250,8 @@ export default function BlackPromo() {
               className={`group flex items-center justify-between rounded-2xl border-2 px-4 py-3 text-[16px] font-semibold transition
                 ${
                   activeNow
-                    ? "border-blue-500 bg-white/60 text-blue-700 shadow-[0_10px_24px_-16px_rgba(59,130,246,0.55)] backdrop-blur [.dark_&]:bg-slate-900/60 [.dark_&]:text-blue-300"
-                    : "border-white/20 bg-white/10 text-slate-100 hover:border-white/40 hover:bg-white/16 backdrop-blur-sm [.dark_&]:bg-slate-900/50 [.dark_&]:text-slate-200"
+                    ? "border-blue-500 bg-white text-blue-700 shadow-[0_10px_24px_-16px_rgba(59,130,246,0.55)] hover:shadow-[0_12px_28px_-18px_rgba(59,130,246,0.55)] [.dark_&]:bg-slate-900/60 [.dark_&]:text-blue-300"
+                    : "border-slate-200 bg-white text-slate-900 hover:border-slate-300 hover:bg-slate-50 [.dark_&]:border-white/20 [.dark_&]:bg-slate-900/50 [.dark_&]:text-slate-200"
                 }`}
               aria-pressed={activeNow}
             >
@@ -260,7 +260,7 @@ export default function BlackPromo() {
                   className={`grid h-6 w-6 place-items-center rounded-full text-[15px] ${
                     activeNow
                       ? "bg-blue-100 text-blue-700 [.dark_&]:bg-blue-900/30 [.dark_&]:text-blue-300"
-                      : "bg-white/20 text-slate-700 [.dark_&]:bg-slate-700/60 [.dark_&]:text-slate-200"
+                      : "bg-slate-100 text-slate-700 [.dark_&]:bg-slate-700/60 [.dark_&]:text-slate-200"
                   }`}
                 >
                   {BENEFITS[key].icon}

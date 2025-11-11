@@ -369,6 +369,9 @@ export default function AccountPage() {
         </div>
       </section>
 
+      {/* NEWSLETTER */}
+      <NewsletterSettings variant="compact" className="sm:mx-auto sm:max-w-3xl" />
+
       {/* Temp Access Info */}
       <TempAccessInfo />
 
@@ -485,8 +488,6 @@ export default function AccountPage() {
         </button>
       </Card>
 
-      {/* NEWSLETTER */}
-      <NewsletterSettings />
     </main>
   );
 }
