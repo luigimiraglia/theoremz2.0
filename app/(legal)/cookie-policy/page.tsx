@@ -1,7 +1,6 @@
 // app/(legal)/cookie-policy/page.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { getLegalInfo } from "@/lib/legal";
 
 export const dynamic = "force-static";
@@ -46,23 +45,6 @@ function Section({
 export default function CookiePolicyPage() {
   const lastUpdate = "10 novembre 2025";
   const legal = getLegalInfo();
-  const renderLink = (href: string, label: ReactNode) =>
-    href.startsWith("http")
-      ? (
-          <a
-            href={href}
-            className="underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {label}
-          </a>
-        )
-      : (
-          <Link href={href} className="underline">
-            {label}
-          </Link>
-        );
 
   const orgSchema = {
     "@context": "https://schema.org",

@@ -7,46 +7,66 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { GoogleButton } from "@/components/GoogleButton"; // ← se lo hai già
+import { GoogleButton } from "@/components/GoogleButton";
 import { useAuth } from "@/lib/AuthContext";
 
 export default function Register() {
   const router = useRouter();
   const { user } = useAuth();
 
-  /* form state */
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [isLogin, setIsLogin] = useState(false); // toggle login / register
+  const [subscribeNewsletter, setSubscribeNewsletter] = useState(false);
+  const [isLogin, setIsLogin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* redirect se già loggato */
   useEffect(() => {
     if (user) router.replace("/account");
   }, [user, router]);
 
-  /* submit */
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    if (!acceptTerms && !isLogin) {
+    if (!isLogin && !acceptTerms) {
       setError("Devi accettare i Termini e Condizioni per creare l’account.");
       return;
     }
 
     try {
       setLoading(true);
+      let createdUser = null;
       if (isLogin) {
-        /* LOGIN */
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        /* REGISTER */
-        await createUserWithEmailAndPassword(auth, email, password);
+        const credential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        createdUser = credential.user;
+        if (subscribeNewsletter && createdUser) {
+          try {
+            await fetch("/api/newsletter", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                user_id: createdUser.uid,
+                email,
+                subscribed: true,
+                source: "signup_form",
+                frequenza: "weekly",
+                tipo_contenuti: ["lezioni", "esercizi"],
+              }),
+            });
+          } catch (newsletterError) {
+            console.error("Newsletter opt-in error:", newsletterError);
+          }
+        }
       }
-      router.replace("/account"); // redirect account invece che home
+      router.replace("/account");
     } catch (err: any) {
       setError(err.message ?? "Qualcosa è andato storto.");
     } finally {
@@ -54,15 +74,13 @@ export default function Register() {
     }
   }
 
-  /* UI */
   return (
-    <div className="flex items-center justify-center h-[70vh]">
-      <div className="w-full max-w-md space-y-6 rounded-2xl bg-white p-8 drop-shadow-2xl">
+    <div className="flex h-[70vh] items-center justify-center bg-slate-950 px-4">
+      <div className="w-full max-w-md space-y-6 rounded-2xl bg-white p-8 shadow-2xl">
         <h1 className="mb-4 text-center text-3xl font-bold text-slate-800">
           {isLogin ? "Accedi" : "Crea il tuo account"}
         </h1>
 
-        {/* Google */}
         <GoogleButton disabled={loading} redirectTo="/account" />
 
         <div className="my-4 flex items-center gap-2">
@@ -71,7 +89,6 @@ export default function Register() {
           <hr className="flex-grow border-slate-300" />
         </div>
 
-        {/* form email / pw */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <label htmlFor="reg-email" className="sr-only">
             Email
@@ -82,7 +99,7 @@ export default function Register() {
             type="email"
             autoComplete="email"
             placeholder="Email"
-            className="w-full rounded border p-2 text-slate-800"
+            className="w-full rounded-lg border p-3 text-slate-800"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -97,36 +114,55 @@ export default function Register() {
             type="password"
             autoComplete={isLogin ? "current-password" : "new-password"}
             placeholder="Password"
-            className="w-full rounded border p-2 text-slate-800"
+            className="w-full rounded-lg border p-3 text-slate-800"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
 
           {!isLogin && (
-            <label
-              htmlFor="accept-terms"
-              className="flex cursor-pointer items-start gap-2 text-sm"
-            >
-              <input
-                id="accept-terms"
-                name="acceptTerms"
-                type="checkbox"
-                className="mt-1"
-                checked={acceptTerms}
-                onChange={(e) => setAcceptTerms(e.target.checked)}
-              />
-              <span className="text-slate-800 ">
-                Accetto i{" "}
-                <a
-                  href="/termini-e-condizioni"
-                  target="_blank"
-                  className="text-blue-600 underline "
-                >
-                  Termini e Condizioni
-                </a>
-              </span>
-            </label>
+            <div className="space-y-3 text-sm text-slate-800">
+              <label
+                htmlFor="accept-terms"
+                className="flex cursor-pointer items-start gap-2"
+              >
+                <input
+                  id="accept-terms"
+                  name="acceptTerms"
+                  type="checkbox"
+                  className="mt-1 rounded"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                />
+                <span>
+                  Accetto i{" "}
+                  <a
+                    href="/termini-di-servizio"
+                    target="_blank"
+                    className="text-blue-600 underline"
+                  >
+                    Termini e Condizioni
+                  </a>
+                </span>
+              </label>
+
+              <label
+                htmlFor="newsletter-optin"
+                className="flex cursor-pointer items-start gap-2"
+              >
+                <input
+                  id="newsletter-optin"
+                  name="newsletterOptIn"
+                  type="checkbox"
+                  className="mt-1 rounded"
+                  checked={subscribeNewsletter}
+                  onChange={(e) => setSubscribeNewsletter(e.target.checked)}
+                />
+                <span>
+                  Ricevi consigli e materiale ogni settimana (opzionale).
+                </span>
+              </label>
+            </div>
           )}
 
           {error && (
@@ -138,7 +174,7 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded bg-blue-600 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+            className="w-full rounded-lg bg-blue-600 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {loading ? "Attendere…" : isLogin ? "Accedi" : "Crea account"}
           </button>
