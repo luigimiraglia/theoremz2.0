@@ -7,7 +7,7 @@ export default function Header() {
     <header
       id="site-header" // ⬅️ ancora per il banner
       data-floating-anchor="" // ⬅️ opzionale, utile se cambi selettore
-      className="sticky px-4 top-2 max-w-screen-xl mx-2 xl:mx-auto mb-4 z-50 rounded-3xl [.dark_&]:bg-slate-800/60 bg-gray-100/60 backdrop-blur-xl border border-neutral-100/60"
+      className="fixed top-3 left-1/2 z-50 w-[calc(100%-1rem)] max-w-screen-xl -translate-x-1/2 px-4 rounded-3xl [.dark_&]:bg-slate-800/60 bg-gray-100/70 backdrop-blur-xl border border-white/60 shadow-lg"
     >
       <div className="relative mx-auto flex max-w-screen-xl flex-col py-4 md:flex-row md:items-center md:justify-between">
         <Link

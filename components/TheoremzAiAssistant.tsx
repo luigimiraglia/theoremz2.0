@@ -158,7 +158,7 @@ export default function TheoremzAIAssistant({
                 : undefined
             }
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 relative">
               <div
                 className={`${iconWrapperSize} rounded-xl bg-white/20 flex items-center justify-center`}
               >
