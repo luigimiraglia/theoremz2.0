@@ -30,6 +30,7 @@ Questa nota riassume lo schema dati usato dall’ecosistema Black (Supabase + Fi
 | `risk_level` | `text` | `green`, `yellow`, `red`. |
 | `ai_description` | `text` | Spiegazione AI opzionale. |
 | `last_active_at` | `timestamptz` | Ultima attività (login/chat/etc). |
+| `last_contacted_at` | `timestamptz` | Ultimo contatto registrato manualmente (bot/CRM). |
 | `created_at`, `updated_at` | `timestamptz` | Default now, `updated_at` via trigger. |
 
 **Indici da mantenere**: `user_id`, `tutor_id`, `parent_email`, `student_email`, `next_assessment_date`, `(risk_level, readiness)`.
@@ -142,11 +143,11 @@ Inbox centralizzata per tutte le attivazioni Stripe, così il bot può mostrare 
 ## Bot Telegram (`/api/telegram/hook`)
 
 - Usa Supabase service role (`supabaseServer`) per interrogare `black_student_card`.
-- Comandi `/s`, `/n`, `/v`, `/ass`, `/oggi`, `/nuovi`, `/syncstripe`.
+- Comandi `/s`, `/n`, `/v`, `/ass`, `/oggi`, `/nuovi`, `/sync` (`/syncstripe` alias).
 - `/s <term>` ora supporta lookup smart: se `<term>` contiene `@` cerca per email (studenti o genitori) e, in fallback, via `profiles.email`. Altrimenti usa l’RPC `search_black_student` (full-text sul nome).
 - Tutti i comandi loggano ed eventualmente rigenerano `brief_md` via RPC `refresh_black_brief`.
 - `/nuovi` mostra prima le attivazioni Stripe da `black_stripe_signups` con `status != 'synced'` (ultimi 30 giorni) e poi gli studenti già sincronizzati in `black_students`.
-- `/syncstripe [limite]` rilancia `syncPendingStripeSignups` direttamente dal bot (default 25).
+- `/sync [limite]` (alias `/syncstripe`) rilancia `syncPendingStripeSignups` direttamente dal bot (default 25).
 
 ---
 
@@ -164,3 +165,25 @@ Inbox centralizzata per tutte le attivazioni Stripe, così il bot può mostrare 
    - valida che la view `black_student_card` rifletta gli ultimi voti (`black_grades`) e verifiche (`black_assessments`).
 
 Tenendo UID Firebase come chiave unica, il bot, Stripe, Firestore e Supabase rimangono coerenti e il recupero schede via email o nome è immediato.
+
+---
+
+## Tabella `black_contact_logs`
+
+Log dedicato per tracciare i contatti tutor↔famiglia registrati dal bot o da eventuali tool operativi.
+
+| Campo | Tipo | Note |
+| --- | --- | --- |
+| `id` | `uuid` | PK. |
+| `student_id` | `uuid` | FK `black_students.id`. |
+| `contacted_at` | `timestamptz` | Timestamp dichiarato dal tutor (default `now()` dal bot). |
+| `body` | `text` | Nota/riassunto della conversazione. Facoltativa ma consigliata. |
+| `source` | `text` | Es. `telegram_bot`, `crm_manual`. |
+| `author_chat_id` | `text` | ID chat Telegram o identificativo equivalente. |
+| `author_label` | `text` | Alias leggibile (es. nome tutor) per audit rapida. |
+| `readiness_snapshot` | `int` | Readiness al momento del contatto (0–100) per storicizzare il contesto. |
+| `created_at` | `timestamptz` | Default `now()`. |
+
+Indici consigliati: `(student_id, contacted_at DESC)` per mostrare la cronologia di un singolo studente e `contacted_at` per report settimanali. Ogni volta che inserisci una riga aggiorna `black_students.last_contacted_at` con lo stesso timestamp per averlo disponibile anche sulle view operative (`black_student_card`, digest, ecc.).
+
+> Bot Telegram: il comando `/checked email@example.com [nota]` (solo email, niente cognomi) aggiorna `last_contacted_at`, incrementa la readiness e inserisce una riga su `black_contact_logs`.

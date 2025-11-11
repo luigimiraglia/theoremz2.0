@@ -3,12 +3,27 @@ import { supabaseServer } from "@/lib/supabase";
 import { syncPendingStripeSignups } from "@/lib/black/manualStripeSync";
 
 const TG = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-const ALLOWED = new Set(
-  (process.env.ALLOWED_CHAT_IDS || "")
-    .split(",")
-    .map((s) => s.split("#")[0]?.trim())
-    .filter(Boolean)
+type AllowedEntry = { id: string; label: string | null };
+
+const allowedEntries: AllowedEntry[] = (process.env.ALLOWED_CHAT_IDS || "")
+  .split(",")
+  .map((entry) => entry.trim())
+  .filter(Boolean)
+  .map((entry) => {
+    const [idRaw, labelRaw] = entry.split("#");
+    const id = idRaw?.trim();
+    const label = labelRaw?.trim();
+    return id ? { id, label: label || null } : null;
+  })
+  .filter((entry): entry is AllowedEntry => Boolean(entry));
+
+const ALLOWED = new Set(allowedEntries.map((entry) => entry.id));
+const CHAT_LABELS = new Map(
+  allowedEntries
+    .filter((entry) => Boolean(entry.label))
+    .map((entry) => [entry.id, entry.label as string])
 );
+const CONTACT_LOG_TABLE = "black_contact_logs";
 
 async function send(chat_id: number | string, text: string, replyMarkup?: any) {
   await fetch(`${TG}/sendMessage`, {
@@ -476,7 +491,7 @@ async function cmdNUOVI({ db, chatId }: CmdCtx) {
 }
 
 async function cmdSYNCSTRIPE({ db, chatId, text }: CmdCtx) {
-  const match = text.match(/^\/syncstripe(?:@\w+)?(?:\s+(\d+))?/i);
+  const match = text.match(/^\/sync(?:stripe)?(?:@\w+)?(?:\s+(\d+))?/i);
   const limit = match?.[1] ? Number(match[1]) : undefined;
   await send(chatId, "⏳ Sync Stripe in corso...");
   try {
@@ -530,16 +545,23 @@ function formatSyncDetail(detail: {
 }
 
 async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
-  const m = text.match(/^\/checked(?:@\w+)?\s+(\S+)/i);
+  const m = text.match(/^\/checked(?:@\w+)?\s+(\S+)(?:\s+([\s\S]+))?/i);
   if (!m)
     return send(
       chatId,
-      "Uso: `/checked cognome` oppure `/checked email@example.com`"
+      "Uso: `/checked email@example.com [nota]` (usa sempre l'email)"
     );
-  const [, q] = m;
-  const r = await resolveStudentId(db, q);
-  if ((r as any).err) return send(chatId, (r as any).err);
-  const { id, name } = r as any;
+  const [, q, rawNote] = m;
+  const note = rawNote?.trim();
+  if (!q.includes("@")) {
+    return send(
+      chatId,
+      "Per tracciare il contatto servono email studente/genitore, es: `/checked nome@example.com Nota`"
+    );
+  }
+  const byEmail = await lookupStudentByEmail(db, q.toLowerCase());
+  if ((byEmail as any).err) return send(chatId, (byEmail as any).err);
+  const { id, name } = byEmail as any;
 
   const { data, error } = await db
     .from("black_students")
@@ -549,28 +571,51 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
   if (error) return send(chatId, `❌ Errore update: ${error.message}`);
   const current = Number(data?.readiness ?? 0);
   const updated = Math.min(100, current + 5);
+  const contactAt = new Date().toISOString();
   const { error: updErr } = await db
     .from("black_students")
-    .update({ readiness: updated, last_active_at: new Date().toISOString() })
+    .update({
+      readiness: updated,
+      last_active_at: contactAt,
+      last_contacted_at: contactAt,
+    })
     .eq("id", id);
   if (updErr) return send(chatId, `❌ Errore update: ${updErr.message}`);
+
+  const authorLabel = CHAT_LABELS.get(String(chatId)) || null;
+  const { error: logErr } = await db.from(CONTACT_LOG_TABLE).insert({
+    student_id: id,
+    contacted_at: contactAt,
+    body: note || null,
+    source: "telegram_bot",
+    author_chat_id: String(chatId),
+    author_label: authorLabel,
+    readiness_snapshot: updated,
+  });
+  if (logErr)
+    return send(chatId, `❌ Errore log contatto: ${logErr.message || "sconosciuto"}`);
 
   try {
     await db.rpc("refresh_black_brief", { _student: id });
   } catch {
     // best effort
   }
-  await send(
-    chatId,
-    `✅ Contatto registrato per *${name}*. Readiness: ${updated}/100`
-  );
+  const lines = [
+    `✅ Contatto registrato per *${name}*`,
+    `Ultimo contatto: ${formatDateTime(contactAt)}`,
+    note ? `📝 Nota: ${note}` : null,
+    `Readiness: ${updated}/100`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  await send(chatId, lines);
 }
 
 async function cmdDaContattare({ db, chatId }: CmdCtx) {
   const { data, error } = await db
     .from("black_students")
     .select(
-      "id, user_id, readiness, parent_email, parent_phone, student_email, student_phone, year_class, profiles:profiles!black_students_user_id_fkey(full_name)"
+      "id, user_id, readiness, parent_email, parent_phone, student_email, student_phone, year_class, last_contacted_at, profiles:profiles!black_students_user_id_fkey(full_name)"
     )
     .eq("status", "active")
     .lt("readiness", 90)
@@ -587,8 +632,11 @@ async function cmdDaContattare({ db, chatId }: CmdCtx) {
     const readiness = row.readiness ?? 0;
     const email = row.student_email || row.parent_email || "—";
     const phone = row.student_phone || row.parent_phone || "—";
+    const lastContact = row.last_contacted_at
+      ? formatDateTime(row.last_contacted_at)
+      : "—";
     const meta = row.year_class ? `Classe: ${row.year_class}\n` : "";
-    const text = `*${name}*\n${meta}Readiness: ${readiness}/100\nEmail: ${email}\nTelefono: ${phone}`;
+    const text = `*${name}*\n${meta}Readiness: ${readiness}/100\nUltimo contatto: ${lastContact}\nEmail: ${email}\nTelefono: ${phone}`;
     const markup =
       email && email !== "—"
         ? {
@@ -642,8 +690,9 @@ export async function POST(req: Request) {
           "`/v cognome materia 7.5/10 [YYYY-MM-DD]` — aggiungi voto",
           "`/ass cognome YYYY-MM-DD materia [topics]` — nuova verifica",
           "`/nuovi` — iscritti ultimi 30 giorni",
-          "`/syncstripe [limite]` — forza il sync delle attivazioni Stripe",
+          "`/sync [limite]` — forza il sync delle attivazioni Stripe",
           "`/desc cognome testo...` — aggiorna overview studente",
+          "`/checked email@example.com [nota]` — segna ultimo contatto + log",
         ].join("\n")
       );
     } else if (/^\/oggi/i.test(text)) {
@@ -660,7 +709,9 @@ export async function POST(req: Request) {
       await cmdDESC(ctx);
     } else if (/^\/nuovi/i.test(text)) {
       await cmdNUOVI(ctx);
-    } else if (/^\/syncstripe/i.test(text)) {
+    } else if (/^\/checked(\s|@)/i.test(text)) {
+      await cmdCHECKED(ctx);
+    } else if (/^\/sync(?:stripe)?/i.test(text)) {
       await cmdSYNCSTRIPE(ctx);
     } else {
       await send(chatId, "Comando non riconosciuto. Scrivi `/start`.");
