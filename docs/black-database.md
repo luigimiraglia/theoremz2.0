@@ -126,8 +126,8 @@ Esegui un job giornaliero per aggiornare readiness/risk + `brief_md`, e lancialo
    - Popola i campi chiave (`subscription_status`, `stripe_customer_id`, contatti).
 2. **Firestore**: conserva attività (login, consegne, chat) indicizzate per UID. Replica i contatori necessari (ultimo accesso, messaggi ultimi 30 giorni) in Supabase o in una tabella `user_metrics`.
 3. **Cron giornaliero**:
+   - chiama `GET /api/cron/sync-black-subscriptions?secret=XYZ` (Vercel Cron `0 0 * * *`) per riallineare Stripe → Supabase e rigenerare i brief; imposta `BLACK_CRON_SECRET`/`CRON_SECRET` per autorizzare la chiamata.
    - aggiorna readiness/risk/brief.
    - valida che la view `black_student_card` rifletta gli ultimi voti (`black_grades`) e verifiche (`black_assessments`).
 
 Tenendo UID Firebase come chiave unica, il bot, Stripe, Firestore e Supabase rimangono coerenti e il recupero schede via email o nome è immediato.
-

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import nodemailer from "nodemailer";
+import {
+  resolveStripeCustomer,
+  resolveStripeSubscription,
+  syncBlackSubscriptionRecord,
+} from "@/lib/black/subscriptionSync";
 import { adminDb } from "@/lib/firebaseAdmin";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
@@ -54,11 +59,13 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   if (!stripe) return;
 
   const hydratedSession = await stripe.checkout.sessions.retrieve(session.id, {
-    expand: ["line_items.data.price.product"],
+    expand: ["line_items.data.price.product", "customer"],
   });
+  const subscription = await resolveStripeSubscription(stripe, hydratedSession.subscription);
+  const stripeCustomer = await resolveStripeCustomer(stripe, hydratedSession.customer);
 
-  const customer = hydratedSession.customer_details;
-  const metadata = hydratedSession.metadata || {};
+  const customerDetails = hydratedSession.customer_details;
+  const metadata = (hydratedSession.metadata || {}) as Stripe.Metadata;
   const lineItem = hydratedSession.line_items?.data?.[0];
   const planName =
     (metadata.planName as string) ||
@@ -73,9 +80,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const isParent = persona.includes("parent") || persona.includes("genitore");
 
   const phone =
-    customer?.phone || (metadata.phone as string) || (metadata.whatsapp as string) || null;
-  const email = customer?.email || (metadata.email as string) || null;
-  const name = customer?.name || (metadata.name as string) || null;
+    customerDetails?.phone ||
+    (metadata.phone as string) ||
+    (metadata.whatsapp as string) ||
+    null;
+  const email = customerDetails?.email || (metadata.email as string) || null;
+  const name = customerDetails?.name || (metadata.name as string) || null;
   const amount =
     typeof hydratedSession.amount_total === "number"
       ? formatAmount(hydratedSession.amount_total, hydratedSession.currency)
@@ -96,6 +106,16 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     phone,
     name,
     amount,
+  });
+
+  await syncBlackSubscriptionRecord({
+    source: `checkout_session:${session.id}`,
+    planName,
+    subscription,
+    stripeCustomer,
+    metadata,
+    customerDetails,
+    lineItem,
   });
 
   await sendWelcomeEmail({

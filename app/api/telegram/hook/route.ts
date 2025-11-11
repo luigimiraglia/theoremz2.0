@@ -63,8 +63,8 @@ async function lookupStudentByEmail(db: any, email: string) {
     .select(selectFields)
     .or(
       `student_email.ilike.${escapeOrValue(normalized)},parent_email.ilike.${escapeOrValue(
-        normalized,
-      )}`,
+        normalized
+      )}`
     )
     .limit(6);
   if (directError) throw new Error(directError.message);
@@ -102,10 +102,7 @@ async function lookupStudentByEmail(db: any, email: string) {
   return {
     id: row.id,
     name:
-      row.profiles?.full_name ||
-      row.student_email ||
-      row.parent_email ||
-      email,
+      row.profiles?.full_name || row.student_email || row.parent_email || email,
   };
 }
 
@@ -140,7 +137,10 @@ const PLAN_LABELS: Record<string, string> = {
   price_1SII2UHuThKalaHI1g3CgFSb: "Black Annuale",
 };
 
-function planLabelFromPriceId(priceId?: string | null, fallback?: string | null) {
+function planLabelFromPriceId(
+  priceId?: string | null,
+  fallback?: string | null
+) {
   if (!priceId) return fallback || "Black";
   return PLAN_LABELS[priceId] || fallback || "Black";
 }
@@ -161,7 +161,8 @@ function formatDate(date?: string | null) {
 /** /s <nome> → invia scheda (brief) */
 async function cmdS({ db, chatId, text }: CmdCtx) {
   const q = text.replace(/^\/s(@\w+)?\s*/i, "").trim();
-  if (!q) return send(chatId, "Uso: `/s cognome` oppure `/s email@example.com`");
+  if (!q)
+    return send(chatId, "Uso: `/s cognome` oppure `/s email@example.com`");
   const r = await resolveStudentId(db, q);
   if ((r as any).err) return send(chatId, (r as any).err);
   const { id, name } = r as any;
@@ -220,7 +221,7 @@ async function cmdDESC({ db, chatId, text }: CmdCtx) {
   if (!body)
     return send(
       chatId,
-      "Serve anche il testo, es: `/desc rossi seconda scientifico con difficoltà in trigonometria`",
+      "Serve anche il testo, es: `/desc rossi seconda scientifico con difficoltà in trigonometria`"
     );
 
   const r = await resolveStudentId(db, q);
@@ -342,21 +343,26 @@ async function cmdOGGI({ db, chatId }: CmdCtx) {
 }
 
 async function cmdNUOVI({ db, chatId }: CmdCtx) {
-  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000)
+    .toISOString()
+    .slice(0, 10);
   const { data, error } = await db
     .from("black_students")
     .select(
-      "id, user_id, year_class, start_date, parent_email, parent_phone, parent_name, student_email, student_phone, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id)",
+      "id, user_id, year_class, start_date, parent_email, parent_phone, parent_name, student_email, student_phone, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id)"
     )
     .eq("status", "active")
     .gte("start_date", since)
     .order("start_date", { ascending: false })
     .limit(50);
   if (error) return send(chatId, `❌ Errore elenco: ${error.message}`);
-  if (!data?.length) return send(chatId, "Nessun nuovo abbonato negli ultimi 30 giorni.");
+  if (!data?.length)
+    return send(chatId, "Nessun nuovo abbonato negli ultimi 30 giorni.");
 
   for (const row of data) {
-    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const profile = Array.isArray(row.profiles)
+      ? row.profiles[0]
+      : row.profiles;
     const name = profile?.full_name || row.parent_name || "Studente";
     const plan = planLabelFromPriceId(profile?.stripe_price_id);
     const when = formatDate(row.start_date);
@@ -389,7 +395,11 @@ async function cmdNUOVI({ db, chatId }: CmdCtx) {
 
 async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
   const m = text.match(/^\/checked(?:@\w+)?\s+(\S+)/i);
-  if (!m) return send(chatId, "Uso: `/checked cognome` oppure `/checked email@example.com`");
+  if (!m)
+    return send(
+      chatId,
+      "Uso: `/checked cognome` oppure `/checked email@example.com`"
+    );
   const [, q] = m;
   const r = await resolveStudentId(db, q);
   if ((r as any).err) return send(chatId, (r as any).err);
@@ -414,14 +424,17 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
   } catch {
     // best effort
   }
-  await send(chatId, `✅ Contatto registrato per *${name}*. Readiness: ${updated}/100`);
+  await send(
+    chatId,
+    `✅ Contatto registrato per *${name}*. Readiness: ${updated}/100`
+  );
 }
 
 async function cmdDaContattare({ db, chatId }: CmdCtx) {
   const { data, error } = await db
     .from("black_students")
     .select(
-      "id, user_id, readiness, parent_email, parent_phone, student_email, student_phone, year_class, profiles:profiles!black_students_user_id_fkey(full_name)",
+      "id, user_id, readiness, parent_email, parent_phone, student_email, student_phone, year_class, profiles:profiles!black_students_user_id_fkey(full_name)"
     )
     .eq("status", "active")
     .lt("readiness", 90)
@@ -430,8 +443,11 @@ async function cmdDaContattare({ db, chatId }: CmdCtx) {
   if (error) return send(chatId, `❌ Errore elenco: ${error.message}`);
   if (!data?.length) return send(chatId, "Tutti aggiornati ✅");
   for (const row of data) {
-    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    const name = profile?.full_name || row.student_email || row.parent_email || "Studente";
+    const profile = Array.isArray(row.profiles)
+      ? row.profiles[0]
+      : row.profiles;
+    const name =
+      profile?.full_name || row.student_email || row.parent_email || "Studente";
     const readiness = row.readiness ?? 0;
     const email = row.student_email || row.parent_email || "—";
     const phone = row.student_phone || row.parent_phone || "—";

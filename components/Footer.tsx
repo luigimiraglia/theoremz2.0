@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 // components/Footer.tsx  (SERVER)
+import Link from "next/link";
 import ConsentManagerLink from "./ConsentManagerLink";
 export default function Footer() {
   return (
@@ -26,23 +27,17 @@ export default function Footer() {
               P.iva: 17675281004 © 2025 Theoremz
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <a
-                href="/privacy-policy-theoremz.pdf"
-                className="hover:text-blue-400"
-              >
+              <Link href="/privacy-policy" className="hover:text-blue-400">
                 Privacy Policy
-              </a>
+              </Link>
               <span>-</span>
-              <a
-                href="/cookie-policy-theoremz.pdf"
-                className="hover:text-blue-400"
-              >
+              <Link href="/cookie-policy" className="hover:text-blue-400">
                 Cookie Policy
-              </a>
+              </Link>
               <span>-</span>
-              <a href="/termini.html" className="hover:text-blue-400">
+              <Link href="/termini-di-servizio" className="hover:text-blue-400">
                 Termini e Condizioni
-              </a>
+              </Link>
               <span>-</span>
               <a href="/lezioni.html" className="hover:text-blue-400">
                 Lista delle lezioni

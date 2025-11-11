@@ -52,6 +52,14 @@ const auth = getAuth(app);
 const firestore = getFirestore(app);
 
 const SUMMARY = { profilesCreated: 0, studentsUpserted: 0, briefsUpserted: 0, skipped: 0 };
+const PREMIUM_SUB_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
+const SYNCABLE_SUB_STATUSES = new Set([
+  "active",
+  "trialing",
+  "past_due",
+  "unpaid",
+  "canceled",
+]);
 
 async function fetchStripeSubscriptions() {
   const rows = [];
@@ -64,7 +72,7 @@ async function fetchStripeSubscriptions() {
       expand: ["data.customer"],
     });
   for (const sub of page.data) {
-    if (sub.status !== "active") continue;
+    if (!SYNCABLE_SUB_STATUSES.has(sub.status)) continue;
     const customer =
       typeof sub.customer === "object" && sub.customer
         ? sub.customer
@@ -98,6 +106,11 @@ async function ensureProfile(uid, payload) {
 }
 
 function buildBrief(student) {
+  const statusLabel = !student.status
+    ? "active"
+    : PREMIUM_SUB_STATUSES.has(student.status)
+      ? student.status
+      : `❌ Disdetto (${student.status})`;
   return [
     `${student.full_name} — Theoremz Black`,
     "",
@@ -112,7 +125,7 @@ function buildBrief(student) {
     }`,
     `Studente: ${student.student_email || "—"} — ${student.student_phone || "—"}`,
     "",
-    `Stato: ${student.status || "active"} · Readiness: ${student.readiness ?? 50}/100 (${
+    `Stato: ${statusLabel} · Readiness: ${student.readiness ?? 50}/100 (${
       student.risk_level || "yellow"
     })`,
     "",
@@ -174,7 +187,7 @@ async function main() {
       full_name: fallbackName(firebaseUser, customer),
       role: "student",
       email: firebaseUser.email,
-      subscription_tier: sub.status === "active" ? "black" : "free",
+      subscription_tier: PREMIUM_SUB_STATUSES.has(sub.status) ? "black" : "free",
       stripe_customer_id: customer.id,
       stripe_subscription_status: sub.status,
       stripe_price_id: sub.items.data[0]?.price?.id || null,
