@@ -624,19 +624,20 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
   if (!m)
     return send(
       chatId,
-      "Uso: `/checked email@example.com [nota]` (usa sempre l'email)"
+      "Uso: `/checked email@example.com [nota]` oppure `/checked cognome [nota]`"
     );
-  const [, q, rawNote] = m;
+  const [, rawQuery, rawNote] = m;
+  const query = rawQuery.trim();
   const note = rawNote?.trim();
-  if (!q.includes("@")) {
-    return send(
-      chatId,
-      "Per tracciare il contatto servono email studente/genitore, es: `/checked nome@example.com Nota`"
-    );
+
+  let resolved;
+  if (query.includes("@")) {
+    resolved = await lookupStudentByEmail(db, query.toLowerCase());
+  } else {
+    resolved = await resolveStudentId(db, query);
   }
-  const byEmail = await lookupStudentByEmail(db, q.toLowerCase());
-  if ((byEmail as any).err) return send(chatId, (byEmail as any).err);
-  const { id, name } = byEmail as any;
+  if ((resolved as any).err) return send(chatId, (resolved as any).err);
+  const { id, name } = resolved as any;
 
   const { data, error } = await db
     .from("black_students")
@@ -659,22 +660,26 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
 
   const authorLabel = CHAT_LABELS.get(String(chatId)) || null;
   let logWarning: string | null = null;
-  const { error: logErr } = await db.from(CONTACT_LOG_TABLE).insert({
-    student_id: id,
-    contacted_at: contactAt,
-    body: note || null,
-    source: "telegram_bot",
-    author_chat_id: String(chatId),
-    author_label: authorLabel,
-    readiness_snapshot: updated,
-  });
-  if (logErr) {
+  try {
+    const { error: logErr } = await db.from(CONTACT_LOG_TABLE).insert({
+      student_id: id,
+      contacted_at: contactAt,
+      body: note || null,
+      source: "telegram_bot",
+      author_chat_id: String(chatId),
+      author_label: authorLabel,
+      readiness_snapshot: updated,
+    });
+    if (logErr) {
+      throw new Error(logErr.message);
+    }
+  } catch (err: any) {
     console.error("[telegram-bot] log contatto fallito", {
       studentId: id,
       chatId,
-      error: logErr,
+      error: err,
     });
-    logWarning = logErr.message || "sconosciuto";
+    logWarning = err?.message || "errore sconosciuto";
   }
 
   try {
@@ -776,7 +781,7 @@ export async function POST(req: Request) {
           "`/sync [limite]` — forza il sync delle attivazioni Stripe",
           "`/desc cognome testo...` — aggiorna overview studente",
           "`/nome email@example.com Nuovo Nome` — aggiorna il nome in anagrafica",
-          "`/checked email@example.com [nota]` — segna ultimo contatto + log",
+          "`/checked cognome|email [nota]` — segna ultimo contatto + log",
         ].join("\n")
       );
     } else if (/^\/oggi/i.test(text)) {
