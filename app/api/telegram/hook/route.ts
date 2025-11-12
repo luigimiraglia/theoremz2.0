@@ -614,84 +614,90 @@ function formatSyncDetail(detail: StripeSignupSyncResult["details"][number]) {
 }
 
 async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
-  const m = text.match(/^\/checked(?:@\w+)?\s+(\S+)(?:\s+([\s\S]+))?/i);
-  if (!m)
-    return send(
-      chatId,
-      "Uso: `/checked email@example.com [nota]` oppure `/checked cognome [nota]`"
-    );
-  const [, rawQuery, rawNote] = m;
-  const query = rawQuery.trim();
-  const note = rawNote?.trim();
-
-  let resolved;
-  if (query.includes("@")) {
-    resolved = await lookupStudentByEmail(db, query.toLowerCase());
-  } else {
-    resolved = await resolveStudentId(db, query);
-  }
-  if ((resolved as any).err) return send(chatId, (resolved as any).err);
-  const { id, name } = resolved as any;
-
-  const { data, error } = await db
-    .from("black_students")
-    .select("readiness")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) return send(chatId, `❌ Errore update: ${error.message}`);
-  const current = Number(data?.readiness ?? 0);
-  const updated = Math.min(100, current + 5);
-  const contactAt = new Date().toISOString();
-  const { error: updErr } = await db
-    .from("black_students")
-    .update({
-      readiness: updated,
-      last_active_at: contactAt,
-      last_contacted_at: contactAt,
-    })
-    .eq("id", id);
-  if (updErr) return send(chatId, `❌ Errore update: ${updErr.message}`);
-
-  const authorLabel = CHAT_LABELS.get(String(chatId)) || null;
-  let logWarning: string | null = null;
   try {
-    const { error: logErr } = await db.from(CONTACT_LOG_TABLE).insert({
-      student_id: id,
-      contacted_at: contactAt,
-      body: note || null,
-      source: "telegram_bot",
-      author_chat_id: String(chatId),
-      author_label: authorLabel,
-      readiness_snapshot: updated,
-    });
-    if (logErr) {
-      throw new Error(logErr.message);
+    const m = text.match(/^\/checked(?:@\w+)?\s+(\S+)(?:\s+([\s\S]+))?/i);
+    if (!m)
+      return send(
+        chatId,
+        "Uso: `/checked email@example.com [nota]` oppure `/checked cognome [nota]`"
+      );
+    const [, rawQuery, rawNote] = m;
+    const query = rawQuery.trim();
+    const note = rawNote?.trim();
+
+    let resolved;
+    if (query.includes("@")) {
+      resolved = await lookupStudentByEmail(db, query.toLowerCase());
+    } else {
+      resolved = await resolveStudentId(db, query);
     }
-  } catch (err: any) {
-    console.error("[telegram-bot] log contatto fallito", {
-      studentId: id,
-      chatId,
-      error: err,
-    });
-    logWarning = err?.message || "errore sconosciuto";
-  }
+    if ((resolved as any).err) return send(chatId, (resolved as any).err);
+    const { id, name } = resolved as any;
 
-  try {
-    await db.rpc("refresh_black_brief", { _student: id });
-  } catch (briefError) {
-    const err = briefError as Error;
-    console.warn("[telegram-bot] refresh_black_brief failed", err);
+    const { data, error } = await db
+      .from("black_students")
+      .select("readiness")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) return send(chatId, `❌ Errore update: ${error.message}`);
+    const current = Number(data?.readiness ?? 0);
+    const updated = Math.min(100, current + 5);
+    const contactAt = new Date().toISOString();
+    const { error: updErr } = await db
+      .from("black_students")
+      .update({
+        readiness: updated,
+        last_active_at: contactAt,
+        last_contacted_at: contactAt,
+      })
+      .eq("id", id);
+    if (updErr) return send(chatId, `❌ Errore update: ${updErr.message}`);
+
+    const authorLabel = CHAT_LABELS.get(String(chatId)) || null;
+    let logWarning: string | null = null;
+    try {
+      const { error: logErr } = await db.from(CONTACT_LOG_TABLE).insert({
+        student_id: id,
+        contacted_at: contactAt,
+        body: note || null,
+        source: "telegram_bot",
+        author_chat_id: String(chatId),
+        author_label: authorLabel,
+        readiness_snapshot: updated,
+      });
+      if (logErr) {
+        throw new Error(logErr.message);
+      }
+    } catch (err: any) {
+      console.error("[telegram-bot] log contatto fallito", {
+        studentId: id,
+        chatId,
+        error: err,
+      });
+      logWarning = err?.message || "errore sconosciuto";
+    }
+
+    const lines = [
+      `✅ Contatto registrato per *${name}*`,
+      `Ultimo contatto: ${formatDateTime(contactAt)}`,
+      note ? `📝 Nota: ${note}` : null,
+      `Readiness: ${updated}/100`,
+      logWarning ? `⚠️ Log non salvato: ${logWarning}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    await send(chatId, lines);
+
+    db.rpc("refresh_black_brief", { _student: id }).catch((briefError) => {
+      console.warn("[telegram-bot] refresh_black_brief failed", briefError);
+    });
+  } catch (error: any) {
+    console.error("[telegram-bot] cmdCHECKED failed", error);
+    await send(
+      chatId,
+      `❌ Errore inatteso durante il check: ${error?.message || "sconosciuto"}`
+    );
   }
-  const lines = [
-    `✅ Contatto registrato per *${name}*`,
-    `Ultimo contatto: ${formatDateTime(contactAt)}`,
-    note ? `📝 Nota: ${note}` : null,
-    `Readiness: ${updated}/100`,
-    logWarning ? `⚠️ Log non salvato: ${logWarning}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
-  await send(chatId, lines);
 }
 
 async function cmdDaContattare({ db, chatId }: CmdCtx) {
