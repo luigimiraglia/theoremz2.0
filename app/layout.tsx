@@ -174,7 +174,7 @@ export default async function RootLayout({
         </Script>
       </head>
 
-      <body className="antialiased min-h-dvh bg-background text-foreground overflow-x-hidden">
+      <body className="antialiased min-h-dvh bg-background text-foreground overflow-x-hidden pt-16 md:pt-0">
         <ToastProvider>
           <AuthProvider>
             {/* Non bloccare il paint del contenuto server-rendered */}
@@ -184,7 +184,7 @@ export default async function RootLayout({
                 <Header />
               </Suspense>
 
-                <div className="mt-16 md:mt-24">
+                <div className="mt-24 md:mt-24">
                   {/* Banner Black (client) — mostra solo se non abbonato; escluso /black, /mentor e /contatto-rapido */}
                   <Suspense fallback={null}>
                     <BlackPromoBanner />

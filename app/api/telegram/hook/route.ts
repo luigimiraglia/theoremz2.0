@@ -514,12 +514,23 @@ async function cmdOGGI({ db, chatId }: CmdCtx) {
   const upcoming = cards.filter(
     (c: any) => c.next_assessment_date && c.next_assessment_date <= in7
   );
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  const staleContacts = cards.filter((c: any) => {
+    if (!c.last_contacted_at) return true;
+    return c.last_contacted_at < sevenDaysAgo;
+  });
 
   const line = (c: any) =>
     `• ${c.student_name} ${c.readiness ?? "—"}/100` +
     (c.next_assessment_date
       ? ` (${c.next_assessment_subject ?? "verifica"} ${c.next_assessment_date})`
       : "");
+  const staleLine = (c: any) =>
+    `• ${c.student_name} — ultimo contatto: ${
+      c.last_contacted_at ? formatDateTime(c.last_contacted_at) : "mai"
+    }`;
 
   const txt = [
     "*📊 Digest oggi*",
@@ -534,6 +545,16 @@ async function cmdOGGI({ db, chatId }: CmdCtx) {
       : "",
     upcoming.length
       ? `\n🗓️ *Verifiche ≤7g* (${upcoming.length})\n${upcoming.map(line).join("\n")}`
+      : "",
+    staleContacts.length
+      ? `\n📭 *Da ricontattare (≥7g)* (${staleContacts.length})\n${staleContacts
+          .slice(0, 10)
+          .map(staleLine)
+          .join("\n")}${
+          staleContacts.length > 10
+            ? `\n…altri ${staleContacts.length - 10} senza contatto recente`
+            : ""
+        }`
       : "",
   ]
     .filter(Boolean)
