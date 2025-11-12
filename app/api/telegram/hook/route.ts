@@ -410,6 +410,48 @@ async function cmdASS({ db, chatId, text }: CmdCtx) {
   );
 }
 
+/** /verifica <email> <data YYYY-MM-DD> <materia> [topics...] */
+async function cmdVERIFICA({ db, chatId, text }: CmdCtx) {
+  const m = text.match(
+    /^\/verifica(?:@\w+)?\s+(\S+)\s+(\d{4}-\d{2}-\d{2})\s+(\S+)(?:\s+([\s\S]+))?$/i
+  );
+  if (!m)
+    return send(
+      chatId,
+      "Uso: `/verifica email@example.com 2025-11-19 materia [topics]` (usa sempre l'email)"
+    );
+  const [, email, when, subject, topics] = m;
+  if (!email.includes("@")) {
+    return send(
+      chatId,
+      "Per importare una verifica serve l'email dello studente, es: `/verifica nome@example.com 2025-11-19 fisica [topics]`"
+    );
+  }
+
+  const resolved = await lookupStudentByEmail(db, email.toLowerCase());
+  if ((resolved as any).err) return send(chatId, (resolved as any).err);
+  const { id, name } = resolved as any;
+
+  const { error } = await db.from("black_assessments").insert({
+    student_id: id,
+    subject,
+    topics: topics || null,
+    when_at: when,
+  });
+  if (error) return send(chatId, `❌ Errore verifica: ${error.message}`);
+
+  try {
+    await db.rpc("refresh_black_brief", { _student: id });
+  } catch {
+    // best effort
+  }
+
+  await send(
+    chatId,
+    `✅ Verifica importata per *${name}*: ${subject} — ${when}${topics ? " — " + topics : ""}`
+  );
+}
+
 /** /oggi → digest rapido: rossi/yellow/green + verifiche entro 7 giorni */
 async function cmdOGGI({ db, chatId }: CmdCtx) {
   const now = new Date();
@@ -780,6 +822,7 @@ export async function POST(req: Request) {
           "`/n cognome testo...` — aggiungi nota",
           "`/v cognome materia 7.5/10 [YYYY-MM-DD]` — aggiungi voto",
           "`/ass cognome YYYY-MM-DD materia [topics]` — nuova verifica",
+          "`/verifica email@example.com YYYY-MM-DD materia [topics]` — importa verifica via email",
           "`/nuovi` — iscritti ultimi 30 giorni",
           "`/sync [limite]` — forza il sync delle attivazioni Stripe",
           "`/desc cognome testo...` — aggiorna overview studente",
@@ -797,6 +840,8 @@ export async function POST(req: Request) {
       await cmdV(ctx);
     } else if (/^\/ass(\s|@)/i.test(text)) {
       await cmdASS(ctx);
+    } else if (/^\/verifica(\s|@)/i.test(text)) {
+      await cmdVERIFICA(ctx);
     } else if (/^\/desc(\s|@)/i.test(text)) {
       await cmdDESC(ctx);
     } else if (/^\/nome(\s|@)/i.test(text)) {
