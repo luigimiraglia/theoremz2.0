@@ -245,14 +245,19 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
   }
   const { data: studentMeta } = await db
     .from("black_students")
-    .select("last_contacted_at, readiness")
+    .select("last_contacted_at, last_active_at, readiness")
     .eq("id", id)
     .maybeSingle();
   const lastContactLine = studentMeta?.last_contacted_at
     ? `Ultimo contatto: ${formatDateTime(studentMeta.last_contacted_at)}`
     : "Ultimo contatto: —";
+  const lastAccessLine = studentMeta?.last_active_at
+    ? `Ultimo accesso: ${formatDateTime(studentMeta.last_active_at)}`
+    : "Ultimo accesso: —";
   const readinessLine = `Readiness attuale: ${studentMeta?.readiness ?? "—"}/100`;
-  const header = [`*Scheda — ${name}*`, `_${lastContactLine}_`, readinessLine].join("\n");
+  const header = [`*Scheda — ${name}*`, `_${lastContactLine}_`, lastAccessLine, readinessLine].join(
+    "\n"
+  );
   await send(chatId, `${header}\n\n${brief?.brief_md || "_Nessun brief._"}`);
 }
 

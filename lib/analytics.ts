@@ -1,6 +1,7 @@
 "use client";
 
 import { getAnonId } from "./anonId";
+import { identifyBlackSession } from "./black/sessionTracker";
 
 // Genera session ID univoco
 function getSessionId(): string {
@@ -11,6 +12,7 @@ function getSessionId(): string {
     sessionId = `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     sessionStorage.setItem("tz_session_id", sessionId);
   }
+  identifyBlackSession({ sessionId });
   return sessionId;
 }
 
@@ -23,7 +25,9 @@ function getUserId(): string | null {
     const userData = localStorage.getItem("user_data");
     if (userData) {
       const parsed = JSON.parse(userData);
-      return parsed.id || parsed.uid || null;
+      const id = parsed.id || parsed.uid || null;
+      identifyBlackSession({ userId: id || undefined });
+      return id;
     }
   } catch {}
   return null;
@@ -159,4 +163,3 @@ if (typeof window !== "undefined") {
   
   observer.observe(document.body, { childList: true, subtree: true });
 }
-

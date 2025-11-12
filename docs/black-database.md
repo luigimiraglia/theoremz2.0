@@ -188,4 +188,4 @@ Log dedicato per tracciare i contatti tutor↔famiglia registrati dal bot o da e
 
 Indici consigliati: `(student_id, contacted_at DESC)` per mostrare la cronologia di un singolo studente e `contacted_at` per report settimanali. Ogni volta che inserisci una riga aggiorna `black_students.last_contacted_at` con lo stesso timestamp per averlo disponibile anche sulle view operative (`black_student_card`, digest, ecc.).
 
-> Bot Telegram: il comando `/checked cognome|email [nota]` aggiorna `last_contacted_at`, incrementa la readiness e inserisce una riga su `black_contact_logs`. Il comando `/nome email@example.com Nuovo Nome` aggiorna `profiles.full_name` e forza un refresh del brief.
+> Bot Telegram: il comando `/checked cognome|email [nota]` aggiorna `last_contacted_at`, incrementa la readiness e inserisce una riga su `black_contact_logs`. Il comando `/nome email@example.com Nuovo Nome` aggiorna `profiles.full_name` e forza un refresh del brief. Le schede (`/s`) mostrano `last_contacted_at`, `last_active_at` e la readiness live.
