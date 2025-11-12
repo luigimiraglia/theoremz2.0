@@ -29,14 +29,16 @@ const CHAT_LABELS = new Map(
 );
 const CONTACT_LOG_TABLE = "black_contact_logs";
 
-async function send(chat_id: number | string, text: string, replyMarkup?: any) {
+async function send(chat_id: number | string, text: string, replyMarkup?: any, useHTML = true) {
+  // Use HTML by default for better compatibility with user input
+  const parseMode = useHTML ? "HTML" : "Markdown";
   const res = await fetch(`${TG}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chat_id,
       text,
-      parse_mode: "Markdown",
+      parse_mode: parseMode,
       disable_web_page_preview: true,
       reply_markup: replyMarkup,
     }),
@@ -144,8 +146,29 @@ function escapeOrValue(value: string) {
   return value.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
-function escapeMarkdown(text: string) {
-  return text.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
+/**
+ * Escape text for Telegram HTML parse mode.
+ * This is safer than Markdown for user input with special characters.
+ */
+function escapeHTML(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+/**
+ * Convert Markdown formatting to HTML for Telegram messages.
+ * Supports: *bold*, `code`, _italic_
+ */
+function markdownToHTML(text: string): string {
+  return text
+    .replace(/\*([^*]+)\*/g, "<b>$1</b>") // *text* -> <b>text</b>
+    .replace(/`([^`]+)`/g, "<code>$1</code>") // `text` -> <code>text</code>
+    .replace(/_([^_]+)_/g, "<i>$1</i>") // _text_ -> <i>text</i>
+    .replace(/~~([^~]+)~~/g, "<s>$1</s>"); // ~~text~~ -> <s>text</s>
 }
 
 function formatMatchList(matches: any[], prefix = "") {
@@ -684,7 +707,7 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     if (!m)
       return send(
         chatId,
-        "Uso: `/checked email@example.com [nota]` oppure `/checked cognome [nota]`"
+        "Uso: /checked email@example.com [nota]\noppure /checked cognome [nota]"
       );
     const [, rawQuery, rawNote] = m;
     const query = rawQuery.trim();
@@ -748,18 +771,19 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
       logWarning = err?.message || "errore sconosciuto";
     }
 
-    const safeName = escapeMarkdown(name);
-    const safeNote = note ? escapeMarkdown(note) : null;
+    const safeName = escapeHTML(name);
+    const safeNote = note ? escapeHTML(note) : null;
     const lines = [
-      `✅ Contatto registrato per *${safeName}*`,
+      `✅ Contatto registrato per <b>${safeName}</b>`,
       `Ultimo contatto: ${formatDateTime(contactAt)}`,
       safeNote ? `📝 Nota: ${safeNote}` : null,
       `Readiness: ${updated}/100`,
-      logWarning ? `⚠️ Log non salvato: ${logWarning}` : null,
+      logWarning ? `⚠️ Log non salvato: ${escapeHTML(logWarning)}` : null,
     ]
       .filter(Boolean)
       .join("\n");
-    await send(chatId, lines);
+    
+    await send(chatId, lines, undefined, true);
 
     try {
       await db.rpc("refresh_black_brief", { _student: id });

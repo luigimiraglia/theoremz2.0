@@ -10,7 +10,7 @@ import React, {
   ReactNode,
 } from "react";
 import type { User as FirebaseUser } from "firebase/auth";
-import { track } from "@/lib/analytics";
+import { identify, track } from "@/lib/analytics";
 import { hasTempAccess, getTempAccessInfo } from "@/lib/temp-access";
 
 /* =========================
@@ -140,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [reportedSubForEmail, setReportedSubForEmail] = useState<string | null>(
     null
   );
+  const [lastBlackSyncKey, setLastBlackSyncKey] = useState<string | null>(null);
 
   /* ---------- Preferiti ---------- */
   const refreshSavedLessons = async () => {
@@ -187,6 +188,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               : undefined,
           };
           setUser(appUser);
+          try {
+            identify(fbUser.uid);
+          } catch (err) {
+            console.error("Errore identify analytics:", err);
+          }
 
           // Carica profilo/username/salvati quando inattivo
           runWhenIdle(async () => {
@@ -231,8 +237,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSubscribed, user?.email]);
 
+  useEffect(() => {
+    if (!user?.uid || isSubscribed !== true) return;
+    runWhenIdle(async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const sessionId =
+          typeof window !== "undefined"
+            ? sessionStorage.getItem("tz_session_id")
+            : null;
+        const syncKey = `${user.uid}:${today}:${sessionId || "nosession"}`;
+        if (lastBlackSyncKey === syncKey) return;
+
+        let meta: Record<string, any> | null = null;
+        try {
+          const [{ getDoc, doc }, { db }] = await Promise.all([
+            import("firebase/firestore"),
+            import("./firebase"),
+          ]);
+          const snap = await getDoc(doc(db, "users", user.uid));
+          if (snap.exists()) {
+            meta = serializeFirestoreData(snap.data());
+          }
+        } catch (err) {
+          console.error("Errore lettura profilo Firestore:", err);
+        }
+
+        await fetch("/api/black/activity", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user.uid,
+            email: user.email,
+            fullName: user.displayName || meta?.full_name || null,
+            sessionId,
+            meta,
+          }),
+          keepalive: true,
+        });
+        setLastBlackSyncKey(syncKey);
+      } catch (err) {
+        console.error("Errore sync profilo Black:", err);
+      }
+    });
+  }, [user?.uid, user?.email, user?.displayName, isSubscribed, lastBlackSyncKey]);
+
   /* ---------- Calcolo stato abbonamento (con cache/override) ---------- */
-  const computeSubscription = async (emailNullable: string | null) => {
+const computeSubscription = async (emailNullable: string | null) => {
     try {
       if (!emailNullable) {
         setIsSubscribed(false);
@@ -557,6 +608,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+function serializeFirestoreData(value: any): any {
+  if (value === null || value === undefined) return null;
+  if (Array.isArray(value)) return value.map((entry) => serializeFirestoreData(entry));
+  if (typeof value === "object") {
+    if (typeof (value as any).toDate === "function") {
+      try {
+        return (value as any).toDate().toISOString();
+      } catch {
+        return null;
+      }
+    }
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, serializeFirestoreData(entry)])
+    );
+  }
+  if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") {
+    return value;
+  }
+  return null;
 }
 
 /* =========================
