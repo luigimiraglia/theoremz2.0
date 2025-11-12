@@ -1063,21 +1063,166 @@ function TracksCard({
     idx,
     label,
     done,
+    slug,
   }: {
     idx: number;
     label: string;
     done: boolean;
+    slug?: string;
   }) {
-    return (
-      <div className="flex flex-col items-center w-16 shrink-0">
+    const content = (
+      <>
         <div
-          className={`h-14 w-14 rounded-full grid place-items-center text-base font-extrabold shadow-sm ${done ? "bg-emerald-400 text-white" : "bg-blue-500 text-white"}`}
+          className={`h-14 w-14 rounded-full grid place-items-center text-base font-extrabold shadow-sm transition-transform ${slug ? "hover:scale-110" : ""} ${done ? "bg-emerald-400 text-white" : "bg-blue-500 text-white"}`}
         >
           {done ? "✓" : idx + 1}
         </div>
         <div className="mt-1 text-[11px] leading-tight text-slate-600 text-center truncate w-16">
           {label}
         </div>
+      </>
+    );
+
+    if (slug) {
+      return (
+        <Link
+          href={`/${slug}`}
+          className="flex flex-col items-center w-16 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+        >
+          {content}
+        </Link>
+      );
+    }
+
+    return (
+      <div className="flex flex-col items-center w-16 shrink-0">
+        {content}
+      </div>
+    );
+  }
+
+  function PathLessonCardContent({
+    items,
+    savedSlugs,
+  }: {
+    items: Array<{
+      id: string;
+      name: string;
+      emoji: string;
+      lessons: string[];
+      titles: Record<string, string>;
+      total: number;
+      done: number;
+    }>;
+    savedSlugs: string[];
+  }) {
+    const [showAll, setShowAll] = useState(false);
+    const displayedItems = showAll ? items : items.slice(0, 4);
+    const hasMore = items.length > 4;
+
+    return (
+      <div className="space-y-2">
+        {displayedItems.map((t) => (
+          <PathItem
+            key={t.id}
+            emoji={t.emoji}
+            name={t.name}
+            done={t.done}
+            total={t.total}
+            lessons={t.lessons}
+            titles={t.titles}
+            savedSlugs={savedSlugs}
+          />
+        ))}
+        {hasMore && !showAll && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="w-full px-4 py-2 mt-2 rounded-lg border border-slate-200/70 bg-white/60 [.dark_&]:bg-slate-900/40 hover:bg-white/80 [.dark_&]:hover:bg-slate-900/60 text-slate-700 [.dark_&]:text-slate-300 text-sm font-medium transition-colors"
+          >
+            Mostra altri percorsi ({items.length - 4})
+          </button>
+        )}
+        {showAll && hasMore && (
+          <button
+            onClick={() => setShowAll(false)}
+            className="w-full px-4 py-2 mt-2 rounded-lg border border-slate-200/70 bg-white/60 [.dark_&]:bg-slate-900/40 hover:bg-white/80 [.dark_&]:hover:bg-slate-900/60 text-slate-700 [.dark_&]:text-slate-300 text-sm font-medium transition-colors"
+          >
+            Mostra meno
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  function PathItem({
+    emoji,
+    name,
+    done,
+    total,
+    lessons,
+    titles,
+    savedSlugs,
+  }: {
+    emoji: string;
+    name: string;
+    done: number;
+    total: number;
+    lessons: string[];
+    titles: Record<string, string>;
+    savedSlugs: string[];
+  }) {
+    const [expanded, setExpanded] = useState(false);
+    const percentage = Math.round((done / total) * 100);
+
+    return (
+      <div className="rounded-2xl bg-white/80 [.dark_&]:bg-slate-900/60 backdrop-blur border border-slate-200/70 overflow-hidden shadow-sm hover:shadow-md transition-all">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full px-4 sm:px-5 py-3 flex items-center gap-3 hover:bg-white/40 [.dark_&]:hover:bg-slate-800/40 transition-colors"
+        >
+          <span className="text-xl">{emoji}</span>
+          <div className="flex-1 text-left">
+            <h4 className="font-semibold text-sm text-slate-900 [.dark_&]:text-white">{name}</h4>
+            <div className="mt-1.5 w-full bg-slate-300/40 [.dark_&]:bg-white/10 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-sky-500 transition-all duration-300"
+                style={{ width: `${percentage}%` }}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className="text-xs font-medium text-slate-600 [.dark_&]:text-slate-300">
+              {done}/{total}
+            </span>
+            <span className={`text-xs font-bold ${percentage === 100 ? "text-emerald-600 [.dark_&]:text-emerald-400" : "text-sky-600 [.dark_&]:text-sky-400"}`}>
+              {percentage}%
+            </span>
+          </div>
+          <svg
+            className={`w-4 h-4 text-slate-500 [.dark_&]:text-slate-400 transition-transform shrink-0 ${expanded ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </button>
+
+        {expanded && (
+          <div className="border-t border-slate-200/70 px-4 sm:px-5 py-3 bg-white/40 [.dark_&]:bg-slate-800/20 overflow-x-auto">
+            <div className="flex items-start gap-2 pb-1">
+              {lessons.slice(0, 12).map((slug, i) => (
+                <Node
+                  key={slug}
+                  idx={i}
+                  label={titles[slug] || slug.replace(/-/g, " ")}
+                  done={savedSlugs.some((s) => s.includes(slug))}
+                  slug={slug}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1085,45 +1230,18 @@ function TracksCard({
   return (
     <Card title="Il tuo percorso" subtitle={`Classe: ${classe}`}>
       {loading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="rounded-2xl p-4 bg-slate-100 animate-pulse h-[120px]"
-            />
+            <div key={i} className="rounded-lg p-3 bg-slate-100 animate-pulse h-[60px]" />
           ))}
         </div>
       )}
       {error && <div className="text-sm text-red-600">{error}</div>}
       {!loading && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 transition-opacity duration-300 opacity-100">
-          {items.map((t) => (
-            <div
-              key={t.id}
-              className="rounded-2xl p-4 bg-white/70 [.dark_&]:bg-slate-900/50 border border-slate-200 shadow-sm"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xl">{t.emoji}</span>
-                <h3 className="font-extrabold">{t.name}</h3>
-                <span className="ml-auto text-xs rounded-full bg-slate-100 px-2 py-0.5">
-                  {t.done}/{t.total}
-                </span>
-              </div>
-              <div className="relative overflow-x-auto">
-                <div className="flex items-start gap-4 py-1">
-                  {t.lessons.slice(0, 8).map((slug, i) => (
-                    <Node
-                      key={slug}
-                      idx={i}
-                      label={t.titles[slug] || slug.replace(/-/g, " ")}
-                      done={savedSlugs.some((s) => s.includes(slug))}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <PathLessonCardContent
+          items={items}
+          savedSlugs={savedSlugs}
+        />
       )}
     </Card>
   );
