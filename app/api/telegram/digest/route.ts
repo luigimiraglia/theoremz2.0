@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
+import { decayReadiness } from "@/lib/black/readiness";
 
 const TG = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const TARGETS = (process.env.ALLOWED_CHAT_IDS || "")
@@ -22,6 +23,11 @@ async function send(chat_id: string, text: string) {
 
 export async function GET() {
   const db = supabaseServer();
+  try {
+    await decayReadiness({ db });
+  } catch (error) {
+    console.error("[telegram-digest] readiness decay failed", error);
+  }
   const { data: cards } = await db.from("black_student_card").select("*");
 
   if (!cards?.length) {

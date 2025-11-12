@@ -325,11 +325,22 @@ async function cmdNOME({ db, chatId, text }: CmdCtx) {
     return send(chatId, `❌ Errore lettura studente: ${studentFetchErr.message}`);
 
   const stamp = new Date().toISOString();
-  const { error: updateErr } = await db
-    .from("black_students")
-    .update({ full_name: nextName, updated_at: stamp })
-    .eq("id", id);
-  if (updateErr) return send(chatId, `❌ Errore update studente: ${updateErr.message}`);
+  let studentUpdateWarning: string | null = null;
+
+  const studentUpdateResult = await updateStudentNameColumns({
+    db,
+    studentId: id,
+    nextName,
+    stamp,
+  });
+  if (studentUpdateResult.error) {
+    if (studentUpdateResult.kind === "missing_column") {
+      studentUpdateWarning =
+        "⚠️ black_students non ha i campi `student_name`/`full_name`: aggiornato solo il profilo.";
+    } else {
+      return send(chatId, `❌ Errore update studente: ${studentUpdateResult.error.message}`);
+    }
+  }
 
   let profileWarning: string | null = null;
   if (studentRow?.user_id) {
@@ -349,6 +360,7 @@ async function cmdNOME({ db, chatId, text }: CmdCtx) {
   const lines = [
     `✅ Nome aggiornato per *${name}*`,
     `Nuovo nome: *${nextName}*`,
+    studentUpdateWarning,
     profileWarning ? `⚠️ Profilo non aggiornato: ${profileWarning}` : null,
   ]
     .filter(Boolean)
@@ -744,6 +756,44 @@ async function cmdDaContattare({ db, chatId }: CmdCtx) {
         : undefined;
     await send(chatId, text, markup);
   }
+}
+
+async function updateStudentNameColumns({
+  db,
+  studentId,
+  nextName,
+  stamp,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  studentId: string;
+  nextName: string;
+  stamp: string;
+}) {
+  const attemptUpdate = async (field: "student_name" | "full_name") => {
+    const payload: Record<string, any> = { updated_at: stamp };
+    payload[field] = nextName;
+    const { error } = await db.from("black_students").update(payload).eq("id", studentId);
+    return error;
+  };
+
+  const studentNameErr = await attemptUpdate("student_name");
+  if (!studentNameErr) return { ok: true as const };
+  if (!isMissingColumnError(studentNameErr)) {
+    return { error: studentNameErr, kind: "other" as const };
+  }
+
+  const fullNameErr = await attemptUpdate("full_name");
+  if (!fullNameErr) return { ok: true as const };
+  if (isMissingColumnError(fullNameErr)) {
+    return { error: fullNameErr, kind: "missing_column" as const };
+  }
+  return { error: fullNameErr, kind: "other" as const };
+}
+
+function isMissingColumnError(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  if (error.code === "42703") return true;
+  return /column .* does not exist/i.test(error.message || "");
 }
 
 export async function POST(req: Request) {

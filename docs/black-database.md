@@ -161,7 +161,8 @@ Inbox centralizzata per tutte le attivazioni Stripe, così il bot può mostrare 
 3. **Cron giornaliero**:
    - chiama `GET /api/cron/sync-black-subscriptions?secret=XYZ` (Vercel Cron `0 0 * * *`) per riallineare Stripe → Supabase e rigenerare i brief; imposta `BLACK_CRON_SECRET`/`CRON_SECRET` per autorizzare la chiamata.
    - per sincronie manuali usa `POST /api/cron/manual-sync-stripe-signups?secret=XYZ&limit=25`, che prende gli `black_stripe_signups` non `synced` e rilancia lo stesso flusso (`syncBlackSubscriptionRecord`).
-   - chiama `GET /api/cron/readiness?secret=XYZ` una volta al giorno per far scendere di 1 la `readiness` (clamp 0–100). Per riportare tutti a 100 usa `GET /api/cron/readiness?action=reset&secret=XYZ`.
+   - chiama `GET /api/telegram/digest?secret=XYZ` (Vercel Cron `0 18 * * *`): oltre a inviare il digest, questo endpoint decrementa automaticamente la `readiness` di 1 (clamp 0–100).
+   - per riportare tutti a 100 (o forzare una discesa manuale) usa `GET /api/cron/readiness?action=reset&secret=XYZ` oppure `?action=decay`.
    - aggiorna readiness/risk/brief.
    - valida che la view `black_student_card` rifletta gli ultimi voti (`black_grades`) e verifiche (`black_assessments`).
 
