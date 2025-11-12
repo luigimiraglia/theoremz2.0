@@ -736,7 +736,6 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     .from("black_students")
     .update({
       readiness: updated,
-      last_active_at: contactAt,
       last_contacted_at: contactAt,
     })
       .eq("id", id);
