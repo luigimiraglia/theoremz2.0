@@ -229,10 +229,16 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
       .eq("student_id", id)
       .maybeSingle());
   }
-  await send(
-    chatId,
-    `*Scheda — ${name}*\n\n${brief?.brief_md || "_Nessun brief._"}`
-  );
+  const { data: studentMeta } = await db
+    .from("black_students")
+    .select("last_contacted_at")
+    .eq("id", id)
+    .maybeSingle();
+  const lastContactLine = studentMeta?.last_contacted_at
+    ? `Ultimo contatto: ${formatDateTime(studentMeta.last_contacted_at)}`
+    : "Ultimo contatto: —";
+  const header = [`*Scheda — ${name}*`, `_${lastContactLine}_`].join("\n");
+  await send(chatId, `${header}\n\n${brief?.brief_md || "_Nessun brief._"}`);
 }
 
 /** /n <nome> <testo...> → aggiungi nota + refresh */
@@ -588,6 +594,7 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
   if (updErr) return send(chatId, `❌ Errore update: ${updErr.message}`);
 
   const authorLabel = CHAT_LABELS.get(String(chatId)) || null;
+  let logWarning: string | null = null;
   const { error: logErr } = await db.from(CONTACT_LOG_TABLE).insert({
     student_id: id,
     contacted_at: contactAt,
@@ -597,8 +604,14 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     author_label: authorLabel,
     readiness_snapshot: updated,
   });
-  if (logErr)
-    return send(chatId, `❌ Errore log contatto: ${logErr.message || "sconosciuto"}`);
+  if (logErr) {
+    console.error("[telegram-bot] log contatto fallito", {
+      studentId: id,
+      chatId,
+      error: logErr,
+    });
+    logWarning = logErr.message || "sconosciuto";
+  }
 
   try {
     await db.rpc("refresh_black_brief", { _student: id });
@@ -610,6 +623,7 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     `Ultimo contatto: ${formatDateTime(contactAt)}`,
     note ? `📝 Nota: ${note}` : null,
     `Readiness: ${updated}/100`,
+    logWarning ? `⚠️ Log non salvato: ${logWarning}` : null,
   ]
     .filter(Boolean)
     .join("\n");
