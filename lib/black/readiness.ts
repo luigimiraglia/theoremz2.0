@@ -55,7 +55,7 @@ async function applyChunks(
   for (const part of chunks) {
     const { error } = await db
       .from("black_students")
-      .upsert(part, { onConflict: "id", returning: "minimal" });
+      .upsert(part, { onConflict: "id" });
     if (error) throw new Error(`readiness_upsert_failed: ${error.message}`);
   }
 }
