@@ -666,6 +666,7 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     const [, rawQuery, rawNote] = m;
     const query = rawQuery.trim();
     const note = rawNote?.trim();
+    console.info("[telegram-bot] cmdCHECKED start", { chatId, query });
 
     let resolved;
     if (query.includes("@")) {
@@ -694,6 +695,10 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
       })
       .eq("id", id);
     if (updErr) return send(chatId, `❌ Errore update: ${updErr.message}`);
+    console.info("[telegram-bot] cmdCHECKED readiness updated", {
+      studentId: id,
+      readiness: updated,
+    });
 
     const authorLabel = CHAT_LABELS.get(String(chatId)) || null;
     let logWarning: string | null = null;
@@ -710,6 +715,7 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
       if (logErr) {
         throw new Error(logErr.message);
       }
+      console.info("[telegram-bot] contact log inserted", { studentId: id });
     } catch (err: any) {
       console.error("[telegram-bot] log contatto fallito", {
         studentId: id,
@@ -735,6 +741,7 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     } catch (briefError) {
       console.warn("[telegram-bot] refresh_black_brief failed", briefError);
     }
+    console.info("[telegram-bot] cmdCHECKED completed", { studentId: id });
   } catch (error: any) {
     console.error("[telegram-bot] cmdCHECKED failed", error);
     await send(
