@@ -292,6 +292,70 @@ async function cmdDESC({ db, chatId, text }: CmdCtx) {
   await send(chatId, `✅ Overview aggiornata per *${name}*.`);
 }
 
+/** /nome <email> <Nome Cognome> → aggiorna il full_name */
+async function cmdNOME({ db, chatId, text }: CmdCtx) {
+  const m = text.match(/^\/nome(?:@\w+)?\s+(\S+)(?:\s+([\s\S]+))?$/i);
+  if (!m)
+    return send(
+      chatId,
+      "Uso: `/nome email@example.com Nuovo Nome Cognome` (serve sempre l'email)"
+    );
+  const [, email, rawName] = m;
+  if (!email.includes("@")) {
+    return send(
+      chatId,
+      "Per aggiornare il nome serve l'email dello studente/genitore, es: `/nome nome@example.com Nuovo Nome`"
+    );
+  }
+  const nextName = rawName?.trim();
+  if (!nextName) {
+    return send(chatId, "Scrivi anche il nuovo nome completo dopo l'email.");
+  }
+
+  const lookup = await lookupStudentByEmail(db, email.toLowerCase());
+  if ((lookup as any).err) return send(chatId, (lookup as any).err);
+  const { id, name } = lookup as any;
+
+  const { data: studentRow, error: studentFetchErr } = await db
+    .from("black_students")
+    .select("user_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (studentFetchErr)
+    return send(chatId, `❌ Errore lettura studente: ${studentFetchErr.message}`);
+
+  const stamp = new Date().toISOString();
+  const { error: updateErr } = await db
+    .from("black_students")
+    .update({ full_name: nextName, updated_at: stamp })
+    .eq("id", id);
+  if (updateErr) return send(chatId, `❌ Errore update studente: ${updateErr.message}`);
+
+  let profileWarning: string | null = null;
+  if (studentRow?.user_id) {
+    const { error: profileErr } = await db
+      .from("profiles")
+      .update({ full_name: nextName })
+      .eq("id", studentRow.user_id);
+    if (profileErr) profileWarning = profileErr.message || "update profilo fallito";
+  }
+
+  try {
+    await db.rpc("refresh_black_brief", { _student: id });
+  } catch {
+    // best effort
+  }
+
+  const lines = [
+    `✅ Nome aggiornato per *${name}*`,
+    `Nuovo nome: *${nextName}*`,
+    profileWarning ? `⚠️ Profilo non aggiornato: ${profileWarning}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  await send(chatId, lines);
+}
+
 /** /v <nome> <materia> <voto>/<max> [data=YYYY-MM-DD] */
 async function cmdV({ db, chatId, text }: CmdCtx) {
   const m = text.match(
@@ -711,6 +775,7 @@ export async function POST(req: Request) {
           "`/nuovi` — iscritti ultimi 30 giorni",
           "`/sync [limite]` — forza il sync delle attivazioni Stripe",
           "`/desc cognome testo...` — aggiorna overview studente",
+          "`/nome email@example.com Nuovo Nome` — aggiorna il nome in anagrafica",
           "`/checked email@example.com [nota]` — segna ultimo contatto + log",
         ].join("\n")
       );
@@ -726,6 +791,8 @@ export async function POST(req: Request) {
       await cmdASS(ctx);
     } else if (/^\/desc(\s|@)/i.test(text)) {
       await cmdDESC(ctx);
+    } else if (/^\/nome(\s|@)/i.test(text)) {
+      await cmdNOME(ctx);
     } else if (/^\/nuovi/i.test(text)) {
       await cmdNUOVI(ctx);
     } else if (/^\/checked(\s|@)/i.test(text)) {
