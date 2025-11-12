@@ -231,13 +231,14 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
   }
   const { data: studentMeta } = await db
     .from("black_students")
-    .select("last_contacted_at")
+    .select("last_contacted_at, readiness")
     .eq("id", id)
     .maybeSingle();
   const lastContactLine = studentMeta?.last_contacted_at
     ? `Ultimo contatto: ${formatDateTime(studentMeta.last_contacted_at)}`
     : "Ultimo contatto: —";
-  const header = [`*Scheda — ${name}*`, `_${lastContactLine}_`].join("\n");
+  const readinessLine = `Readiness attuale: ${studentMeta?.readiness ?? "—"}/100`;
+  const header = [`*Scheda — ${name}*`, `_${lastContactLine}_`, readinessLine].join("\n");
   await send(chatId, `${header}\n\n${brief?.brief_md || "_Nessun brief._"}`);
 }
 
@@ -677,8 +678,9 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
 
   try {
     await db.rpc("refresh_black_brief", { _student: id });
-  } catch {
-    // best effort
+  } catch (briefError) {
+    const err = briefError as Error;
+    console.warn("[telegram-bot] refresh_black_brief failed", err);
   }
   const lines = [
     `✅ Contatto registrato per *${name}*`,
@@ -793,7 +795,7 @@ export async function POST(req: Request) {
       await cmdNOME(ctx);
     } else if (/^\/nuovi/i.test(text)) {
       await cmdNUOVI(ctx);
-    } else if (/^\/checked(\s|@)/i.test(text)) {
+    } else if (/^\/checked(\s|@)/i.test(text) || /^\/cheched(\s|@)/i.test(text)) {
       await cmdCHECKED(ctx);
     } else if (/^\/sync(?:stripe)?/i.test(text)) {
       await cmdSYNCSTRIPE(ctx);
