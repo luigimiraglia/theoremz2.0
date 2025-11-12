@@ -144,6 +144,10 @@ function escapeOrValue(value: string) {
   return value.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
+function escapeMarkdown(text: string) {
+  return text.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
+}
+
 function formatMatchList(matches: any[], prefix = "") {
   const list = matches
     .slice(0, 6)
@@ -744,10 +748,12 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
       logWarning = err?.message || "errore sconosciuto";
     }
 
+    const safeName = escapeMarkdown(name);
+    const safeNote = note ? escapeMarkdown(note) : null;
     const lines = [
-      `✅ Contatto registrato per *${name}*`,
+      `✅ Contatto registrato per *${safeName}*`,
       `Ultimo contatto: ${formatDateTime(contactAt)}`,
-      note ? `📝 Nota: ${note}` : null,
+      safeNote ? `📝 Nota: ${safeNote}` : null,
       `Readiness: ${updated}/100`,
       logWarning ? `⚠️ Log non salvato: ${logWarning}` : null,
     ]
