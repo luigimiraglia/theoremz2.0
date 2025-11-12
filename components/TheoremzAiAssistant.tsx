@@ -44,16 +44,19 @@ export default function TheoremzAIAssistant({
 
   const toggleChat = (nextState?: boolean) => {
     const target = typeof nextState === "boolean" ? nextState : !open;
-    if (target && !isSubscribed) {
-      setShowBanner(true);
-      return;
-    }
     setOpen(target);
   };
 
   const sendMessage = async () => {
     const content = input.trim();
     if (!content || sending) return;
+
+    // Se non è abbonato, mostra il popup e chiude la chat
+    if (!isSubscribed) {
+      setShowBanner(true);
+      setOpen(false);
+      return;
+    }
 
     const userMsg: Msg = {
       id: crypto.randomUUID(),
@@ -118,8 +121,8 @@ export default function TheoremzAIAssistant({
     ? "w-[92vw] max-w-md"
     : "w-[52vw] min-w-[200px] max-w-[210px]";
   const containerOffset = open
-    ? "bottom-16 sm:bottom-32"
-    : "bottom-16 sm:bottom-24";
+    ? "bottom-16 sm:bottom-20"
+    : "bottom-16 sm:bottom-20";
   const containerRight = open ? "right-3" : "right-3 sm:right-4";
   const headerPadding = open ? "px-4 py-3" : "px-3 py-2";
   const titleSize = open ? "text-lg" : "text-sm";

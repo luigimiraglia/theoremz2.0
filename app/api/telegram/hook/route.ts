@@ -29,9 +29,8 @@ const CHAT_LABELS = new Map(
 );
 const CONTACT_LOG_TABLE = "black_contact_logs";
 
-async function send(chat_id: number | string, text: string, replyMarkup?: any, useHTML = true) {
-  // Use HTML by default for better compatibility with user input
-  const parseMode = useHTML ? "HTML" : "Markdown";
+async function send(chat_id: number | string, text: string, replyMarkup?: any, useMarkdown = true) {
+  const parseMode = useMarkdown ? "Markdown" : "HTML";
   const res = await fetch(`${TG}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -146,33 +145,20 @@ function escapeOrValue(value: string) {
   return value.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
-function escapeMarkdown(value: string) {
-  return value.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
-}
-
 /**
  * Escape text for Telegram HTML parse mode.
  * This is safer than Markdown for user input with special characters.
  */
-function escapeHTML(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;");
+function escapeMarkdown(value: string) {
+  return value.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
 }
 
-/**
- * Convert Markdown formatting to HTML for Telegram messages.
- * Supports: *bold*, `code`, _italic_
- */
-function markdownToHTML(text: string): string {
-  return text
-    .replace(/\*([^*]+)\*/g, "<b>$1</b>") // *text* -> <b>text</b>
-    .replace(/`([^`]+)`/g, "<code>$1</code>") // `text` -> <code>text</code>
-    .replace(/_([^_]+)_/g, "<i>$1</i>") // _text_ -> <i>text</i>
-    .replace(/~~([^~]+)~~/g, "<s>$1</s>"); // ~~text~~ -> <s>text</s>
+function bold(text: string) {
+  return `*${escapeMarkdown(text)}*`;
+}
+
+function italic(text: string) {
+  return `_${escapeMarkdown(text)}_`;
 }
 
 function formatMatchList(matches: any[], prefix = "") {
@@ -255,7 +241,7 @@ function formatCurrency(amountCents?: number | null, currency?: string | null) {
 async function cmdS({ db, chatId, text }: CmdCtx) {
   const q = text.replace(/^\/s(@\w+)?\s*/i, "").trim();
   if (!q)
-    return send(chatId, "Uso: `/s cognome` oppure `/s email@example.com`");
+    return send(chatId, "Uso: /s cognome oppure /s email@example.com");
   const r = await resolveStudentId(db, q);
   if ((r as any).err) return send(chatId, (r as any).err);
   const { id, name } = r as any;
@@ -294,28 +280,30 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
     : "—";
   const infoCard = [
     "╭────────────────────────",
-    `│ *${escapeMarkdown(name)}*`,
+    `│ ${bold(name)}`,
     studentMeta?.year_class
-      ? `│ 🎓 Classe: ${escapeMarkdown(studentMeta.year_class)}${
-          studentMeta?.track ? ` · Track: ${escapeMarkdown(studentMeta.track)}` : ""
+      ? `│ ${italic("Classe")}: ${escapeMarkdown(studentMeta.year_class)}${
+          studentMeta?.track ? ` · ${italic("Track")}: ${escapeMarkdown(studentMeta.track)}` : ""
         }`
       : studentMeta?.track
-      ? `│ 🎯 Track: ${escapeMarkdown(studentMeta.track)}`
+      ? `│ ${italic("Track")}: ${escapeMarkdown(studentMeta.track)}`
       : null,
-    `│ 🤝 Ultimo contatto: ${escapeMarkdown(lastContact)}`,
-    `│ 👀 Ultimo accesso: ${escapeMarkdown(lastAccess)}`,
-    `│ ⚡ Readiness: ${escapeMarkdown(readiness)}`,
-    `│ 🗓️ Prossima verifica: ${escapeMarkdown(nextAssessment)}`,
-    studentMeta?.goal ? `│ 🎯 Goal: ${escapeMarkdown(studentMeta.goal)}` : null,
+    `│ ${italic("Ultimo contatto")}: ${escapeMarkdown(lastContact)}`,
+    `│ ${italic("Ultimo accesso")}: ${escapeMarkdown(lastAccess)}`,
+    `│ ${italic("Readiness")}: ${escapeMarkdown(readiness)}`,
+    `│ ${italic("Prossima verifica")}: ${escapeMarkdown(nextAssessment)}`,
+    studentMeta?.goal ? `│ ${italic("Goal")}: ${escapeMarkdown(studentMeta.goal)}` : null,
     studentMeta?.difficulty_focus
-      ? `│ 🧩 Focus: ${escapeMarkdown(studentMeta.difficulty_focus)}`
+      ? `│ ${italic("Focus")}: ${escapeMarkdown(studentMeta.difficulty_focus)}`
       : null,
     "╰────────────────────────",
   ]
     .filter(Boolean)
     .join("\n");
 
-  await send(chatId, `${infoCard}\n\n${brief?.brief_md || "_Nessun brief._"}`);
+  const body = brief?.brief_md || italic("Nessun brief.");
+
+  await send(chatId, `${infoCard}\n\n${body}`);
 }
 
 /** /n <nome> <testo...> → aggiungi nota + refresh */
@@ -326,7 +314,7 @@ async function cmdN({ db, chatId, text }: CmdCtx) {
   if (!body)
     return send(
       chatId,
-      "Scrivi anche la nota, es: `/n rossi ripasso lenti entro ven`"
+      "Scrivi anche la nota, es: /n rossi ripasso lenti entro ven"
     );
 
   const r = await resolveStudentId(db, q);
@@ -341,7 +329,7 @@ async function cmdN({ db, chatId, text }: CmdCtx) {
     _ai_desc: null,
   });
   if (error) return send(chatId, `❌ Errore: ${error.message}`);
-  await send(chatId, `✅ Nota aggiunta a *${name}* e scheda aggiornata.`);
+  await send(chatId, `✅ Nota aggiunta a ${bold(name)} e scheda aggiornata.`);
 }
 
 /** /desc <nome/email> <testo...> → aggiorna overview manuale */
@@ -352,7 +340,7 @@ async function cmdDESC({ db, chatId, text }: CmdCtx) {
   if (!body)
     return send(
       chatId,
-      "Serve anche il testo, es: `/desc rossi seconda scientifico con difficoltà in trigonometria`"
+      "Serve anche il testo, es: /desc rossi seconda scientifico con difficoltà in trigonometria"
     );
 
   const r = await resolveStudentId(db, q);
@@ -366,7 +354,7 @@ async function cmdDESC({ db, chatId, text }: CmdCtx) {
   if (error) return send(chatId, `❌ Errore overview: ${error.message}`);
 
   await db.rpc("refresh_black_brief", { _student: id });
-  await send(chatId, `✅ Overview aggiornata per *${name}*.`);
+  await send(chatId, `✅ Overview aggiornata per ${bold(name)}.`);
 }
 
 /** /nome <email> <Nome Cognome> → aggiorna il full_name */
@@ -418,8 +406,8 @@ async function cmdNOME({ db, chatId, text }: CmdCtx) {
   }
 
   const lines = [
-    `✅ Nome aggiornato per *${name}*`,
-    `Nuovo nome: *${nextName}*`,
+    `✅ Nome aggiornato per ${bold(name)}`,
+    `Nuovo nome: ${bold(nextName)}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -434,7 +422,7 @@ async function cmdV({ db, chatId, text }: CmdCtx) {
   if (!m)
     return send(
       chatId,
-      "Uso: `/v cognome materia 7.5/10 2025-11-12` (data opzionale)"
+      "Uso: /v cognome materia 7.5/10 2025-11-12 (data opzionale)"
     );
   const [, q, subject, score, max, when] = m;
 
@@ -454,7 +442,7 @@ async function cmdV({ db, chatId, text }: CmdCtx) {
   await db.rpc("refresh_black_brief", { _student: id });
   await send(
     chatId,
-    `✅ Voto registrato per *${name}*: ${score}/${max}${when ? " (" + when + ")" : ""}`
+    `✅ Voto registrato per ${bold(name)}: ${score}/${max}${when ? " (" + when + ")" : ""}`
   );
 }
 
@@ -463,7 +451,7 @@ async function cmdASS({ db, chatId, text }: CmdCtx) {
   const m = text.match(
     /^\/ass(?:@\w+)?\s+(\S+)\s+(\d{4}-\d{2}-\d{2})\s+(\S+)(?:\s+([\s\S]+))?$/i
   );
-  if (!m) return send(chatId, "Uso: `/ass cognome 2025-11-19 fisica [topics]`");
+  if (!m) return send(chatId, "Uso: /ass cognome 2025-11-19 fisica [topics]");
   const [, q, when, subject, topics] = m;
 
   const r = await resolveStudentId(db, q);
@@ -482,7 +470,7 @@ async function cmdASS({ db, chatId, text }: CmdCtx) {
   await db.rpc("refresh_black_brief", { _student: id });
   await send(
     chatId,
-    `✅ Verifica creata per *${name}*: ${subject} — ${when}${topics ? " — " + topics : ""}`
+    `✅ Verifica creata per ${bold(name)}: ${subject} — ${when}${topics ? " — " + topics : ""}`
   );
 }
 
@@ -494,7 +482,7 @@ async function cmdVERIFICA({ db, chatId, text }: CmdCtx) {
   if (!m)
     return send(
       chatId,
-      "Uso: `/verifica email@example.com 2025-11-19 materia [topics]` (usa sempre l'email)"
+      "Uso: /verifica email@example.com 2025-11-19 materia [topics] (serve l'email)"
     );
   const [, email, when, subject, topics] = m;
   if (!email.includes("@")) {
@@ -524,7 +512,7 @@ async function cmdVERIFICA({ db, chatId, text }: CmdCtx) {
 
   await send(
     chatId,
-    `✅ Verifica importata per *${name}*: ${subject} — ${when}${topics ? " — " + topics : ""}`
+    `✅ Verifica importata per ${bold(name)}: ${subject} — ${when}${topics ? " — " + topics : ""}`
   );
 }
 
@@ -672,14 +660,14 @@ async function cmdNUOVI({ db, chatId }: CmdCtx) {
     const when = formatDate(row.start_date);
     const email = row.student_email || row.parent_email || null;
     const phone = row.student_phone || row.parent_phone || "—";
-    const lines = [
-      `*${name}*`,
-      `Classe: ${row.year_class || "—"}`,
-      `Piano: ${plan}`,
-      `Iscritto il: ${when}`,
-      `Email: ${email || "—"}`,
-      `Telefono: ${phone}`,
-    ].join("\n");
+  const lines = [
+    bold(name),
+    `${italic("Classe")}: ${escapeMarkdown(row.year_class || "—")}`,
+    `${italic("Piano")}: ${escapeMarkdown(plan)}`,
+    `${italic("Iscritto il")}: ${escapeMarkdown(when)}`,
+    `${italic("Email")}: ${escapeMarkdown(email || "—")}`,
+    `${italic("Telefono")}: ${escapeMarkdown(phone)}`,
+  ].join("\n");
     const replyMarkup =
       email && email !== "—"
         ? {
@@ -821,19 +809,19 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
       logWarning = err?.message || "errore sconosciuto";
     }
 
-    const safeName = escapeHTML(name);
-    const safeNote = note ? escapeHTML(note) : null;
+    const safeName = bold(name);
+    const safeNote = note ? escapeMarkdown(note) : null;
     const lines = [
-      `✅ Contatto registrato per <b>${safeName}</b>`,
-      `Ultimo contatto: ${formatDateTime(contactAt)}`,
+      `✅ Contatto registrato per ${safeName}`,
+      `Ultimo contatto: ${escapeMarkdown(formatDateTime(contactAt))}`,
       safeNote ? `📝 Nota: ${safeNote}` : null,
       `Readiness: ${updated}/100`,
-      logWarning ? `⚠️ Log non salvato: ${escapeHTML(logWarning)}` : null,
+      logWarning ? `⚠️ Log non salvato: ${escapeMarkdown(logWarning)}` : null,
     ]
       .filter(Boolean)
       .join("\n");
     
-    await send(chatId, lines, undefined, true);
+    await send(chatId, lines);
 
     try {
       await db.rpc("refresh_black_brief", { _student: id });
@@ -874,8 +862,19 @@ async function cmdDaContattare({ db, chatId }: CmdCtx) {
     const lastContact = row.last_contacted_at
       ? formatDateTime(row.last_contacted_at)
       : "—";
-    const meta = row.year_class ? `Classe: ${row.year_class}\n` : "";
-    const text = `*${name}*\n${meta}Readiness: ${readiness}/100\nUltimo contatto: ${lastContact}\nEmail: ${email}\nTelefono: ${phone}`;
+    const meta = row.year_class
+      ? `${italic("Classe")}: ${escapeMarkdown(row.year_class)}\n`
+      : "";
+    const text = [
+      bold(name),
+      meta,
+      `${italic("Readiness")}: ${readiness}/100`,
+      `${italic("Ultimo contatto")}: ${escapeMarkdown(lastContact)}`,
+      `${italic("Email")}: ${escapeMarkdown(email)}`,
+      `${italic("Telefono")}: ${escapeMarkdown(phone)}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
     const markup =
       email && email !== "—"
         ? {
