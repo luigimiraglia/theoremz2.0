@@ -189,3 +189,22 @@ Log dedicato per tracciare i contatti tutor↔famiglia registrati dal bot o da e
 Indici consigliati: `(student_id, contacted_at DESC)` per mostrare la cronologia di un singolo studente e `contacted_at` per report settimanali. Ogni volta che inserisci una riga aggiorna `black_students.last_contacted_at` con lo stesso timestamp per averlo disponibile anche sulle view operative (`black_student_card`, digest, ecc.).
 
 > Bot Telegram: il comando `/checked cognome|email [nota]` aggiorna `last_contacted_at`, incrementa la readiness e inserisce una riga su `black_contact_logs`. Il comando `/nome email@example.com Nuovo Nome` aggiorna `profiles.full_name` e forza un refresh del brief. Le schede (`/s`) mostrano `last_contacted_at`, `last_active_at` e la readiness live.
+
+## Tabella `black_access_logs`
+
+Log giornaliero automatico degli accessi per studenti Black (aggiornato dal client via `/api/black/activity`).
+
+| Campo | Tipo | Note |
+| --- | --- | --- |
+| `id` | `uuid` | PK. |
+| `user_id` | `text` | FK `profiles.id`. |
+| `access_date` | `date` | Un record per utente/giorno. |
+| `first_access_at`, `last_access_at` | `timestamptz` | Traccia primo/ultimo hit di quel giorno. |
+| `access_count` | `int` | Incrementato per ogni beacon durante la giornata. |
+| `last_session_id` | `text` | Sessione web associata all’ultimo hit. |
+| `last_ip`, `last_user_agent` | `text` | Metadati utili per audit. |
+
+> Quando un utente autenticato (Firebase) accede con un account Black, il client chiama `/api/black/activity` che:
+> - aggiorna `profiles` (nome/email/sottoscrizione),
+> - aggiorna `black_students.last_active_at` e sincronizza eventuali meta (classe, prossima verifica) dal documento Firestore `users/{uid}`,
+> - inserisce/aggiorna la riga corrispondente su `black_access_logs`.

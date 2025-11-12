@@ -28,6 +28,20 @@ CREATE TABLE public.black_contact_logs (
   CONSTRAINT black_contact_logs_pkey PRIMARY KEY (id),
   CONSTRAINT black_contact_logs_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.black_students(id)
 );
+CREATE TABLE public.black_access_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id text NOT NULL,
+  access_date date NOT NULL,
+  first_access_at timestamp with time zone NOT NULL DEFAULT now(),
+  last_access_at timestamp with time zone NOT NULL DEFAULT now(),
+  access_count integer NOT NULL DEFAULT 1,
+  last_session_id text,
+  last_ip text,
+  last_user_agent text,
+  CONSTRAINT black_access_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT black_access_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT black_access_logs_user_date_key UNIQUE (user_id, access_date)
+);
 CREATE TABLE public.black_grades (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   student_id uuid NOT NULL,

@@ -732,13 +732,13 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     const current = Number(data?.readiness ?? 0);
     const updated = Math.min(100, current + 5);
     const contactAt = new Date().toISOString();
-    const { error: updErr } = await db
-      .from("black_students")
-      .update({
-        readiness: updated,
-        last_active_at: contactAt,
-        last_contacted_at: contactAt,
-      })
+  const { error: updErr } = await db
+    .from("black_students")
+    .update({
+      readiness: updated,
+      last_active_at: contactAt,
+      last_contacted_at: contactAt,
+    })
       .eq("id", id);
     if (updErr) return send(chatId, `❌ Errore update: ${updErr.message}`);
     console.info("[telegram-bot] cmdCHECKED readiness updated", {

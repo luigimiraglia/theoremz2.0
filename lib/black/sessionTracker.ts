@@ -1,3 +1,5 @@
+ "use client";
+
 type SessionContext = {
   sessionId?: string | null;
   userId?: string | null;
@@ -14,7 +16,7 @@ export function identifyBlackSession(context: SessionContext) {
     lastUpdated: new Date().toISOString(),
   };
   window.localStorage.setItem(BLACK_TRACK_KEY, JSON.stringify(next));
-  if (next.userId && typeof window !== "undefined") {
+  if (next.userId && typeof navigator !== "undefined") {
     try {
       navigator.sendBeacon?.(
         "/api/black/activity",
