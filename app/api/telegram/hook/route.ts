@@ -146,6 +146,10 @@ function escapeOrValue(value: string) {
   return value.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
+function escapeMarkdown(value: string) {
+  return value.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
+}
+
 /**
  * Escape text for Telegram HTML parse mode.
  * This is safer than Markdown for user input with special characters.
@@ -272,20 +276,46 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
   }
   const { data: studentMeta } = await db
     .from("black_students")
-    .select("last_contacted_at, last_active_at, readiness")
+    .select(
+      "last_contacted_at, last_active_at, readiness, year_class, track, next_assessment_subject, next_assessment_date, goal, difficulty_focus"
+    )
     .eq("id", id)
     .maybeSingle();
-  const lastContactLine = studentMeta?.last_contacted_at
-    ? `Ultimo contatto: ${formatDateTime(studentMeta.last_contacted_at)}`
-    : "Ultimo contatto: —";
-  const lastAccessLine = studentMeta?.last_active_at
-    ? `Ultimo accesso: ${formatDateTime(studentMeta.last_active_at)}`
-    : "Ultimo accesso: —";
-  const readinessLine = `Readiness attuale: ${studentMeta?.readiness ?? "—"}/100`;
-  const header = [`*Scheda — ${name}*`, `_${lastContactLine}_`, lastAccessLine, readinessLine].join(
-    "\n"
-  );
-  await send(chatId, `${header}\n\n${brief?.brief_md || "_Nessun brief._"}`);
+
+  const lastContact =
+    studentMeta?.last_contacted_at ? formatDateTime(studentMeta.last_contacted_at) : "—";
+  const lastAccess =
+    studentMeta?.last_active_at ? formatDateTime(studentMeta.last_active_at) : "—";
+  const readiness = `${studentMeta?.readiness ?? "—"}/100`;
+  const nextAssessment = studentMeta?.next_assessment_date
+    ? `${studentMeta.next_assessment_subject || "verifica"} · ${formatDate(
+        studentMeta.next_assessment_date
+      )}`
+    : "—";
+  const infoCard = [
+    "╭────────────────────────",
+    `│ *${escapeMarkdown(name)}*`,
+    studentMeta?.year_class
+      ? `│ 🎓 Classe: ${escapeMarkdown(studentMeta.year_class)}${
+          studentMeta?.track ? ` · Track: ${escapeMarkdown(studentMeta.track)}` : ""
+        }`
+      : studentMeta?.track
+      ? `│ 🎯 Track: ${escapeMarkdown(studentMeta.track)}`
+      : null,
+    `│ 🤝 Ultimo contatto: ${escapeMarkdown(lastContact)}`,
+    `│ 👀 Ultimo accesso: ${escapeMarkdown(lastAccess)}`,
+    `│ ⚡ Readiness: ${escapeMarkdown(readiness)}`,
+    `│ 🗓️ Prossima verifica: ${escapeMarkdown(nextAssessment)}`,
+    studentMeta?.goal ? `│ 🎯 Goal: ${escapeMarkdown(studentMeta.goal)}` : null,
+    studentMeta?.difficulty_focus
+      ? `│ 🧩 Focus: ${escapeMarkdown(studentMeta.difficulty_focus)}`
+      : null,
+    "╰────────────────────────",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  await send(chatId, `${infoCard}\n\n${brief?.brief_md || "_Nessun brief._"}`);
 }
 
 /** /n <nome> <testo...> → aggiungi nota + refresh */
