@@ -688,9 +688,11 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
       .join("\n");
     await send(chatId, lines);
 
-    db.rpc("refresh_black_brief", { _student: id }).catch((briefError) => {
+    try {
+      await db.rpc("refresh_black_brief", { _student: id });
+    } catch (briefError) {
       console.warn("[telegram-bot] refresh_black_brief failed", briefError);
-    });
+    }
   } catch (error: any) {
     console.error("[telegram-bot] cmdCHECKED failed", error);
     await send(
