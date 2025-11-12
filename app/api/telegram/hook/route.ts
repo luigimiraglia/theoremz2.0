@@ -101,7 +101,7 @@ async function lookupStudentByEmail(db: any, email: string) {
     const userIds = (profiles ?? []).map((p: any) => p.id);
     if (userIds.length) {
       const { data: viaUid, error: viaUidError } = await db
-        .from("black_student_card")
+        .from("black_students")
         .select(selectFields)
         .in("user_id", userIds)
         .limit(6);
