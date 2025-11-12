@@ -30,7 +30,7 @@ const CHAT_LABELS = new Map(
 const CONTACT_LOG_TABLE = "black_contact_logs";
 
 async function send(chat_id: number | string, text: string, replyMarkup?: any) {
-  await fetch(`${TG}/sendMessage`, {
+  const res = await fetch(`${TG}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -41,6 +41,20 @@ async function send(chat_id: number | string, text: string, replyMarkup?: any) {
       reply_markup: replyMarkup,
     }),
   });
+  let payload: any = null;
+  try {
+    payload = await res.json();
+  } catch {
+    // ignore non-JSON responses
+  }
+  if (!res.ok || (payload && payload.ok === false)) {
+    console.error("[telegram-bot] send failed", {
+      chat_id,
+      status: res.status,
+      body: payload,
+    });
+    throw new Error(payload?.description || `Telegram send failed (${res.status})`);
+  }
 }
 
 type CmdCtx = {
