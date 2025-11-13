@@ -681,6 +681,180 @@ async function cmdVERIFICA({ db, chatId, text }: CmdCtx) {
   );
 }
 
+/** /logs <nome|email> [limite] */
+async function cmdLOGS({ db, chatId, text }: CmdCtx) {
+  const rest = text.replace(/^\/logs(?:@\w+)?/i, "").trim();
+  if (!rest) return send(chatId, "Uso: /logs cognome [limite].");
+  const parts = rest.split(/\s+/);
+  let limit = 5;
+  let query = rest;
+  if (parts.length > 1 && /^\d+$/.test(parts[parts.length - 1])) {
+    limit = Math.max(1, Math.min(15, Number(parts.pop())));
+    query = parts.join(" ");
+  }
+  if (!query) return send(chatId, "Specificare cognome o email.");
+
+  let resolved;
+  if (query.includes("@")) {
+    resolved = await lookupStudentByEmail(db, query.toLowerCase());
+  } else {
+    resolved = await resolveStudentId(db, query);
+  }
+  if ((resolved as any).err) return send(chatId, (resolved as any).err);
+  const { id, name } = resolved as any;
+
+  const [logsRes, assessmentsRes, gradesRes] = await Promise.all([
+    db
+      .from(CONTACT_LOG_TABLE)
+      .select("contacted_at, body, author_label, source")
+      .eq("student_id", id)
+      .order("contacted_at", { ascending: false })
+      .limit(limit),
+    db
+      .from("black_assessments")
+      .select("id, subject, when_at, topics")
+      .eq("student_id", id)
+      .order("when_at", { ascending: false })
+      .limit(Math.max(limit, 5)),
+    db
+      .from("black_grades")
+      .select("subject, score, max_score, when_at")
+      .eq("student_id", id)
+      .order("when_at", { ascending: false })
+      .limit(25),
+  ]);
+
+  const contactLogs = logsRes.data || [];
+  const assessments = assessmentsRes.data || [];
+  const grades = gradesRes.data || [];
+
+  const gradeByDate = new Map<string, Array<any>>();
+  for (const grade of grades) {
+    if (!grade.when_at) continue;
+    const key = grade.when_at;
+    if (!gradeByDate.has(key)) gradeByDate.set(key, []);
+    gradeByDate.get(key)!.push(grade);
+  }
+
+  const logLines =
+    contactLogs.length > 0
+      ? contactLogs.map((log) => {
+          const when = formatDateTime(log.contacted_at);
+          const who = log.author_label || log.source || "staff";
+          const body = log.body ? log.body.slice(0, 120) : "—";
+          return `• ${when} — ${who}: ${body}`;
+        })
+      : ["_Nessun log recente._"];
+
+  const assessLines =
+    assessments.length > 0
+      ? assessments.map((ass) => {
+          const when = formatDate(ass.when_at);
+          const subject = ass.subject || "Materia";
+          const gradeList = gradeByDate.get(ass.when_at || "");
+          const gradeText = gradeList?.length
+            ? gradeList
+                .map((g) => `${g.score}/${g.max_score || 10}`)
+                .join(", ")
+            : "—";
+          const extra =
+            ass.topics && ass.topics.includes("Esito")
+              ? ` · ${ass.topics.split("\n").find((line) => line.includes("Esito"))}`
+              : "";
+          return `• ${when} — ${subject} → voto ${gradeText}${extra}`;
+        })
+      : ["_Nessuna verifica trovata._"];
+
+  const textLines = [
+    `*🗂️ Logs ${bold(name)}*`,
+    ...logLines,
+    "",
+    "*📅 Verifiche & voti*",
+    ...assessLines,
+  ];
+
+  await send(chatId, textLines.join("\n"));
+}
+
+/** /nomebreve <nome|email> <Nome> */
+async function cmdNOMEBREVE({ db, chatId, text }: CmdCtx) {
+  const m = text.match(/^\/nomebreve(?:@\w+)?\s+(\S+)\s+(.+)$/i);
+  if (!m) return send(chatId, "Uso: /nomebreve cognome Nome");
+  const [, query, rawName] = m;
+  const preferred = rawName.trim();
+  if (!preferred || preferred.length < 2)
+    return send(chatId, "Nome troppo corto.");
+
+  let resolved;
+  if (query.includes("@")) {
+    resolved = await lookupStudentByEmail(db, query.toLowerCase());
+  } else {
+    resolved = await resolveStudentId(db, query);
+  }
+  if ((resolved as any).err) return send(chatId, (resolved as any).err);
+  const { id, name } = resolved as any;
+
+  const { error } = await db
+    .from("black_students")
+    .update({
+      preferred_name: preferred,
+      preferred_name_updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error)
+    return send(chatId, `❌ Errore salvataggio: ${error.message}`);
+
+  try {
+    await db.rpc("refresh_black_brief", { _student: id });
+  } catch {
+    // best effort
+  }
+
+  await send(
+    chatId,
+    `✅ Nome breve aggiornato per ${bold(name)} → ${bold(preferred)}`
+  );
+}
+
+/** /votoiniziale <nome> <voto> */
+async function cmdVOTOINIZIALE({ db, chatId, text }: CmdCtx) {
+  const m = text.match(
+    /^\/votoiniziale(?:@\w+)?\s+(\S+)\s+(\d+(?:[.,]\d+)?)$/i
+  );
+  if (!m)
+    return send(chatId, "Uso: /votoiniziale cognome 6.5");
+  const [, query, rawGrade] = m;
+  const gradeValue = Number(rawGrade.replace(",", "."));
+  if (!Number.isFinite(gradeValue) || gradeValue < 0 || gradeValue > 10) {
+    return send(chatId, "Inserisci un voto tra 0 e 10.");
+  }
+
+  let resolved;
+  if (query.includes("@")) {
+    resolved = await lookupStudentByEmail(db, query.toLowerCase());
+  } else {
+    resolved = await resolveStudentId(db, query);
+  }
+  if ((resolved as any).err) return send(chatId, (resolved as any).err);
+  const { id, name } = resolved as any;
+
+  const { error } = await db
+    .from("black_students")
+    .update({ initial_avg: gradeValue })
+    .eq("id", id);
+  if (error) return send(chatId, `❌ Errore salvataggio: ${error.message}`);
+  try {
+    await db.rpc("refresh_black_brief", { _student: id });
+  } catch {
+    // ignore
+  }
+
+  await send(
+    chatId,
+    `✅ Voto iniziale aggiornato per ${bold(name)}: ${gradeValue.toFixed(1)}/10`
+  );
+}
+
 /** /oggi → digest rapido: rossi/yellow/green + verifiche entro 7 giorni */
 async function cmdOGGI({ db, chatId }: CmdCtx) {
   const now = new Date();
@@ -1103,6 +1277,9 @@ export async function POST(req: Request) {
           "`/vdate cognome YYYY-MM-DD 7.5/10 [materia]` — voto collegato alla verifica del giorno",
           "`/ass cognome YYYY-MM-DD materia [topics]` — nuova verifica",
           "`/verifica email@example.com YYYY-MM-DD materia [topics]` — importa verifica via email",
+          "`/logs cognome [limite]` — ultimi log + verifiche/voti",
+          "`/nomebreve cognome Nome` — imposta il nome corto",
+          "`/votoiniziale cognome 7.0` — salva il voto iniziale",
           "`/nuovi` — iscritti ultimi 30 giorni",
           "`/sync [limite]` — forza il sync delle attivazioni Stripe",
           "`/desc cognome testo...` — aggiorna overview studente",
@@ -1112,6 +1289,12 @@ export async function POST(req: Request) {
       );
     } else if (/^\/oggi/i.test(text)) {
       await cmdOGGI(ctx);
+    } else if (/^\/logs(\s|@)/i.test(text)) {
+      await cmdLOGS(ctx);
+    } else if (/^\/nomebreve(\s|@)/i.test(text)) {
+      await cmdNOMEBREVE(ctx);
+    } else if (/^\/votoiniziale(\s|@)/i.test(text)) {
+      await cmdVOTOINIZIALE(ctx);
     } else if (/^\/s(\s|@)/i.test(text)) {
       await cmdS(ctx);
     } else if (/^\/n(\s|@)/i.test(text)) {
