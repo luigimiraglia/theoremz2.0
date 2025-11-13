@@ -165,6 +165,7 @@ export default function AccountPage() {
   /* --------------------------------------------------------------------------- */
 
   // UI state: none (pagina unica, sezioni verticali)
+  const [gradesVersion, setGradesVersion] = useState(0);
 
   const handleSaveUsername = async () => {
     const clean = username.trim().toLowerCase();
@@ -383,7 +384,9 @@ export default function AccountPage() {
       <TracksCard savedSlugs={savedLessons || []} profile={profile} />
 
       {/* VERIFICHE PROGRAMMATE */}
-      <ScheduledExamsCard />
+      <ScheduledExamsCard
+        onGradeAdded={() => setGradesVersion((v) => v + 1)}
+      />
 
       {/* CONTINUA A STUDIARE */}
       <Card
@@ -442,7 +445,7 @@ export default function AccountPage() {
       </Card>
 
       {/* VOTI E ANDAMENTO */}
-      <GradesCard userId={user.uid} />
+      <GradesCard userId={user.uid} refreshKey={gradesVersion} />
 
       {/* PROFILO */}
       <div id="profilo" className="h-0" aria-hidden="true" />
@@ -1254,7 +1257,7 @@ type GradeItem = {
   grade: number;
 };
 
-function GradesCard({ userId }: { userId: string }) {
+function GradesCard({ userId, refreshKey }: { userId: string; refreshKey: number }) {
   const storageKey = `tz_grades_${userId}`;
   const [items, setItems] = useState<GradeItem[]>([]);
   const [subject, setSubject] = useState<"matematica" | "fisica">("matematica");
@@ -1275,11 +1278,27 @@ function GradesCard({ userId }: { userId: string }) {
         });
         const json = await res.json();
         const rows = Array.isArray(json.items) ? json.items : [];
-        setItems(rows);
+        const cleaned: GradeItem[] = rows
+          .map((row: any) => {
+            const subj =
+              row.subject === "matematica" || row.subject === "fisica"
+                ? row.subject
+                : null;
+            const val = Number(row.grade);
+            if (!subj || !Number.isFinite(val)) return null;
+            return {
+              id: row.id,
+              date: row.date,
+              subject: subj,
+              grade: val,
+            } as GradeItem;
+          })
+          .filter(Boolean) as GradeItem[];
+        setItems(cleaned);
       } catch {}
     })();
     return () => ac.abort();
-  }, [storageKey]);
+  }, [storageKey, refreshKey]);
 
   function persist(next: GradeItem[]) {
     setItems(next);
@@ -1466,7 +1485,15 @@ function gradeBadgeClass(g: number) {
 }
 
 /* ────────────────────── Verifiche programmate ────────────────────── */
-type ExamItem = { id: string; date: string; subject?: string | null; notes?: string | null };
+type ExamItem = {
+  id: string;
+  date: string;
+  subject?: string | null;
+  notes?: string | null;
+  grade?: number | null;
+  grade_subject?: string | null;
+  grade_id?: string | null;
+};
 
 function ymd(d: Date): string {
   const y = d.getFullYear();
@@ -1571,7 +1598,13 @@ function CalendarView({
   );
 }
 
-function ScheduledExamsCard() {
+type ExamGradeDraft = {
+  grade: string;
+  subject: "matematica" | "fisica";
+  saving: boolean;
+};
+
+function ScheduledExamsCard({ onGradeAdded }: { onGradeAdded?: () => void }) {
   const [items, setItems] = useState<ExamItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1586,6 +1619,9 @@ function ScheduledExamsCard() {
   const [firstDate, setFirstDate] = useState<string>("");
   const [firstSubject, setFirstSubject] = useState<string>("");
   const [firstNotes, setFirstNotes] = useState<string>("");
+  const [gradeDrafts, setGradeDrafts] = useState<Record<string, ExamGradeDraft>>(
+    {}
+  );
 
   const [viewYear, setViewYear] = useState<number>(new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState<number>(new Date().getMonth());
@@ -1611,6 +1647,9 @@ function ScheduledExamsCard() {
               date: it.date,
               subject: it.subject ?? null,
               notes: it.notes ?? null,
+              grade: typeof it.grade === "number" ? it.grade : null,
+              grade_subject: it.grade_subject ?? null,
+              grade_id: it.grade_id ?? null,
             }))
           : [];
         setItems(list);
@@ -1657,6 +1696,9 @@ function ScheduledExamsCard() {
           date: useDate,
           subject: useSubject || null,
           notes: useNotes || null,
+          grade: null,
+          grade_subject: null,
+          grade_id: null,
         },
       ].sort((a, b) => a.date.localeCompare(b.date));
       setItems(next);
@@ -1671,6 +1713,63 @@ function ScheduledExamsCard() {
       // no-op
     } finally {
       setAdding(false);
+    }
+  }
+
+  function updateGradeDraft(
+    id: string,
+    patch: Partial<ExamGradeDraft>
+  ) {
+    setGradeDrafts((prev) => {
+      const current =
+        prev[id] || { grade: "", subject: "matematica", saving: false };
+      return { ...prev, [id]: { ...current, ...patch } };
+    });
+  }
+
+  async function saveGradeForExam(examId: string) {
+    const draft =
+      gradeDrafts[examId] || { grade: "", subject: "matematica", saving: false };
+    const value = Number(draft.grade);
+    if (!Number.isFinite(value)) return;
+    updateGradeDraft(examId, { saving: true });
+    try {
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("missing_token");
+      const res = await fetch(
+        `/api/me/exams/${encodeURIComponent(examId)}/grade`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            grade: value,
+            subject: draft.subject,
+          }),
+        }
+      );
+      const json = await res.json();
+      if (!res.ok || !json?.ok) throw new Error(json?.error || "Errore");
+      const payload = json.grade;
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === examId
+            ? {
+                ...it,
+                grade: payload?.grade ?? value,
+                grade_subject: payload?.subject ?? draft.subject,
+                grade_id: payload?.id ?? it.grade_id ?? null,
+              }
+            : it
+        )
+      );
+      updateGradeDraft(examId, { grade: "", saving: false });
+      onGradeAdded?.();
+    } catch (err) {
+      console.error(err);
+      updateGradeDraft(examId, { saving: false });
     }
   }
 
@@ -1961,12 +2060,19 @@ function ScheduledExamsCard() {
                   else if (rem === 0) label = "Oggi";
                   else if (rem === 1) label = "Domani";
                   else label = `tra ${rem}g`;
+                  const draft =
+                    gradeDrafts[it.id] || {
+                      grade: "",
+                      subject: "matematica",
+                      saving: false,
+                    };
+                  const canAddGrade = rem <= 0 && !it.grade;
                   return (
                     <li
                       key={it.id}
-                      className="py-2 flex items-center justify-between text-sm"
+                      className="py-3 flex items-center justify-between gap-4 text-sm"
                     >
-                      <div>
+                      <div className="flex-1">
                         <div className="font-semibold">{it.date}</div>
                         {it.subject && (
                           <div className="text-slate-700 [.dark_&]:text-white/80">
@@ -1978,9 +2084,59 @@ function ScheduledExamsCard() {
                             {it.notes}
                           </div>
                         )}
-                        <div className="text-blue-700 [.dark_&]:text-sky-300 font-semibold">
+                        <div className="text-blue-700 [.dark_&]:text-sky-300 font-semibold mt-1">
                           {label}
                         </div>
+                        {it.grade ? (
+                          <div className="mt-1 text-sm text-emerald-700 [.dark_&]:text-emerald-300">
+                            Voto registrato:{" "}
+                            <strong>{it.grade.toFixed(1)}</strong>{" "}
+                            {it.grade_subject ? `(${it.grade_subject})` : ""}
+                          </div>
+                        ) : canAddGrade ? (
+                          <div className="mt-2 space-y-1 text-xs text-slate-600 [.dark_&]:text-white/70">
+                            <div className="flex flex-wrap gap-2">
+                              <select
+                                value={draft.subject}
+                                onChange={(e) =>
+                                  updateGradeDraft(it.id, {
+                                    subject: e.target.value as
+                                      | "matematica"
+                                      | "fisica",
+                                  })
+                                }
+                                className="rounded-lg border px-2 py-1 text-xs bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
+                              >
+                                <option value="matematica">Matematica</option>
+                                <option value="fisica">Fisica</option>
+                              </select>
+                              <input
+                                type="number"
+                                min={0}
+                                max={10}
+                                step={0.5}
+                                value={draft.grade}
+                                onChange={(e) =>
+                                  updateGradeDraft(it.id, {
+                                    grade: e.target.value,
+                                  })
+                                }
+                                placeholder="Voto"
+                                className="rounded-lg border px-2 py-1 text-xs w-24 bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
+                              />
+                              <button
+                                onClick={() => saveGradeForExam(it.id)}
+                                disabled={
+                                  draft.saving ||
+                                  String(draft.grade).trim() === ""
+                                }
+                                className="rounded-lg bg-emerald-500 text-white px-3 py-1 text-xs font-semibold disabled:opacity-60"
+                              >
+                                {draft.saving ? "Salvataggio…" : "Salva voto"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                       <button
                         onClick={() => removeExam(it.id)}

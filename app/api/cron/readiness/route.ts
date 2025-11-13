@@ -445,7 +445,7 @@ Requisiti:
 
   try {
     const completion = await openaiClient.chat.completions.create({
-      model: "gpt-5",
+      model: "gpt-4o",
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
@@ -485,7 +485,8 @@ function composeEmail({
   const focusList = normalizeSectionEntries(tipPayload.focus_points);
   const actionList = normalizeSectionEntries(tipPayload.study_actions);
   const reminderList = normalizeSectionEntries(tipPayload.reminders);
-  if (!focusList.length && !actionList.length && !reminderList.length) return null;
+  if (!focusList.length && !actionList.length && !reminderList.length)
+    return null;
   const motivation = sanitizeOutput(
     tipPayload.motivation || "Siamo qui, scrivici se serve un check veloce.",
     briefMd
@@ -521,12 +522,15 @@ function composeEmail({
     `${subjectLabel} ${dateLabel} | ${focusList[0] || actionList[0] || ""}`.trim(),
     160
   );
-  const subject = `Consigli rapidi per ${subjectLabel} (${dateLabel})`;
+  const subject = `Ci siamo quasi... Ecco qualche consiglio per la verifica di ${subjectLabel} (${dateLabel})`;
   return { subject, text, html, preview };
 }
 
 function normalizeSectionEntries(
-  value?: string | string[] | Array<string | { title?: string; detail?: string }>
+  value?:
+    | string
+    | string[]
+    | Array<string | { title?: string; detail?: string }>
 ) {
   if (!value) return [];
   const lines: string[] = [];
@@ -583,7 +587,7 @@ function renderHtmlEmail({
     <div style="background:#f8fafc;padding:24px">
       <div style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:20px;overflow:hidden;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;box-shadow:0 10px 30px rgba(15,23,42,0.08)">
         <div style="background:#0f172a;color:#f8fafc;padding:18px 26px;font-weight:700;letter-spacing:0.03em;font-size:15px">
-          THEOREMZ BLACK · CHECK QUOTIDIANO
+          Ci siamo quasi...
         </div>
         <div style="padding:28px 32px;line-height:1.6;color:#0f172a">
           <p style="margin:0 0 12px">${escapeHtml(intro)}</p>

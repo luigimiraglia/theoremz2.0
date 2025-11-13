@@ -23,6 +23,14 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   const snap = await ref.get();
   const data = (snap.exists ? snap.data() : null) as any;
   await ref.delete();
+  const gradeId = data?.grade_id || data?.gradeId || null;
+  if (gradeId) {
+    try {
+      await adminDb.doc(`users/${uid}/grades/${gradeId}`).delete();
+    } catch (error) {
+      console.warn("[me-exams] failed to delete linked grade", error);
+    }
+  }
   if (data?.blackAssessmentId || data?.date) {
     await deleteBlackAssessment({
       uid,

@@ -29,6 +29,9 @@ export async function GET(req: Request) {
       date: data.date,
       subject: data.subject ?? null,
       notes: data.notes ?? null,
+      grade: typeof data.grade === "number" ? data.grade : data.gradeValue ?? null,
+      grade_subject: data.grade_subject ?? null,
+      grade_id: data.gradeId || data.grade_id || null,
     };
   });
   return NextResponse.json({ items });
