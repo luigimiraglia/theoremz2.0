@@ -69,6 +69,68 @@ async function send(
   }
 }
 
+async function cmdDARIATTIVARE({ db, chatId }: CmdCtx) {
+  const { data, error } = await db
+    .from("black_students")
+    .select(
+      "id, user_id, year_class, student_email, parent_email, student_phone, parent_phone, last_active_at, profiles:profiles!black_students_user_id_fkey(full_name)"
+    )
+    .eq("status", "active")
+    .is("last_contacted_at", null)
+    .not("last_active_at", "is", null)
+    .order("last_active_at", { ascending: false })
+    .limit(25);
+  if (error) return send(chatId, `❌ Errore elenco: ${error.message}`);
+  if (!data?.length)
+    return send(chatId, "Nessuno studente da riattivare ✅");
+
+  for (const row of data) {
+    const profile = Array.isArray(row.profiles)
+      ? row.profiles[0]
+      : row.profiles;
+    const name =
+      profile?.full_name ||
+      row.student_email ||
+      row.parent_email ||
+      "Studente";
+    const email = row.student_email || row.parent_email || "—";
+    const phone = row.student_phone || row.parent_phone || "—";
+    const lastActive = row.last_active_at
+      ? formatDateTime(row.last_active_at)
+      : "—";
+    const classInfo = row.year_class
+      ? `${italic("Classe")}: ${escapeMarkdown(row.year_class)}`
+      : null;
+    const lines = [
+      bold(name),
+      classInfo,
+      `${italic("Ultimo accesso app")}: ${escapeMarkdown(lastActive)}`,
+      `${italic("Email")}: ${escapeMarkdown(email)}`,
+      `${italic("Telefono")}: ${escapeMarkdown(phone)}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const markup =
+      email && email !== "—"
+        ? {
+            inline_keyboard: [
+              [
+                {
+                  text: "Apri scheda",
+                  switch_inline_query_current_chat: `/s ${email}`,
+                },
+                {
+                  text: "Segna contatto",
+                  switch_inline_query_current_chat: `/checked ${email}`,
+                },
+              ],
+            ],
+          }
+        : undefined;
+    await send(chatId, lines, markup);
+  }
+}
+
 type CmdCtx = {
   db: ReturnType<typeof supabaseServer>;
   chatId: number;
@@ -1187,14 +1249,17 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
 }
 
 async function cmdDaContattare({ db, chatId }: CmdCtx) {
+  const threshold = new Date(Date.now() - 5 * 24 * 3600 * 1000)
+    .toISOString()
+    .slice(0, 10);
   const { data, error } = await db
     .from("black_students")
     .select(
       "id, user_id, readiness, parent_email, parent_phone, student_email, student_phone, year_class, last_contacted_at, profiles:profiles!black_students_user_id_fkey(full_name)"
     )
     .eq("status", "active")
-    .lt("readiness", 90)
-    .order("readiness", { ascending: true })
+    .lte("last_contacted_at", threshold)
+    .order("last_contacted_at", { ascending: true })
     .limit(20);
   if (error) return send(chatId, `❌ Errore elenco: ${error.message}`);
   if (!data?.length) return send(chatId, "Tutti aggiornati ✅");
@@ -1280,6 +1345,7 @@ export async function POST(req: Request) {
           "`/logs cognome [limite]` — ultimi log + verifiche/voti",
           "`/nomebreve cognome Nome` — imposta il nome corto",
           "`/votoiniziale cognome 7.0` — salva il voto iniziale",
+          "`/dariattivare` — studenti mai contattati ma attivi sul sito",
           "`/nuovi` — iscritti ultimi 30 giorni",
           "`/sync [limite]` — forza il sync delle attivazioni Stripe",
           "`/desc cognome testo...` — aggiorna overview studente",
@@ -1295,6 +1361,8 @@ export async function POST(req: Request) {
       await cmdNOMEBREVE(ctx);
     } else if (/^\/votoiniziale(\s|@)/i.test(text)) {
       await cmdVOTOINIZIALE(ctx);
+    } else if (/^\/dariattivare/i.test(text)) {
+      await cmdDARIATTIVARE(ctx);
     } else if (/^\/s(\s|@)/i.test(text)) {
       await cmdS(ctx);
     } else if (/^\/n(\s|@)/i.test(text)) {
