@@ -519,7 +519,7 @@ function composeEmail({
     closing,
   });
   const preview = truncate(
-    `${subjectLabel} ${dateLabel} | ${focusPoints[0] || actions[0] || ""}`.trim(),
+    `${subjectLabel} ${dateLabel} | ${focusText || actionText || ""}`.trim(),
     160
   );
   const subject = `Consigli rapidi per ${subjectLabel} (${dateLabel})`;
