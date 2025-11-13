@@ -1783,6 +1783,12 @@ function ScheduledExamsCard({ onGradeAdded }: { onGradeAdded?: () => void }) {
       });
       if (!res.ok) return;
       setItems(items.filter((x) => x.id !== id));
+      setGradeDrafts((prev) => {
+        if (!prev[id]) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     } catch {}
   }
 

@@ -279,9 +279,7 @@ function buildAssessmentResultLine({
   subject: string | null;
 }) {
   const cleanScore =
-    Number.isFinite(score) && Number.isFinite(max)
-      ? `${score}/${max}`
-      : "";
+    Number.isFinite(score) && Number.isFinite(max) ? `${score}/${max}` : "";
   const label = subject ? `Esito ${subject}` : "Esito verifica";
   return cleanScore ? `${label}: ${cleanScore}` : `${label}: registrato`;
 }
@@ -581,10 +579,7 @@ async function cmdVDATE({ db, chatId, text }: CmdCtx) {
     /^\/v(?:date|data)(?:@\w+)?\s+(\S+)\s+(\d{4}-\d{2}-\d{2})\s+(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)(?:\s+(\S+))?$/i
   );
   if (!m)
-    return send(
-      chatId,
-      "Uso: /vdate cognome 2025-11-20 7.5/10 [materia]"
-    );
+    return send(chatId, "Uso: /vdate cognome 2025-11-20 7.5/10 [materia]");
   const [, q, when, scoreRaw, maxRaw, subjectRaw] = m;
 
   const score = Number(scoreRaw);
@@ -605,8 +600,7 @@ async function cmdVDATE({ db, chatId, text }: CmdCtx) {
     subject: explicitSubject,
   });
 
-  const finalSubject =
-    explicitSubject || matchInfo.match?.subject || null;
+  const finalSubject = explicitSubject || matchInfo.match?.subject || null;
 
   const { error: insertErr } = await db.from("black_grades").insert({
     student_id: id,
@@ -615,8 +609,7 @@ async function cmdVDATE({ db, chatId, text }: CmdCtx) {
     max_score: max,
     when_at: when,
   });
-  if (insertErr)
-    return send(chatId, `❌ Errore voto: ${insertErr.message}`);
+  if (insertErr) return send(chatId, `❌ Errore voto: ${insertErr.message}`);
 
   let linkMessage: string | null = null;
   if (matchInfo.match) {
@@ -1129,8 +1122,8 @@ export async function POST(req: Request) {
           "`/s cognome` — scheda",
           "`/s email@example.com` — scheda via email",
           "`/n cognome testo...` — aggiungi nota",
-      "`/v cognome materia 7.5/10 [YYYY-MM-DD]` — aggiungi voto",
-      "`/vdate cognome YYYY-MM-DD 7.5/10 [materia]` — voto collegato alla verifica del giorno",
+          "`/v cognome materia 7.5/10 [YYYY-MM-DD]` — aggiungi voto",
+          "`/vdate cognome YYYY-MM-DD 7.5/10 [materia]` — voto collegato alla verifica del giorno",
           "`/ass cognome YYYY-MM-DD materia [topics]` — nuova verifica",
           "`/verifica email@example.com YYYY-MM-DD materia [topics]` — importa verifica via email",
           "`/nuovi` — iscritti ultimi 30 giorni",

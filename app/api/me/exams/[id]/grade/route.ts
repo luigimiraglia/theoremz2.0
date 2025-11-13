@@ -56,15 +56,25 @@ export async function POST(
   }
 
   const gradesCollection = adminDb.collection(`users/${uid}/grades`);
+  const assessmentId = data?.blackAssessmentId || data?.black_assessment_id || null;
   const existingGradeId = data?.grade_id || data?.gradeId || null;
   let gradeDocId = existingGradeId;
-  if (existingGradeId) {
-    await gradesCollection.doc(existingGradeId).set(
+  if (!gradeDocId && assessmentId) {
+    const snap = await gradesCollection
+      .where("assessmentId", "==", assessmentId)
+      .limit(1)
+      .get();
+    if (!snap.empty) gradeDocId = snap.docs[0].id;
+  }
+  if (gradeDocId) {
+    await gradesCollection.doc(gradeDocId).set(
       {
         date,
         subject,
         grade: boundedGrade,
+        assessmentId,
         updatedAt: Date.now(),
+        source: "account_app",
       },
       { merge: true }
     );
@@ -73,7 +83,9 @@ export async function POST(
       date,
       subject,
       grade: boundedGrade,
+      assessmentId,
       createdAt: Date.now(),
+      source: "account_app",
     });
     gradeDocId = doc.id;
   }
