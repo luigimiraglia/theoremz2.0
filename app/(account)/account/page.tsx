@@ -1466,7 +1466,7 @@ function gradeBadgeClass(g: number) {
 }
 
 /* ────────────────────── Verifiche programmate ────────────────────── */
-type ExamItem = { id: string; date: string; subject?: string | null };
+type ExamItem = { id: string; date: string; subject?: string | null; notes?: string | null };
 
 function ymd(d: Date): string {
   const y = d.getFullYear();
@@ -1579,11 +1579,13 @@ function ScheduledExamsCard() {
   // selezione data (header)
   const [date, setDate] = useState<string>("");
   const [subject, setSubject] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
   const [showHeaderCalendar, setShowHeaderCalendar] = useState(false);
   // selezione prima verifica (modal stile shadcn)
   const [firstOpen, setFirstOpen] = useState(false);
   const [firstDate, setFirstDate] = useState<string>("");
   const [firstSubject, setFirstSubject] = useState<string>("");
+  const [firstNotes, setFirstNotes] = useState<string>("");
 
   const [viewYear, setViewYear] = useState<number>(new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState<number>(new Date().getMonth());
@@ -1603,7 +1605,15 @@ function ScheduledExamsCard() {
           signal: ac.signal,
         });
         const json = await res.json();
-        setItems(Array.isArray(json.items) ? json.items : []);
+        const list = Array.isArray(json.items)
+          ? json.items.map((it: any) => ({
+              id: it.id,
+              date: it.date,
+              subject: it.subject ?? null,
+              notes: it.notes ?? null,
+            }))
+          : [];
+        setItems(list);
       } catch (e: any) {
         setError(e?.message || "Errore");
       } finally {
@@ -1613,9 +1623,14 @@ function ScheduledExamsCard() {
     return () => ac.abort();
   }, []);
 
-  async function addExam(dateOverride?: string, subjectOverride?: string) {
+  async function addExam(
+    dateOverride?: string,
+    subjectOverride?: string,
+    notesOverride?: string
+  ) {
     const useDate = ((dateOverride ?? date) || "").trim();
     const useSubject = ((subjectOverride ?? subject) || "").trim();
+    const useNotes = ((notesOverride ?? notes) || "").trim();
     if (!useDate) return;
     try {
       setAdding(true);
@@ -1627,13 +1642,22 @@ function ScheduledExamsCard() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ date: useDate, subject: useSubject || null }),
+        body: JSON.stringify({
+          date: useDate,
+          subject: useSubject || null,
+          notes: useNotes || null,
+        }),
       });
       const json = await res.json();
       if (!res.ok || !json?.ok) throw new Error(json?.error || "Errore");
       const next = [
         ...items,
-        { id: json.id, date: useDate, subject: useSubject || null },
+        {
+          id: json.id,
+          date: useDate,
+          subject: useSubject || null,
+          notes: useNotes || null,
+        },
       ].sort((a, b) => a.date.localeCompare(b.date));
       setItems(next);
       // Se è la prima verifica, centra la vista su quel mese
@@ -1641,6 +1665,7 @@ function ScheduledExamsCard() {
       setViewYear(d.getFullYear());
       setViewMonth(d.getMonth());
       setSubject("");
+      setNotes("");
       setShowHeaderCalendar(false);
     } catch (e) {
       // no-op
@@ -1686,6 +1711,13 @@ function ScheduledExamsCard() {
               placeholder="Materia (facoltativa)"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
+              className="rounded-lg border px-3 py-1.5 text-sm bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
+            />
+            <input
+              type="text"
+              placeholder="Argomenti / nota"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               className="rounded-lg border px-3 py-1.5 text-sm bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
             />
             <button
@@ -1800,6 +1832,16 @@ function ScheduledExamsCard() {
                       className="mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
                     />
                   </label>
+                  <label className="mt-3 block text-[12px] font-medium text-slate-700 [.dark_&]:text-white/80">
+                    Argomenti / Nota (facoltativo)
+                    <textarea
+                      placeholder="Es. Disequazioni, moto rettilineo…"
+                      value={firstNotes}
+                      onChange={(e) => setFirstNotes(e.target.value)}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
+                      rows={3}
+                    />
+                  </label>
                   <div className="mt-3 flex justify-end gap-2">
                     <button
                       onClick={() => setFirstOpen(false)}
@@ -1810,10 +1852,11 @@ function ScheduledExamsCard() {
                     <button
                       onClick={async () => {
                         if (!firstDate) return;
-                        await addExam(firstDate, firstSubject);
+                        await addExam(firstDate, firstSubject, firstNotes);
                         setFirstOpen(false);
                         setFirstDate("");
                         setFirstSubject("");
+                        setFirstNotes("");
                       }}
                       disabled={!firstDate}
                       className="rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] text-white px-4 py-1.5 text-sm font-semibold disabled:opacity-60"
@@ -1925,11 +1968,18 @@ function ScheduledExamsCard() {
                     >
                       <div>
                         <div className="font-semibold">{it.date}</div>
-                        <div className="text-slate-600 [.dark_&]:text-white/70 flex items-center gap-2">
-                          {it.subject && <span>{it.subject}</span>}
-                          <span className="text-blue-700 [.dark_&]:text-sky-300 font-semibold">
-                            {label}
-                          </span>
+                        {it.subject && (
+                          <div className="text-slate-700 [.dark_&]:text-white/80">
+                            {it.subject}
+                          </div>
+                        )}
+                        {it.notes && (
+                          <div className="text-xs text-slate-500 [.dark_&]:text-white/60">
+                            {it.notes}
+                          </div>
+                        )}
+                        <div className="text-blue-700 [.dark_&]:text-sky-300 font-semibold">
+                          {label}
                         </div>
                       </div>
                       <button

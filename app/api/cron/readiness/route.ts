@@ -434,15 +434,14 @@ async function generateTipPlan({
     .filter(Boolean)
     .join("\n");
 
-  const systemPrompt = `Sei un coach didattico di Theoremz. Analizza le informazioni e produci consigli pratici per i genitori.
+  const systemPrompt = `Sei un coach didattico di Theoremz. Analizza le informazioni e produci consigli pratici e rassicuranti per i genitori.
 Requisiti:
-- linguaggio italiano, tono positivo ma diretto;
-- non citare il nome dello studente, di solo "Ciao, ti scrivo per la verifica di domani";
-- considera che lo studio principale è già fatto: punta su rifiniture, gestione del tempo e serenità;
-- dai priorità pratiche per la verifica del giorno dopo; includi almeno un consiglio su come iniziare (es: parti dai problemi più facili) e uno sulla verifica delle risposte (es: rivedi i primi risultati prima di continuare);
-- ricorda l'importanza della presentazione del compito e che può fare la differenza;
-- trasmetti supporto emotivo e chiudi con un "In bocca al lupo";
-- restituisci SOLO JSON con i campi: focus_points (stringa breve), study_actions (stringa breve), motivation (stringa breve), reminders (stringa breve).`;
+- linguaggio italiano, tono calmo e incoraggiante, come un amico esperto che conosce bene lo studente;
+- non citare il nome dello studente né usare saluti: entra subito nel merito;
+- considera che la preparazione è fatta: concentrati su presentazione pulita, gestione del tempo, evitare errori di distrazione e iniziare dai problemi più facili;
+- ogni suggerimento deve essere una frase completa che contenga una sola idea chiara (niente elenchi telegrafici o mix di azioni diverse nella stessa frase);
+- evita linguaggio “militare”: enfatizza sicurezza, respirazione, leggerezza e controllo dell’ansia;
+- restituisci SOLO JSON con i campi: focus_points (array di 1-3 frasi complete), study_actions (array di 1-3 frasi complete, concrete ma leggere), motivation (frase breve e calorosa), reminders (array opzionale di frasi corte e pratiche).`;
 
   try {
     const completion = await openaiClient.chat.completions.create({
@@ -483,27 +482,27 @@ function composeEmail({
   const dateLabel = formatItalianDate(assessment.when_at);
   const prepLine =
     "Hai già fatto il grosso: oggi pensa solo a rifinire e a come affrontare la verifica con calma.";
-  const focusText = formatSectionText(tipPayload.focus_points);
-  const actionText = formatSectionText(tipPayload.study_actions);
-  if (!focusText && !actionText) return null;
+  const focusList = normalizeSectionEntries(tipPayload.focus_points);
+  const actionList = normalizeSectionEntries(tipPayload.study_actions);
+  const reminderList = normalizeSectionEntries(tipPayload.reminders);
+  if (!focusList.length && !actionList.length && !reminderList.length) return null;
   const motivation = sanitizeOutput(
     tipPayload.motivation || "Siamo qui, scrivici se serve un check veloce.",
     briefMd
   );
-  const reminders = formatSectionText(tipPayload.reminders);
   const intro = `Ciao, ti scrivo per la verifica di ${subjectLabel} di domani (${dateLabel}). ${prepLine}`;
   const closing = "In bocca al lupo,\nTeam Theoremz";
 
   const sections = [
     intro,
-    focusText
-      ? `Priorità da ripassare:\n${focusText}`
+    focusList.length
+      ? `Priorità da tenere a mente:\n${focusList.map((line) => `• ${line}`).join("\n")}`
       : null,
-    actionText
-      ? `Mini-piano per oggi:\n${actionText}`
+    actionList.length
+      ? `Mini-piano per oggi:\n${actionList.map((line) => `• ${line}`).join("\n")}`
       : null,
-    reminders
-      ? `Promemoria veloci:\n${reminders}`
+    reminderList.length
+      ? `Promemoria veloci:\n${reminderList.map((line) => `• ${line}`).join("\n")}`
       : null,
     motivation,
     closing,
@@ -512,9 +511,9 @@ function composeEmail({
   const text = sections.join("\n\n");
   const html = renderHtmlEmail({
     intro,
-    focusText,
-    actionText,
-    reminders,
+    focusList,
+    actionList,
+    reminderList,
     motivation,
     closing,
   });
@@ -526,48 +525,56 @@ function composeEmail({
   return { subject, text, html, preview };
 }
 
-function formatSectionText(
+function normalizeSectionEntries(
   value?: string | string[] | Array<string | { title?: string; detail?: string }>
 ) {
-  if (!value) return null;
-  if (typeof value === "string") return sanitizeOutput(value);
-  if (Array.isArray(value)) {
-    const lines = value
-      .map((entry) => {
-        if (!entry) return null;
-        if (typeof entry === "string") return sanitizeOutput(entry);
+  if (!value) return [];
+  const lines: string[] = [];
+  const push = (text?: string | null) => {
+    const clean = sanitizeOutput(text || "").trim();
+    if (clean) lines.push(clean);
+  };
+  if (typeof value === "string") {
+    value.split(/\n+/).forEach(push);
+  } else if (Array.isArray(value)) {
+    value.forEach((entry) => {
+      if (!entry) return;
+      if (typeof entry === "string") {
+        push(entry);
+      } else {
         const title = entry.title ? sanitizeOutput(entry.title) : null;
         const detail = entry.detail ? sanitizeOutput(entry.detail) : null;
-        return [title, detail].filter(Boolean).join(": ");
-      })
-      .filter(Boolean);
-    return lines.length ? lines.join("\n") : null;
+        push([title, detail].filter(Boolean).join(": "));
+      }
+    });
   }
-  return null;
+  return lines;
 }
 
 function renderHtmlEmail({
   intro,
-  focusText,
-  actionText,
-  reminders,
+  focusList,
+  actionList,
+  reminderList,
   motivation,
   closing,
 }: {
   intro: string;
-  focusText: string | null;
-  actionText: string | null;
-  reminders: string | null;
+  focusList: string[];
+  actionList: string[];
+  reminderList: string[];
   motivation: string;
   closing: string;
 }) {
   const closingHtml = escapeHtml(closing).replace(/\n/g, "<br/>");
-  const section = (title: string, body: string | null) => {
-    if (!body) return "";
+  const section = (title: string, items: string[], ordered = false) => {
+    if (!items.length) return "";
+    const tag = ordered ? "ol" : "ul";
+    const inner = items.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
     return `
       <div style="margin:16px 0">
         <p style="margin:0 0 4px;font-weight:600;color:#0f172a">${escapeHtml(title)}</p>
-        <p style="margin:0;color:#0f172a">${escapeHtml(body).replace(/\n/g, "<br/>")}</p>
+        <${tag} style="margin:0 0 0 20px;padding-left:12px;color:#0f172a">${inner}</${tag}>
       </div>
     `;
   };
@@ -580,9 +587,9 @@ function renderHtmlEmail({
         </div>
         <div style="padding:28px 32px;line-height:1.6;color:#0f172a">
           <p style="margin:0 0 12px">${escapeHtml(intro)}</p>
-          ${section("Priorità da ripassare", focusText)}
-          ${section("Mini-piano per oggi", actionText)}
-          ${section("Promemoria veloci", reminders)}
+          ${section("Priorità da tenere a mente", focusList)}
+          ${section("Mini-piano per oggi", actionList)}
+          ${section("Promemoria veloci", reminderList)}
           <p style="margin-top:22px">${escapeHtml(motivation)}</p>
           <p style="margin-top:30px;font-weight:600">${closingHtml}</p>
         </div>
