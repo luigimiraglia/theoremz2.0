@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
+import { adminDb } from "@/lib/firebaseAdmin";
 import {
   buildAssessmentResultLine,
   mergeAssessmentTopics,
@@ -142,12 +143,7 @@ async function cmdOREPAGATE({ db, chatId, text }: CmdCtx) {
   if (!Number.isFinite(hours) || hours <= 0)
     return send(chatId, "Inserisci un numero di ore positivo.");
 
-  let resolved;
-  if (query.includes("@")) {
-    resolved = await lookupStudentByEmail(db, query.toLowerCase());
-  } else {
-    resolved = await resolveStudentId(db, query);
-  }
+  const resolved = await resolveStudent(db, query);
   if ((resolved as any).err) return send(chatId, (resolved as any).err);
   const { id, name } = resolved as any;
 
@@ -179,12 +175,7 @@ async function cmdASSEGNA_TUTOR({ db, chatId, text }: CmdCtx) {
     return send(chatId, "Uso: /assegnatutor cognome nomeTutor");
   const [, studentQuery, tutorQuery] = m;
 
-  let resolved;
-  if (studentQuery.includes("@")) {
-    resolved = await lookupStudentByEmail(db, studentQuery.toLowerCase());
-  } else {
-    resolved = await resolveStudentId(db, studentQuery);
-  }
+  const resolved = await resolveStudent(db, studentQuery);
   if ((resolved as any).err) return send(chatId, (resolved as any).err);
   const { id, name } = resolved as any;
 
@@ -227,12 +218,7 @@ async function cmdLOGLEZIONE({ db, chatId, text }: CmdCtx) {
   if (!Number.isFinite(hours) || hours <= 0)
     return send(chatId, "Inserisci un numero di ore valido.");
 
-  let resolved;
-  if (studentQuery.includes("@")) {
-    resolved = await lookupStudentByEmail(db, studentQuery.toLowerCase());
-  } else {
-    resolved = await resolveStudentId(db, studentQuery);
-  }
+  const resolved = await resolveStudent(db, studentQuery);
   if ((resolved as any).err) return send(chatId, (resolved as any).err);
   const { id, name } = resolved as any;
 
@@ -379,6 +365,60 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
   await send(chatId, text);
 }
 
+async function cmdADDTUTOR({ db, chatId, text }: CmdCtx) {
+  const raw = text.replace(/^\/addtutor(?:@\w+)?/i, "").trim();
+  if (!raw) {
+    return send(
+      chatId,
+      "Uso: /addtutor Nome Cognome;Telefono;Email (telefono/email opzionali, separati da ;)"
+    );
+  }
+  const parts = raw.split(";").map((p) => p.trim());
+  const fullName = parts[0];
+  if (!fullName) {
+    return send(
+      chatId,
+      "Uso: /addtutor Nome Cognome;Telefono;Email — serve almeno il nome."
+    );
+  }
+  const phone = parts[1] || null;
+  const email = parts[2]?.toLowerCase() || null;
+
+  if (email) {
+    const { data: existing, error: lookupErr } = await db
+      .from("tutors")
+      .select("id, full_name")
+      .eq("email", email)
+      .maybeSingle();
+    if (lookupErr)
+      return send(chatId, `❌ Errore lookup: ${lookupErr.message}`);
+    if (existing?.id) {
+      return send(
+        chatId,
+        `⚠️ Esiste già un tutor con email ${email}: ${existing.full_name}`
+      );
+    }
+  }
+
+  const { data, error } = await db
+    .from("tutors")
+    .insert({
+      full_name: fullName,
+      phone,
+      email,
+    })
+    .select("id")
+    .single();
+  if (error) return send(chatId, `❌ Errore creazione tutor: ${error.message}`);
+
+  await send(
+    chatId,
+    `✅ Tutor creato: ${bold(fullName)}${
+      phone ? ` · 📞 ${phone}` : ""
+    }${email ? ` · ✉️ ${email}` : ""}`
+  );
+}
+
 type CmdCtx = {
   db: ReturnType<typeof supabaseServer>;
   chatId: number;
@@ -502,6 +542,16 @@ function formatMatchList(matches: any[], prefix = "") {
   return `${prefix}${list}\n\nRaffina la ricerca.`;
 }
 
+async function resolveStudent(
+  db: ReturnType<typeof supabaseServer>,
+  query: string
+) {
+  if (query.includes("@")) {
+    return lookupStudentByEmail(db, query.toLowerCase());
+  }
+  return resolveStudentId(db, query);
+}
+
 async function resolveTutor(db: ReturnType<typeof supabaseServer>, query: string) {
   const normalized = query.trim();
   if (!normalized) return { err: "❌ Specifica un tutor (nome o email)." };
@@ -538,6 +588,63 @@ async function resolveTutor(db: ReturnType<typeof supabaseServer>, query: string
     name: row.full_name || row.email || "Tutor",
     meta: row,
   };
+}
+
+async function fetchStudentUserId(
+  db: ReturnType<typeof supabaseServer>,
+  studentId: string
+) {
+  const { data, error } = await db
+    .from("black_students")
+    .select("user_id")
+    .eq("id", studentId)
+    .maybeSingle();
+  if (error) {
+    console.error("[telegram-bot] user lookup failed", error);
+    return null;
+  }
+  return data?.user_id || null;
+}
+
+async function mirrorAssessmentToFirestore({
+  db,
+  studentId,
+  assessmentId,
+  date,
+  subject,
+  topics,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  studentId: string;
+  assessmentId: string;
+  date: string;
+  subject?: string | null;
+  topics?: string | null;
+}) {
+  const uid = await fetchStudentUserId(db, studentId);
+  if (!uid) return;
+  try {
+    await adminDb
+      .collection(`users/${uid}/exams`)
+      .doc(assessmentId)
+      .set(
+        {
+          date,
+          subject: subject || null,
+          notes: topics || null,
+          blackAssessmentId: assessmentId,
+          createdAt: Date.now(),
+          source: "telegram_bot",
+        },
+        { merge: true }
+      );
+  } catch (error) {
+    console.error("[telegram-bot] firestore exam mirror failed", {
+      studentId,
+      assessmentId,
+      error,
+    });
+  }
 }
 
 async function findAssessmentMatch({
@@ -981,6 +1088,15 @@ async function cmdASS({ db, chatId, text }: CmdCtx) {
 
   // aggiorna cache prossima verifica rigenerando brief
   await db.rpc("refresh_black_brief", { _student: id });
+  await mirrorAssessmentToFirestore({
+    db,
+    studentId: id,
+    assessmentId: inserted.id,
+    date: when,
+    subject,
+    topics: topics || null,
+  });
+
   await send(
     chatId,
     `✅ Verifica creata per ${bold(name)}: ${subject} — ${when}${topics ? " — " + topics : ""}`
@@ -1022,6 +1138,15 @@ async function cmdVERIFICA({ db, chatId, text }: CmdCtx) {
   } catch {
     // best effort
   }
+
+  await mirrorAssessmentToFirestore({
+    db,
+    studentId: id,
+    assessmentId: inserted.id,
+    date: when,
+    subject,
+    topics: topics || null,
+  });
 
   await send(
     chatId,
@@ -1206,9 +1331,15 @@ async function cmdVOTOINIZIALE({ db, chatId, text }: CmdCtx) {
 /** /oggi → digest rapido: rossi/yellow/green + verifiche entro 7 giorni */
 async function cmdOGGI({ db, chatId }: CmdCtx) {
   const now = new Date();
-  const in7 = new Date(now.getTime() + 7 * 24 * 3600 * 1000)
-    .toISOString()
-    .slice(0, 10);
+  const startOfWeek = new Date(now);
+  const day = startOfWeek.getDay(); // 0=Sun
+  const diff = day === 0 ? 6 : day - 1;
+  startOfWeek.setDate(startOfWeek.getDate() - diff);
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  const startIso = startOfWeek.toISOString().slice(0, 10);
+  const endIso = endOfWeek.toISOString().slice(0, 10);
   const { data: cards } = await db.from("black_student_card").select("*");
 
   if (!cards?.length) return send(chatId, "Nessuno studente.");
@@ -1216,7 +1347,10 @@ async function cmdOGGI({ db, chatId }: CmdCtx) {
   const reds = cards.filter((c: any) => c.risk_level === "red");
   const yell = cards.filter((c: any) => c.risk_level === "yellow");
   const upcoming = cards.filter(
-    (c: any) => c.next_assessment_date && c.next_assessment_date <= in7
+    (c: any) =>
+      c.next_assessment_date &&
+      c.next_assessment_date >= startIso &&
+      c.next_assessment_date <= endIso
   );
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000)
     .toISOString()
@@ -1637,6 +1771,7 @@ export async function POST(req: Request) {
           "`/assegnatutor cognome tutor` — collega tutor videolezione",
           "`/loglezione cognome 1.5 [nota]` — logga una lezione",
           "`/pagatutor tutor 2` — scala ore pagate al tutor",
+          "`/addtutor Nome;Telefono;Email` — crea un tutor",
           "`/dashore` — riepilogo studenti/tutor/ore",
           "`/nuovi` — iscritti ultimi 30 giorni",
           "`/sync [limite]` — forza il sync delle attivazioni Stripe",
@@ -1667,6 +1802,8 @@ export async function POST(req: Request) {
       await cmdPAGATUTOR(ctx);
     } else if (/^\/dashore/i.test(text)) {
       await cmdDASHORE(ctx);
+    } else if (/^\/addtutor/i.test(text)) {
+      await cmdADDTUTOR(ctx);
     } else if (/^\/s(\s|@)/i.test(text)) {
       await cmdS(ctx);
     } else if (/^\/n(\s|@)/i.test(text)) {
