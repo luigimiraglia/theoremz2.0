@@ -1345,6 +1345,7 @@ export async function POST(req: Request) {
           "`/logs cognome [limite]` — ultimi log + verifiche/voti",
           "`/nomebreve cognome Nome` — imposta il nome corto",
           "`/votoiniziale cognome 7.0` — salva il voto iniziale",
+          "`/dacontattare` — ultimi contatti >5 giorni",
           "`/dariattivare` — studenti mai contattati ma attivi sul sito",
           "`/nuovi` — iscritti ultimi 30 giorni",
           "`/sync [limite]` — forza il sync delle attivazioni Stripe",
@@ -1361,6 +1362,8 @@ export async function POST(req: Request) {
       await cmdNOMEBREVE(ctx);
     } else if (/^\/votoiniziale(\s|@)/i.test(text)) {
       await cmdVOTOINIZIALE(ctx);
+    } else if (/^\/dacontattare/i.test(text)) {
+      await cmdDaContattare(ctx);
     } else if (/^\/dariattivare/i.test(text)) {
       await cmdDARIATTIVARE(ctx);
     } else if (/^\/s(\s|@)/i.test(text)) {
