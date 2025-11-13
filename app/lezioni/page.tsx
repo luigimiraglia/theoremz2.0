@@ -5,7 +5,8 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Tutte le lezioni — Theoremz",
-  description: "Consulta l'indice completo di tutte le lezioni di matematica e fisica disponibili su Theoremz.",
+  description:
+    "Consulta l'indice completo di tutte le lezioni di matematica e fisica disponibili su Theoremz.",
   alternates: { canonical: "https://theoremz.com/lezioni" },
 };
 
@@ -52,7 +53,8 @@ export default async function LessonIndexPage() {
             Tutte le lezioni
           </h1>
           <p className="text-lg text-slate-600 [.dark_&]:text-slate-300">
-            Accedi all&apos;indice completo di {lessons.length} lezioni di matematica e fisica.
+            Accedi all&apos;indice completo di {lessons.length} lezioni di
+            matematica e fisica.
           </p>
         </div>
 

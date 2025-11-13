@@ -180,9 +180,9 @@ export default async function RootLayout({
             {/* Non bloccare il paint del contenuto server-rendered */}
             <Suspense fallback={null}>
               <Providers>
-              <Suspense fallback={null}>
-                <Header />
-              </Suspense>
+                <Suspense fallback={null}>
+                  <Header />
+                </Suspense>
 
                 <div className="mt-24 md:mt-24">
                   {/* Banner Black (client) — mostra solo se non abbonato; escluso /black, /mentor e /contatto-rapido */}

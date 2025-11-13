@@ -26,7 +26,8 @@ export default function NotFound() {
             Pagina non trovata
           </p>
           <p className="text-base text-slate-600 [.dark_&]:text-slate-400">
-            Ops! Sembra che tu stia cercando una pagina che non esiste. Non ti preoccupare, capita a tutti.
+            Ops! Sembra che tu stia cercando una pagina che non esiste. Non ti
+            preoccupare, capita a tutti.
           </p>
         </div>
 

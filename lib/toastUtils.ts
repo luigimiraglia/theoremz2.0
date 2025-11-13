@@ -1,6 +1,6 @@
 /**
  * Toast Notification Utilities
- * 
+ *
  * Questo file contiene helper functions per usare il sistema di toast
  * in modo semplice e coerente in tutta l'applicazione.
  */
@@ -145,10 +145,7 @@ export const commonToasts = {
    * Toast per autenticazione richiesta
    */
   loginRequired: (toast: any) => {
-    return toast.info(
-      "Accesso richiesto",
-      "Effettua l'accesso per continuare"
-    );
+    return toast.info("Accesso richiesto", "Effettua l'accesso per continuare");
   },
 
   /**
@@ -165,7 +162,9 @@ export const commonToasts = {
    * Toast per validazione fallita
    */
   validationError: (toast: any, field?: string) => {
-    const message = field ? `Per favore, verifica il campo: ${field}` : "Per favore, verifica i dati inseriti";
+    const message = field
+      ? `Per favore, verifica il campo: ${field}`
+      : "Per favore, verifica i dati inseriti";
     return toast.error("Errore di validazione", message);
   },
 
@@ -228,21 +227,21 @@ export async function executeWithToast<T>(
 
   try {
     const result = await promise;
-    
+
     if (loadingToastId) {
       toast.removeToast(loadingToastId);
     }
-    
+
     if (messages.success) {
       toast.success("Successo", messages.success);
     }
-    
+
     return result;
   } catch (error) {
     if (loadingToastId) {
       toast.removeToast(loadingToastId);
     }
-    
+
     const errorMessage =
       error instanceof Error ? error.message : "Errore sconosciuto";
     toast.error(messages.error || "Errore", errorMessage);

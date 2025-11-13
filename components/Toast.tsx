@@ -1,5 +1,11 @@
 "use client";
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+} from "react";
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react";
 
 export type ToastType = "success" | "error" | "info" | "warning";
@@ -51,7 +57,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       setToasts((prev) => [...prev, newToast]);
 
       // Auto-remove dopo la durata specificata
-      const duration = toast.duration ?? (toast.type === "error" ? 6000 : toast.type === "success" ? 4000 : 5000);
+      const duration =
+        toast.duration ??
+        (toast.type === "error"
+          ? 6000
+          : toast.type === "success"
+            ? 4000
+            : 5000);
       setTimeout(() => {
         removeToast(id);
       }, duration);
@@ -198,7 +210,9 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
         <div className="flex-1 min-w-0">
           <h4 className="font-semibold text-sm leading-snug">{toast.title}</h4>
           {toast.message && (
-            <p className="text-sm opacity-75 mt-1 leading-snug">{toast.message}</p>
+            <p className="text-sm opacity-75 mt-1 leading-snug">
+              {toast.message}
+            </p>
           )}
 
           {/* Action button */}

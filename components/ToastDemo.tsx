@@ -19,13 +19,21 @@ export function ToastDemo() {
         <h2 className="text-xl font-semibold">Success Toasts</h2>
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => toast.success("Salvato", "Le modifiche sono state salvate")}
+            onClick={() =>
+              toast.success("Salvato", "Le modifiche sono state salvate")
+            }
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Successo Semplice
           </button>
           <button
-            onClick={() => toast.success("Operazione Completata", "Il file è stato caricato con successo", 3000)}
+            onClick={() =>
+              toast.success(
+                "Operazione Completata",
+                "Il file è stato caricato con successo",
+                3000
+              )
+            }
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Successo Breve
@@ -50,13 +58,23 @@ export function ToastDemo() {
         <h2 className="text-xl font-semibold">Error Toasts</h2>
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => toast.error("Errore", "Si è verificato un errore durante il salvataggio")}
+            onClick={() =>
+              toast.error(
+                "Errore",
+                "Si è verificato un errore durante il salvataggio"
+              )
+            }
             className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Errore Generico
           </button>
           <button
-            onClick={() => commonToasts.genericError(toast, new Error("Errore di connessione"))}
+            onClick={() =>
+              commonToasts.genericError(
+                toast,
+                new Error("Errore di connessione")
+              )
+            }
             className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Errore Catturato
@@ -93,7 +111,9 @@ export function ToastDemo() {
             Login Richiesto
           </button>
           <button
-            onClick={() => toast.info("Caricamento", "Sto elaborando i dati...", 10000)}
+            onClick={() =>
+              toast.info("Caricamento", "Sto elaborando i dati...", 10000)
+            }
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Caricamento
@@ -112,7 +132,9 @@ export function ToastDemo() {
         <h2 className="text-xl font-semibold">Warning Toasts</h2>
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => toast.warning("Attenzione", "Stai per eliminare questo elemento")}
+            onClick={() =>
+              toast.warning("Attenzione", "Stai per eliminare questo elemento")
+            }
             className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Warning Semplice
@@ -179,8 +201,9 @@ export function ToastDemo() {
       {/* Note */}
       <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
         <p className="text-sm text-blue-900 dark:text-blue-200">
-          💡 <strong>Nota:</strong> Apri la console per vedere gli ID dei toast. I toast scompaiono automaticamente
-          dopo la durata specificata (success: 4s, error: 6s, info/warning: 5s).
+          💡 <strong>Nota:</strong> Apri la console per vedere gli ID dei toast.
+          I toast scompaiono automaticamente dopo la durata specificata
+          (success: 4s, error: 6s, info/warning: 5s).
         </p>
       </div>
     </div>
