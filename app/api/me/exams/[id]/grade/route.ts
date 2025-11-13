@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
-import { supabaseServer } from "@/lib/supabase";
+import { syncBlackGrade } from "@/lib/black/gradeSync";
 
 async function getUid(req: Request) {
   const h = req.headers.get("authorization") || "";
@@ -105,7 +105,9 @@ export async function POST(
     date,
     grade: boundedGrade,
     subject,
-    examData: data,
+    assessmentId:
+      data?.blackAssessmentId || data?.black_assessment_id || null,
+    examSubject: data?.subject || null,
   });
 
   return NextResponse.json({
@@ -117,135 +119,3 @@ export async function POST(
       grade: boundedGrade,
     },
   });
-}
-
-async function syncBlackGrade({
-  uid,
-  date,
-  grade,
-  subject,
-  examData,
-}: {
-  uid: string;
-  date: string;
-  grade: number;
-  subject: "matematica" | "fisica";
-  examData: Record<string, any>;
-}) {
-  const db = supabaseServer();
-  const { data: student, error } = await db
-    .from("black_students")
-    .select("id")
-    .eq("user_id", uid)
-    .maybeSingle();
-  if (error) {
-    console.error("[me-exams] black student lookup failed", error);
-    return;
-  }
-  if (!student?.id) return;
-  const studentId = student.id;
-
-  const insertPayload: Record<string, any> = {
-    student_id: studentId,
-    subject: subject,
-    score: grade,
-    max_score: 10,
-    when_at: date,
-  };
-  const { error: gradeInsertError } = await db
-    .from("black_grades")
-    .insert(insertPayload);
-  if (gradeInsertError) {
-    console.error("[me-exams] black grade insert failed", gradeInsertError);
-  }
-
-  let assessmentRow: { id: string; subject?: string | null; topics?: string | null } | null =
-    null;
-  const existingAssessmentId =
-    examData?.blackAssessmentId || examData?.black_assessment_id || null;
-  if (existingAssessmentId) {
-    const { data: assessment, error: assessmentError } = await db
-      .from("black_assessments")
-      .select("id, subject, topics")
-      .eq("id", existingAssessmentId)
-      .maybeSingle();
-    if (!assessmentError && assessment?.id) {
-      assessmentRow = assessment;
-    }
-  }
-  if (!assessmentRow) {
-    const { data: candidates, error: candidatesError } = await db
-      .from("black_assessments")
-      .select("id, subject, topics")
-      .eq("student_id", studentId)
-      .eq("when_at", date);
-    if (!candidatesError) {
-      if (candidates?.length === 1) assessmentRow = candidates[0];
-      else if (candidates?.length && examData?.subject) {
-        const normalized = String(examData.subject).toLowerCase();
-        assessmentRow =
-          candidates.find(
-            (row) => (row.subject || "").toLowerCase() === normalized
-          ) || null;
-      }
-    }
-  }
-
-  if (assessmentRow) {
-    const resultLine = buildAssessmentResultLine({
-      score: grade,
-      max: 10,
-      subject: subject,
-    });
-    const topics = mergeAssessmentTopics(assessmentRow.topics || "", resultLine);
-    const { error: updateError } = await db
-      .from("black_assessments")
-      .update({ topics })
-      .eq("id", assessmentRow.id);
-    if (updateError) {
-      console.error("[me-exams] assessment update failed", updateError);
-    }
-  }
-
-  await refreshBriefSafe(db, studentId);
-}
-
-function buildAssessmentResultLine({
-  score,
-  max,
-  subject,
-}: {
-  score: number;
-  max: number;
-  subject: string | null;
-}) {
-  const cleanScore =
-    Number.isFinite(score) && Number.isFinite(max)
-      ? `${score}/${max}`
-      : "";
-  const label = subject ? `Esito ${subject}` : "Esito verifica";
-  return cleanScore ? `${label}: ${cleanScore}` : `${label}: registrato`;
-}
-
-function mergeAssessmentTopics(current: string, resultLine: string) {
-  const lines = current
-    ? current.split("\n").map((line) => line.trimEnd())
-    : [];
-  const idx = lines.findIndex((line) =>
-    line.trim().toLowerCase().startsWith("esito")
-  );
-  if (idx >= 0) lines[idx] = resultLine;
-  else lines.push(resultLine);
-  return lines.filter(Boolean).join("\n");
-}
-
-async function refreshBriefSafe(
-  db: ReturnType<typeof supabaseServer>,
-  studentId: string
-) {
-  try {
-    await db.rpc("refresh_black_brief", { _student: studentId });
-  } catch (error) {
-    console.warn("[me-exams] refresh brief failed", error);
-  }
-}

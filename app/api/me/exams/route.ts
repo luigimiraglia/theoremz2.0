@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
+import { refreshBriefSafe } from "@/lib/black/gradeSync";
 
 async function getUid(req: Request) {
   const h = req.headers.get("authorization") || "";
@@ -139,12 +140,4 @@ async function syncBlackAssessment({
 
   await refreshBriefSafe(db, studentId);
   return insertData?.id ?? null;
-}
-
-async function refreshBriefSafe(db: ReturnType<typeof supabaseServer>, studentId: string) {
-  try {
-    await db.rpc("refresh_black_brief", { _student: studentId });
-  } catch (error) {
-    console.warn("[me-exams] refresh brief failed", error);
-  }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { syncBlackGrade } from "@/lib/black/gradeSync";
 
 async function getUid(req: Request) {
   const h = req.headers.get("authorization") || "";
@@ -50,7 +51,69 @@ export async function POST(req: Request) {
     subject,
     grade: Math.max(0, Math.min(10, grade)),
     createdAt: Date.now(),
+    source: "account_app",
   });
+
+  const linkInfo = await linkGradeToExam({
+    uid,
+    date,
+    subject,
+    grade: Math.max(0, Math.min(10, grade)),
+    gradeDocId: doc.id,
+  });
+
+  await syncBlackGrade({
+    uid,
+    date,
+    grade: Math.max(0, Math.min(10, grade)),
+    subject,
+    assessmentId: linkInfo?.assessmentId || null,
+    examSubject: linkInfo?.examSubject || null,
+  });
+
   return NextResponse.json({ ok: true, id: doc.id });
 }
 
+async function linkGradeToExam({
+  uid,
+  date,
+  subject,
+  grade,
+  gradeDocId,
+}: {
+  uid: string;
+  date: string;
+  subject: "matematica" | "fisica";
+  grade: number;
+  gradeDocId: string;
+}) {
+  try {
+    const exams = adminDb.collection(`users/${uid}/exams`);
+    const snap = await exams.where("date", "==", date).limit(10).get();
+    if (snap.empty) return null;
+    const target =
+      snap.docs.find((doc) => {
+        const data = doc.data() as any;
+        return typeof data?.grade !== "number";
+      }) || snap.docs[0];
+    await target.ref.set(
+      {
+        grade,
+        grade_subject: subject,
+        grade_id: gradeDocId,
+        grade_synced_at: Date.now(),
+        updatedAt: Date.now(),
+        source: "account_app",
+      },
+      { merge: true }
+    );
+    const data = target.data() as any;
+    return {
+      assessmentId: data?.blackAssessmentId || data?.black_assessment_id || null,
+      examSubject: data?.subject || null,
+    };
+  } catch (error) {
+    console.error("[grades] failed linking grade to exam", error);
+    return null;
+  }
+}

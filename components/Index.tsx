@@ -57,7 +57,7 @@ export default function Index() {
             <div className="h-40 mx-auto w-fit py-2">
               <Image
                 alt="tutor"
-                src="/images/teacher.png"
+                src="/images/tutor2.webp"
                 width={512}
                 height={512}
                 className="w-auto h-full"

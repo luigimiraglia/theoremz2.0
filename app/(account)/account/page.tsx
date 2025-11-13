@@ -386,6 +386,7 @@ export default function AccountPage() {
       {/* VERIFICHE PROGRAMMATE */}
       <ScheduledExamsCard
         onGradeAdded={() => setGradesVersion((v) => v + 1)}
+        refreshKey={gradesVersion}
       />
 
       {/* CONTINUA A STUDIARE */}
@@ -1257,7 +1258,15 @@ type GradeItem = {
   grade: number;
 };
 
-function GradesCard({ userId, refreshKey }: { userId: string; refreshKey: number }) {
+function GradesCard({
+  userId,
+  refreshKey,
+  onGradeAdded,
+}: {
+  userId: string;
+  refreshKey: number;
+  onGradeAdded?: () => void;
+}) {
   const storageKey = `tz_grades_${userId}`;
   const [items, setItems] = useState<GradeItem[]>([]);
   const [subject, setSubject] = useState<"matematica" | "fisica">("matematica");
@@ -1323,6 +1332,7 @@ function GradesCard({ userId, refreshKey }: { userId: string; refreshKey: number
       const it: GradeItem = { id: json.id, date, subject, grade: g };
       const next = [...items, it].sort((a, b) => a.date.localeCompare(b.date));
       persist(next);
+      onGradeAdded?.();
     } catch {}
   }
 
@@ -1604,7 +1614,13 @@ type ExamGradeDraft = {
   saving: boolean;
 };
 
-function ScheduledExamsCard({ onGradeAdded }: { onGradeAdded?: () => void }) {
+function ScheduledExamsCard({
+  onGradeAdded,
+  refreshKey,
+}: {
+  onGradeAdded?: () => void;
+  refreshKey?: number;
+}) {
   const [items, setItems] = useState<ExamItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1660,7 +1676,7 @@ function ScheduledExamsCard({ onGradeAdded }: { onGradeAdded?: () => void }) {
       }
     })();
     return () => ac.abort();
-  }, []);
+  }, [refreshKey]);
 
   async function addExam(
     dateOverride?: string,

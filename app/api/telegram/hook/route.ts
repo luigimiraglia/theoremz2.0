@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 import {
+  buildAssessmentResultLine,
+  mergeAssessmentTopics,
+} from "@/lib/black/gradeSync";
+import {
   syncActiveStripeSubscriptions,
   syncPendingStripeSignups,
   type StripeSignupSyncResult,
@@ -267,33 +271,6 @@ async function attachGradeToAssessment({
   }
   const subjectLabel = assessment.subject || subject || "verifica";
   return `🔗 Collegato alla verifica ${subjectLabel}`;
-}
-
-function buildAssessmentResultLine({
-  score,
-  max,
-  subject,
-}: {
-  score: number;
-  max: number;
-  subject: string | null;
-}) {
-  const cleanScore =
-    Number.isFinite(score) && Number.isFinite(max) ? `${score}/${max}` : "";
-  const label = subject ? `Esito ${subject}` : "Esito verifica";
-  return cleanScore ? `${label}: ${cleanScore}` : `${label}: registrato`;
-}
-
-function mergeAssessmentTopics(current: string, resultLine: string) {
-  const lines = current
-    ? current.split("\n").map((line) => line.trimEnd())
-    : [];
-  const idx = lines.findIndex((line) =>
-    line.trim().toLowerCase().startsWith("esito")
-  );
-  if (idx >= 0) lines[idx] = resultLine;
-  else lines.push(resultLine);
-  return lines.filter(Boolean).join("\n");
 }
 
 const PLAN_LABELS: Record<string, string> = {
