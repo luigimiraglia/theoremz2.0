@@ -51,6 +51,8 @@ async function main() {
   const studentMap = await fetchStudentMap();
   console.log(`• Loaded ${studentMap.size} student→uid mappings`);
 
+  const assessmentIndex = new Map();
+
   const stats = {
     assessmentsProcessed: 0,
     assessmentsMirrored: 0,
@@ -83,20 +85,28 @@ async function main() {
         stats.assessmentsMissingDate += 1;
         continue;
       }
+      const assessmentId = row.id;
+      const dateIso = row.when_at;
       await mirrorAssessment({
         uid,
-        assessmentId: row.id,
-        date: row.when_at,
+        assessmentId,
+        date: dateIso,
         subject: row.subject,
         topics: row.topics,
       });
       stats.assessmentsMirrored += 1;
+      const key = `${row.student_id}|${dateIso}`;
+      if (!assessmentIndex.has(key)) assessmentIndex.set(key, []);
+      assessmentIndex.get(key).push({
+        id: assessmentId,
+        subject: row.subject || null,
+      });
     }
     from += data.length;
     if (data.length < pageSize) break;
   }
 
-  await syncGrades(studentMap, stats);
+  await syncGrades(studentMap, assessmentIndex, stats);
 
   console.log("✅ Sync completed:");
   console.log(
@@ -161,7 +171,26 @@ async function mirrorGrade({ uid, gradeId, date, subject, grade, maxScore }) {
     .set(payload, { merge: true });
 }
 
-async function syncGrades(studentMap, stats) {
+async function updateExamGrade({
+  uid,
+  assessmentId,
+  gradeId,
+  subject,
+  grade,
+}) {
+  const payload = {
+    grade,
+    grade_subject: subject || null,
+    grade_id: gradeId,
+    grade_synced_at: Date.now(),
+  };
+  await firestore
+    .collection(`users/${uid}/exams`)
+    .doc(assessmentId)
+    .set(payload, { merge: true });
+}
+
+async function syncGrades(studentMap, assessmentIndex, stats) {
   const pageSize = 1000;
   let from = 0;
   while (true) {
@@ -183,15 +212,40 @@ async function syncGrades(studentMap, stats) {
         stats.gradesMissingDate += 1;
         continue;
       }
+      const gradeId = row.id;
+      const dateIso = row.when_at;
       await mirrorGrade({
         uid,
-        gradeId: row.id,
-        date: row.when_at,
+        gradeId,
+        date: dateIso,
         subject: row.subject,
         grade: row.score,
         maxScore: row.max_score,
       });
       stats.gradesMirrored += 1;
+      const key = `${row.student_id}|${dateIso}`;
+      const candidates = assessmentIndex.get(key) || [];
+      let assessmentId = null;
+      if (candidates.length === 1) {
+        assessmentId = candidates[0].id;
+      } else if (candidates.length > 1 && row.subject) {
+        const normalized = row.subject.toLowerCase();
+        const match = candidates.find(
+          (c) => (c.subject || "").toLowerCase() === normalized,
+        );
+        assessmentId = match?.id || candidates[0].id;
+      } else if (candidates.length > 1) {
+        assessmentId = candidates[0].id;
+      }
+      if (assessmentId) {
+        await updateExamGrade({
+          uid,
+          assessmentId,
+          gradeId,
+          subject: row.subject,
+          grade: row.score,
+        });
+      }
     }
     from += data.length;
     if (data.length < pageSize) break;

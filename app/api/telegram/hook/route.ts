@@ -82,18 +82,14 @@ async function cmdDARIATTIVARE({ db, chatId }: CmdCtx) {
     .order("last_active_at", { ascending: false })
     .limit(25);
   if (error) return send(chatId, `❌ Errore elenco: ${error.message}`);
-  if (!data?.length)
-    return send(chatId, "Nessuno studente da riattivare ✅");
+  if (!data?.length) return send(chatId, "Nessuno studente da riattivare ✅");
 
   for (const row of data) {
     const profile = Array.isArray(row.profiles)
       ? row.profiles[0]
       : row.profiles;
     const name =
-      profile?.full_name ||
-      row.student_email ||
-      row.parent_email ||
-      "Studente";
+      profile?.full_name || row.student_email || row.parent_email || "Studente";
     const email = row.student_email || row.parent_email || "—";
     const phone = row.student_phone || row.parent_phone || "—";
     const lastActive = row.last_active_at
@@ -133,11 +129,8 @@ async function cmdDARIATTIVARE({ db, chatId }: CmdCtx) {
 }
 
 async function cmdOREPAGATE({ db, chatId, text }: CmdCtx) {
-  const m = text.match(
-    /^\/orepagate(?:@\w+)?\s+(\S+)\s+(\d+(?:[.,]\d+)?)/i
-  );
-  if (!m)
-    return send(chatId, "Uso: /orepagate cognome 3.5");
+  const m = text.match(/^\/orepagate(?:@\w+)?\s+(\S+)\s+(\d+(?:[.,]\d+)?)/i);
+  if (!m) return send(chatId, "Uso: /orepagate cognome 3.5");
   const [, query, rawHours] = m;
   const hours = Number(rawHours.replace(",", "."));
   if (!Number.isFinite(hours) || hours <= 0)
@@ -159,8 +152,7 @@ async function cmdOREPAGATE({ db, chatId, text }: CmdCtx) {
     .from("black_students")
     .update({ hours_paid: updated })
     .eq("id", id);
-  if (updateErr)
-    return send(chatId, `❌ Errore update: ${updateErr.message}`);
+  if (updateErr) return send(chatId, `❌ Errore update: ${updateErr.message}`);
   await send(
     chatId,
     `💳 Ore pagate per ${bold(name)}: +${hours}h (totale: ${updated.toFixed(2)}h)`
@@ -168,11 +160,8 @@ async function cmdOREPAGATE({ db, chatId, text }: CmdCtx) {
 }
 
 async function cmdASSEGNA_TUTOR({ db, chatId, text }: CmdCtx) {
-  const m = text.match(
-    /^\/assegnatutor(?:@\w+)?\s+(\S+)\s+([\s\S]+)$/i
-  );
-  if (!m)
-    return send(chatId, "Uso: /assegnatutor cognome nomeTutor");
+  const m = text.match(/^\/assegnatutor(?:@\w+)?\s+(\S+)\s+([\s\S]+)$/i);
+  if (!m) return send(chatId, "Uso: /assegnatutor cognome nomeTutor");
   const [, studentQuery, tutorQuery] = m;
 
   const resolved = await resolveStudent(db, studentQuery);
@@ -190,16 +179,14 @@ async function cmdASSEGNA_TUTOR({ db, chatId, text }: CmdCtx) {
   if (studentUpdate)
     return send(chatId, `❌ Errore update studente: ${studentUpdate.message}`);
 
-  await db
-    .from("tutor_assignments")
-    .upsert(
-      {
-        tutor_id: tutorId,
-        student_id: id,
-        role: "videolezione",
-      },
-      { onConflict: "tutor_id,student_id" }
-    );
+  await db.from("tutor_assignments").upsert(
+    {
+      tutor_id: tutorId,
+      student_id: id,
+      role: "videolezione",
+    },
+    { onConflict: "tutor_id,student_id" }
+  );
 
   await send(
     chatId,
@@ -211,8 +198,7 @@ async function cmdLOGLEZIONE({ db, chatId, text }: CmdCtx) {
   const m = text.match(
     /^\/loglezione(?:@\w+)?\s+(\S+)\s+(\d+(?:[.,]\d+)?)(?:\s+([\s\S]+))?$/i
   );
-  if (!m)
-    return send(chatId, "Uso: /loglezione cognome 1.5 [nota]");
+  if (!m) return send(chatId, "Uso: /loglezione cognome 1.5 [nota]");
   const [, studentQuery, rawHours, note] = m;
   const hours = Number(rawHours.replace(",", "."));
   if (!Number.isFinite(hours) || hours <= 0)
@@ -242,7 +228,10 @@ async function cmdLOGLEZIONE({ db, chatId, text }: CmdCtx) {
     note: note?.trim() || null,
   });
   if (sessionInsert.error)
-    return send(chatId, `❌ Errore log sessione: ${sessionInsert.error.message}`);
+    return send(
+      chatId,
+      `❌ Errore log sessione: ${sessionInsert.error.message}`
+    );
 
   const currentConsumed = Number(studentRow?.hours_consumed ?? 0);
   await db
@@ -272,8 +261,7 @@ async function cmdPAGATUTOR({ db, chatId, text }: CmdCtx) {
   const m = text.match(
     /^\/pagatutor(?:@\w+)?\s+([\s\S]+?)\s+(\d+(?:[.,]\d+)?)$/i
   );
-  if (!m)
-    return send(chatId, "Uso: /pagatutor nomeTutor 2");
+  if (!m) return send(chatId, "Uso: /pagatutor nomeTutor 2");
   const [, tutorQuery, rawHours] = m;
   const hours = Number(rawHours.replace(",", "."));
   if (!Number.isFinite(hours) || hours <= 0)
@@ -295,8 +283,7 @@ async function cmdPAGATUTOR({ db, chatId, text }: CmdCtx) {
     .from("tutors")
     .update({ hours_due: updated })
     .eq("id", tutorId);
-  if (updErr)
-    return send(chatId, `❌ Errore update tutor: ${updErr.message}`);
+  if (updErr) return send(chatId, `❌ Errore update tutor: ${updErr.message}`);
 
   await send(
     chatId,
@@ -332,10 +319,7 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
     students.length > 0
       ? students.map((s: any) => {
           const name =
-            s.student_name ||
-            s.student_email ||
-            s.parent_email ||
-            "Studente";
+            s.student_name || s.student_email || s.parent_email || "Studente";
           const hoursPaid = Number(s.hours_paid ?? 0);
           const hoursDone = Number(s.hours_consumed ?? 0);
           const residual = hoursPaid - hoursDone;
@@ -552,7 +536,10 @@ async function resolveStudent(
   return resolveStudentId(db, query);
 }
 
-async function resolveTutor(db: ReturnType<typeof supabaseServer>, query: string) {
+async function resolveTutor(
+  db: ReturnType<typeof supabaseServer>,
+  query: string
+) {
   const normalized = query.trim();
   if (!normalized) return { err: "❌ Specifica un tutor (nome o email)." };
   let res;
@@ -579,7 +566,9 @@ async function resolveTutor(db: ReturnType<typeof supabaseServer>, query: string
   if (!data?.length)
     return { err: `❌ Nessun tutor trovato per "${normalized}"` };
   if (data.length > 1) {
-    const sample = data.map((t) => `• ${t.full_name || t.email || "Tutor"}`).join("\n");
+    const sample = data
+      .map((t) => `• ${t.full_name || t.email || "Tutor"}`)
+      .join("\n");
     return { err: `⚠️ Più risultati:\n${sample}\nSpecifica meglio.` };
   }
   const row = data[0];
@@ -642,6 +631,65 @@ async function mirrorAssessmentToFirestore({
     console.error("[telegram-bot] firestore exam mirror failed", {
       studentId,
       assessmentId,
+      error,
+    });
+  }
+}
+
+async function mirrorGradeToFirestore({
+  db,
+  studentId,
+  gradeId,
+  date,
+  subject,
+  grade,
+  maxScore,
+  assessmentId,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  studentId: string;
+  gradeId: string;
+  date: string;
+  subject?: string | null;
+  grade: number;
+  maxScore: number;
+  assessmentId?: string | null;
+}) {
+  const uid = await fetchStudentUserId(db, studentId);
+  if (!uid) return;
+  try {
+    await adminDb
+      .collection(`users/${uid}/grades`)
+      .doc(gradeId)
+      .set(
+        {
+          date,
+          subject: subject || null,
+          grade,
+          maxScore,
+          source: "telegram_bot",
+          syncedAt: Date.now(),
+        },
+        { merge: true }
+      );
+    if (assessmentId) {
+      await adminDb
+        .collection(`users/${uid}/exams`)
+        .doc(assessmentId)
+        .set(
+          {
+            grade,
+            grade_subject: subject || null,
+            grade_id: gradeId,
+            grade_synced_at: Date.now(),
+          },
+          { merge: true }
+        );
+    }
+  } catch (error) {
+    console.error("[telegram-bot] mirror grade failed", {
+      studentId,
+      gradeId,
       error,
     });
   }
@@ -989,14 +1037,34 @@ async function cmdV({ db, chatId, text }: CmdCtx) {
   if ((r as any).err) return send(chatId, (r as any).err);
   const { id, name } = r as any;
 
-  const { error: e1 } = await db.from("black_grades").insert({
-    student_id: id,
+  const whenDate = when || new Date().toISOString().slice(0, 10);
+  const { data: inserted, error: e1 } = await db
+    .from("black_grades")
+    .insert({
+      student_id: id,
+      subject,
+      score: Number(score),
+      max_score: Number(max),
+      when_at: whenDate,
+    })
+    .select("id")
+    .single();
+  if (e1 || !inserted?.id)
+    return send(
+      chatId,
+      `❌ Errore voto: ${e1?.message || "inserimento fallito"}`
+    );
+
+  await mirrorGradeToFirestore({
+    db,
+    studentId: id,
+    gradeId: inserted.id,
+    date: whenDate,
     subject,
-    score: Number(score),
-    max_score: Number(max),
-    when_at: when || new Date().toISOString().slice(0, 10),
+    grade: Number(score),
+    maxScore: Number(max),
+    assessmentId: null,
   });
-  if (e1) return send(chatId, `❌ Errore voto: ${e1.message}`);
 
   await db.rpc("refresh_black_brief", { _student: id });
   await send(
@@ -1020,7 +1088,7 @@ async function cmdVDATE({ db, chatId, text }: CmdCtx) {
     return send(chatId, "❌ Formato voto non valido. Usa 7.5/10.");
   }
 
-  const resolved = await resolveStudentId(db, q);
+  const resolved = await resolveStudent(db, q);
   if ((resolved as any).err) return send(chatId, (resolved as any).err);
   const { id, name } = resolved as any;
   const explicitSubject = subjectRaw?.trim() || null;
@@ -1034,14 +1102,22 @@ async function cmdVDATE({ db, chatId, text }: CmdCtx) {
 
   const finalSubject = explicitSubject || matchInfo.match?.subject || null;
 
-  const { error: insertErr } = await db.from("black_grades").insert({
-    student_id: id,
-    subject: finalSubject,
-    score,
-    max_score: max,
-    when_at: when,
-  });
-  if (insertErr) return send(chatId, `❌ Errore voto: ${insertErr.message}`);
+  const { data: gradeInsert, error: insertErr } = await db
+    .from("black_grades")
+    .insert({
+      student_id: id,
+      subject: finalSubject,
+      score,
+      max_score: max,
+      when_at: when,
+    })
+    .select("id")
+    .single();
+  if (insertErr || !gradeInsert?.id)
+    return send(
+      chatId,
+      `❌ Errore voto: ${insertErr?.message || "inserimento fallito"}`
+    );
 
   let linkMessage: string | null = null;
   if (matchInfo.match) {
@@ -1064,6 +1140,17 @@ async function cmdVDATE({ db, chatId, text }: CmdCtx) {
     .filter(Boolean)
     .join("\n");
   await send(chatId, lines);
+
+  await mirrorGradeToFirestore({
+    db,
+    studentId: id,
+    gradeId: gradeInsert.id,
+    date: when,
+    subject: finalSubject,
+    grade: score,
+    maxScore: max,
+    assessmentId: matchInfo.match?.id || null,
+  });
 }
 
 /** /ass <nome> <data YYYY-MM-DD> <materia> [topics...] */
@@ -1226,9 +1313,7 @@ async function cmdLOGS({ db, chatId, text }: CmdCtx) {
           const subject = ass.subject || "Materia";
           const gradeList = gradeByDate.get(ass.when_at || "");
           const gradeText = gradeList?.length
-            ? gradeList
-                .map((g) => `${g.score}/${g.max_score || 10}`)
-                .join(", ")
+            ? gradeList.map((g) => `${g.score}/${g.max_score || 10}`).join(", ")
             : "—";
           const extra =
             ass.topics && ass.topics.includes("Esito")
@@ -1274,8 +1359,7 @@ async function cmdNOMEBREVE({ db, chatId, text }: CmdCtx) {
       preferred_name_updated_at: new Date().toISOString(),
     })
     .eq("id", id);
-  if (error)
-    return send(chatId, `❌ Errore salvataggio: ${error.message}`);
+  if (error) return send(chatId, `❌ Errore salvataggio: ${error.message}`);
 
   try {
     await db.rpc("refresh_black_brief", { _student: id });
@@ -1294,8 +1378,7 @@ async function cmdVOTOINIZIALE({ db, chatId, text }: CmdCtx) {
   const m = text.match(
     /^\/votoiniziale(?:@\w+)?\s+(\S+)\s+(\d+(?:[.,]\d+)?)$/i
   );
-  if (!m)
-    return send(chatId, "Uso: /votoiniziale cognome 6.5");
+  if (!m) return send(chatId, "Uso: /votoiniziale cognome 6.5");
   const [, query, rawGrade] = m;
   const gradeValue = Number(rawGrade.replace(",", "."));
   if (!Number.isFinite(gradeValue) || gradeValue < 0 || gradeValue > 10) {

@@ -86,20 +86,22 @@ export default function AccountPage() {
   }, [user]);
 
   // Fetch subscription start date from Stripe
-  const [subscriptionStartMs, setSubscriptionStartMs] = useState<number | null>(null);
+  const [subscriptionStartMs, setSubscriptionStartMs] = useState<number | null>(
+    null
+  );
   useEffect(() => {
     if (!isSubscribed || !user?.uid) return;
-    
+
     const fetchSubscriptionInfo = async () => {
       try {
         const token = await getAuth().currentUser?.getIdToken();
         if (!token) return;
-        
+
         const res = await fetch("/api/subscription-info", {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         });
-        
+
         const data = await res.json();
         console.log("📅 Subscription info:", data);
         if (data.subscribed && data.startDate) {
@@ -111,7 +113,7 @@ export default function AccountPage() {
         console.error("Errore caricamento info abbonamento:", error);
       }
     };
-    
+
     fetchSubscriptionInfo();
   }, [isSubscribed, user?.uid]);
 
@@ -135,7 +137,7 @@ export default function AccountPage() {
   // Formatta la durata dell'abbonamento in modo leggibile
   const subscriptionDuration = useMemo(() => {
     if (!daysSubscribed) return null;
-    
+
     const days = daysSubscribed;
     const years = Math.floor(days / 365);
     const months = Math.floor((days % 365) / 30);
@@ -149,17 +151,19 @@ export default function AccountPage() {
       return weeks > 0 ? `${months}m ${weeks}sett` : `${months}m`;
     }
     if (weeks > 0) {
-      return remainingDays > 0 ? `${weeks}sett ${remainingDays}g` : `${weeks}sett`;
+      return remainingDays > 0
+        ? `${weeks}sett ${remainingDays}g`
+        : `${weeks}sett`;
     }
     return `${days}g`;
   }, [daysSubscribed]);
 
   const subscriptionStartDate = useMemo(() => {
     if (!subscriptionSince) return null;
-    return subscriptionSince.toLocaleDateString('it-IT', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
+    return subscriptionSince.toLocaleDateString("it-IT", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     });
   }, [subscriptionSince]);
   /* --------------------------------------------------------------------------- */
@@ -213,12 +217,12 @@ export default function AccountPage() {
       try {
         const token = await getAuth().currentUser?.getIdToken();
         if (!token) return;
-        
+
         const response = await fetch("/api/create-portal-session", {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         });
-        
+
         const data = await response.json();
         if (data.url) {
           window.location.href = data.url;
@@ -289,14 +293,20 @@ export default function AccountPage() {
         </span>
       )}
       {isSubscribed ? (
-        <span 
+        <span
           className="inline-flex items-center gap-1.5 text-xs bg-gradient-to-r from-slate-800 to-black px-2.5 py-1 rounded-full border border-white/20 shadow-lg"
-          title={subscriptionStartDate ? `Abbonato dal ${subscriptionStartDate}` : undefined}
+          title={
+            subscriptionStartDate
+              ? `Abbonato dal ${subscriptionStartDate}`
+              : undefined
+          }
         >
           <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
           <span className="font-bold text-white">Black</span>
           {subscriptionDuration && (
-            <span className="text-white/80 font-medium ml-0.5">· {subscriptionDuration}</span>
+            <span className="text-white/80 font-medium ml-0.5">
+              · {subscriptionDuration}
+            </span>
           )}
         </span>
       ) : (
@@ -318,7 +328,7 @@ export default function AccountPage() {
           <div className="sm:hidden mb-2 -mt-2 -ml-1">
             <BadgesRow />
           </div>
-          
+
           <div className="flex items-center gap-4">
             <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-white/20 flex items-center justify-center text-xl sm:text-2xl font-bold">
               {avatarLetter}
@@ -371,7 +381,10 @@ export default function AccountPage() {
       </section>
 
       {/* NEWSLETTER */}
-      <NewsletterSettings variant="compact" className="sm:mx-auto sm:max-w-3xl" />
+      <NewsletterSettings
+        variant="compact"
+        className="sm:mx-auto sm:max-w-3xl"
+      />
 
       {/* Temp Access Info */}
       <TempAccessInfo />
@@ -491,7 +504,6 @@ export default function AccountPage() {
           {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
         </button>
       </Card>
-
     </main>
   );
 }
@@ -1099,9 +1111,7 @@ function TracksCard({
     }
 
     return (
-      <div className="flex flex-col items-center w-16 shrink-0">
-        {content}
-      </div>
+      <div className="flex flex-col items-center w-16 shrink-0">{content}</div>
     );
   }
 
@@ -1186,7 +1196,9 @@ function TracksCard({
         >
           <span className="text-xl">{emoji}</span>
           <div className="flex-1 text-left">
-            <h4 className="font-semibold text-sm text-slate-900 [.dark_&]:text-white">{name}</h4>
+            <h4 className="font-semibold text-sm text-slate-900 [.dark_&]:text-white">
+              {name}
+            </h4>
             <div className="mt-1.5 w-full bg-slate-300/40 [.dark_&]:bg-white/10 h-1.5 rounded-full overflow-hidden">
               <div
                 className="h-full bg-sky-500 transition-all duration-300"
@@ -1198,7 +1210,9 @@ function TracksCard({
             <span className="text-xs font-medium text-slate-600 [.dark_&]:text-slate-300">
               {done}/{total}
             </span>
-            <span className={`text-xs font-bold ${percentage === 100 ? "text-emerald-600 [.dark_&]:text-emerald-400" : "text-sky-600 [.dark_&]:text-sky-400"}`}>
+            <span
+              className={`text-xs font-bold ${percentage === 100 ? "text-emerald-600 [.dark_&]:text-emerald-400" : "text-sky-600 [.dark_&]:text-sky-400"}`}
+            >
               {percentage}%
             </span>
           </div>
@@ -1208,7 +1222,12 @@ function TracksCard({
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 14l-7 7m0 0l-7-7m7 7V3"
+            />
           </svg>
         </button>
 
@@ -1236,16 +1255,16 @@ function TracksCard({
       {loading && (
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-lg p-3 bg-slate-100 animate-pulse h-[60px]" />
+            <div
+              key={i}
+              className="rounded-lg p-3 bg-slate-100 animate-pulse h-[60px]"
+            />
           ))}
         </div>
       )}
       {error && <div className="text-sm text-red-600">{error}</div>}
       {!loading && !error && (
-        <PathLessonCardContent
-          items={items}
-          savedSlugs={savedSlugs}
-        />
+        <PathLessonCardContent items={items} savedSlugs={savedSlugs} />
       )}
     </Card>
   );
@@ -1635,9 +1654,9 @@ function ScheduledExamsCard({
   const [firstDate, setFirstDate] = useState<string>("");
   const [firstSubject, setFirstSubject] = useState<string>("");
   const [firstNotes, setFirstNotes] = useState<string>("");
-  const [gradeDrafts, setGradeDrafts] = useState<Record<string, ExamGradeDraft>>(
-    {}
-  );
+  const [gradeDrafts, setGradeDrafts] = useState<
+    Record<string, ExamGradeDraft>
+  >({});
 
   const [viewYear, setViewYear] = useState<number>(new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState<number>(new Date().getMonth());
@@ -1732,20 +1751,23 @@ function ScheduledExamsCard({
     }
   }
 
-  function updateGradeDraft(
-    id: string,
-    patch: Partial<ExamGradeDraft>
-  ) {
+  function updateGradeDraft(id: string, patch: Partial<ExamGradeDraft>) {
     setGradeDrafts((prev) => {
-      const current =
-        prev[id] || { grade: "", subject: "matematica", saving: false };
+      const current = prev[id] || {
+        grade: "",
+        subject: "matematica",
+        saving: false,
+      };
       return { ...prev, [id]: { ...current, ...patch } };
     });
   }
 
   async function saveGradeForExam(examId: string) {
-    const draft =
-      gradeDrafts[examId] || { grade: "", subject: "matematica", saving: false };
+    const draft = gradeDrafts[examId] || {
+      grade: "",
+      subject: "matematica",
+      saving: false,
+    };
     const value = Number(draft.grade);
     if (!Number.isFinite(value)) return;
     updateGradeDraft(examId, { saving: true });
@@ -2041,16 +2063,19 @@ function ScheduledExamsCard({
                 .flat()
                 .map((d, i) => {
                   const key = i;
-                  const isEmpty = !d;
                   const ds = d ? ymd(d) : "";
-                  const scheduled = d && items.some((it) => it.date === ds);
+                  const scheduled = Boolean(
+                    d && items.some((it) => it.date === ds)
+                  );
                   const isToday = d ? ds === today : false;
                   return (
                     <div
                       key={key}
                       className={[
-                        "min-h-14 bg-white [.dark_&]:bg-slate-900 p-1",
-                        scheduled ? "ring-2 ring-sky-400" : "",
+                        "relative min-h-16 bg-white [.dark_&]:bg-slate-900 p-1 flex flex-col justify-between border border-transparent",
+                        scheduled
+                          ? "border-sky-400 shadow-inner shadow-sky-100"
+                          : "",
                       ].join(" ")}
                       title={scheduled ? "Verifica programmata" : undefined}
                     >
@@ -2082,12 +2107,11 @@ function ScheduledExamsCard({
                   else if (rem === 0) label = "Oggi";
                   else if (rem === 1) label = "Domani";
                   else label = `tra ${rem}g`;
-                  const draft =
-                    gradeDrafts[it.id] || {
-                      grade: "",
-                      subject: "matematica",
-                      saving: false,
-                    };
+                  const draft = gradeDrafts[it.id] || {
+                    grade: "",
+                    subject: "matematica",
+                    saving: false,
+                  };
                   const canAddGrade = rem <= 0 && !it.grade;
                   return (
                     <li
