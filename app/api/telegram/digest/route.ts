@@ -39,9 +39,6 @@ export async function GET() {
   const in7 = new Date(now.getTime() + 7 * 24 * 3600 * 1000)
     .toISOString()
     .slice(0, 10);
-  const reds = cards.filter((c: any) => c.risk_level === "red");
-  const yell = cards.filter((c: any) => c.risk_level === "yellow");
-  const greens = cards.filter((c: any) => c.risk_level === "green");
   const upcoming = cards.filter(
     (c: any) =>
       c.next_assessment_date &&
@@ -63,15 +60,6 @@ export async function GET() {
   const txt =
     [
       "*📊 Digest quotidiano*",
-      reds.length
-        ? `\n🔴 *Rossi* (${reds.length})\n${reds.map(line).join("\n")}`
-        : "",
-      yell.length
-        ? `\n🟡 *Gialli* (${yell.length})\n${yell.map(line).join("\n")}`
-        : "",
-      greens.length
-        ? `\n✅ *Verdi* (${greens.length})\n${greens.map(line).join("\n")}`
-        : "",
       upcoming.length
         ? `\n🗓️ *Verifiche ≤7g* (${upcoming.length})\n${upcoming.map(line).join("\n")}`
         : "",

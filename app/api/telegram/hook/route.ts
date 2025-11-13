@@ -29,7 +29,12 @@ const CHAT_LABELS = new Map(
 );
 const CONTACT_LOG_TABLE = "black_contact_logs";
 
-async function send(chat_id: number | string, text: string, replyMarkup?: any, useMarkdown = true) {
+async function send(
+  chat_id: number | string,
+  text: string,
+  replyMarkup?: any,
+  useMarkdown = true
+) {
   const parseMode = useMarkdown ? "Markdown" : "HTML";
   const res = await fetch(`${TG}/sendMessage`, {
     method: "POST",
@@ -54,7 +59,9 @@ async function send(chat_id: number | string, text: string, replyMarkup?: any, u
       status: res.status,
       body: payload,
     });
-    throw new Error(payload?.description || `Telegram send failed (${res.status})`);
+    throw new Error(
+      payload?.description || `Telegram send failed (${res.status})`
+    );
   }
 }
 
@@ -240,8 +247,7 @@ function formatCurrency(amountCents?: number | null, currency?: string | null) {
 /** /s <nome> → invia scheda (brief) */
 async function cmdS({ db, chatId, text }: CmdCtx) {
   const q = text.replace(/^\/s(@\w+)?\s*/i, "").trim();
-  if (!q)
-    return send(chatId, "Uso: /s cognome oppure /s email@example.com");
+  if (!q) return send(chatId, "Uso: /s cognome oppure /s email@example.com");
   const r = await resolveStudentId(db, q);
   if ((r as any).err) return send(chatId, (r as any).err);
   const { id, name } = r as any;
@@ -268,10 +274,12 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
     .eq("id", id)
     .maybeSingle();
 
-  const lastContact =
-    studentMeta?.last_contacted_at ? formatDateTime(studentMeta.last_contacted_at) : "—";
-  const lastAccess =
-    studentMeta?.last_active_at ? formatDateTime(studentMeta.last_active_at) : "—";
+  const lastContact = studentMeta?.last_contacted_at
+    ? formatDateTime(studentMeta.last_contacted_at)
+    : "—";
+  const lastAccess = studentMeta?.last_active_at
+    ? formatDateTime(studentMeta.last_active_at)
+    : "—";
   const readiness = `${studentMeta?.readiness ?? "—"}/100`;
   const nextAssessment = studentMeta?.next_assessment_date
     ? `${studentMeta.next_assessment_subject || "verifica"} · ${formatDate(
@@ -283,16 +291,20 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
     `│ ${bold(name)}`,
     studentMeta?.year_class
       ? `│ ${italic("Classe")}: ${escapeMarkdown(studentMeta.year_class)}${
-          studentMeta?.track ? ` · ${italic("Track")}: ${escapeMarkdown(studentMeta.track)}` : ""
+          studentMeta?.track
+            ? ` · ${italic("Track")}: ${escapeMarkdown(studentMeta.track)}`
+            : ""
         }`
       : studentMeta?.track
-      ? `│ ${italic("Track")}: ${escapeMarkdown(studentMeta.track)}`
-      : null,
+        ? `│ ${italic("Track")}: ${escapeMarkdown(studentMeta.track)}`
+        : null,
     `│ ${italic("Ultimo contatto")}: ${escapeMarkdown(lastContact)}`,
     `│ ${italic("Ultimo accesso")}: ${escapeMarkdown(lastAccess)}`,
     `│ ${italic("Readiness")}: ${escapeMarkdown(readiness)}`,
     `│ ${italic("Prossima verifica")}: ${escapeMarkdown(nextAssessment)}`,
-    studentMeta?.goal ? `│ ${italic("Goal")}: ${escapeMarkdown(studentMeta.goal)}` : null,
+    studentMeta?.goal
+      ? `│ ${italic("Goal")}: ${escapeMarkdown(studentMeta.goal)}`
+      : null,
     studentMeta?.difficulty_focus
       ? `│ ${italic("Focus")}: ${escapeMarkdown(studentMeta.difficulty_focus)}`
       : null,
@@ -387,17 +399,24 @@ async function cmdNOME({ db, chatId, text }: CmdCtx) {
     .eq("id", id)
     .maybeSingle();
   if (studentFetchErr)
-    return send(chatId, `❌ Errore lettura studente: ${studentFetchErr.message}`);
+    return send(
+      chatId,
+      `❌ Errore lettura studente: ${studentFetchErr.message}`
+    );
 
   if (!studentRow?.user_id)
-    return send(chatId, "❌ Studente senza user_id: aggiorna prima il profilo.");
+    return send(
+      chatId,
+      "❌ Studente senza user_id: aggiorna prima il profilo."
+    );
 
   const stamp = new Date().toISOString();
   const { error: profileErr } = await db
     .from("profiles")
     .update({ full_name: nextName, updated_at: stamp })
     .eq("id", studentRow.user_id);
-  if (profileErr) return send(chatId, `❌ Errore update profilo: ${profileErr.message}`);
+  if (profileErr)
+    return send(chatId, `❌ Errore update profilo: ${profileErr.message}`);
 
   try {
     await db.rpc("refresh_black_brief", { _student: id });
@@ -528,7 +547,6 @@ async function cmdOGGI({ db, chatId }: CmdCtx) {
 
   const reds = cards.filter((c: any) => c.risk_level === "red");
   const yell = cards.filter((c: any) => c.risk_level === "yellow");
-  const greens = cards.filter((c: any) => c.risk_level === "green");
   const upcoming = cards.filter(
     (c: any) => c.next_assessment_date && c.next_assessment_date <= in7
   );
@@ -557,9 +575,6 @@ async function cmdOGGI({ db, chatId }: CmdCtx) {
       : "",
     yell.length
       ? `\n🟡 *Gialli* (${yell.length})\n${yell.map(line).join("\n")}`
-      : "",
-    greens.length
-      ? `\n✅ *Verdi* (${greens.length})\n${greens.map(line).join("\n")}`
       : "",
     upcoming.length
       ? `\n🗓️ *Verifiche ≤7g* (${upcoming.length})\n${upcoming.map(line).join("\n")}`
@@ -607,15 +622,21 @@ async function cmdNUOVI({ db, chatId }: CmdCtx) {
   ]);
 
   const { data: students, error: studentError } = studentsRes;
-  if (studentError) return send(chatId, `❌ Errore elenco: ${studentError.message}`);
+  if (studentError)
+    return send(chatId, `❌ Errore elenco: ${studentError.message}`);
   const { data: signups, error: signupError } = signupsRes;
-  if (signupError) return send(chatId, `❌ Errore Stripe: ${signupError.message}`);
+  if (signupError)
+    return send(chatId, `❌ Errore Stripe: ${signupError.message}`);
 
   const pendingSignups =
-    signups?.filter((row: any) => !row.student_id || row.status !== "synced") ?? [];
+    signups?.filter((row: any) => !row.student_id || row.status !== "synced") ??
+    [];
 
   if (pendingSignups.length) {
-    await send(chatId, `*🆕 Attivazioni Stripe da collegare (${pendingSignups.length})*`);
+    await send(
+      chatId,
+      `*🆕 Attivazioni Stripe da collegare (${pendingSignups.length})*`
+    );
     for (const row of pendingSignups) {
       const plan = row.plan_label || row.plan_name || "Theoremz Black";
       const email = row.customer_email || "—";
@@ -643,7 +664,10 @@ async function cmdNUOVI({ db, chatId }: CmdCtx) {
       await send(chatId, lines);
     }
   } else {
-    await send(chatId, "Nessuna nuova attivazione Stripe negli ultimi 30 giorni.");
+    await send(
+      chatId,
+      "Nessuna nuova attivazione Stripe negli ultimi 30 giorni."
+    );
   }
 
   if (!students?.length) {
@@ -654,20 +678,22 @@ async function cmdNUOVI({ db, chatId }: CmdCtx) {
   }
 
   for (const row of students) {
-    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const profile = Array.isArray(row.profiles)
+      ? row.profiles[0]
+      : row.profiles;
     const name = profile?.full_name || row.parent_name || "Studente";
     const plan = planLabelFromPriceId(profile?.stripe_price_id);
     const when = formatDate(row.start_date);
     const email = row.student_email || row.parent_email || null;
     const phone = row.student_phone || row.parent_phone || "—";
-  const lines = [
-    bold(name),
-    `${italic("Classe")}: ${escapeMarkdown(row.year_class || "—")}`,
-    `${italic("Piano")}: ${escapeMarkdown(plan)}`,
-    `${italic("Iscritto il")}: ${escapeMarkdown(when)}`,
-    `${italic("Email")}: ${escapeMarkdown(email || "—")}`,
-    `${italic("Telefono")}: ${escapeMarkdown(phone)}`,
-  ].join("\n");
+    const lines = [
+      bold(name),
+      `${italic("Classe")}: ${escapeMarkdown(row.year_class || "—")}`,
+      `${italic("Piano")}: ${escapeMarkdown(plan)}`,
+      `${italic("Iscritto il")}: ${escapeMarkdown(when)}`,
+      `${italic("Email")}: ${escapeMarkdown(email || "—")}`,
+      `${italic("Telefono")}: ${escapeMarkdown(phone)}`,
+    ].join("\n");
     const replyMarkup =
       email && email !== "—"
         ? {
@@ -699,7 +725,9 @@ async function cmdSYNCSTRIPE({ db, chatId, text }: CmdCtx) {
       .map(formatSyncDetail)
       .join("\n");
     const detailNote =
-      combinedDetails.length > 10 ? `…altri ${combinedDetails.length - 10}` : null;
+      combinedDetails.length > 10
+        ? `…altri ${combinedDetails.length - 10}`
+        : null;
     const message = [summary, detailLines || null, detailNote]
       .filter(Boolean)
       .join("\n\n");
@@ -711,7 +739,7 @@ async function cmdSYNCSTRIPE({ db, chatId, text }: CmdCtx) {
 
 function formatSyncSummary(
   pending: StripeSignupSyncResult["stats"],
-  active: StripeSignupSyncResult["stats"],
+  active: StripeSignupSyncResult["stats"]
 ) {
   return [
     "*Sync Stripe completata*",
@@ -771,12 +799,12 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     const current = Number(data?.readiness ?? 0);
     const updated = Math.min(100, current + 5);
     const contactAt = new Date().toISOString();
-  const { error: updErr } = await db
-    .from("black_students")
-    .update({
-      readiness: updated,
-      last_contacted_at: contactAt,
-    })
+    const { error: updErr } = await db
+      .from("black_students")
+      .update({
+        readiness: updated,
+        last_contacted_at: contactAt,
+      })
       .eq("id", id);
     if (updErr) return send(chatId, `❌ Errore update: ${updErr.message}`);
     console.info("[telegram-bot] cmdCHECKED readiness updated", {
@@ -820,7 +848,7 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     ]
       .filter(Boolean)
       .join("\n");
-    
+
     await send(chatId, lines);
 
     try {
@@ -953,7 +981,10 @@ export async function POST(req: Request) {
       await cmdNOME(ctx);
     } else if (/^\/nuovi/i.test(text)) {
       await cmdNUOVI(ctx);
-    } else if (/^\/checked(\s|@)/i.test(text) || /^\/cheched(\s|@)/i.test(text)) {
+    } else if (
+      /^\/checked(\s|@)/i.test(text) ||
+      /^\/cheched(\s|@)/i.test(text)
+    ) {
       await cmdCHECKED(ctx);
     } else if (/^\/sync(?:stripe)?/i.test(text)) {
       await cmdSYNCSTRIPE(ctx);
