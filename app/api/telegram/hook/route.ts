@@ -1165,12 +1165,16 @@ async function cmdASS({ db, chatId, text }: CmdCtx) {
   if ((r as any).err) return send(chatId, (r as any).err);
   const { id, name } = r as any;
 
-  const { error: e1 } = await db.from("black_assessments").insert({
-    student_id: id,
-    subject,
-    topics: topics || null,
-    when_at: when,
-  });
+  const { error: e1, data: assessmentData } = await db
+    .from("black_assessments")
+    .insert({
+      student_id: id,
+      subject,
+      topics: topics || null,
+      when_at: when,
+    })
+    .select("id")
+    .single();
   if (e1) return send(chatId, `❌ Errore verifica: ${e1.message}`);
 
   // aggiorna cache prossima verifica rigenerando brief
@@ -1178,7 +1182,7 @@ async function cmdASS({ db, chatId, text }: CmdCtx) {
   await mirrorAssessmentToFirestore({
     db,
     studentId: id,
-    assessmentId: inserted.id,
+    assessmentId: assessmentData?.id,
     date: when,
     subject,
     topics: topics || null,
@@ -1212,12 +1216,16 @@ async function cmdVERIFICA({ db, chatId, text }: CmdCtx) {
   if ((resolved as any).err) return send(chatId, (resolved as any).err);
   const { id, name } = resolved as any;
 
-  const { error } = await db.from("black_assessments").insert({
-    student_id: id,
-    subject,
-    topics: topics || null,
-    when_at: when,
-  });
+  const { error, data: assessmentData2 } = await db
+    .from("black_assessments")
+    .insert({
+      student_id: id,
+      subject,
+      topics: topics || null,
+      when_at: when,
+    })
+    .select("id")
+    .single();
   if (error) return send(chatId, `❌ Errore verifica: ${error.message}`);
 
   try {
@@ -1229,7 +1237,7 @@ async function cmdVERIFICA({ db, chatId, text }: CmdCtx) {
   await mirrorAssessmentToFirestore({
     db,
     studentId: id,
-    assessmentId: inserted.id,
+    assessmentId: assessmentData2?.id,
     date: when,
     subject,
     topics: topics || null,

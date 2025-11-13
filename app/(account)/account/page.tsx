@@ -1657,6 +1657,8 @@ function ScheduledExamsCard({
   const [gradeDrafts, setGradeDrafts] = useState<
     Record<string, ExamGradeDraft>
   >({});
+  const [showAllFuture, setShowAllFuture] = useState(false);
+  const [showAllPast, setShowAllPast] = useState(false);
 
   const [viewYear, setViewYear] = useState<number>(new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState<number>(new Date().getMonth());
@@ -1831,6 +1833,144 @@ function ScheduledExamsCard({
   }
 
   const hasAny = items.length > 0;
+  const upcomingItems = [...items]
+    .filter((it) => it.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const pastItemsSorted = [...items]
+    .filter((it) => it.date < today)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const upcomingList = showAllFuture ? upcomingItems : upcomingItems.slice(0, 3);
+  const pastList = showAllPast ? pastItemsSorted : pastItemsSorted.slice(0, 3);
+
+  const renderExamCard = (it: ExamItem, bucket: "future" | "past") => {
+    const rem = daysBetweenISO(today, it.date);
+    let label: string;
+    if (rem < 0) {
+      label = new Date(`${it.date}T00:00:00`).toLocaleDateString("it-IT", {
+        day: "numeric",
+        month: "short",
+      });
+    } else if (rem === 0) {
+      label = "È oggi";
+    } else if (rem === 1) {
+      label = "Domani";
+    } else {
+      label = `Tra ${rem}g`;
+    }
+
+    const draft =
+      gradeDrafts[it.id] || {
+        grade: "",
+        subject: "matematica",
+        saving: false,
+      };
+    const canAddGrade = rem <= 0 && !it.grade;
+
+    const accent =
+      bucket === "future"
+        ? "from-[#2b7fff] to-[#55d4ff]"
+        : "from-[#34d399] to-[#06b6d4]";
+    const labelChipClass =
+      bucket === "future"
+        ? "bg-sky-100 text-sky-700 [.dark_&]:bg-sky-500/25 [.dark_&]:text-sky-100"
+        : "bg-emerald-100 text-emerald-700 [.dark_&]:bg-emerald-500/25 [.dark_&]:text-emerald-100";
+
+    const friendlyDate = (() => {
+      const parsed = new Date(`${it.date}T00:00:00`);
+      if (Number.isNaN(parsed.getTime())) return it.date;
+      return parsed.toLocaleDateString("it-IT", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      });
+    })();
+
+    return (
+      <div
+        key={it.id}
+        className="relative overflow-hidden rounded-2xl border border-slate-200 [.dark_&]:border-white/10 bg-white [.dark_&]:bg-slate-900/40 p-3 shadow-sm"
+      >
+        <span
+          className={`pointer-events-none absolute left-4 right-4 top-0 h-1 rounded-b-full bg-gradient-to-r ${accent}`}
+          aria-hidden="true"
+        />
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="text-sm font-semibold text-slate-900 [.dark_&]:text-white">
+              {friendlyDate}
+            </div>
+            <div className="text-xs text-slate-500 [.dark_&]:text-white/60">
+              {it.date}
+            </div>
+            <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.18em]">
+              <span className="rounded-full border border-slate-200 px-2.5 py-0.5 text-slate-600 [.dark_&]:border-white/20 [.dark_&]:text-white/70">
+                {it.subject || "Materia"}
+              </span>
+              {typeof it.grade === "number" && (
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-800 [.dark_&]:bg-emerald-500/25 [.dark_&]:text-emerald-100">
+                  {it.grade.toFixed(1)}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${labelChipClass}`}
+            >
+              {label}
+            </span>
+            <button
+              onClick={() => removeExam(it.id)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 [.dark_&]:border-white/20 [.dark_&]:text-white/60"
+              aria-label="Rimuovi"
+              title="Rimuovi"
+            >
+              <Trash className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        {canAddGrade ? (
+          <div className="mt-3 space-y-1 text-xs text-slate-600 [.dark_&]:text-white/70">
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={draft.subject}
+                onChange={(e) =>
+                  updateGradeDraft(it.id, {
+                    subject: e.target.value as "matematica" | "fisica",
+                  })
+                }
+                className="rounded-lg border px-2 py-1 text-xs bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
+              >
+                <option value="matematica">Matematica</option>
+                <option value="fisica">Fisica</option>
+              </select>
+              <input
+                type="number"
+                min={0}
+                max={10}
+                step={0.5}
+                value={draft.grade}
+                onChange={(e) =>
+                  updateGradeDraft(it.id, {
+                    grade: e.target.value,
+                  })
+                }
+                placeholder="Voto"
+                className="rounded-lg border px-2 py-1 text-xs w-24 bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
+              />
+              <button
+                onClick={() => saveGradeForExam(it.id)}
+                disabled={draft.saving || String(draft.grade).trim() === ""}
+                className="rounded-lg bg-emerald-500 text-white px-3 py-1 text-xs font-semibold disabled:opacity-60"
+              >
+                {draft.saving ? "Salvataggio…" : "Salva voto"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   return (
     <Card
@@ -2067,19 +2207,33 @@ function ScheduledExamsCard({
                   const scheduled = Boolean(
                     d && items.some((it) => it.date === ds)
                   );
+                  const isPastExamDay = scheduled && ds < today;
                   const isToday = d ? ds === today : false;
                   return (
                     <div
                       key={key}
                       className={[
-                        "relative min-h-16 bg-white [.dark_&]:bg-slate-900 p-1 flex flex-col justify-between border border-transparent",
+                        "relative min-h-16 bg-white [.dark_&]:bg-slate-900 p-1 flex flex-col justify-between border border-transparent box-border overflow-hidden",
                         scheduled
                           ? "border-sky-400 shadow-inner shadow-sky-100"
                           : "",
                       ].join(" ")}
                       title={scheduled ? "Verifica programmata" : undefined}
                     >
-                      <div className="text-xs font-semibold text-slate-700 [.dark_&]:text-white/80 flex items-center gap-1">
+                      {scheduled && (
+                        <span
+                          className={[
+                            "pointer-events-none absolute inset-0 flex items-center justify-center font-black",
+                            isPastExamDay
+                              ? "text-emerald-400/80"
+                              : "text-sky-400/80",
+                            "text-4xl sm:text-5xl",
+                          ].join(" ")}
+                        >
+                          {isPastExamDay ? "✓" : "×"}
+                        </span>
+                      )}
+                      <div className="relative z-10 text-xs font-semibold text-slate-700 [.dark_&]:text-white/80 flex items-center gap-1">
                         {d ? d.getDate() : ""}
                         {isToday && (
                           <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
@@ -2092,111 +2246,70 @@ function ScheduledExamsCard({
           </div>
 
           {/* Lista verifiche */}
-          <div className="rounded-xl border border-slate-200 [.dark_&]:border-white/10 p-3">
-            <div className="text-sm font-semibold mb-2">Prossime verifiche</div>
-            {items.length === 0 ? (
-              <div className="text-sm text-slate-600 [.dark_&]:text-white/70">
-                Nessuna.
+          <div className="space-y-4">
+            <section className="rounded-2xl border border-slate-200 [.dark_&]:border-white/10 bg-white [.dark_&]:bg-slate-900/40 p-4 shadow-sm">
+              <header className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.32em] text-slate-400 [.dark_&]:text-white/50">
+                    Pianificazione
+                  </p>
+                  <h3 className="text-base font-semibold text-slate-900 [.dark_&]:text-white">
+                    Prossime verifiche
+                  </h3>
+                </div>
+                {upcomingItems.length > 3 && (
+                  <button
+                    onClick={() => setShowAllFuture((v) => !v)}
+                    className="text-xs font-semibold text-sky-600 hover:text-sky-500 [.dark_&]:text-sky-300"
+                  >
+                    {showAllFuture
+                      ? "Mostra meno"
+                      : `Mostra tutte (${upcomingItems.length})`}
+                  </button>
+                )}
+              </header>
+              <div className="mt-4 space-y-2">
+                {upcomingList.length === 0 ? (
+                  <p className="text-sm text-slate-600 [.dark_&]:text-white/70">
+                    Nessuna verifica imminente.
+                  </p>
+                ) : (
+                  upcomingList.map((exam) => renderExamCard(exam, "future"))
+                )}
               </div>
-            ) : (
-              <ul className="divide-y divide-slate-200 [.dark_&]:divide-white/10">
-                {items.map((it) => {
-                  const rem = daysBetweenISO(today, it.date);
-                  let label: string;
-                  if (rem < 0) label = `passata da ${Math.abs(rem)}g`;
-                  else if (rem === 0) label = "Oggi";
-                  else if (rem === 1) label = "Domani";
-                  else label = `tra ${rem}g`;
-                  const draft = gradeDrafts[it.id] || {
-                    grade: "",
-                    subject: "matematica",
-                    saving: false,
-                  };
-                  const canAddGrade = rem <= 0 && !it.grade;
-                  return (
-                    <li
-                      key={it.id}
-                      className="py-3 flex items-center justify-between gap-4 text-sm"
-                    >
-                      <div className="flex-1">
-                        <div className="font-semibold">{it.date}</div>
-                        {it.subject && (
-                          <div className="text-slate-700 [.dark_&]:text-white/80">
-                            {it.subject}
-                          </div>
-                        )}
-                        {it.notes && (
-                          <div className="text-xs text-slate-500 [.dark_&]:text-white/60">
-                            {it.notes}
-                          </div>
-                        )}
-                        <div className="text-blue-700 [.dark_&]:text-sky-300 font-semibold mt-1">
-                          {label}
-                        </div>
-                        {it.grade ? (
-                          <div className="mt-1 text-sm text-emerald-700 [.dark_&]:text-emerald-300">
-                            Voto registrato:{" "}
-                            <strong>{it.grade.toFixed(1)}</strong>{" "}
-                            {it.grade_subject ? `(${it.grade_subject})` : ""}
-                          </div>
-                        ) : canAddGrade ? (
-                          <div className="mt-2 space-y-1 text-xs text-slate-600 [.dark_&]:text-white/70">
-                            <div className="flex flex-wrap gap-2">
-                              <select
-                                value={draft.subject}
-                                onChange={(e) =>
-                                  updateGradeDraft(it.id, {
-                                    subject: e.target.value as
-                                      | "matematica"
-                                      | "fisica",
-                                  })
-                                }
-                                className="rounded-lg border px-2 py-1 text-xs bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
-                              >
-                                <option value="matematica">Matematica</option>
-                                <option value="fisica">Fisica</option>
-                              </select>
-                              <input
-                                type="number"
-                                min={0}
-                                max={10}
-                                step={0.5}
-                                value={draft.grade}
-                                onChange={(e) =>
-                                  updateGradeDraft(it.id, {
-                                    grade: e.target.value,
-                                  })
-                                }
-                                placeholder="Voto"
-                                className="rounded-lg border px-2 py-1 text-xs w-24 bg-white text-slate-900 border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:border-white/20"
-                              />
-                              <button
-                                onClick={() => saveGradeForExam(it.id)}
-                                disabled={
-                                  draft.saving ||
-                                  String(draft.grade).trim() === ""
-                                }
-                                className="rounded-lg bg-emerald-500 text-white px-3 py-1 text-xs font-semibold disabled:opacity-60"
-                              >
-                                {draft.saving ? "Salvataggio…" : "Salva voto"}
-                              </button>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                      <button
-                        onClick={() => removeExam(it.id)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 hover:bg-red-50 [.dark_&]:hover:bg-red-500/10"
-                        aria-label="Rimuovi"
-                        title="Rimuovi"
-                      >
-                        <Trash className="h-4 w-4" />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 [.dark_&]:border-white/10 bg-white [.dark_&]:bg-slate-900/40 p-4 shadow-sm">
+              <header className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.32em] text-slate-400 [.dark_&]:text-white/50">
+                    Debrief
+                  </p>
+                  <h3 className="text-base font-semibold text-slate-900 [.dark_&]:text-white">
+                    Verifiche appena concluse
+                  </h3>
+                </div>
+                {pastItemsSorted.length > 3 && (
+                  <button
+                    onClick={() => setShowAllPast((v) => !v)}
+                    className="text-xs font-semibold text-sky-600 hover:text-sky-500 [.dark_&]:text-sky-300"
+                  >
+                    {showAllPast
+                      ? "Mostra meno"
+                      : `Mostra tutte (${pastItemsSorted.length})`}
+                  </button>
+                )}
+              </header>
+              <div className="mt-4 space-y-2">
+                {pastList.length === 0 ? (
+                  <p className="text-sm text-slate-600 [.dark_&]:text-white/70">
+                    Ancora nessun risultato recente.
+                  </p>
+                ) : (
+                  pastList.map((exam) => renderExamCard(exam, "past"))
+                )}
+              </div>
+            </section>
           </div>
         </div>
       )}
