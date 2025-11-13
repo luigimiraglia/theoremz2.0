@@ -41,6 +41,10 @@ async function handle(req: Request) {
       const reset = await resetReadiness({ db });
       return NextResponse.json({ ok: true, mode: "reset", ...reset });
     }
+    if (action === "test-pre-exam") {
+      const testResult = await handleTestPreExam(req);
+      return NextResponse.json({ ok: !testResult.error, mode: "test", ...testResult });
+    }
     const decay = await decayReadiness({ db });
     let preExamTips: Awaited<ReturnType<typeof maybeSendPreExamTips>> | null =
       null;
@@ -79,6 +83,110 @@ function isAuthorized(req: Request) {
     null;
   if (CRON_SECRET) return provided === CRON_SECRET;
   return req.headers.has("x-vercel-cron");
+}
+
+async function handleTestPreExam(req: Request) {
+  if (!openaiClient) return { error: "missing_openai_api_key" };
+  const transporter = getMailer();
+  if (!transporter) return { error: "missing_mail_transport" };
+
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return { error: "invalid_json" };
+  }
+  if (!body || typeof body !== "object") {
+    return { error: "invalid_payload" };
+  }
+
+  const toCandidates: string[] = [];
+  if (Array.isArray(body.to)) {
+    toCandidates.push(...body.to);
+  } else if (typeof body.to === "string") {
+    toCandidates.push(body.to);
+  }
+  if (typeof body.additionalTo === "string") {
+    toCandidates.push(body.additionalTo);
+  }
+  const fallbackTo =
+    process.env.BLACK_PRE_EXAM_TEST_TO || process.env.BLACK_PRE_EXAM_CC || process.env.CONTACT_TO || GMAIL_USER;
+  if (!toCandidates.length && fallbackTo) {
+    toCandidates.push(fallbackTo);
+  }
+  const to = extractEmails(toCandidates.join(","));
+  if (!to.length) {
+    return { error: "missing_to" };
+  }
+
+  const parentName = body.parentName || "genitori";
+  const subjectLabel = body.subject || "Matematica";
+  const topics = body.topics || null;
+  const date =
+    body.date ||
+    new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+  const assessment = {
+    id: body.assessmentId || `test-${Date.now()}`,
+    student_id: "test-student",
+    subject: subjectLabel,
+    topics,
+    when_at: date,
+  };
+
+  const logs = Array.isArray(body.logs)
+    ? body.logs.map(normalizeTestLog).filter(Boolean)
+    : [];
+
+  const briefMd =
+    typeof body.briefMd === "string" && body.briefMd.trim()
+      ? body.briefMd
+      : defaultBriefMock(parentName);
+
+  const tipPayload = await generateTipPlan({
+    parentName,
+    assessment,
+    briefMd,
+    logs,
+    goal: body.goal || null,
+    difficulty: body.difficulty || null,
+  });
+  if (!tipPayload) {
+    return { error: "ai_generation_failed" };
+  }
+  const email = composeEmail({
+    parentName,
+    assessment,
+    tipPayload,
+    briefMd,
+  });
+  if (!email) {
+    return { error: "email_compose_failed" };
+  }
+
+  const subjectPrefix = typeof body.subjectPrefix === "string" ? body.subjectPrefix.trim() : "[TEST]";
+  const mailSubject = subjectPrefix ? `${subjectPrefix} ${email.subject}` : email.subject;
+
+  try {
+    await transporter.sendMail({
+      from: `Team Theoremz <${GMAIL_USER}>`,
+      to,
+      subject: mailSubject,
+      text: email.text,
+      html: email.html,
+    });
+  } catch (error: any) {
+    console.error("[pre-exam:test] send failed", error);
+    return { error: error?.message || "send_failed" };
+  }
+
+  return {
+    sent: true,
+    to,
+    subject: mailSubject,
+    preview: email.preview,
+    ai: tipPayload,
+  };
 }
 
 async function maybeSendPreExamTips(db: ReturnType<typeof supabaseServer>) {
@@ -460,6 +568,49 @@ function renderHtmlEmail({
       <p style="margin-top:24px">Un abbraccio,<br/>Team Theoremz</p>
     </div>
   `;
+}
+
+function normalizeTestLog(raw: any) {
+  if (!raw || typeof raw !== "object") return null;
+  const contacted_at =
+    raw.contacted_at || raw.date || new Date().toISOString();
+  const body =
+    typeof raw.body === "string" && raw.body.trim()
+      ? raw.body.trim()
+      : raw.summary || "Nota di prova.";
+  return {
+    student_id: "test-student",
+    contacted_at,
+    body,
+    source: raw.source || "test_payload",
+    author_label: raw.author_label || raw.author || "tester",
+  };
+}
+
+function defaultBriefMock(parentName: string) {
+  const today = new Date().toLocaleDateString("it-IT");
+  return `STUDENTE BLACK — Brief di prova
+
+Contatti
+Genitore: ${parentName} — +39 333 0000000 — famiglia@example.com
+Studente: studente@example.com
+
+Obiettivo
+Portare matematica e fisica sopra il 7 entro fine quadrimestre.
+
+Focus
+Algebra, problemi con testi lunghi, gestione del tempo in verifica.
+
+Stato
+Readiness: 58/100
+Rischio: yellow
+Prossima verifica: Matematica — domani
+
+Ultime note
+- 2 giorni fa: consegnata scheda esercizi con qualche incertezza sulle disequazioni.
+- Settimana scorsa: coach suggerisce di ripassare teoria sui sistemi.
+
+Aggiornato: ${today}`;
 }
 
 function formatLogsForPrompt(logs: any[]) {
