@@ -131,6 +131,254 @@ async function cmdDARIATTIVARE({ db, chatId }: CmdCtx) {
   }
 }
 
+async function cmdOREPAGATE({ db, chatId, text }: CmdCtx) {
+  const m = text.match(
+    /^\/orepagate(?:@\w+)?\s+(\S+)\s+(\d+(?:[.,]\d+)?)/i
+  );
+  if (!m)
+    return send(chatId, "Uso: /orepagate cognome 3.5");
+  const [, query, rawHours] = m;
+  const hours = Number(rawHours.replace(",", "."));
+  if (!Number.isFinite(hours) || hours <= 0)
+    return send(chatId, "Inserisci un numero di ore positivo.");
+
+  let resolved;
+  if (query.includes("@")) {
+    resolved = await lookupStudentByEmail(db, query.toLowerCase());
+  } else {
+    resolved = await resolveStudentId(db, query);
+  }
+  if ((resolved as any).err) return send(chatId, (resolved as any).err);
+  const { id, name } = resolved as any;
+
+  const { data, error } = await db
+    .from("black_students")
+    .select("hours_paid")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) return send(chatId, `❌ Errore lettura: ${error.message}`);
+  const current = Number(data?.hours_paid ?? 0);
+  const updated = current + hours;
+  const { error: updateErr } = await db
+    .from("black_students")
+    .update({ hours_paid: updated })
+    .eq("id", id);
+  if (updateErr)
+    return send(chatId, `❌ Errore update: ${updateErr.message}`);
+  await send(
+    chatId,
+    `💳 Ore pagate per ${bold(name)}: +${hours}h (totale: ${updated.toFixed(2)}h)`
+  );
+}
+
+async function cmdASSEGNA_TUTOR({ db, chatId, text }: CmdCtx) {
+  const m = text.match(
+    /^\/assegnatutor(?:@\w+)?\s+(\S+)\s+([\s\S]+)$/i
+  );
+  if (!m)
+    return send(chatId, "Uso: /assegnatutor cognome nomeTutor");
+  const [, studentQuery, tutorQuery] = m;
+
+  let resolved;
+  if (studentQuery.includes("@")) {
+    resolved = await lookupStudentByEmail(db, studentQuery.toLowerCase());
+  } else {
+    resolved = await resolveStudentId(db, studentQuery);
+  }
+  if ((resolved as any).err) return send(chatId, (resolved as any).err);
+  const { id, name } = resolved as any;
+
+  const tutor = await resolveTutor(db, tutorQuery.trim());
+  if ((tutor as any).err) return send(chatId, (tutor as any).err);
+  const { id: tutorId, name: tutorName } = tutor as any;
+
+  const { error: studentUpdate } = await db
+    .from("black_students")
+    .update({ videolesson_tutor_id: tutorId })
+    .eq("id", id);
+  if (studentUpdate)
+    return send(chatId, `❌ Errore update studente: ${studentUpdate.message}`);
+
+  await db
+    .from("tutor_assignments")
+    .upsert(
+      {
+        tutor_id: tutorId,
+        student_id: id,
+        role: "videolezione",
+      },
+      { onConflict: "tutor_id,student_id" }
+    );
+
+  await send(
+    chatId,
+    `👩‍🏫 ${bold(tutorName)} ora segue ${bold(name)} per le videolezioni.`
+  );
+}
+
+async function cmdLOGLEZIONE({ db, chatId, text }: CmdCtx) {
+  const m = text.match(
+    /^\/loglezione(?:@\w+)?\s+(\S+)\s+(\d+(?:[.,]\d+)?)(?:\s+([\s\S]+))?$/i
+  );
+  if (!m)
+    return send(chatId, "Uso: /loglezione cognome 1.5 [nota]");
+  const [, studentQuery, rawHours, note] = m;
+  const hours = Number(rawHours.replace(",", "."));
+  if (!Number.isFinite(hours) || hours <= 0)
+    return send(chatId, "Inserisci un numero di ore valido.");
+
+  let resolved;
+  if (studentQuery.includes("@")) {
+    resolved = await lookupStudentByEmail(db, studentQuery.toLowerCase());
+  } else {
+    resolved = await resolveStudentId(db, studentQuery);
+  }
+  if ((resolved as any).err) return send(chatId, (resolved as any).err);
+  const { id, name } = resolved as any;
+
+  const { data: studentRow, error: studentErr } = await db
+    .from("black_students")
+    .select("videolesson_tutor_id, hours_consumed")
+    .eq("id", id)
+    .maybeSingle();
+  if (studentErr)
+    return send(chatId, `❌ Errore lettura studente: ${studentErr.message}`);
+  const tutorId = studentRow?.videolesson_tutor_id;
+  if (!tutorId)
+    return send(chatId, "❌ Nessun tutor assegnato. Usa /assegnatutor prima.");
+
+  const happenedAt = new Date().toISOString().slice(0, 10);
+  const sessionInsert = await db.from("tutor_sessions").insert({
+    tutor_id: tutorId,
+    student_id: id,
+    duration: hours,
+    happened_at: happenedAt,
+    note: note?.trim() || null,
+  });
+  if (sessionInsert.error)
+    return send(chatId, `❌ Errore log sessione: ${sessionInsert.error.message}`);
+
+  const currentConsumed = Number(studentRow?.hours_consumed ?? 0);
+  await db
+    .from("black_students")
+    .update({ hours_consumed: currentConsumed + hours })
+    .eq("id", id);
+
+  const { data: tutorRow } = await db
+    .from("tutors")
+    .select("hours_due, full_name")
+    .eq("id", tutorId)
+    .maybeSingle();
+  if (tutorRow) {
+    const due = Number(tutorRow.hours_due ?? 0) + hours;
+    await db.from("tutors").update({ hours_due: due }).eq("id", tutorId);
+  }
+
+  await send(
+    chatId,
+    `📘 Loggato ${hours}h per ${bold(name)} (tutor: ${bold(
+      tutorRow?.full_name || "Tutor"
+    )}).`
+  );
+}
+
+async function cmdPAGATUTOR({ db, chatId, text }: CmdCtx) {
+  const m = text.match(
+    /^\/pagatutor(?:@\w+)?\s+([\s\S]+?)\s+(\d+(?:[.,]\d+)?)$/i
+  );
+  if (!m)
+    return send(chatId, "Uso: /pagatutor nomeTutor 2");
+  const [, tutorQuery, rawHours] = m;
+  const hours = Number(rawHours.replace(",", "."));
+  if (!Number.isFinite(hours) || hours <= 0)
+    return send(chatId, "Inserisci ore positive.");
+
+  const tutor = await resolveTutor(db, tutorQuery.trim());
+  if ((tutor as any).err) return send(chatId, (tutor as any).err);
+  const { id: tutorId, name } = tutor as any;
+
+  const { data, error } = await db
+    .from("tutors")
+    .select("hours_due")
+    .eq("id", tutorId)
+    .maybeSingle();
+  if (error) return send(chatId, `❌ Errore lettura tutor: ${error.message}`);
+  const current = Number(data?.hours_due ?? 0);
+  const updated = Math.max(0, current - hours);
+  const { error: updErr } = await db
+    .from("tutors")
+    .update({ hours_due: updated })
+    .eq("id", tutorId);
+  if (updErr)
+    return send(chatId, `❌ Errore update tutor: ${updErr.message}`);
+
+  await send(
+    chatId,
+    `💸 Pagamento registrato per ${bold(
+      name
+    )}: -${hours}h (restano ${updated.toFixed(2)}h da saldare)`
+  );
+}
+
+async function cmdDASHORE({ db, chatId }: CmdCtx) {
+  const [studentsRes, tutorsRes] = await Promise.all([
+    db
+      .from("black_students")
+      .select(
+        "id, student_name, student_email, parent_email, videolesson_tutor_id, hours_paid, hours_consumed, tutors:tutors!tutor_assignments(student_id)"
+      )
+      .eq("status", "active")
+      .not("hours_paid", "is", null)
+      .order("hours_paid", { ascending: false }),
+    db
+      .from("tutors")
+      .select("id, full_name, hours_due")
+      .order("hours_due", { ascending: false }),
+  ]);
+  if (studentsRes.error)
+    return send(chatId, `❌ Errore studenti: ${studentsRes.error.message}`);
+  if (tutorsRes.error)
+    return send(chatId, `❌ Errore tutor: ${tutorsRes.error.message}`);
+  const students = studentsRes.data || [];
+  const tutors = tutorsRes.data || [];
+
+  const studentLines =
+    students.length > 0
+      ? students.map((s: any) => {
+          const name =
+            s.student_name ||
+            s.student_email ||
+            s.parent_email ||
+            "Studente";
+          const hoursPaid = Number(s.hours_paid ?? 0);
+          const hoursDone = Number(s.hours_consumed ?? 0);
+          const residual = hoursPaid - hoursDone;
+          return `• ${name} — pagate ${hoursPaid.toFixed(
+            2
+          )}h, svolte ${hoursDone.toFixed(2)}h, residuo ${residual.toFixed(
+            2
+          )}h`;
+        })
+      : ["Nessuno studente con ore registrate."];
+
+  const tutorLines =
+    tutors.length > 0
+      ? tutors.map((t: any) => {
+          const hrs = Number(t.hours_due ?? 0);
+          return `• ${t.full_name || "Tutor"} — da pagare ${hrs.toFixed(2)}h`;
+        })
+      : ["Nessun tutor con ore da saldare."];
+
+  const text = [
+    "*📊 Ore studenti*",
+    ...studentLines,
+    "",
+    "*💸 Tutor da pagare*",
+    ...tutorLines,
+  ].join("\n");
+  await send(chatId, text);
+}
+
 type CmdCtx = {
   db: ReturnType<typeof supabaseServer>;
   chatId: number;
@@ -252,6 +500,44 @@ function formatMatchList(matches: any[], prefix = "") {
     })
     .join("\n");
   return `${prefix}${list}\n\nRaffina la ricerca.`;
+}
+
+async function resolveTutor(db: ReturnType<typeof supabaseServer>, query: string) {
+  const normalized = query.trim();
+  if (!normalized) return { err: "❌ Specifica un tutor (nome o email)." };
+  let res;
+  if (normalized.includes("@")) {
+    res = await db
+      .from("tutors")
+      .select("id, full_name, email, phone")
+      .eq("email", normalized.toLowerCase())
+      .maybeSingle();
+    if (res.error) throw new Error(res.error.message);
+    if (!res.data) return { err: `❌ Nessun tutor con email ${normalized}` };
+    return {
+      id: res.data.id,
+      name: res.data.full_name || res.data.email || "Tutor",
+      meta: res.data,
+    };
+  }
+  const { data, error } = await db
+    .from("tutors")
+    .select("id, full_name, email, phone")
+    .ilike("full_name", `%${normalized}%`)
+    .limit(5);
+  if (error) throw new Error(error.message);
+  if (!data?.length)
+    return { err: `❌ Nessun tutor trovato per "${normalized}"` };
+  if (data.length > 1) {
+    const sample = data.map((t) => `• ${t.full_name || t.email || "Tutor"}`).join("\n");
+    return { err: `⚠️ Più risultati:\n${sample}\nSpecifica meglio.` };
+  }
+  const row = data[0];
+  return {
+    id: row.id,
+    name: row.full_name || row.email || "Tutor",
+    meta: row,
+  };
 }
 
 async function findAssessmentMatch({
@@ -1347,6 +1633,11 @@ export async function POST(req: Request) {
           "`/votoiniziale cognome 7.0` — salva il voto iniziale",
           "`/dacontattare` — ultimi contatti >5 giorni",
           "`/dariattivare` — studenti mai contattati ma attivi sul sito",
+          "`/orepagate cognome 3` — segna ore pagate",
+          "`/assegnatutor cognome tutor` — collega tutor videolezione",
+          "`/loglezione cognome 1.5 [nota]` — logga una lezione",
+          "`/pagatutor tutor 2` — scala ore pagate al tutor",
+          "`/dashore` — riepilogo studenti/tutor/ore",
           "`/nuovi` — iscritti ultimi 30 giorni",
           "`/sync [limite]` — forza il sync delle attivazioni Stripe",
           "`/desc cognome testo...` — aggiorna overview studente",
@@ -1366,6 +1657,16 @@ export async function POST(req: Request) {
       await cmdDaContattare(ctx);
     } else if (/^\/dariattivare/i.test(text)) {
       await cmdDARIATTIVARE(ctx);
+    } else if (/^\/orepagate/i.test(text)) {
+      await cmdOREPAGATE(ctx);
+    } else if (/^\/assegnatutor/i.test(text)) {
+      await cmdASSEGNA_TUTOR(ctx);
+    } else if (/^\/loglezione/i.test(text)) {
+      await cmdLOGLEZIONE(ctx);
+    } else if (/^\/pagatutor/i.test(text)) {
+      await cmdPAGATUTOR(ctx);
+    } else if (/^\/dashore/i.test(text)) {
+      await cmdDASHORE(ctx);
     } else if (/^\/s(\s|@)/i.test(text)) {
       await cmdS(ctx);
     } else if (/^\/n(\s|@)/i.test(text)) {
