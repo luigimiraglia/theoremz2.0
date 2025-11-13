@@ -759,7 +759,7 @@ async function cmdLOGS({ db, chatId, text }: CmdCtx) {
             : "—";
           const extra =
             ass.topics && ass.topics.includes("Esito")
-              ? ` · ${ass.topics.split("\n").find((line) => line.includes("Esito"))}`
+              ? ` · ${ass.topics.split("\n").find((line: string) => line.includes("Esito"))}`
               : "";
           return `• ${when} — ${subject} → voto ${gradeText}${extra}`;
         })

@@ -329,7 +329,7 @@ export async function syncBlackSubscriptionRecord({
       stringOrNull(firestoreMeta?.tutorId),
     status: subscription?.status ?? "active",
     initial_avg: toNumberOrNull(firestoreMeta?.initial_avg),
-    readiness: clamp(toNumberOrNull(firestoreMeta?.readiness) ?? 50, 0, 100),
+    readiness: clamp(toNumberOrNull(firestoreMeta?.readiness) ?? 95, 0, 100),
     risk_level:
       stringOrNull(meta.risk_level) || stringOrNull(firestoreMeta?.risk_level) || "yellow",
     ai_description: stringOrNull(firestoreMeta?.ai_description),
