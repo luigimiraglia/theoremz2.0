@@ -188,6 +188,116 @@ function formatMatchList(matches: any[], prefix = "") {
   return `${prefix}${list}\n\nRaffina la ricerca.`;
 }
 
+async function findAssessmentMatch({
+  db,
+  studentId,
+  when,
+  subject,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  studentId: string;
+  when: string;
+  subject: string | null;
+}) {
+  const { data, error } = await db
+    .from("black_assessments")
+    .select("id, subject, topics")
+    .eq("student_id", studentId)
+    .eq("when_at", when);
+  if (error) {
+    console.error("[telegram-bot] assessment lookup failed", error);
+    return {
+      match: null as any,
+      info: "⚠️ Collegamento verifica non riuscito (errore).",
+    };
+  }
+  if (!data?.length) {
+    return {
+      match: null as any,
+      info: "ℹ️ Nessuna verifica in quella data da collegare.",
+    };
+  }
+  if (data.length === 1) return { match: data[0], info: null };
+  if (subject) {
+    const normalized = subject.toLowerCase();
+    const match = data.find(
+      (row) => (row.subject || "").toLowerCase() === normalized
+    );
+    if (match) return { match, info: null };
+    return {
+      match: null as any,
+      info: "ℹ️ Più verifiche quel giorno ma nessuna materia coincide, voto salvato senza collegamento.",
+    };
+  }
+  return {
+    match: null as any,
+    info: "ℹ️ Più verifiche in quella data: specifica la materia per collegarle automaticamente.",
+  };
+}
+
+async function attachGradeToAssessment({
+  db,
+  assessment,
+  score,
+  max,
+  subject,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  assessment: { id: string; subject?: string | null; topics?: string | null };
+  score: number;
+  max: number;
+  subject: string | null;
+}) {
+  const resultLine = buildAssessmentResultLine({
+    score,
+    max,
+    subject: subject || assessment.subject || null,
+  });
+  const updatedTopics = mergeAssessmentTopics(
+    assessment.topics || "",
+    resultLine
+  );
+  const { error } = await db
+    .from("black_assessments")
+    .update({ topics: updatedTopics })
+    .eq("id", assessment.id);
+  if (error) {
+    console.error("[telegram-bot] assessment result update failed", error);
+    return "⚠️ Voto salvato ma non sono riuscito a collegarlo alla verifica.";
+  }
+  const subjectLabel = assessment.subject || subject || "verifica";
+  return `🔗 Collegato alla verifica ${subjectLabel}`;
+}
+
+function buildAssessmentResultLine({
+  score,
+  max,
+  subject,
+}: {
+  score: number;
+  max: number;
+  subject: string | null;
+}) {
+  const cleanScore =
+    Number.isFinite(score) && Number.isFinite(max)
+      ? `${score}/${max}`
+      : "";
+  const label = subject ? `Esito ${subject}` : "Esito verifica";
+  return cleanScore ? `${label}: ${cleanScore}` : `${label}: registrato`;
+}
+
+function mergeAssessmentTopics(current: string, resultLine: string) {
+  const lines = current
+    ? current.split("\n").map((line) => line.trimEnd())
+    : [];
+  const idx = lines.findIndex((line) =>
+    line.trim().toLowerCase().startsWith("esito")
+  );
+  if (idx >= 0) lines[idx] = resultLine;
+  else lines.push(resultLine);
+  return lines.filter(Boolean).join("\n");
+}
+
 const PLAN_LABELS: Record<string, string> = {
   price_1SQIy3HuThKalaHI4pli489T: "Black Standard",
   price_1SGtQvHuThKalaHIr1d9ua0D: "Black Standard",
@@ -463,6 +573,72 @@ async function cmdV({ db, chatId, text }: CmdCtx) {
     chatId,
     `✅ Voto registrato per ${bold(name)}: ${score}/${max}${when ? " (" + when + ")" : ""}`
   );
+}
+
+/** /vdate <nome> <data YYYY-MM-DD> <voto>/<max> [materia] */
+async function cmdVDATE({ db, chatId, text }: CmdCtx) {
+  const m = text.match(
+    /^\/v(?:date|data)(?:@\w+)?\s+(\S+)\s+(\d{4}-\d{2}-\d{2})\s+(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)(?:\s+(\S+))?$/i
+  );
+  if (!m)
+    return send(
+      chatId,
+      "Uso: /vdate cognome 2025-11-20 7.5/10 [materia]"
+    );
+  const [, q, when, scoreRaw, maxRaw, subjectRaw] = m;
+
+  const score = Number(scoreRaw);
+  const max = Number(maxRaw);
+  if (!Number.isFinite(score) || !Number.isFinite(max) || max <= 0) {
+    return send(chatId, "❌ Formato voto non valido. Usa 7.5/10.");
+  }
+
+  const resolved = await resolveStudentId(db, q);
+  if ((resolved as any).err) return send(chatId, (resolved as any).err);
+  const { id, name } = resolved as any;
+  const explicitSubject = subjectRaw?.trim() || null;
+
+  const matchInfo = await findAssessmentMatch({
+    db,
+    studentId: id,
+    when,
+    subject: explicitSubject,
+  });
+
+  const finalSubject =
+    explicitSubject || matchInfo.match?.subject || null;
+
+  const { error: insertErr } = await db.from("black_grades").insert({
+    student_id: id,
+    subject: finalSubject,
+    score,
+    max_score: max,
+    when_at: when,
+  });
+  if (insertErr)
+    return send(chatId, `❌ Errore voto: ${insertErr.message}`);
+
+  let linkMessage: string | null = null;
+  if (matchInfo.match) {
+    linkMessage = await attachGradeToAssessment({
+      db,
+      assessment: matchInfo.match,
+      score,
+      max,
+      subject: finalSubject,
+    });
+  } else if (matchInfo.info) {
+    linkMessage = matchInfo.info;
+  }
+
+  await db.rpc("refresh_black_brief", { _student: id });
+  const lines = [
+    `✅ Voto registrato per ${bold(name)}: ${score}/${max} (${when})`,
+    linkMessage,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  await send(chatId, lines);
 }
 
 /** /ass <nome> <data YYYY-MM-DD> <materia> [topics...] */
@@ -953,7 +1129,8 @@ export async function POST(req: Request) {
           "`/s cognome` — scheda",
           "`/s email@example.com` — scheda via email",
           "`/n cognome testo...` — aggiungi nota",
-          "`/v cognome materia 7.5/10 [YYYY-MM-DD]` — aggiungi voto",
+      "`/v cognome materia 7.5/10 [YYYY-MM-DD]` — aggiungi voto",
+      "`/vdate cognome YYYY-MM-DD 7.5/10 [materia]` — voto collegato alla verifica del giorno",
           "`/ass cognome YYYY-MM-DD materia [topics]` — nuova verifica",
           "`/verifica email@example.com YYYY-MM-DD materia [topics]` — importa verifica via email",
           "`/nuovi` — iscritti ultimi 30 giorni",
@@ -969,6 +1146,8 @@ export async function POST(req: Request) {
       await cmdS(ctx);
     } else if (/^\/n(\s|@)/i.test(text)) {
       await cmdN(ctx);
+    } else if (/^\/vdate(\s|@)/i.test(text)) {
+      await cmdVDATE(ctx);
     } else if (/^\/v(\s|@)/i.test(text)) {
       await cmdV(ctx);
     } else if (/^\/ass(\s|@)/i.test(text)) {
