@@ -43,7 +43,11 @@ async function handle(req: Request) {
     }
     if (action === "test-pre-exam") {
       const testResult = await handleTestPreExam(req);
-      return NextResponse.json({ ok: !testResult.error, mode: "test", ...testResult });
+      return NextResponse.json({
+        ok: !testResult.error,
+        mode: "test",
+        ...testResult,
+      });
     }
     const decay = await decayReadiness({ db });
     let preExamTips: Awaited<ReturnType<typeof maybeSendPreExamTips>> | null =
@@ -110,7 +114,10 @@ async function handleTestPreExam(req: Request) {
     toCandidates.push(body.additionalTo);
   }
   const fallbackTo =
-    process.env.BLACK_PRE_EXAM_TEST_TO || process.env.BLACK_PRE_EXAM_CC || process.env.CONTACT_TO || GMAIL_USER;
+    process.env.BLACK_PRE_EXAM_TEST_TO ||
+    process.env.BLACK_PRE_EXAM_CC ||
+    process.env.CONTACT_TO ||
+    GMAIL_USER;
   if (!toCandidates.length && fallbackTo) {
     toCandidates.push(fallbackTo);
   }
@@ -164,8 +171,13 @@ async function handleTestPreExam(req: Request) {
     return { error: "email_compose_failed" };
   }
 
-  const subjectPrefix = typeof body.subjectPrefix === "string" ? body.subjectPrefix.trim() : "[TEST]";
-  const mailSubject = subjectPrefix ? `${subjectPrefix} ${email.subject}` : email.subject;
+  const subjectPrefix =
+    typeof body.subjectPrefix === "string"
+      ? body.subjectPrefix.trim()
+      : "[TEST]";
+  const mailSubject = subjectPrefix
+    ? `${subjectPrefix} ${email.subject}`
+    : email.subject;
 
   try {
     await transporter.sendMail({
@@ -381,10 +393,10 @@ function getMailer() {
 }
 
 type TipPlan = {
-  focus_points?: Array<string | { title?: string; detail?: string }>;
-  study_actions?: string[];
+  focus_points?: string | Array<string | { title?: string; detail?: string }>;
+  study_actions?: string | string[];
   motivation?: string;
-  reminders?: string[];
+  reminders?: string | string[];
   tone?: string;
 };
 
@@ -422,16 +434,19 @@ async function generateTipPlan({
     .filter(Boolean)
     .join("\n");
 
-  const systemPrompt = `Sei un coach didattico di Theoremz. Analizza le informazioni e produci consigli per i genitori.
+  const systemPrompt = `Sei un coach didattico di Theoremz. Analizza le informazioni e produci consigli pratici per i genitori.
 Requisiti:
 - linguaggio italiano, tono positivo ma diretto;
-- non citare il nome dello studente, parla di "tuo figlio" o "ragazzo/ragazza";
-- concentra i suggerimenti su verifiche del giorno successivo;
-- restituisci SOLO JSON con i campi: focus_points (array massimo 3 voci), study_actions (array massimo 3 voci), motivation (stringa breve), reminders (array opzionale).`;
+- non citare il nome dello studente, di solo "Ciao, ti scrivo per la verifica di domani";
+- considera che lo studio principale è già fatto: punta su rifiniture, gestione del tempo e serenità;
+- dai priorità pratiche per la verifica del giorno dopo; includi almeno un consiglio su come iniziare (es: parti dai problemi più facili) e uno sulla verifica delle risposte (es: rivedi i primi risultati prima di continuare);
+- ricorda l'importanza della presentazione del compito e che può fare la differenza;
+- trasmetti supporto emotivo e chiudi con un "In bocca al lupo";
+- restituisci SOLO JSON con i campi: focus_points (stringa breve), study_actions (stringa breve), motivation (stringa breve), reminders (stringa breve).`;
 
   try {
     const completion = await openaiClient.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5",
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
@@ -466,39 +481,42 @@ function composeEmail({
 }) {
   const subjectLabel = assessment.subject || "la verifica di domani";
   const dateLabel = formatItalianDate(assessment.when_at);
-  const greetingName = parentName?.trim() || "genitori";
-  const focusPoints = formatFocusPoints(tipPayload.focus_points);
-  const actions = formatActions(tipPayload.study_actions);
-  if (!focusPoints.length && !actions.length) return null;
+  const prepLine =
+    "Hai già fatto il grosso: oggi pensa solo a rifinire e a come affrontare la verifica con calma.";
+  const focusText = formatSectionText(tipPayload.focus_points);
+  const actionText = formatSectionText(tipPayload.study_actions);
+  if (!focusText && !actionText) return null;
   const motivation = sanitizeOutput(
     tipPayload.motivation || "Siamo qui, scrivici se serve un check veloce.",
     briefMd
   );
-  const reminders = formatReminders(tipPayload.reminders);
-  const intro = `Ciao ${greetingName},\ndomani (${dateLabel}) è prevista la verifica di ${subjectLabel}. Ti lasciamo qualche idea rapida basata sulla scheda e sugli ultimi confronti.`;
+  const reminders = formatSectionText(tipPayload.reminders);
+  const intro = `Ciao, ti scrivo per la verifica di ${subjectLabel} di domani (${dateLabel}). ${prepLine}`;
+  const closing = "In bocca al lupo,\nTeam Theoremz";
 
   const sections = [
     intro,
-    focusPoints.length
-      ? `Priorità da ripassare:\n${focusPoints.map((p) => `• ${p}`).join("\n")}`
+    focusText
+      ? `Priorità da ripassare:\n${focusText}`
       : null,
-    actions.length
-      ? `Mini-piano per oggi:\n${actions.map((action, idx) => `${idx + 1}. ${action}`).join("\n")}`
+    actionText
+      ? `Mini-piano per oggi:\n${actionText}`
       : null,
-    reminders.length
-      ? `Promemoria veloci:\n${reminders.map((r) => `- ${r}`).join("\n")}`
+    reminders
+      ? `Promemoria veloci:\n${reminders}`
       : null,
     motivation,
-    "Un abbraccio,\nTeam Theoremz",
+    closing,
   ].filter(Boolean);
 
   const text = sections.join("\n\n");
   const html = renderHtmlEmail({
     intro,
-    focusPoints,
-    actions,
+    focusText,
+    actionText,
     reminders,
     motivation,
+    closing,
   });
   const preview = truncate(
     `${subjectLabel} ${dateLabel} | ${focusPoints[0] || actions[0] || ""}`.trim(),
@@ -508,72 +526,77 @@ function composeEmail({
   return { subject, text, html, preview };
 }
 
-function formatFocusPoints(
-  points?: Array<string | { title?: string; detail?: string }>
+function formatSectionText(
+  value?: string | string[] | Array<string | { title?: string; detail?: string }>
 ) {
-  if (!Array.isArray(points)) return [];
-  return points
-    .map((point) => {
-      if (!point) return null;
-      if (typeof point === "string") return sanitizeOutput(point);
-      const title = point.title ? sanitizeOutput(point.title) : null;
-      const detail = point.detail ? sanitizeOutput(point.detail) : null;
-      return [title, detail].filter(Boolean).join(": ");
-    })
-    .filter(Boolean) as string[];
-}
-
-function formatActions(actions?: string[]) {
-  if (!Array.isArray(actions)) return [];
-  return actions.map((action) => sanitizeOutput(action)).filter(Boolean);
-}
-
-function formatReminders(reminders?: string[]) {
-  if (!Array.isArray(reminders)) return [];
-  return reminders.map((reminder) => sanitizeOutput(reminder)).filter(Boolean);
+  if (!value) return null;
+  if (typeof value === "string") return sanitizeOutput(value);
+  if (Array.isArray(value)) {
+    const lines = value
+      .map((entry) => {
+        if (!entry) return null;
+        if (typeof entry === "string") return sanitizeOutput(entry);
+        const title = entry.title ? sanitizeOutput(entry.title) : null;
+        const detail = entry.detail ? sanitizeOutput(entry.detail) : null;
+        return [title, detail].filter(Boolean).join(": ");
+      })
+      .filter(Boolean);
+    return lines.length ? lines.join("\n") : null;
+  }
+  return null;
 }
 
 function renderHtmlEmail({
   intro,
-  focusPoints,
-  actions,
+  focusText,
+  actionText,
   reminders,
   motivation,
+  closing,
 }: {
   intro: string;
-  focusPoints: string[];
-  actions: string[];
-  reminders: string[];
+  focusText: string | null;
+  actionText: string | null;
+  reminders: string | null;
   motivation: string;
+  closing: string;
 }) {
-  const block = (title: string, items: string[], ordered = false) => {
-    if (!items.length) return "";
-    const tag = ordered ? "ol" : "ul";
-    const inner = items.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const closingHtml = escapeHtml(closing).replace(/\n/g, "<br/>");
+  const section = (title: string, body: string | null) => {
+    if (!body) return "";
     return `
       <div style="margin:16px 0">
-        <p style="margin:0 0 4px;font-weight:600">${escapeHtml(title)}</p>
-        <${tag} style="margin:0 0 0 16px;padding:0">${inner}</${tag}>
+        <p style="margin:0 0 4px;font-weight:600;color:#0f172a">${escapeHtml(title)}</p>
+        <p style="margin:0;color:#0f172a">${escapeHtml(body).replace(/\n/g, "<br/>")}</p>
       </div>
     `;
   };
 
   return `
-    <div style="font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;line-height:1.55;color:#0f172a">
-      <p>${escapeHtml(intro)}</p>
-      ${block("Priorità da ripassare", focusPoints)}
-      ${block("Mini-piano per oggi", actions, true)}
-      ${block("Promemoria veloci", reminders)}
-      <p>${escapeHtml(motivation)}</p>
-      <p style="margin-top:24px">Un abbraccio,<br/>Team Theoremz</p>
+    <div style="background:#f8fafc;padding:24px">
+      <div style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:20px;overflow:hidden;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;box-shadow:0 10px 30px rgba(15,23,42,0.08)">
+        <div style="background:#0f172a;color:#f8fafc;padding:18px 26px;font-weight:700;letter-spacing:0.03em;font-size:15px">
+          THEOREMZ BLACK · CHECK QUOTIDIANO
+        </div>
+        <div style="padding:28px 32px;line-height:1.6;color:#0f172a">
+          <p style="margin:0 0 12px">${escapeHtml(intro)}</p>
+          ${section("Priorità da ripassare", focusText)}
+          ${section("Mini-piano per oggi", actionText)}
+          ${section("Promemoria veloci", reminders)}
+          <p style="margin-top:22px">${escapeHtml(motivation)}</p>
+          <p style="margin-top:30px;font-weight:600">${closingHtml}</p>
+        </div>
+        <div style="padding:14px 26px;background:#e0f2fe;color:#0f172a;font-size:13px">
+          Hai bisogno di un check veloce? Scrivici su Telegram o WhatsApp, siamo online.
+        </div>
+      </div>
     </div>
   `;
 }
 
 function normalizeTestLog(raw: any) {
   if (!raw || typeof raw !== "object") return null;
-  const contacted_at =
-    raw.contacted_at || raw.date || new Date().toISOString();
+  const contacted_at = raw.contacted_at || raw.date || new Date().toISOString();
   const body =
     typeof raw.body === "string" && raw.body.trim()
       ? raw.body.trim()
