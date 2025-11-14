@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { deleteSavedLessonLite } from "@/lib/studentLiteSync";
 
 async function getUid(req: Request) {
   const h = req.headers.get("authorization") || "";
@@ -23,5 +24,10 @@ export async function DELETE(
   const { "lesson-id": lessonId } = await params;
 
   await adminDb.doc(`users/${uid}/savedLessons/${lessonId}`).delete();
+  try {
+    await deleteSavedLessonLite({ userId: uid, lessonId });
+  } catch (error) {
+    console.error("[saved-lessons-delete] lite sync failed", error);
+  }
   return NextResponse.json({ ok: true });
 }

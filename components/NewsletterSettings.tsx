@@ -122,7 +122,7 @@ export default function NewsletterSettings({
   const isCompact = variant === "compact";
   const containerClassName = [
     isCompact
-      ? "rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-slate-900 text-sm shadow-none [.dark_&]:border-slate-700/60 [.dark_&]:bg-slate-900/80 [.dark_&]:text-white/90"
+      ? "rounded-2xl border border-slate-200/70 bg-white/80 px-4 py-3 text-slate-900 text-sm shadow-sm [.dark_&]:border-slate-700/60 [.dark_&]:bg-slate-900/70 [.dark_&]:text-white/90"
       : "rounded-2xl border border-slate-200 bg-white p-6 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-900",
     className,
   ]

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { track } from "@/lib/analytics";
+import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
 
 // Crea client Supabase per operazioni newsletter
 function getSupabaseClient() {
@@ -82,6 +83,16 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      try {
+        await syncLiteProfilePatch(user_id, {
+          newsletter_opt_in: true,
+          email,
+          full_name: nome ? `${nome}${cognome ? ` ${cognome}` : ""}` : null,
+        });
+      } catch (err) {
+        console.error("[newsletter] lite profile sync failed", err);
+      }
+
       // Analytics tracking
       try {
         track("newsletter_subscribe", {
@@ -115,6 +126,14 @@ export async function POST(request: NextRequest) {
           { error: "Errore nella disiscrizione" },
           { status: 500 }
         );
+      }
+
+      try {
+        await syncLiteProfilePatch(user_id, {
+          newsletter_opt_in: false,
+        });
+      } catch (err) {
+        console.error("[newsletter] lite profile sync failed", err);
       }
 
       // Analytics tracking

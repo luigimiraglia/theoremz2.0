@@ -48,6 +48,23 @@ export default function Register() {
           password
         );
         createdUser = credential.user;
+        if (createdUser) {
+          try {
+            const token = await createdUser.getIdToken();
+            await fetch("/api/me/init-lite-profile", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                fullName: createdUser.displayName || null,
+              }),
+            });
+          } catch (initError) {
+            console.warn("Lite profile init failed:", initError);
+          }
+        }
         if (subscribeNewsletter && createdUser) {
           try {
             await fetch("/api/newsletter", {

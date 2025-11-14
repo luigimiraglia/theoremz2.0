@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { upsertSavedLessonLite } from "@/lib/studentLiteSync";
 
 // helper: verifica Bearer token
 async function getUidFromRequest(req: Request) {
@@ -55,6 +56,17 @@ export async function POST(req: Request) {
     },
     { merge: true }
   );
+
+  try {
+    await upsertSavedLessonLite({
+      userId: uid,
+      slug,
+      status: "saved",
+      savedAt: Date.now(),
+    });
+  } catch (error) {
+    console.error("[saved-lessons] lite sync failed", error);
+  }
 
   return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,7 @@
 // /app/api/account/username/route.ts
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
 
 /** Normalizza & valida */
 function normalize(u: string) {
@@ -81,6 +82,12 @@ export async function POST(req: Request) {
       await adminAuth.updateUser(uid, { displayName: u });
     } catch {
       // non blocca l'operazione se fallisce
+    }
+
+    try {
+      await syncLiteProfilePatch(uid, { nickname: u });
+    } catch (err) {
+      console.error("[username] lite sync failed", err);
     }
 
     return NextResponse.json({ ok: true, username: u });

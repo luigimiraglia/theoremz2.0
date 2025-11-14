@@ -66,6 +66,36 @@ export default function AccountPage() {
     })();
   }, [user?.uid]);
 
+  useEffect(() => {
+    if (!user?.uid) return;
+    (async () => {
+      try {
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) return;
+        let sessionId: string | null = null;
+        if (typeof window !== "undefined") {
+          sessionId = window.sessionStorage.getItem("tz_session_id");
+          if (!sessionId) {
+            sessionId = `sess_${Date.now()}_${Math.random()
+              .toString(36)
+              .slice(2, 9)}`;
+            window.sessionStorage.setItem("tz_session_id", sessionId);
+          }
+        }
+        await fetch("/api/me/access-log", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sessionId }),
+        });
+      } catch (error) {
+        console.warn("[account] access log failed", error);
+      }
+    })();
+  }, [user?.uid]);
+
   // username: lazy init
   const [username, setUsername] = useState<string>(() => {
     const u =
@@ -380,12 +410,6 @@ export default function AccountPage() {
         </div>
       </section>
 
-      {/* NEWSLETTER */}
-      <NewsletterSettings
-        variant="compact"
-        className="sm:mx-auto sm:max-w-3xl"
-      />
-
       {/* Temp Access Info */}
       <TempAccessInfo />
 
@@ -477,6 +501,9 @@ export default function AccountPage() {
         />
       </Card>
 
+      {/* NEWSLETTER */}
+      <NewsletterSettings variant="compact" className="w-full" />
+
       {/* ABBONAMENTO */}
       <Card title="Stato abbonamento">
         <div className="flex items-center justify-between">
@@ -504,6 +531,7 @@ export default function AccountPage() {
           {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
         </button>
       </Card>
+
     </main>
   );
 }
@@ -1460,53 +1488,58 @@ function GradesCard({
           </div>
 
           {items.length > 0 && (
-            <div className="mt-2 overflow-auto max-h-60 rounded-xl border border-slate-200">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 [.dark_&]:bg-slate-800/40">
-                  <tr>
-                    <th className="text-left px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">
-                      Materia
-                    </th>
-                    <th className="text-left px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">
-                      Data
-                    </th>
-                    <th className="text-right px-3 py-2 font-semibold text-slate-700 [.dark_&]:text-white">
-                      Voto
-                    </th>
-                    <th className="w-8 px-2" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 [.dark_&]:divide-white/10">
-                  {visibleRows.map((it) => (
-                    <tr
-                      key={it.id}
-                      className="hover:bg-slate-50 [.dark_&]:hover:bg-white/5 transition-colors"
-                    >
-                      <td className="px-3 py-2 capitalize text-slate-700 [.dark_&]:text-white/90">
-                        {it.subject}
-                      </td>
-                      <td className="px-3 py-2 text-slate-600 [.dark_&]:text-white/80">
-                        {it.date}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <span className={gradeBadgeClass(it.grade)}>
-                          {it.grade}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-right">
-                        <button
-                          onClick={() => removeItem(it.id)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 hover:bg-red-50 [.dark_&]:hover:bg-red-500/10"
-                          title="Rimuovi voto"
-                          aria-label="Rimuovi voto"
-                        >
-                          <Trash className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mt-3 space-y-3">
+              {visibleRows.map((it) => {
+                const friendlyDateRaw = new Date(`${it.date}T00:00:00`).toLocaleDateString(
+                  "it-IT",
+                  { weekday: "short", day: "numeric", month: "short" }
+                );
+                const friendlyDate =
+                  friendlyDateRaw.charAt(0).toUpperCase() + friendlyDateRaw.slice(1);
+                const subjectLabel = it.subject === "matematica" ? "Matematica" : "Fisica";
+                const accent =
+                  it.subject === "matematica"
+                    ? "from-[#2b7fff] via-[#3d8bff] to-[#55d4ff]"
+                    : "from-[#34d399] via-[#20c7ba] to-[#06b6d4]";
+                const gradeText = Number.isInteger(it.grade)
+                  ? it.grade.toString()
+                  : it.grade.toFixed(1);
+                return (
+                  <div
+                    key={it.id}
+                    className="flex flex-wrap items-center justify-between gap-4 rounded-[24px] border border-slate-200/80 bg-white/80 px-4 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(15,23,42,0.09)] [.dark_&]:border-white/15 [.dark_&]:bg-slate-900/70"
+                  >
+                    <div className="flex flex-1 items-center gap-4 min-w-0">
+                      <div
+                        className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${accent} text-lg font-bold text-white shadow-inner shadow-black/20`}
+                      >
+                        {gradeText}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold uppercase tracking-[0.2em] text-slate-600 [.dark_&]:text-white/60">
+                          {subjectLabel}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-900 [.dark_&]:text-white">
+                          <span>{friendlyDate}</span>
+                          <span className="rounded-full bg-slate-100/90 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600 [.dark_&]:bg-white/20 [.dark_&]:text-white/70">
+                            {it.date}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => removeItem(it.id)}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/80 text-slate-500 transition hover:border-red-200 hover:bg-red-50/80 hover:text-red-600 [.dark_&]:border-white/15 [.dark_&]:hover:bg-red-500/10 [.dark_&]:hover:text-red-300"
+                        title="Rimuovi voto"
+                        aria-label="Rimuovi voto"
+                      >
+                        <Trash className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -1612,14 +1645,6 @@ function GradesCard({
 }
 
 // MiniChart removed in favor of GradesChart (shadcn-style)
-
-function gradeBadgeClass(g: number) {
-  if (g >= 8.5)
-    return "inline-flex items-center justify-center min-w-[3ch] rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 font-semibold";
-  if (g >= 6.0)
-    return "inline-flex items-center justify-center min-w-[3ch] rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 font-semibold";
-  return "inline-flex items-center justify-center min-w-[3ch] rounded-full bg-red-100 text-red-700 px-2 py-0.5 font-semibold";
-}
 
 /* ────────────────────── Verifiche programmate ────────────────────── */
 type ExamItem = {

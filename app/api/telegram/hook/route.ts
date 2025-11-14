@@ -10,6 +10,10 @@ import {
   syncPendingStripeSignups,
   type StripeSignupSyncResult,
 } from "@/lib/black/manualStripeSync";
+import {
+  recordStudentAssessmentLite,
+  recordStudentGradeLite,
+} from "@/lib/studentLiteSync";
 
 const TG = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 type AllowedEntry = { id: string; label: string | null };
@@ -627,6 +631,14 @@ async function mirrorAssessmentToFirestore({
         },
         { merge: true }
       );
+    await recordStudentAssessmentLite({
+      userId: uid,
+      seed: assessmentId,
+      date,
+      subject: subject || null,
+      notes: topics || null,
+      kind: "verifica",
+    });
   } catch (error) {
     console.error("[telegram-bot] firestore exam mirror failed", {
       studentId,
@@ -686,6 +698,14 @@ async function mirrorGradeToFirestore({
           { merge: true }
         );
     }
+    await recordStudentGradeLite({
+      userId: uid,
+      seed: gradeId,
+      date,
+      subject: subject || null,
+      grade,
+      assessmentSeed: assessmentId || null,
+    });
   } catch (error) {
     console.error("[telegram-bot] mirror grade failed", {
       studentId,

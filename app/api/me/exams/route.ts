@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
 import { refreshBriefSafe } from "@/lib/black/gradeSync";
+import { recordStudentAssessmentLite } from "@/lib/studentLiteSync";
 
 async function getUid(req: Request) {
   const h = req.headers.get("authorization") || "";
@@ -69,6 +70,19 @@ export async function POST(req: Request) {
     blackAssessmentId: blackAssessmentId || null,
     createdAt: Date.now(),
   });
+
+  try {
+    await recordStudentAssessmentLite({
+      userId: uid,
+      seed: blackAssessmentId || doc.id,
+      date,
+      subject,
+      notes,
+      kind: "verifica",
+    });
+  } catch (error) {
+    console.error("[me-exams] lite sync failed", error);
+  }
   return NextResponse.json({ ok: true, id: doc.id });
 }
 

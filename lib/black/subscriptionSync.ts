@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import type { UserRecord } from "firebase-admin/auth";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
+import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
 
 const HAS_SUPABASE_ENV = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -250,12 +251,13 @@ export async function syncBlackSubscriptionRecord({
       planName,
     ) || planName;
 
+  const subscriptionTier = determineSubscriptionTier(subscription?.status);
   const profilePayload: ProfilePayload = {
     id: firebaseUser.uid,
     full_name: fallbackName(firebaseUser, stripeCustomer, meta),
     role: "student",
     email: firebaseUser.email ?? studentEmailCandidate ?? parentEmailCandidate ?? null,
-    subscription_tier: determineSubscriptionTier(subscription?.status),
+    subscription_tier: subscriptionTier,
     stripe_customer_id:
       stripeCustomer?.id ||
       (typeof subscription?.customer === "string" ? subscription.customer : null),
@@ -268,6 +270,11 @@ export async function syncBlackSubscriptionRecord({
   };
 
   await ensureProfile(profilePayload);
+  try {
+    await syncLiteProfilePatch(firebaseUser.uid, { is_black: subscriptionTier === "black" });
+  } catch (error) {
+    console.error("[black-sync] lite profile sync failed", error);
+  }
 
   const firestoreMeta = await getFirestoreMeta(firebaseUser.uid);
   const parentName =

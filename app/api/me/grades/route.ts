@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { syncBlackGrade } from "@/lib/black/gradeSync";
+import { recordStudentGradeLite } from "@/lib/studentLiteSync";
 
 async function getUid(req: Request) {
   const h = req.headers.get("authorization") || "";
@@ -71,6 +72,20 @@ export async function POST(req: Request) {
     examSubject: linkInfo?.examSubject || null,
   });
 
+  try {
+    await recordStudentGradeLite({
+      userId: uid,
+      seed: doc.id,
+      date,
+      subject,
+      grade: Math.max(0, Math.min(10, grade)),
+      assessmentSeed:
+        linkInfo?.assessmentId || linkInfo?.firestoreId || null,
+    });
+  } catch (error) {
+    console.error("[me-grades] lite sync failed", error);
+  }
+
   return NextResponse.json({ ok: true, id: doc.id });
 }
 
@@ -111,6 +126,7 @@ async function linkGradeToExam({
     return {
       assessmentId: data?.blackAssessmentId || data?.black_assessment_id || null,
       examSubject: data?.subject || null,
+      firestoreId: target.id,
     };
   } catch (error) {
     console.error("[grades] failed linking grade to exam", error);
