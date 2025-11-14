@@ -313,7 +313,7 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
       .order("hours_due", { ascending: false }),
     db
       .from("black_students")
-      .select("id, student_name, student_email, parent_email, hours_paid")
+      .select("id,student_name,student_email,parent_email,hours_paid")
       .eq("status", "active")
       .gt("hours_paid", 0)
       .order("hours_paid", { ascending: false }),
