@@ -336,11 +336,12 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
           const hoursPaid = Number(s.hours_paid ?? 0);
           const hoursDone = Number(s.hours_consumed ?? 0);
           const residual = hoursPaid - hoursDone;
-          return `${idx + 1}. ${name} · pagate ${formatHours(
+          const line = `${idx + 1}. ${name} · pagate ${formatHours(
             hoursPaid
           )}h · svolte ${formatHours(hoursDone)}h · residuo ${formatHours(
             residual
           )}h`;
+          return sanitizePlainTextLine(line);
         })
       : ["Nessuno studente con ore registrate."];
 
@@ -349,7 +350,9 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
       ? tutors.map((t: any, idx: number) => {
           const hrs = Number(t.hours_due ?? 0);
           const name = cleanLabel(t.full_name, "Tutor");
-          return `${idx + 1}. ${name} · da pagare ${formatHours(hrs)}h`;
+          return sanitizePlainTextLine(
+            `${idx + 1}. ${name} · da pagare ${formatHours(hrs)}h`
+          );
         })
       : ["Nessun tutor con ore da saldare."];
 
@@ -361,7 +364,7 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
   for (const section of sections) {
     const chunks = chunkTextWithHeader(section.title, section.lines);
     for (const chunk of chunks) {
-      await send(chatId, chunk, undefined, null);
+      await sendDashoreChunk(chatId, chunk);
     }
   }
 }
@@ -527,9 +530,8 @@ function cleanLabel(
   value: string | null | undefined,
   fallback: string = "—"
 ) {
-  if (!value) return fallback;
-  const trimmed = value.replace(/\s+/g, " ").trim();
-  return trimmed.length ? trimmed : fallback;
+  const sanitized = sanitizePlainTextLine(value);
+  return sanitized.length ? sanitized : fallback;
 }
 
 function formatHours(value: number) {
@@ -543,6 +545,11 @@ function chunkTextWithHeader(title: string, lines: string[], limit = 3500) {
   const blocks: string[] = [];
   let current = header;
 
+  const pushCurrent = () => {
+    const sanitized = sanitizePlainTextBlock(current);
+    if (sanitized) blocks.push(sanitized);
+  };
+
   for (const line of lines) {
     const normalizedLine = line || "";
     const next =
@@ -551,13 +558,14 @@ function chunkTextWithHeader(title: string, lines: string[], limit = 3500) {
         : normalizedLine;
 
     if (next.length > limit && current && current !== header) {
-      blocks.push(current);
+      pushCurrent();
       current = header ? `${header}\n${normalizedLine}` : normalizedLine;
       continue;
     }
 
     if (next.length > limit) {
-      blocks.push(next);
+      const sanitizedNext = sanitizePlainTextBlock(next);
+      if (sanitizedNext) blocks.push(sanitizedNext);
       current = header;
       continue;
     }
@@ -566,12 +574,59 @@ function chunkTextWithHeader(title: string, lines: string[], limit = 3500) {
   }
 
   if (current && (!header || current !== header)) {
-    blocks.push(current);
+    pushCurrent();
   } else if (!blocks.length && header) {
-    blocks.push(header);
+    pushCurrent();
   }
 
   return blocks;
+}
+
+function sanitizePlainTextLine(value: string | null | undefined) {
+  if (!value) return "";
+  const line = sanitizePlainTextBlock(value).replace(/\n+/g, " ").trim();
+  return line;
+}
+
+function sanitizePlainTextBlock(value: string | null | undefined) {
+  if (!value) return "";
+  let output = String(value);
+  if (typeof (output as any).normalize === "function") {
+    output = output.normalize("NFKC");
+  }
+  output = output
+    .replace(/\r\n/g, "\n")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
+    .replace(/[^\S\r\n]+/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return output;
+}
+
+async function sendDashoreChunk(chatId: number, text: string) {
+  const normalized = sanitizePlainTextBlock(text);
+  if (!normalized) {
+    await send(chatId, "⚠️ Nessun dato disponibile per /dashore.", undefined, null);
+    return;
+  }
+  try {
+    await send(chatId, normalized, undefined, null);
+  } catch (err: any) {
+    console.error("[telegram-bot] dashore chunk send failed", {
+      err: err?.message || err,
+      preview: normalized.slice(0, 160),
+    });
+    const fallback = sanitizePlainTextBlock(
+      `⚠️ /dashore non riesce a inviare tutti i dettagli (${err?.message || err}). Verifica i dati su Supabase.`
+    );
+    try {
+      await send(chatId, fallback || "⚠️ /dashore ha avuto un problema.", undefined, null);
+    } catch (fallbackErr) {
+      console.error("[telegram-bot] dashore fallback send failed", fallbackErr);
+    }
+  }
 }
 
 function formatMatchList(matches: any[], prefix = "") {
