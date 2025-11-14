@@ -324,7 +324,7 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
       ? students.map((s: any) => {
           const name =
             s.student_name || s.student_email || s.parent_email || "Studente";
-          const safeName = escapeMarkdown(name);
+          const safeName = escapeHtml(name);
           const hoursPaid = Number(s.hours_paid ?? 0);
           const hoursDone = Number(s.hours_consumed ?? 0);
           const residual = hoursPaid - hoursDone;
@@ -340,19 +340,19 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
     tutors.length > 0
       ? tutors.map((t: any) => {
           const hrs = Number(t.hours_due ?? 0);
-          const safeTutorName = escapeMarkdown(t.full_name || "Tutor");
+          const safeTutorName = escapeHtml(t.full_name || "Tutor");
           return `• ${safeTutorName} — da pagare ${hrs.toFixed(2)}h`;
         })
       : ["Nessun tutor con ore da saldare."];
 
   const text = [
-    "*📊 Ore studenti*",
+    "<b>📊 Ore studenti</b>",
     ...studentLines,
     "",
-    "*💸 Tutor da pagare*",
+    "<b>💸 Tutor da pagare</b>",
     ...tutorLines,
   ].join("\n");
-  await send(chatId, text);
+  await send(chatId, text, undefined, false);
 }
 
 async function cmdADDTUTOR({ db, chatId, text }: CmdCtx) {
@@ -496,9 +496,16 @@ function escapeOrValue(value: string) {
   return value.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 /**
- * Escape text for Telegram HTML parse mode.
- * This is safer than Markdown for user input with special characters.
+ * Escape text for Telegram Markdown parse mode.
+ * Use before wrapping dynamic values with bold()/italic() helpers.
  */
 function escapeMarkdown(value: string) {
   return value.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
