@@ -324,10 +324,11 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
       ? students.map((s: any) => {
           const name =
             s.student_name || s.student_email || s.parent_email || "Studente";
+          const safeName = escapeMarkdown(name);
           const hoursPaid = Number(s.hours_paid ?? 0);
           const hoursDone = Number(s.hours_consumed ?? 0);
           const residual = hoursPaid - hoursDone;
-          return `• ${name} — pagate ${hoursPaid.toFixed(
+          return `• ${safeName} — pagate ${hoursPaid.toFixed(
             2
           )}h, svolte ${hoursDone.toFixed(2)}h, residuo ${residual.toFixed(
             2
@@ -339,7 +340,8 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
     tutors.length > 0
       ? tutors.map((t: any) => {
           const hrs = Number(t.hours_due ?? 0);
-          return `• ${t.full_name || "Tutor"} — da pagare ${hrs.toFixed(2)}h`;
+          const safeTutorName = escapeMarkdown(t.full_name || "Tutor");
+          return `• ${safeTutorName} — da pagare ${hrs.toFixed(2)}h`;
         })
       : ["Nessun tutor con ore da saldare."];
 
