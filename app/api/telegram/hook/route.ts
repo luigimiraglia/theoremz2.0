@@ -305,68 +305,50 @@ async function cmdPAGATUTOR({ db, chatId, text }: CmdCtx) {
 }
 
 async function cmdDASHORE({ db, chatId }: CmdCtx) {
-  const [studentsRes, tutorsRes] = await Promise.all([
-    db
-      .from("black_students")
-      .select(
-        "id, student_name, student_email, parent_email, videolesson_tutor_id, hours_paid, hours_consumed, tutors:tutors!tutor_assignments(student_id)"
-      )
-      .eq("status", "active")
-      .not("hours_paid", "is", null)
-      .order("hours_paid", { ascending: false }),
+  const [tutorsRes, studentsRes] = await Promise.all([
     db
       .from("tutors")
       .select("id, full_name, hours_due")
+      .gt("hours_due", 0)
       .order("hours_due", { ascending: false }),
+    db
+      .from("black_students")
+      .select("id, student_name, student_email, parent_email, hours_paid")
+      .eq("status", "active")
+      .gt("hours_paid", 0)
+      .order("hours_paid", { ascending: false }),
   ]);
-  if (studentsRes.error)
-    return send(chatId, `❌ Errore studenti: ${studentsRes.error.message}`);
+
   if (tutorsRes.error)
     return send(chatId, `❌ Errore tutor: ${tutorsRes.error.message}`);
-  const students = studentsRes.data || [];
-  const tutors = tutorsRes.data || [];
+  if (studentsRes.error)
+    return send(chatId, `❌ Errore studenti: ${studentsRes.error.message}`);
 
-  const studentLines =
-    students.length > 0
-      ? students.map((s: any, idx: number) => {
-          const name = cleanLabel(
-            s.student_name || s.student_email || s.parent_email,
-            "Studente"
-          );
-          const hoursPaid = Number(s.hours_paid ?? 0);
-          const hoursDone = Number(s.hours_consumed ?? 0);
-          const residual = hoursPaid - hoursDone;
-          const line = `${idx + 1}. ${name} · pagate ${formatHours(
-            hoursPaid
-          )}h · svolte ${formatHours(hoursDone)}h · residuo ${formatHours(
-            residual
-          )}h`;
-          return sanitizePlainTextLine(line);
-        })
-      : ["Nessuno studente con ore registrate."];
+  const tutors = tutorsRes.data || [];
+  const students = studentsRes.data || [];
 
   const tutorLines =
     tutors.length > 0
       ? tutors.map((t: any, idx: number) => {
-          const hrs = Number(t.hours_due ?? 0);
-          const name = cleanLabel(t.full_name, "Tutor");
-          return sanitizePlainTextLine(
-            `${idx + 1}. ${name} · da pagare ${formatHours(hrs)}h`
-          );
+          const name = bold(t.full_name || "Tutor");
+          const hours = formatHours(Number(t.hours_due ?? 0));
+          return `${idx + 1}. ${name} — ${hours}h da pagare`;
         })
-      : ["Nessun tutor con ore da saldare."];
+      : ["Tutti i tutor risultano saldati ✅"];
 
-  const sections = [
-    { title: "📊 Ore studenti", lines: studentLines },
-    { title: "💸 Tutor da pagare", lines: tutorLines },
-  ];
+  const studentLines =
+    students.length > 0
+      ? students.map((s: any, idx: number) => {
+          const name = bold(
+            s.student_name || s.student_email || s.parent_email || "Studente"
+          );
+          const hoursPaid = formatHours(Number(s.hours_paid ?? 0));
+          return `${idx + 1}. ${name} — ${hoursPaid}h già pagate`;
+        })
+      : ["Nessuno studente con ore pagate al momento."];
 
-  for (const section of sections) {
-    const chunks = chunkTextWithHeader(section.title, section.lines);
-    for (const chunk of chunks) {
-      await sendDashoreChunk(chatId, chunk);
-    }
-  }
+  await sendDashoreSection(chatId, "💸 Tutor da pagare", tutorLines);
+  await sendDashoreSection(chatId, "🎓 Studenti con ore pagate", studentLines);
 }
 
 async function cmdADDTUTOR({ db, chatId, text }: CmdCtx) {
@@ -526,107 +508,44 @@ function italic(text: string) {
   return `_${escapeMarkdown(text)}_`;
 }
 
-function cleanLabel(
-  value: string | null | undefined,
-  fallback: string = "—"
-) {
-  const sanitized = sanitizePlainTextLine(value);
-  return sanitized.length ? sanitized : fallback;
-}
-
 function formatHours(value: number) {
   if (!Number.isFinite(value)) return "0";
   const fixed = value.toFixed(2);
   return fixed.replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
 }
 
-function chunkTextWithHeader(title: string, lines: string[], limit = 3500) {
-  const header = title.trim();
-  const blocks: string[] = [];
+async function sendDashoreSection(
+  chatId: number,
+  title: string,
+  lines: string[]
+) {
+  const chunks = buildDashoreChunks(title, lines);
+  for (const chunk of chunks) {
+    await send(chatId, chunk);
+  }
+}
+
+function buildDashoreChunks(title: string, lines: string[], limit = 3500) {
+  const header = title ? bold(title) : "";
+  const content = lines.length ? lines : ["—"];
+  const chunks: string[] = [];
   let current = header;
 
-  const pushCurrent = () => {
-    const sanitized = sanitizePlainTextBlock(current);
-    if (sanitized) blocks.push(sanitized);
-  };
-
-  for (const line of lines) {
-    const normalizedLine = line || "";
-    const next =
-      current && current.length > 0
-        ? `${current}\n${normalizedLine}`
-        : normalizedLine;
-
-    if (next.length > limit && current && current !== header) {
-      pushCurrent();
-      current = header ? `${header}\n${normalizedLine}` : normalizedLine;
+  for (const line of content) {
+    const candidate = current ? `${current}\n${line}` : line;
+    if (candidate.length > limit && current) {
+      chunks.push(current);
+      current = header ? `${header}\n${line}` : line;
       continue;
     }
-
-    if (next.length > limit) {
-      const sanitizedNext = sanitizePlainTextBlock(next);
-      if (sanitizedNext) blocks.push(sanitizedNext);
-      current = header;
-      continue;
-    }
-
-    current = next;
+    current = candidate;
   }
 
-  if (current && (!header || current !== header)) {
-    pushCurrent();
-  } else if (!blocks.length && header) {
-    pushCurrent();
+  if (current) {
+    chunks.push(current);
   }
 
-  return blocks;
-}
-
-function sanitizePlainTextLine(value: string | null | undefined) {
-  if (!value) return "";
-  const line = sanitizePlainTextBlock(value).replace(/\n+/g, " ").trim();
-  return line;
-}
-
-function sanitizePlainTextBlock(value: string | null | undefined) {
-  if (!value) return "";
-  let output = String(value);
-  if (typeof (output as any).normalize === "function") {
-    output = output.normalize("NFKC");
-  }
-  output = output
-    .replace(/\r\n/g, "\n")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
-    .replace(/[^\S\r\n]+/g, " ")
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n[ \t]+/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-  return output;
-}
-
-async function sendDashoreChunk(chatId: number, text: string) {
-  const normalized = sanitizePlainTextBlock(text);
-  if (!normalized) {
-    await send(chatId, "⚠️ Nessun dato disponibile per /dashore.", undefined, null);
-    return;
-  }
-  try {
-    await send(chatId, normalized, undefined, null);
-  } catch (err: any) {
-    console.error("[telegram-bot] dashore chunk send failed", {
-      err: err?.message || err,
-      preview: normalized.slice(0, 160),
-    });
-    const fallback = sanitizePlainTextBlock(
-      `⚠️ /dashore non riesce a inviare tutti i dettagli (${err?.message || err}). Verifica i dati su Supabase.`
-    );
-    try {
-      await send(chatId, fallback || "⚠️ /dashore ha avuto un problema.", undefined, null);
-    } catch (fallbackErr) {
-      console.error("[telegram-bot] dashore fallback send failed", fallbackErr);
-    }
-  }
+  return chunks;
 }
 
 function formatMatchList(matches: any[], prefix = "") {
