@@ -313,7 +313,9 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
       .order("hours_due", { ascending: false }),
     db
       .from("black_students")
-      .select("id,student_name,student_email,parent_email,hours_paid")
+      .select(
+        "id, student_email, parent_email, hours_paid, profiles:profiles!black_students_user_id_fkey(full_name)"
+      )
       .eq("status", "active")
       .gt("hours_paid", 0)
       .order("hours_paid", { ascending: false }),
@@ -339,9 +341,9 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
   const studentLines =
     students.length > 0
       ? students.map((s: any, idx: number) => {
-          const name = bold(
-            s.student_name || s.student_email || s.parent_email || "Studente"
-          );
+          const displayName =
+            s?.profiles?.full_name || s.student_email || s.parent_email || "Studente";
+          const name = bold(displayName);
           const hoursPaid = formatHours(Number(s.hours_paid ?? 0));
           return `${idx + 1}. ${name} — ${hoursPaid}h già pagate`;
         })
