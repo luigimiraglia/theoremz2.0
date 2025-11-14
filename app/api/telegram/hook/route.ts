@@ -42,18 +42,25 @@ async function send(
   chat_id: number | string,
   text: string,
   replyMarkup?: any,
-  useMarkdown = true
+  parseMode: "Markdown" | "HTML" | null | boolean = "Markdown"
 ) {
-  const parseMode = useMarkdown ? "Markdown" : "HTML";
+  let resolvedMode: "Markdown" | "HTML" | null;
+  if (typeof parseMode === "boolean") {
+    resolvedMode = parseMode ? "Markdown" : "HTML";
+  } else if (parseMode === undefined) {
+    resolvedMode = "Markdown";
+  } else {
+    resolvedMode = parseMode;
+  }
   const res = await fetch(`${TG}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chat_id,
       text,
-      parse_mode: parseMode,
       disable_web_page_preview: true,
       reply_markup: replyMarkup,
+      ...(resolvedMode ? { parse_mode: resolvedMode } : {}),
     }),
   });
   let payload: any = null;
@@ -321,38 +328,42 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
 
   const studentLines =
     students.length > 0
-      ? students.map((s: any) => {
-          const name =
-            s.student_name || s.student_email || s.parent_email || "Studente";
-          const safeName = escapeHtml(name);
+      ? students.map((s: any, idx: number) => {
+          const name = cleanLabel(
+            s.student_name || s.student_email || s.parent_email,
+            "Studente"
+          );
           const hoursPaid = Number(s.hours_paid ?? 0);
           const hoursDone = Number(s.hours_consumed ?? 0);
           const residual = hoursPaid - hoursDone;
-          return `• ${safeName} — pagate ${hoursPaid.toFixed(
-            2
-          )}h, svolte ${hoursDone.toFixed(2)}h, residuo ${residual.toFixed(
-            2
+          return `${idx + 1}. ${name} · pagate ${formatHours(
+            hoursPaid
+          )}h · svolte ${formatHours(hoursDone)}h · residuo ${formatHours(
+            residual
           )}h`;
         })
       : ["Nessuno studente con ore registrate."];
 
   const tutorLines =
     tutors.length > 0
-      ? tutors.map((t: any) => {
+      ? tutors.map((t: any, idx: number) => {
           const hrs = Number(t.hours_due ?? 0);
-          const safeTutorName = escapeHtml(t.full_name || "Tutor");
-          return `• ${safeTutorName} — da pagare ${hrs.toFixed(2)}h`;
+          const name = cleanLabel(t.full_name, "Tutor");
+          return `${idx + 1}. ${name} · da pagare ${formatHours(hrs)}h`;
         })
       : ["Nessun tutor con ore da saldare."];
 
-  const text = [
-    "<b>📊 Ore studenti</b>",
-    ...studentLines,
-    "",
-    "<b>💸 Tutor da pagare</b>",
-    ...tutorLines,
-  ].join("\n");
-  await send(chatId, text, undefined, false);
+  const sections = [
+    { title: "📊 Ore studenti", lines: studentLines },
+    { title: "💸 Tutor da pagare", lines: tutorLines },
+  ];
+
+  for (const section of sections) {
+    const chunks = chunkTextWithHeader(section.title, section.lines);
+    for (const chunk of chunks) {
+      await send(chatId, chunk, undefined, null);
+    }
+  }
 }
 
 async function cmdADDTUTOR({ db, chatId, text }: CmdCtx) {
@@ -496,13 +507,6 @@ function escapeOrValue(value: string) {
   return value.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
 /**
  * Escape text for Telegram Markdown parse mode.
  * Use before wrapping dynamic values with bold()/italic() helpers.
@@ -517,6 +521,57 @@ function bold(text: string) {
 
 function italic(text: string) {
   return `_${escapeMarkdown(text)}_`;
+}
+
+function cleanLabel(
+  value: string | null | undefined,
+  fallback: string = "—"
+) {
+  if (!value) return fallback;
+  const trimmed = value.replace(/\s+/g, " ").trim();
+  return trimmed.length ? trimmed : fallback;
+}
+
+function formatHours(value: number) {
+  if (!Number.isFinite(value)) return "0";
+  const fixed = value.toFixed(2);
+  return fixed.replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+}
+
+function chunkTextWithHeader(title: string, lines: string[], limit = 3500) {
+  const header = title.trim();
+  const blocks: string[] = [];
+  let current = header;
+
+  for (const line of lines) {
+    const normalizedLine = line || "";
+    const next =
+      current && current.length > 0
+        ? `${current}\n${normalizedLine}`
+        : normalizedLine;
+
+    if (next.length > limit && current && current !== header) {
+      blocks.push(current);
+      current = header ? `${header}\n${normalizedLine}` : normalizedLine;
+      continue;
+    }
+
+    if (next.length > limit) {
+      blocks.push(next);
+      current = header;
+      continue;
+    }
+
+    current = next;
+  }
+
+  if (current && (!header || current !== header)) {
+    blocks.push(current);
+  } else if (!blocks.length && header) {
+    blocks.push(header);
+  }
+
+  return blocks;
 }
 
 function formatMatchList(matches: any[], prefix = "") {
