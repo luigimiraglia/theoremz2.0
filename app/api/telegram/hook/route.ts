@@ -221,7 +221,7 @@ async function cmdLOGLEZIONE({ db, chatId, text }: CmdCtx) {
 
   const { data: studentRow, error: studentErr } = await db
     .from("black_students")
-    .select("videolesson_tutor_id, hours_consumed")
+    .select("videolesson_tutor_id, hours_consumed, hours_paid")
     .eq("id", id)
     .maybeSingle();
   if (studentErr)
@@ -245,9 +245,14 @@ async function cmdLOGLEZIONE({ db, chatId, text }: CmdCtx) {
     );
 
   const currentConsumed = Number(studentRow?.hours_consumed ?? 0);
+  const currentPaid = Number(studentRow?.hours_paid ?? 0);
+  const remainingPaid = Math.max(0, currentPaid - hours);
   await db
     .from("black_students")
-    .update({ hours_consumed: currentConsumed + hours })
+    .update({
+      hours_consumed: currentConsumed + hours,
+      hours_paid: remainingPaid,
+    })
     .eq("id", id);
 
   const { data: tutorRow } = await db
@@ -260,11 +265,12 @@ async function cmdLOGLEZIONE({ db, chatId, text }: CmdCtx) {
     await db.from("tutors").update({ hours_due: due }).eq("id", tutorId);
   }
 
+  const remainingLabel = remainingPaid ? ` | ${remainingPaid.toFixed(2)}h da consegnare` : "";
   await send(
     chatId,
     `📘 Loggato ${hours}h per ${bold(name)} (tutor: ${bold(
       tutorRow?.full_name || "Tutor"
-    )}).`
+    )})${remainingLabel}.`
   );
 }
 
