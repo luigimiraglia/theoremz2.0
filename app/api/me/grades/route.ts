@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { supabaseServer } from "@/lib/supabase";
 import { syncBlackGrade } from "@/lib/black/gradeSync";
 import { recordStudentGradeLite } from "@/lib/studentLiteSync";
 
@@ -23,14 +24,38 @@ export async function GET(req: Request) {
   const u = new URL(req.url);
   const subject = u.searchParams.get("subject");
 
-  let q = adminDb.collection(`users/${uid}/grades`).orderBy("date");
+  const db = supabaseServer();
+  let query = db
+    .from("student_grades")
+    .select("id, subject, grade, taken_on, source, assessment_id")
+    .eq("user_id", uid)
+    .order("taken_on", { ascending: true });
   if (subject === "matematica" || subject === "fisica") {
-    q = q.where("subject", "==", subject);
+    query = query.eq("subject", subject);
+  }
+  const { data, error } = await query;
+  if (error) {
+    console.error("[me-grades] supabase query failed", error);
+  } else if ((data?.length ?? 0) > 0) {
+    const items = (data || []).map((row) => ({
+      id: row.id,
+      subject: row.subject,
+      grade: typeof row.grade === "number" ? row.grade : null,
+      date: row.taken_on,
+      source: row.source ?? null,
+      assessment_id: row.assessment_id ?? null,
+    }));
+    if (items.length) return NextResponse.json({ items });
   }
 
-  const snap = await q.get();
-  const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-  return NextResponse.json({ items });
+  // fallback to legacy Firestore collection
+  let legacyQuery = adminDb.collection(`users/${uid}/grades`).orderBy("date");
+  if (subject === "matematica" || subject === "fisica") {
+    legacyQuery = legacyQuery.where("subject", "==", subject);
+  }
+  const snap = await legacyQuery.get();
+  const legacyItems = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+  return NextResponse.json({ items: legacyItems });
 }
 
 // POST { date: YYYY-MM-DD, subject: matematica|fisica, grade: number }

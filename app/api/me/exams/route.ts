@@ -20,23 +20,50 @@ async function getUid(req: Request) {
 export async function GET(req: Request) {
   const uid = await getUid(req);
   if (!uid) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const db = supabaseServer();
+  const { data, error } = await db
+    .from("student_assessments")
+    .select("id, date, subject, notes, grade, grade_subject, grade_id, kind")
+    .eq("user_id", uid)
+    .order("date", { ascending: true });
+  if (error) {
+    console.error("[me-exams] supabase query failed", error);
+  } else if ((data?.length ?? 0) > 0) {
+    const items = (data || [])
+      .filter((row) => !row.kind || row.kind === "verifica")
+      .map((row) => ({
+        id: row.id,
+        date: row.date,
+        subject: row.subject ?? null,
+        notes: row.notes ?? null,
+        grade: typeof row.grade === "number" ? row.grade : null,
+        grade_subject: row.grade_subject ?? null,
+        grade_id: row.grade_id ?? null,
+      }));
+    if (items.length) return NextResponse.json({ items });
+  }
+
+  // fallback to legacy Firestore collection for users not yet migrated
   const snap = await adminDb
     .collection(`users/${uid}/exams`)
     .orderBy("date")
     .get();
-  const items = snap.docs.map((d) => {
-    const data = d.data() as any;
+  const legacyItems = snap.docs.map((d) => {
+    const payload = d.data() as any;
     return {
       id: d.id,
-      date: data.date,
-      subject: data.subject ?? null,
-      notes: data.notes ?? null,
-      grade: typeof data.grade === "number" ? data.grade : data.gradeValue ?? null,
-      grade_subject: data.grade_subject ?? null,
-      grade_id: data.gradeId || data.grade_id || null,
+      date: payload.date,
+      subject: payload.subject ?? null,
+      notes: payload.notes ?? null,
+      grade:
+        typeof payload.grade === "number"
+          ? payload.grade
+          : payload.gradeValue ?? null,
+      grade_subject: payload.grade_subject ?? null,
+      grade_id: payload.gradeId || payload.grade_id || null,
     };
   });
-  return NextResponse.json({ items });
+  return NextResponse.json({ items: legacyItems });
 }
 
 // POST { date: YYYY-MM-DD, subject?: string|null }

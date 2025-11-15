@@ -291,7 +291,14 @@ export default function LessonClient({
           <div className="flex items-center gap-2">
             <ThemeToggle position="relative" />
           </div>
-          <SaveLessonButton lessonSlug={lezione} />
+          <SaveLessonButton
+            lesson={{
+              id: lesson.id || lezione,
+              slug: lesson.slug || lezione,
+              title: lesson.title,
+              thumb: lesson.thumbnailUrl ?? undefined,
+            }}
+          />
         </div>
         <h1 className="text-[27px] px-3 sm:text-4xl font-bold opacity-95 leading-tight">
           {lesson.title}

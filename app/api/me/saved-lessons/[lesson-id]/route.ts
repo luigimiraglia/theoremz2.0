@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth } from "@/lib/firebaseAdmin";
+import { supabaseServer } from "@/lib/supabase";
 import { deleteSavedLessonLite } from "@/lib/studentLiteSync";
 
 async function getUid(req: Request) {
@@ -23,7 +24,16 @@ export async function DELETE(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { "lesson-id": lessonId } = await params;
 
-  await adminDb.doc(`users/${uid}/savedLessons/${lessonId}`).delete();
+  const db = supabaseServer();
+  const { error } = await db
+    .from("student_saved_lessons")
+    .delete()
+    .eq("user_id", uid)
+    .eq("lesson_id", lessonId);
+  if (error) {
+    console.error("[saved-lessons-delete] supabase delete failed", error);
+  }
+
   try {
     await deleteSavedLessonLite({ userId: uid, lessonId });
   } catch (error) {

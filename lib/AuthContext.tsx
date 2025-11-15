@@ -144,14 +144,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /* ---------- Preferiti ---------- */
   const refreshSavedLessons = async () => {
-    if (!user) return;
+    if (!user) {
+      setSavedLessons([]);
+      return;
+    }
     try {
-      const [{ getDoc, doc }, { db }] = await Promise.all([
-        import("firebase/firestore"),
-        import("./firebase"),
-      ]);
-      const snap = await getDoc(doc(db, "users", user.uid));
-      setSavedLessons(snap.exists() ? snap.data().savedLessons || [] : []);
+      const [{ getAuth }] = await Promise.all([import("firebase/auth")]);
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("missing_token");
+      const res = await fetch("/api/me/saved-lessons", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error("fetch_failed");
+      const data = await res.json();
+      const slugs =
+        (Array.isArray(data.items) ? data.items : [])
+          .map((item) => item?.slug || item?.lessonId)
+          .filter(Boolean) || [];
+      setSavedLessons(slugs);
     } catch (err) {
       console.error("Errore caricamento lezioni salvate:", err);
       setSavedLessons([]);
@@ -204,7 +215,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const snap = await getDoc(doc(db, "users", fbUser.uid));
               if (snap.exists()) {
                 appUser.username = snap.data().username || null;
-                setSavedLessons(snap.data().savedLessons || []);
               }
             } catch (err) {
               console.error("Errore Firestore", err);
@@ -223,6 +233,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {}
     };
   }, []);
+
+  useEffect(() => {
+    refreshSavedLessons();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
 
   // When subscription becomes active for a user, send a one-time analytics event per session
   useEffect(() => {

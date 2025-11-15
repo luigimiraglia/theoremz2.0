@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth } from "@/lib/firebaseAdmin";
+import { supabaseServer } from "@/lib/supabase";
 import { upsertSavedLessonLite } from "@/lib/studentLiteSync";
 
 // helper: verifica Bearer token
@@ -22,13 +23,32 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const limit = Number(new URL(req.url).searchParams.get("limit") ?? 50);
-  const snap = await adminDb
-    .collection(`users/${uid}/savedLessons`)
-    .orderBy("savedAt", "desc")
-    .limit(Math.min(limit, 200))
-    .get();
+  const db = supabaseServer();
+  const { data, error } = await db
+    .from("student_saved_lessons")
+    .select(
+      "lesson_id, lesson_slug, title, thumb_url, status, saved_at, updated_at"
+    )
+    .eq("user_id", uid)
+    .order("saved_at", { ascending: false })
+    .limit(Math.min(limit, 200));
 
-  const items = snap.docs.map((d) => d.data());
+  if (error) {
+    console.error("[saved-lessons] supabase fetch failed", error);
+    return NextResponse.json({ error: "internal_error" }, { status: 500 });
+  }
+
+  const items =
+    data?.map((row) => ({
+      lessonId: row.lesson_id,
+      slug: row.lesson_slug,
+      title: row.title,
+      thumb: row.thumb_url,
+      status: row.status,
+      savedAt: row.saved_at,
+      updatedAt: row.updated_at,
+    })) ?? [];
+
   return NextResponse.json({ items });
 }
 
@@ -45,17 +65,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const ref = adminDb.doc(`users/${uid}/savedLessons/${lessonId}`);
-  await ref.set(
+  const savedAt = Date.now();
+  const db = supabaseServer();
+  const { error } = await db.from("student_saved_lessons").upsert(
     {
-      lessonId,
-      slug,
+      user_id: uid,
+      lesson_id: lessonId,
+      lesson_slug: slug,
       title,
-      thumb: thumb ?? null,
-      savedAt: Date.now(),
+      thumb_url: thumb ?? null,
+      status: "saved",
+      saved_at: new Date(savedAt).toISOString(),
+      updated_at: new Date(savedAt).toISOString(),
     },
-    { merge: true }
+    { onConflict: "user_id,lesson_id" }
   );
+  if (error) {
+    console.error("[saved-lessons] supabase upsert failed", error);
+  }
 
   try {
     await upsertSavedLessonLite({

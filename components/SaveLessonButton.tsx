@@ -1,14 +1,6 @@
 "use client";
 import { useState, useMemo, type ComponentType } from "react";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getAuth } from "firebase/auth";
 import { useAuth } from "@/lib/AuthContext";
 import type { User as FirebaseUser } from "firebase/auth";
 
@@ -18,11 +10,18 @@ type AuthReturn = {
   refreshSavedLessons: () => Promise<void>;
 };
 
+type LessonMeta = {
+  id: string;
+  slug: string;
+  title: string;
+  thumb?: string | null;
+};
+
 export default function SaveLessonButton({
-  lessonSlug,
+  lesson,
   className = "",
 }: {
-  lessonSlug: string | undefined;
+  lesson: LessonMeta;
   className?: string;
 }) {
   const { user, savedLessons, refreshSavedLessons, isSubscribed } =
@@ -32,13 +31,19 @@ export default function SaveLessonButton({
   const [state, setState] = useState<"idle" | "popup">("idle");
 
   const slug = useMemo(
-    () => (typeof lessonSlug === "string" ? lessonSlug.trim() : ""),
-    [lessonSlug]
+    () => (typeof lesson?.slug === "string" ? lesson.slug.trim() : ""),
+    [lesson?.slug]
   );
+  const lessonId = lesson?.id || slug;
+  const title = lesson?.title?.trim() || slug;
+  const thumb = lesson?.thumb ?? null;
   const isValid = slug.length > 0;
 
   const isSaved =
-    savedLessons && Array.isArray(savedLessons) && savedLessons.includes(slug);
+    Boolean(lessonId) &&
+    savedLessons &&
+    Array.isArray(savedLessons) &&
+    savedLessons.includes(slug);
 
   const toggle = async () => {
     // Gating: serve utente loggato e abbonamento
@@ -54,16 +59,31 @@ export default function SaveLessonButton({
     if (!isValid || busy) return;
     setBusy(true);
     try {
-      const ref = doc(db, "users", user.uid);
-      const snap = await getDoc(ref);
-
-      if (!snap.exists() || !Array.isArray(snap.data()?.savedLessons)) {
-        await setDoc(ref, { savedLessons: [] }, { merge: true });
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) {
+        throw new Error("missing_token");
       }
 
-      await updateDoc(ref, {
-        savedLessons: isSaved ? arrayRemove(slug) : arrayUnion(slug),
-      });
+      if (isSaved) {
+        await fetch(`/api/me/saved-lessons/${encodeURIComponent(lessonId)}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else {
+        await fetch(`/api/me/saved-lessons`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            lessonId,
+            slug,
+            title,
+            thumb,
+          }),
+        });
+      }
 
       await refreshSavedLessons?.();
     } finally {
