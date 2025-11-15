@@ -160,7 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       const slugs =
         (Array.isArray(data.items) ? data.items : [])
-          .map((item) => item?.slug || item?.lessonId)
+          .map((item: any) => item?.slug || item?.lessonId)
           .filter(Boolean) || [];
       setSavedLessons(slugs);
     } catch (err) {
