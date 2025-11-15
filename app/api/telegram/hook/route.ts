@@ -350,8 +350,8 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
           const displayName =
             s?.profiles?.full_name || s.student_email || s.parent_email || "Studente";
           const name = bold(displayName);
-          const hoursPaid = formatHours(Number(s.hours_paid ?? 0));
-          return `${idx + 1}. ${name} — ${hoursPaid}h già pagate`;
+          const remaining = formatHours(Math.max(0, Number(s.hours_paid ?? 0)));
+          return `${idx + 1}. ${name} — ${remaining}h da erogare`;
         })
       : ["Nessuno studente con ore pagate al momento."];
 
