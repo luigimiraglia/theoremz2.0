@@ -66,36 +66,6 @@ export default function AccountPage() {
     })();
   }, [user?.uid]);
 
-  useEffect(() => {
-    if (!user?.uid) return;
-    (async () => {
-      try {
-        const token = await getAuth().currentUser?.getIdToken();
-        if (!token) return;
-        let sessionId: string | null = null;
-        if (typeof window !== "undefined") {
-          sessionId = window.sessionStorage.getItem("tz_session_id");
-          if (!sessionId) {
-            sessionId = `sess_${Date.now()}_${Math.random()
-              .toString(36)
-              .slice(2, 9)}`;
-            window.sessionStorage.setItem("tz_session_id", sessionId);
-          }
-        }
-        await fetch("/api/me/access-log", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ sessionId }),
-        });
-      } catch (error) {
-        console.warn("[account] access log failed", error);
-      }
-    })();
-  }, [user?.uid]);
-
   // username: lazy init
   const [username, setUsername] = useState<string>(() => {
     const u =

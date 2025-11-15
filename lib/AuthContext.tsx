@@ -239,6 +239,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid]);
 
+  useEffect(() => {
+    if (!user?.uid) return;
+    (async () => {
+      try {
+        const [{ getAuth }] = await Promise.all([import("firebase/auth")]);
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) return;
+
+        let sessionId: string | null = null;
+        if (typeof window !== "undefined") {
+          sessionId = window.sessionStorage.getItem("tz_session_id");
+          if (!sessionId) {
+            sessionId = `sess_${Date.now()}_${Math.random()
+              .toString(36)
+              .slice(2, 9)}`;
+            window.sessionStorage.setItem("tz_session_id", sessionId);
+          }
+        }
+
+        const todayKey = sessionId ? `access:${sessionId}` : `access:${user.uid}`;
+        const today = new Date().toISOString().slice(0, 10);
+        if (typeof window !== "undefined") {
+          const last = window.sessionStorage.getItem(todayKey);
+          if (last === today) return;
+        }
+
+        const res = await fetch("/api/me/access-log", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+          body: JSON.stringify({ sessionId }),
+        });
+        if (res.ok && typeof window !== "undefined") {
+          window.sessionStorage.setItem(todayKey, today);
+        }
+      } catch (error) {
+        console.warn("[auth] access log failed", error);
+      }
+    })();
+  }, [user?.uid]);
+
   // When subscription becomes active for a user, send a one-time analytics event per session
   useEffect(() => {
     try {
