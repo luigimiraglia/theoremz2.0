@@ -367,15 +367,18 @@ async function ensureProfile(payload: ProfilePayload) {
   if (!supabase) return;
   const existing = await supabase
     .from("profiles")
-    .select("id")
+    .select(
+      "id, full_name, role, email, subscription_tier, stripe_customer_id, stripe_subscription_status, stripe_price_id, stripe_current_period_end, created_at"
+    )
     .eq("id", payload.id)
     .maybeSingle();
   if (existing.error) {
     throw new Error(`[black-sync] Profile lookup failed: ${existing.error.message}`);
   }
   if (existing.data?.id) {
+    const merged = mergeRecords(payload, existing.data);
     const updatePayload: Partial<ProfilePayload> & { updated_at: string } = {
-      ...payload,
+      ...merged,
       updated_at: new Date().toISOString(),
     };
     delete updatePayload.id;
@@ -395,16 +398,19 @@ async function upsertBlackStudent(payload: BlackStudentPayload) {
   if (!supabase) return null;
   const existing = await supabase
     .from("black_students")
-    .select("id")
+    .select(
+      "id, year_class, track, start_date, goal, difficulty_focus, parent_name, parent_phone, parent_email, student_phone, student_email, tutor_id, status, initial_avg, readiness, risk_level, ai_description, next_assessment_subject, next_assessment_date"
+    )
     .eq("user_id", payload.user_id)
     .maybeSingle();
   if (existing.error) {
     throw new Error(`[black-sync] Student lookup failed: ${existing.error.message}`);
   }
   if (existing.data?.id) {
+    const merged = mergeRecords(payload, existing.data);
     const { error, data } = await supabase
       .from("black_students")
-      .update(payload)
+      .update(merged)
       .eq("id", existing.data.id)
       .select("id")
       .single();
@@ -585,6 +591,31 @@ function stringOrNull(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : null;
+}
+
+function mergeRecords<T extends Record<string, any>>(
+  incoming: T,
+  existing?: Partial<T> | null
+): T {
+  const result: Record<string, any> = {};
+  for (const key of Object.keys(incoming)) {
+    const nextValue = incoming[key];
+    const currentValue = existing ? (existing as any)[key] : undefined;
+    result[key] = preferValue(nextValue, currentValue);
+  }
+  return result as T;
+}
+
+function preferValue<T>(incoming: T, current: T) {
+  if (incoming === null || incoming === undefined) return current ?? null;
+  if (typeof incoming === "string") {
+    const trimmed = incoming.trim();
+    if (!trimmed) {
+      return current ?? null;
+    }
+    return trimmed as unknown as T;
+  }
+  return incoming;
 }
 
 function cloneJson(input: Stripe.Metadata | Record<string, any> | null | undefined) {
