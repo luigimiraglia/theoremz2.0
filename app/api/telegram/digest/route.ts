@@ -47,7 +47,7 @@ export async function GET() {
   );
 
   const line = (c: any) =>
-    `• ${c.student_name} ${c.readiness ?? "—"}/100` +
+    `• ${resolveContactLabel(c)} ${c.readiness ?? "—"}/100` +
     (c.next_assessment_date
       ? ` (${c.next_assessment_subject ?? "verifica"} ${c.next_assessment_date})`
       : "");
@@ -57,13 +57,60 @@ export async function GET() {
     ? formatAssessments(weekAssessments)
     : null;
 
+  const staleContacts = cards.filter((c: any) => {
+    if (!c.last_contacted_at) return false;
+    const contactedAt = new Date(c.last_contacted_at);
+    if (Number.isNaN(contactedAt.getTime())) return false;
+    const diffMs = now.getTime() - contactedAt.getTime();
+    const diffDays = diffMs / (24 * 3600 * 1000);
+    return diffDays > 3;
+  });
+
+  const contactLine = (c: any) => {
+    const when = new Date(c.last_contacted_at).toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+    });
+    return `• ${resolveContactLabel(c)} — contattato il ${when}`;
+  };
+
+  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 3600 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  const { data: recentSignups } = await db
+    .from("black_students")
+    .select(
+      "id, start_date, student_email, parent_email, profiles:profiles!black_students_user_id_fkey(full_name)"
+    )
+    .gte("start_date", threeDaysAgo)
+    .is("last_contacted_at", null)
+    .eq("status", "active");
+
+  const signupLine = (row: any) => {
+    const name = resolveContactLabel(row);
+    const start = row.start_date
+      ? new Date(row.start_date).toLocaleDateString("it-IT", {
+          day: "2-digit",
+          month: "2-digit",
+        })
+      : "—";
+    return `• ${name} — onboarding dal ${start}`;
+  };
+
   const txt =
     [
       "*📊 Digest quotidiano*",
-      upcoming.length
-        ? `\n🗓️ *Verifiche ≤7g* (${upcoming.length})\n${upcoming.map(line).join("\n")}`
-        : "",
       assessmentsText ? `\n🧾 *Agenda verifiche (7g)*\n${assessmentsText}` : "",
+      staleContacts.length
+        ? `\n📞 *Da ricontattare (>3g)* (${staleContacts.length})\n${staleContacts
+            .map(contactLine)
+            .join("\n")}`
+        : "",
+      recentSignups?.length
+        ? `\n🚀 *Nuove attivazioni (<3g)* (${recentSignups.length})\n${recentSignups
+            .map(signupLine)
+            .join("\n")}`
+        : "",
     ]
       .filter(Boolean)
       .join("\n") || "Nessun dato.";
@@ -80,7 +127,7 @@ async function fetchAssessmentsNext7Days(db: ReturnType<typeof supabaseServer>) 
   const { data, error } = await db
     .from("black_assessments")
     .select(
-      "student_id, subject, when_at, readiness, black_students!inner(user_id, profiles:profiles!black_students_user_id_fkey(full_name))"
+      "student_id, subject, when_at, readiness, black_students!inner(user_id, student_email, parent_email, profiles:profiles!black_students_user_id_fkey(full_name))"
     )
     .gte("when_at", from)
     .lte("when_at", to)
@@ -98,11 +145,14 @@ function formatAssessments(rows: any[]) {
       const studentProfile = Array.isArray(row.black_students?.profiles)
         ? row.black_students.profiles[0]
         : row.black_students?.profiles;
-      const name =
-        studentProfile?.full_name ||
-        row.black_students?.user_id ||
-        row.student_id ||
-        "Studente";
+      const name = resolveContactLabel({
+        student_email: row.black_students?.student_email,
+        parent_email: row.black_students?.parent_email,
+        student_name:
+          studentProfile?.full_name ||
+          row.black_students?.user_id ||
+          row.student_id,
+      });
       const when = row.when_at
         ? new Date(row.when_at).toLocaleDateString("it-IT", {
             day: "2-digit",
@@ -113,4 +163,17 @@ function formatAssessments(rows: any[]) {
       return `• ${when} — ${name} (${row.subject || "materia"}) · readiness ${readiness}/100`;
     })
     .join("\n");
+}
+
+function resolveContactLabel(source: {
+  student_email?: string | null;
+  parent_email?: string | null;
+  student_name?: string | null;
+}) {
+  return (
+    source.student_email ||
+    source.parent_email ||
+    source.student_name ||
+    "Studente"
+  );
 }
