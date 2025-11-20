@@ -516,6 +516,22 @@ function italic(text: string) {
   return `_${escapeMarkdown(text)}_`;
 }
 
+function sanitizePhoneInput(raw: string) {
+  if (!raw) return null;
+  const digits = raw.replace(/\D+/g, "");
+  if (!digits || digits.length < 6) return null;
+  let normalized = digits;
+  if (normalized.startsWith("00")) normalized = normalized.slice(2);
+  if (normalized.startsWith("0") && normalized.length > 9) {
+    normalized = normalized.replace(/^0+/, "");
+  }
+  if (!normalized.startsWith("39") && normalized.length === 10) {
+    normalized = `39${normalized}`;
+  }
+  if (!normalized) return null;
+  return `+${normalized}`;
+}
+
 function formatHours(value: number) {
   if (!Number.isFinite(value)) return "0";
   const fixed = value.toFixed(2);
@@ -1021,6 +1037,45 @@ async function cmdDESC({ db, chatId, text }: CmdCtx) {
 
   await db.rpc("refresh_black_brief", { _student: id });
   await send(chatId, `✅ Overview aggiornata per ${bold(name)}.`);
+}
+
+/** /telefono <nome/email> <numero> [studente|genitore] → aggiorna telefono scheda */
+async function cmdTELEFONO({ db, chatId, text }: CmdCtx) {
+  const m = text.match(
+    /^\/telefono(?:@\w+)?\s+(\S+)\s+(\S+)(?:\s+(studente|student[eo]?|genitore|parent[eo]?))?$/i
+  );
+  if (!m)
+    return send(
+      chatId,
+      "Uso: `/telefono cognome|email +39333... [studente|genitore]` (numero senza spazi)."
+    );
+  const [, query, rawValue, rawTarget] = m;
+  const lowerValue = rawValue.toLowerCase();
+  const shouldClear = ["clear", "cancella", "reset", "-", "x"].includes(lowerValue);
+  const normalized = shouldClear ? null : sanitizePhoneInput(rawValue);
+  if (!shouldClear && !normalized)
+    return send(chatId, "❌ Inserisci un numero valido (almeno 6 cifre, evita spazi).");
+
+  const resolved = await resolveStudentId(db, query);
+  if ((resolved as any).err) return send(chatId, (resolved as any).err);
+  const { id, name } = resolved as any;
+
+  const target = (rawTarget || "studente").toLowerCase();
+  const column = /genitor|parent/.test(target) ? "parent_phone" : "student_phone";
+  const payload: Record<string, any> = {
+    [column]: normalized,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await db.from("black_students").update(payload).eq("id", id);
+  if (error)
+    return send(chatId, `❌ Errore aggiornamento telefono: ${error.message}`);
+
+  const label = column === "student_phone" ? "Telefono studente" : "Telefono genitore";
+  const summary = shouldClear
+    ? `${label} rimosso per ${bold(name)}.`
+    : `${label} aggiornato per ${bold(name)}: ${escapeMarkdown(normalized!)}`;
+  await send(chatId, `📞 ${summary}`);
 }
 
 /** /nome <email> <Nome Cognome> → aggiorna il full_name */
@@ -1933,6 +1988,7 @@ export async function POST(req: Request) {
           "`/nuovi` — iscritti ultimi 30 giorni",
           "`/sync [limite]` — forza il sync delle attivazioni Stripe",
           "`/desc cognome testo...` — aggiorna overview studente",
+          "`/telefono cognome|email +39333... [studente|genitore]` — aggiorna telefono",
           "`/nome email@example.com Nuovo Nome` — aggiorna il nome in anagrafica",
           "`/checked cognome|email [nota]` — segna ultimo contatto + log",
         ].join("\n")
@@ -1975,6 +2031,8 @@ export async function POST(req: Request) {
       await cmdVERIFICA(ctx);
     } else if (/^\/desc(\s|@)/i.test(text)) {
       await cmdDESC(ctx);
+    } else if (/^\/telefono(\s|@)/i.test(text)) {
+      await cmdTELEFONO(ctx);
     } else if (/^\/nome(\s|@)/i.test(text)) {
       await cmdNOME(ctx);
     } else if (/^\/nuovi/i.test(text)) {
