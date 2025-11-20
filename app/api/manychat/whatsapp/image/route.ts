@@ -30,7 +30,10 @@ export async function POST(req: Request) {
   const messageText =
     payload?.message?.text || payload?.text || "Guarda l'immagine allegata, ti spiego come risolverla.";
   const subscriberName = extractSubscriberName(payload);
-  const rawPhone = extractPhone(payload);
+  const rawPhone = payload?.phone || extractPhone(payload);
+  if (!rawPhone) {
+    return jsonResponse("Non riesco a capire da che numero arriva questa immagine 😅", { status: 400 });
+  }
 
   return handleWhatsAppMessage({
     messageText,

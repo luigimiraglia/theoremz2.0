@@ -30,16 +30,15 @@ L'endpoint prova a estrarre:
 - Numero WhatsApp da chiavi come `subscriber.phone`, `contact.phone`, `data.raw_message.from`, o qualsiasi campo con `phone` nel nome.
 - Testo del messaggio da `message.text`, `raw_message.text`, `data.message.body`, `text`, ecc.
 
-Per i messaggi con immagine puoi usare l'endpoint dedicato `POST /api/manychat/whatsapp/image` passando anche `image_url` (pubblico o data-uri). Esempio:
+Per i messaggi con immagine puoi usare l'endpoint dedicato `POST /api/manychat/whatsapp/image` passando anche `image_url` (pubblico o data-uri). L'AI recupera la cronologia dal numero, quindi il corpo minimo può essere:
 
 ```json
 {
-  "subscriber": { "id": "{{contact.id}}", "phone": "{{contact.phone}}", "name": "{{contact.full_name}}" },
-  "message": { "text": "{{last_received_input}}" },
+  "phone": "{{contact.phone}}",
   "image_url": "{{last_received_attachment}}"
 }
 ```
-Se `message.text` è vuoto, il backend genera una caption di default e allega l'immagine alla richiesta OpenAI.
+Il testo è opzionale: se vuoi includerlo, aggiungi `"text": "{{last_received_input}}"`. In assenza, il backend usa un prompt standard (“Guarda l'immagine…”).
 
 Esempio minimale di payload funzionante (da usare nell'External Request di ManyChat):
 
@@ -122,7 +121,7 @@ create unique index if not exists black_whatsapp_inquiries_phone_tail_key
    - **Body**: JSON come nell'esempio sopra con i merge field di ManyChat (`{{contact.phone}}`, `{{last_received_input}}`, ecc.).
 3. Imposta l'opzione "Response Mapping" del blocco per usare il testo di ritorno. In genere basta collegare la risposta del webhook a un blocco "Send Message" con il contenuto `{{request.body.content.text}}`. Se vuoi sapere se il contatto è stato riconosciuto come Black, mappa anche `$.black` in un Custom Field boolean (es. `Ai__Is_Black`).
 4. Collega eventuali fallback (es. se la risposta contiene "non trovo un profilo" manda a un umano).
-5. Per le immagini crea un secondo External Request che punta a `/api/manychat/whatsapp/image`, inviando l'URL dell'allegato (`{{last_received_attachment}}` o campo equivalente). Il blocco di risposta è identico.
+5. Per le immagini crea un secondo External Request che punta a `/api/manychat/whatsapp/image`, inviando almeno `phone` e `image_url` (puoi aggiungere `text` se la foto ha una caption). Il blocco di risposta è identico al flow testuale.
 
 ## Debug & test
 - **Ping rapido**: `GET /api/manychat/whatsapp` restituisce `{ "ok": true }` ed è utile per verificare routing e deploy.
