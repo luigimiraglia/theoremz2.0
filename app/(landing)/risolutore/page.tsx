@@ -39,7 +39,7 @@ export default function RisolutorePage() {
             Risolutore esercizi
           </h1>
           <p className="text-sm text-slate-600 [.dark_&]:text-slate-300">
-            Carica l'esercizio e ottieni una soluzione didattica pronta da copiare nei tuoi appunti.
+            Carica l&apos;esercizio e ottieni una soluzione didattica pronta da copiare nei tuoi appunti.
           </p>
         </header>
         <RisolutoreUpload />

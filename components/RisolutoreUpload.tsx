@@ -105,7 +105,7 @@ export default function RisolutoreUpload() {
                 onClick={() => replaceInputRef.current?.click()}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 [.dark_&]:border-slate-700 [.dark_&]:text-white"
               >
-                <Upload size={16} /> Carica un'altra foto
+                <Upload size={16} /> Carica un&apos;altra foto
               </button>
             ) : (
               <div className="space-y-3">
@@ -146,7 +146,7 @@ export default function RisolutoreUpload() {
               onClick={() => replaceInputRef.current?.click()}
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 [.dark_&]:border-slate-700 [.dark_&]:text-white"
             >
-              <Upload size={16} /> Carica un'altra foto
+              <Upload size={16} /> Carica un&apos;altra foto
             </button>
           ) : (
             <label className="group flex h-44 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 transition hover:border-slate-500 hover:bg-white [.dark_&]:border-slate-600 [.dark_&]:bg-slate-900/30">
@@ -220,7 +220,7 @@ export default function RisolutoreUpload() {
             </li>
             <li className="rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm [.dark_&]:border-slate-700 [.dark_&]:bg-slate-900/60">
               <p className="font-semibold text-slate-900 [.dark_&]:text-white">Risposte complete</p>
-              <p>Verifichiamo di rispondere a tutte le domande dell'esercizio.</p>
+              <p>Verifichiamo di rispondere a tutte le domande dell&apos;esercizio.</p>
             </li>
           </ul>
         </div>

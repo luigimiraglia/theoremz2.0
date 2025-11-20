@@ -39,7 +39,7 @@ export function useSavedLessons() {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid]);
+  }, [user]);
 
   useEffect(() => {
     fetchAll();
