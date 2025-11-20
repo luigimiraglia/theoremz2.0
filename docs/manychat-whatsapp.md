@@ -55,6 +55,29 @@ L'API restituisce sempre un JSON conforme a ManyChat v2:
 
 Il campo `black` è `true` solo se il numero è stato agganciato a uno studente Black attivo; in fallback o per numeri non riconosciuti rimane `false`.
 
+## Log conversazioni su Supabase
+Ogni messaggio WhatsApp (testo studente + risposta AI) viene salvato su `black_whatsapp_messages` e la cronologia recente viene ripassata al modello OpenAI. Se non l'hai ancora creata, usa questa SQL su Supabase:
+
+```sql
+create table if not exists public.black_whatsapp_messages (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid references public.black_students(id) on delete set null,
+  phone_tail text,
+  role text not null check (role in ('user','assistant')),
+  content text not null,
+  meta jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists black_whatsapp_messages_student_id_idx
+  on public.black_whatsapp_messages(student_id, created_at desc);
+
+create index if not exists black_whatsapp_messages_phone_tail_idx
+  on public.black_whatsapp_messages(phone_tail, created_at desc);
+```
+
+> `phone_tail` contiene le ultime 10 cifre del numero, così da collegare anche i contatti senza profilazione completa.
+
 ## Configurazione ManyChat (WhatsApp)
 1. **Automation → Flows**: crea (o apri) il flow associato all'evento "Incoming Message" del canale WhatsApp.
 2. Aggiungi un blocco **External Request** subito dopo l'evento. Configuralo così:

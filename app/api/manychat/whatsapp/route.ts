@@ -17,6 +17,7 @@ const ACTIVE_BLACK_STATUSES = new Set([
   "past_due",
   "unpaid",
 ]);
+const WHATSAPP_MESSAGES_TABLE = "black_whatsapp_messages";
 
 type SupabaseProfileRow = {
   full_name?: string | null;
@@ -46,6 +47,7 @@ type StudentProfileRow = {
 
 type ResolvedContact = {
   userId: string;
+  studentId: string | null;
   fullName: string | null;
   email: string | null;
   phone: string | null;
@@ -55,6 +57,11 @@ type ResolvedContact = {
   subscriptionTier: string | null;
   isBlack: boolean;
   source: "black_students" | "student_profiles" | "fallback";
+};
+
+type ConversationMessage = {
+  role: "user" | "assistant";
+  content: string;
 };
 
 type JsonResponseOptions = {
@@ -212,6 +219,7 @@ function mapBlackStudent(row: BlackStudentRow): ResolvedContact {
 
   return {
     userId: row.user_id,
+    studentId: row.id,
     fullName,
     email: row.student_email || row.parent_email || null,
     phone: row.student_phone || row.parent_phone || null,
@@ -229,6 +237,7 @@ function mapStudentProfile(row: StudentProfileRow): ResolvedContact {
   const isBlack = Boolean(row.is_black);
   return {
     userId: row.user_id,
+    studentId: null,
     fullName: row.full_name || row.email || null,
     email: row.email || null,
     phone: row.phone || null,
@@ -244,6 +253,7 @@ function mapStudentProfile(row: StudentProfileRow): ResolvedContact {
 function buildFallbackContact(name: string | null, phone: string | null): ResolvedContact {
   return {
     userId: "guest",
+    studentId: null,
     fullName: name,
     email: null,
     phone,
@@ -294,6 +304,60 @@ async function resolveContact(
   return null;
 }
 
+async function fetchConversationHistory(
+  db: ReturnType<typeof supabaseServer>,
+  studentId: string | null,
+  phoneTail: string | null,
+  limit = 12
+): Promise<ConversationMessage[]> {
+  if (!studentId && !phoneTail) return [];
+  let query = db
+    .from(WHATSAPP_MESSAGES_TABLE)
+    .select("role, content")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (studentId) {
+    query = query.eq("student_id", studentId);
+  } else if (phoneTail) {
+    query = query.eq("phone_tail", phoneTail);
+  }
+  const { data, error } = await query;
+  if (error) {
+    console.error("[manychat-whatsapp] history fetch failed", error.message);
+    return [];
+  }
+  return (data ?? []).reverse() as ConversationMessage[];
+}
+
+async function logConversationMessage({
+  db,
+  studentId,
+  phoneTail,
+  role,
+  content,
+  meta,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  studentId: string | null;
+  phoneTail: string | null;
+  role: "user" | "assistant";
+  content: string;
+  meta?: Record<string, any> | null;
+}) {
+  if (!studentId && !phoneTail) return;
+  const payload = {
+    student_id: studentId,
+    phone_tail: phoneTail,
+    role,
+    content,
+    meta: meta ?? null,
+  };
+  const { error } = await db.from(WHATSAPP_MESSAGES_TABLE).insert(payload);
+  if (error) {
+    console.error("[manychat-whatsapp] log insert failed", error.message);
+  }
+}
+
 function buildSystemPrompt(contact: ResolvedContact) {
   const persona =
     personaOverride?.trim() ||
@@ -322,7 +386,12 @@ Regole:
 - Se non hai abbastanza contesto, fai domande mirate invece di inventare dettagli.`;
 }
 
-async function generateAiReply(contact: ResolvedContact, message: string, subscriberName: string | null) {
+async function generateAiReply(
+  contact: ResolvedContact,
+  message: string,
+  subscriberName: string | null,
+  history: ConversationMessage[]
+) {
   if (!openai) throw new Error("OpenAI client not configured");
   const systemPrompt = buildSystemPrompt(contact);
   const addressedName = subscriberName || contact.fullName;
@@ -340,12 +409,21 @@ ${message}
 
 Rispondi come Luigi.`;
 
+  const formattedHistory = (history || []).map((entry) => ({
+    role: entry.role,
+    content:
+      entry.role === "user"
+        ? `Messaggio precedente dello studente:\n"""${entry.content}"""`
+        : entry.content,
+  }));
+
   const completion = await openai.chat.completions.create({
     model: aiModel,
     temperature: Number.isFinite(aiTemperature) ? aiTemperature : 0.4,
     max_tokens: Number.isFinite(aiMaxTokens) ? aiMaxTokens : 320,
     messages: [
       { role: "system", content: systemPrompt },
+      ...formattedHistory,
       { role: "user", content: userContent },
     ],
   });
@@ -381,6 +459,7 @@ export async function POST(req: Request) {
 
   const subscriberName = extractSubscriberName(payload);
   const rawPhone = extractPhone(payload);
+  const phoneTail = rawPhone ? extractPhoneTail(rawPhone) : null;
 
   const db = supabaseServer();
   let contact: ResolvedContact | null = null;
@@ -402,15 +481,52 @@ export async function POST(req: Request) {
   }
 
   const resolvedContact = contact ?? buildFallbackContact(subscriberName, rawPhone);
+  let history: ConversationMessage[] = [];
   try {
-    const reply = await generateAiReply(resolvedContact, messageText, subscriberName);
+    history = await fetchConversationHistory(db, resolvedContact.studentId, phoneTail);
+  } catch (err) {
+    console.error("[manychat-whatsapp] conversation history error", err);
+  }
+
+  if (phoneTail || resolvedContact.studentId) {
+    await logConversationMessage({
+      db,
+      studentId: resolvedContact.studentId,
+      phoneTail,
+      role: "user",
+      content: messageText,
+      meta: { subscriberName },
+    });
+  }
+
+  try {
+    const reply = await generateAiReply(resolvedContact, messageText, subscriberName, history);
+    if (phoneTail || resolvedContact.studentId) {
+      await logConversationMessage({
+        db,
+        studentId: resolvedContact.studentId,
+        phoneTail,
+        role: "assistant",
+        content: reply,
+        meta: { model: aiModel },
+      });
+    }
     return jsonResponse(reply, { isBlack: resolvedContact.isBlack });
   } catch (error) {
     console.error("[manychat-whatsapp] ai error", error);
-    return jsonResponse(
-      "Mi sfugge proprio la risposta giusta 😅 Riprovo tra un attimo oppure scrivimi dentro l'app.",
-      { isBlack: resolvedContact.isBlack }
-    );
+    const fallbackMessage =
+      "Mi sfugge proprio la risposta giusta 😅 Riprovo tra un attimo oppure scrivimi dentro l'app.";
+    if (phoneTail || resolvedContact.studentId) {
+      await logConversationMessage({
+        db,
+        studentId: resolvedContact.studentId,
+        phoneTail,
+        role: "assistant",
+        content: fallbackMessage,
+        meta: { model: aiModel, error: (error as Error)?.message },
+      });
+    }
+    return jsonResponse(fallbackMessage, { isBlack: resolvedContact.isBlack });
   }
 }
 
