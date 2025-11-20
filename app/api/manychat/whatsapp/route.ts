@@ -308,12 +308,12 @@ async function fetchConversationHistory(
   db: ReturnType<typeof supabaseServer>,
   studentId: string | null,
   phoneTail: string | null,
-  limit = 12
-): Promise<ConversationMessage[]> {
-  if (!studentId && !phoneTail) return [];
+  limit = 20
+): Promise<{ history: ConversationMessage[]; total: number }> {
+  if (!studentId && !phoneTail) return { history: [], total: 0 };
   let query = db
     .from(WHATSAPP_MESSAGES_TABLE)
-    .select("role, content")
+    .select("role, content", { count: "exact" })
     .order("created_at", { ascending: false })
     .limit(limit);
   if (studentId) {
@@ -321,12 +321,15 @@ async function fetchConversationHistory(
   } else if (phoneTail) {
     query = query.eq("phone_tail", phoneTail);
   }
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) {
     console.error("[manychat-whatsapp] history fetch failed", error.message);
-    return [];
+    return { history: [], total: 0 };
   }
-  return (data ?? []).reverse() as ConversationMessage[];
+  return {
+    history: (data ?? []).reverse() as ConversationMessage[],
+    total: typeof count === "number" ? count : data?.length ?? 0,
+  };
 }
 
 async function logConversationMessage({
@@ -356,6 +359,135 @@ async function logConversationMessage({
   if (error) {
     console.error("[manychat-whatsapp] log insert failed", error.message);
   }
+}
+
+async function pruneOldMessages({
+  db,
+  studentId,
+  phoneTail,
+  deleteCount,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  studentId: string | null;
+  phoneTail: string | null;
+  deleteCount: number;
+}) {
+  if (!deleteCount || deleteCount <= 0) return;
+  if (!studentId && !phoneTail) return;
+  let query = db
+    .from(WHATSAPP_MESSAGES_TABLE)
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(deleteCount);
+  if (studentId) {
+    query = query.eq("student_id", studentId);
+  } else if (phoneTail) {
+    query = query.eq("phone_tail", phoneTail);
+  }
+  const { data, error } = await query;
+  if (error) {
+    console.error("[manychat-whatsapp] prune lookup failed", error.message);
+    return;
+  }
+  if (!data?.length) return;
+  const ids = data.map((row: any) => row.id);
+  const { error: deleteErr } = await db.from(WHATSAPP_MESSAGES_TABLE).delete().in("id", ids);
+  if (deleteErr) {
+    console.error("[manychat-whatsapp] prune delete failed", deleteErr.message);
+  }
+}
+
+async function summarizeConversation({
+  studentId,
+  phoneTail,
+  db,
+}: {
+  studentId: string | null;
+  phoneTail: string | null;
+  db: ReturnType<typeof supabaseServer>;
+}) {
+  if (!openai || (!studentId && !phoneTail)) return;
+  let transcriptQuery = db
+    .from(WHATSAPP_MESSAGES_TABLE)
+    .select("role, content")
+    .order("created_at", { ascending: true })
+    .limit(70);
+  if (studentId) transcriptQuery = transcriptQuery.eq("student_id", studentId);
+  else if (phoneTail) transcriptQuery = transcriptQuery.eq("phone_tail", phoneTail);
+  const { data: transcript, error: transcriptErr } = await transcriptQuery;
+  if (transcriptErr) {
+    console.error("[manychat-whatsapp] summary fetch failed", transcriptErr.message);
+    return;
+  }
+  if (!transcript?.length || !studentId) return;
+
+  const { data: studentRow, error: studentErr } = await db
+    .from("black_students")
+    .select("ai_description, profiles:profiles!black_students_user_id_fkey(full_name)")
+    .eq("id", studentId)
+    .maybeSingle();
+  if (studentErr) {
+    console.error("[manychat-whatsapp] summary student fetch failed", studentErr.message);
+    return;
+  }
+  const existingSummary = studentRow?.ai_description || "";
+  const studentName = studentRow?.profiles?.full_name || "studente";
+  const transcriptText = transcript
+    .map((entry) => `${entry.role === "user" ? "Studente" : "Luigi"}: ${entry.content}`)
+    .join("\n");
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: aiModel,
+      temperature: 0.3,
+      max_tokens: 320,
+      messages: [
+        {
+          role: "system",
+          content: "Sei un tutor senior di Theoremz Black: sintetizza le conversazioni WhatsApp e aggiorna la descrizione dello studente.",
+        },
+        {
+          role: "user",
+          content: `Descrizione attuale di ${studentName}:
+"""
+${existingSummary || "(nessuna)"}
+"""
+
+Chat recente:
+"""
+${transcriptText}
+"""
+
+Fondi le informazioni in un'unica nota chiara (4-6 frasi) con tono professionale e concreto.`,
+        },
+      ],
+    });
+    const summary = completion.choices[0]?.message?.content?.trim();
+    if (summary) {
+      await db
+        .from("black_students")
+        .update({ ai_description: summary, updated_at: new Date().toISOString() })
+        .eq("id", studentId);
+    }
+  } catch (err) {
+    console.error("[manychat-whatsapp] summary completion failed", err);
+  }
+}
+
+async function handleConversationRetention({
+  db,
+  studentId,
+  phoneTail,
+  totalCount,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  studentId: string | null;
+  phoneTail: string | null;
+  totalCount: number;
+}) {
+  if (totalCount <= 70) return;
+  await summarizeConversation({ studentId, phoneTail, db });
+  await pruneOldMessages({ db, studentId, phoneTail, deleteCount: 50 });
 }
 
 function buildSystemPrompt(contact: ResolvedContact) {
@@ -482,13 +614,18 @@ export async function POST(req: Request) {
 
   const resolvedContact = contact ?? buildFallbackContact(subscriberName, rawPhone);
   let history: ConversationMessage[] = [];
+  let historyTotal = 0;
   try {
-    history = await fetchConversationHistory(db, resolvedContact.studentId, phoneTail);
+    const { history: items, total } = await fetchConversationHistory(db, resolvedContact.studentId, phoneTail);
+    history = items;
+    historyTotal = total;
   } catch (err) {
     console.error("[manychat-whatsapp] conversation history error", err);
   }
 
-  if (phoneTail || resolvedContact.studentId) {
+  const canLogConversation = Boolean(phoneTail || resolvedContact.studentId);
+  let totalCountAfterLogs = historyTotal;
+  if (canLogConversation) {
     await logConversationMessage({
       db,
       studentId: resolvedContact.studentId,
@@ -497,11 +634,12 @@ export async function POST(req: Request) {
       content: messageText,
       meta: { subscriberName },
     });
+    totalCountAfterLogs += 1;
   }
 
   try {
     const reply = await generateAiReply(resolvedContact, messageText, subscriberName, history);
-    if (phoneTail || resolvedContact.studentId) {
+    if (canLogConversation) {
       await logConversationMessage({
         db,
         studentId: resolvedContact.studentId,
@@ -510,13 +648,20 @@ export async function POST(req: Request) {
         content: reply,
         meta: { model: aiModel },
       });
+      totalCountAfterLogs += 1;
+      await handleConversationRetention({
+        db,
+        studentId: resolvedContact.studentId,
+        phoneTail,
+        totalCount: totalCountAfterLogs,
+      });
     }
     return jsonResponse(reply, { isBlack: resolvedContact.isBlack });
   } catch (error) {
     console.error("[manychat-whatsapp] ai error", error);
     const fallbackMessage =
       "Mi sfugge proprio la risposta giusta 😅 Riprovo tra un attimo oppure scrivimi dentro l'app.";
-    if (phoneTail || resolvedContact.studentId) {
+    if (canLogConversation) {
       await logConversationMessage({
         db,
         studentId: resolvedContact.studentId,
@@ -524,6 +669,13 @@ export async function POST(req: Request) {
         role: "assistant",
         content: fallbackMessage,
         meta: { model: aiModel, error: (error as Error)?.message },
+      });
+      totalCountAfterLogs += 1;
+      await handleConversationRetention({
+        db,
+        studentId: resolvedContact.studentId,
+        phoneTail,
+        totalCount: totalCountAfterLogs,
       });
     }
     return jsonResponse(fallbackMessage, { isBlack: resolvedContact.isBlack });
