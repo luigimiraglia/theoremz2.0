@@ -4,11 +4,14 @@ import { supabaseServer } from "@/lib/supabase";
 
 const openaiApiKey = process.env.OPENAI_API_KEY;
 const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
+export const hasOpenAIClient = Boolean(openai);
 const webhookSecret = process.env.MANYCHAT_WEBHOOK_SECRET;
 const personaOverride = process.env.MANYCHAT_WHATSAPP_PERSONA;
 const aiModel = process.env.MANYCHAT_OPENAI_MODEL || "gpt-4o-mini";
 const aiMaxTokens = Number(process.env.MANYCHAT_OPENAI_MAX_TOKENS || 320);
 const aiTemperature = Number(process.env.MANYCHAT_OPENAI_TEMPERATURE || 0.4);
+const NON_BLACK_ACADEMIC_REPLY =
+  "Certo ti aiuto subito! Posso avere prima la mail del tuo account? Ricorda che il supporto sugli esercizi è riservato agli abbonati Theoremz Black.";
 
 const ACTIVE_BLACK_STATUSES = new Set([
   "active",
@@ -30,10 +33,12 @@ type BlackStudentRow = {
   status?: string | null;
   year_class?: string | null;
   track?: string | null;
+  student_name?: string | null;
   student_email?: string | null;
   parent_email?: string | null;
   student_phone?: string | null;
   parent_phone?: string | null;
+  ai_description?: string | null;
   profiles?: SupabaseProfileRow | SupabaseProfileRow[] | null;
 };
 
@@ -57,6 +62,7 @@ type ResolvedContact = {
   subscriptionTier: string | null;
   isBlack: boolean;
   source: "black_students" | "student_profiles" | "fallback";
+  aiSummary?: string | null;
 };
 
 type ConversationMessage = {
@@ -78,7 +84,7 @@ type JsonResponseOptions = {
   isBlack?: boolean;
 };
 
-function jsonResponse(message: string, options?: JsonResponseOptions) {
+export function jsonResponse(message: string, options?: JsonResponseOptions) {
   const status = options?.status ?? 200;
   const isBlack = options?.isBlack ?? false;
   return NextResponse.json(
@@ -91,7 +97,7 @@ function jsonResponse(message: string, options?: JsonResponseOptions) {
   );
 }
 
-function missingConfigResponse(reason: string) {
+export function missingConfigResponse(reason: string) {
   return NextResponse.json({ error: reason }, { status: 500 });
 }
 
@@ -131,7 +137,7 @@ function deepFindStringByKey(payload: any, matcher: (key: string) => boolean) {
   return null;
 }
 
-function extractPhone(payload: any) {
+export function extractPhone(payload: any) {
   const phonePaths = [
     ["subscriber", "phone"],
     ["subscriber", "whatsapp"],
@@ -150,7 +156,7 @@ function extractPhone(payload: any) {
   return deepFindStringByKey(payload, (key) => key.toLowerCase().includes("phone"));
 }
 
-function extractMessageText(payload: any) {
+export function extractMessageText(payload: any) {
   const messagePaths = [
     ["message", "text"],
     ["message", "body"],
@@ -170,7 +176,7 @@ function extractMessageText(payload: any) {
   return deepFindStringByKey(payload, (key) => key.toLowerCase() === "text" || key.toLowerCase() === "body");
 }
 
-function extractSubscriberName(payload: any) {
+export function extractSubscriberName(payload: any) {
   const namePaths = [
     ["subscriber", "name"],
     ["subscriber", "full_name"],
@@ -224,7 +230,7 @@ function mapBlackStudent(row: BlackStudentRow): ResolvedContact {
   const isBlack = Boolean(
     (status && ACTIVE_BLACK_STATUSES.has(status)) || subscriptionTier === "black"
   );
-  const fullName = profile?.full_name || row.student_email || row.parent_email || null;
+  const fullName = row.student_name || profile?.full_name || row.student_email || row.parent_email || null;
 
   return {
     userId: row.user_id,
@@ -238,6 +244,7 @@ function mapBlackStudent(row: BlackStudentRow): ResolvedContact {
     subscriptionTier,
     isBlack,
     source: "black_students",
+    aiSummary: row.ai_description || null,
   };
 }
 
@@ -256,6 +263,7 @@ function mapStudentProfile(row: StudentProfileRow): ResolvedContact {
     subscriptionTier,
     isBlack,
     source: "student_profiles",
+    aiSummary: null,
   };
 }
 
@@ -272,6 +280,7 @@ function buildFallbackContact(name: string | null, phone: string | null): Resolv
     subscriptionTier: null,
     isBlack: false,
     source: "fallback",
+    aiSummary: null,
   };
 }
 
@@ -287,7 +296,7 @@ async function resolveContact(
     const { data, error } = await db
       .from("black_students")
       .select(
-        "id, user_id, status, year_class, track, student_email, parent_email, student_phone, parent_phone, profiles:profiles!black_students_user_id_fkey(full_name, subscription_tier)"
+        "id, user_id, status, year_class, track, student_name, student_email, parent_email, student_phone, parent_phone, ai_description, profiles:profiles!black_students_user_id_fkey(full_name, subscription_tier)"
       )
       .or(studentFilter)
       .limit(1);
@@ -699,12 +708,14 @@ async function handleBlackConversation({
   messageText,
   subscriberName,
   phoneTail,
+  imageUrl,
 }: {
   db: ReturnType<typeof supabaseServer>;
   resolvedContact: ResolvedContact;
   messageText: string;
   subscriberName: string | null;
   phoneTail: string | null;
+  imageUrl?: string | null;
 }) {
   const { history, total } = await fetchConversationHistory(db, resolvedContact.studentId, phoneTail);
   let runningCount = total;
@@ -716,12 +727,12 @@ async function handleBlackConversation({
       phoneTail,
       role: "user",
       content: messageText,
-      meta: { subscriberName },
+      meta: { subscriberName, imageUrl },
     });
     runningCount += 1;
   }
   try {
-    const reply = await generateAiReply(resolvedContact, messageText, subscriberName, history);
+    const reply = await generateAiReply(resolvedContact, messageText, subscriberName, history, imageUrl);
     if (canLog) {
       await logConversationMessage({
         db,
@@ -771,12 +782,14 @@ async function handleLeadConversation({
   subscriberName,
   rawPhone,
   phoneTail,
+  imageUrl,
 }: {
   db: ReturnType<typeof supabaseServer>;
   messageText: string;
   subscriberName: string | null;
   rawPhone: string | null;
   phoneTail: string | null;
+  imageUrl?: string | null;
 }) {
   const emailCandidate = extractEmailCandidate(messageText);
   if (emailCandidate) {
@@ -805,17 +818,18 @@ async function handleLeadConversation({
     return jsonResponse("Per aiutarti devo avere il tuo numero completo su WhatsApp. Puoi riprovare? 😊");
   }
 
+  const intent = inferLeadIntent(messageText);
+  if (intent !== "info") {
+    return jsonResponse(NON_BLACK_ACADEMIC_REPLY);
+  }
+
   let inquiry = await getInquiryByPhoneTail(db, phoneTail);
   if (!inquiry) {
-    const intent = inferLeadIntent(messageText);
-    if (intent !== "info") {
-      return jsonResponse("Certo ti aiuto subito! Posso avere prima la mail del tuo account?");
-    }
     inquiry = await createInquiryRecord({ db, phoneTail, intent, subscriberName });
   }
 
   if (inquiry.intent !== "info") {
-    return jsonResponse("Certo ti aiuto subito! Posso avere prima la mail del tuo account?");
+    return jsonResponse(NON_BLACK_ACADEMIC_REPLY);
   }
 
   const { history, total } = await fetchConversationHistory(db, null, phoneTail);
@@ -826,7 +840,7 @@ async function handleLeadConversation({
     phoneTail,
     role: "user",
     content: messageText,
-    meta: { subscriberName, inquiryId: inquiry.id },
+    meta: { subscriberName, inquiryId: inquiry.id, imageUrl },
   });
   runningCount += 1;
 
@@ -862,9 +876,14 @@ function buildSystemPrompt(contact: ResolvedContact) {
 ${details.join("\n")}`
     : "Non hai dati aggiuntivi sullo studente oltre al messaggio.";
 
+  const summarySection = contact.aiSummary
+    ? `\nNota tutor esistente:\n${contact.aiSummary}`
+    : "";
+
   return `${persona}
 
 ${header}
+${summarySection}
 
 Regole:
 - Rispondi sempre in italiano e in prima persona come Luigi, ma non aggiungere firme o nomi alla fine.
@@ -877,7 +896,8 @@ async function generateAiReply(
   contact: ResolvedContact,
   message: string,
   subscriberName: string | null,
-  history: ConversationMessage[]
+  history: ConversationMessage[],
+  imageUrl?: string | null
 ) {
   if (!openai) throw new Error("OpenAI client not configured");
   const systemPrompt = buildSystemPrompt(contact);
@@ -904,6 +924,16 @@ Rispondi come Luigi.`;
         : entry.content,
   }));
 
+  const userMessage: any = imageUrl
+    ? {
+        role: "user",
+        content: [
+          { type: "text", text: userContent },
+          { type: "image_url", image_url: { url: imageUrl } },
+        ],
+      }
+    : { role: "user", content: userContent };
+
   const completion = await openai.chat.completions.create({
     model: aiModel,
     temperature: Number.isFinite(aiTemperature) ? aiTemperature : 0.4,
@@ -911,7 +941,7 @@ Rispondi come Luigi.`;
     messages: [
       { role: "system", content: systemPrompt },
       ...formattedHistory,
-      { role: "user", content: userContent },
+      userMessage,
     ],
   });
 
@@ -919,7 +949,7 @@ Rispondi come Luigi.`;
   return content.trim() || "Fammi un attimo capire meglio la situazione 😊";
 }
 
-function verifySecret(req: Request) {
+export function verifySecret(req: Request) {
   if (!webhookSecret) return null;
   const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
   if (!authHeader) return "missing_authorization";
@@ -927,28 +957,22 @@ function verifySecret(req: Request) {
   return authHeader === expected ? null : "invalid_authorization";
 }
 
-export async function POST(req: Request) {
-  if (!openai) return missingConfigResponse("missing_openai_api_key");
-  const authError = verifySecret(req);
-  if (authError) return NextResponse.json({ error: authError }, { status: 401 });
+type WhatsAppMessageInput = {
+  messageText: string;
+  subscriberName: string | null;
+  rawPhone: string | null;
+  imageUrl?: string | null;
+};
 
-  let payload: any;
-  try {
-    payload = await req.json();
-  } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-  }
-
-  const messageText = extractMessageText(payload);
-  if (!messageText) {
-    return jsonResponse("Non ho ricevuto nessun messaggio da elaborare 😅");
-  }
-
-  const subscriberName = extractSubscriberName(payload);
-  const rawPhone = extractPhone(payload);
+export async function handleWhatsAppMessage({
+  messageText,
+  subscriberName,
+  rawPhone,
+  imageUrl,
+}: WhatsAppMessageInput) {
+  const db = supabaseServer();
   const phoneTail = rawPhone ? extractPhoneTail(rawPhone) : null;
 
-  const db = supabaseServer();
   let contact: ResolvedContact | null = null;
   if (rawPhone) {
     try {
@@ -976,6 +1000,7 @@ export async function POST(req: Request) {
       messageText,
       subscriberName,
       phoneTail,
+      imageUrl: imageUrl ?? null,
     });
   }
 
@@ -985,6 +1010,34 @@ export async function POST(req: Request) {
     subscriberName,
     rawPhone,
     phoneTail,
+    imageUrl: imageUrl ?? null,
+  });
+}
+
+export async function POST(req: Request) {
+  if (!openai) return missingConfigResponse("missing_openai_api_key");
+  const authError = verifySecret(req);
+  if (authError) return NextResponse.json({ error: authError }, { status: 401 });
+
+  let payload: any;
+  try {
+    payload = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+
+  const messageText = extractMessageText(payload);
+  if (!messageText) {
+    return jsonResponse("Non ho ricevuto nessun messaggio da elaborare 😅");
+  }
+
+  const subscriberName = extractSubscriberName(payload);
+  const rawPhone = extractPhone(payload);
+
+  return handleWhatsAppMessage({
+    messageText,
+    subscriberName,
+    rawPhone,
   });
 }
 

@@ -11,6 +11,7 @@ Questa nota spiega come funziona l'endpoint `/api/manychat/whatsapp` e come coll
    - **Richieste info/prezzi** → AI commerciale che spiega Theoremz Black e salva lo storico nel DB.
    - **Domande scolastiche/altro** → chiede la mail dell'account per collegare il profilo.
    - **Email fornite** → se trovate in Supabase, il numero viene collegato allo studente e la conversazione passa automaticamente al flusso Black; se l'email non esiste, viene richiesto di reinserirla.
+6. La risposta allo studente usa il campo `black_students.student_name` (se presente) per evitare di citare il nome del genitore; in fallback usa ancora `profiles.full_name`/email.
 
 ## Variabili d'ambiente
 Imposta questi valori in `.env.local`, Vercel o nell'infrastruttura di deploy:
@@ -28,6 +29,17 @@ Imposta questi valori in `.env.local`, Vercel o nell'infrastruttura di deploy:
 L'endpoint prova a estrarre:
 - Numero WhatsApp da chiavi come `subscriber.phone`, `contact.phone`, `data.raw_message.from`, o qualsiasi campo con `phone` nel nome.
 - Testo del messaggio da `message.text`, `raw_message.text`, `data.message.body`, `text`, ecc.
+
+Per i messaggi con immagine puoi usare l'endpoint dedicato `POST /api/manychat/whatsapp/image` passando anche `image_url` (pubblico o data-uri). Esempio:
+
+```json
+{
+  "subscriber": { "id": "{{contact.id}}", "phone": "{{contact.phone}}", "name": "{{contact.full_name}}" },
+  "message": { "text": "{{last_received_input}}" },
+  "image_url": "{{last_received_attachment}}"
+}
+```
+Se `message.text` è vuoto, il backend genera una caption di default e allega l'immagine alla richiesta OpenAI.
 
 Esempio minimale di payload funzionante (da usare nell'External Request di ManyChat):
 
@@ -63,6 +75,9 @@ Il campo `black` è `true` solo se il numero è stato agganciato a uno studente 
 Ogni messaggio WhatsApp (testo studente + risposta AI) viene salvato su `black_whatsapp_messages` e la cronologia recente viene ripassata (max 20 messaggi) al modello OpenAI. Quando lo storico supera i 70 messaggi, il sistema chiede a GPT di riassumere l'intera chat e fonde il risultato con `black_students.ai_description`, poi elimina i 50 messaggi più vecchi per tenere leggera la cronologia. Se non l'hai ancora creata, usa questa SQL su Supabase:
 
 ```sql
+alter table if exists public.black_students
+  add column if not exists student_name text;
+
 create table if not exists public.black_whatsapp_messages (
   id uuid primary key default gen_random_uuid(),
   student_id uuid references public.black_students(id) on delete set null,
@@ -107,6 +122,7 @@ create unique index if not exists black_whatsapp_inquiries_phone_tail_key
    - **Body**: JSON come nell'esempio sopra con i merge field di ManyChat (`{{contact.phone}}`, `{{last_received_input}}`, ecc.).
 3. Imposta l'opzione "Response Mapping" del blocco per usare il testo di ritorno. In genere basta collegare la risposta del webhook a un blocco "Send Message" con il contenuto `{{request.body.content.text}}`. Se vuoi sapere se il contatto è stato riconosciuto come Black, mappa anche `$.black` in un Custom Field boolean (es. `Ai__Is_Black`).
 4. Collega eventuali fallback (es. se la risposta contiene "non trovo un profilo" manda a un umano).
+5. Per le immagini crea un secondo External Request che punta a `/api/manychat/whatsapp/image`, inviando l'URL dell'allegato (`{{last_received_attachment}}` o campo equivalente). Il blocco di risposta è identico.
 
 ## Debug & test
 - **Ping rapido**: `GET /api/manychat/whatsapp` restituisce `{ "ok": true }` ed è utile per verificare routing e deploy.
