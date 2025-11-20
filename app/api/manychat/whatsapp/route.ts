@@ -54,7 +54,7 @@ type ResolvedContact = {
   status: string | null;
   subscriptionTier: string | null;
   isBlack: boolean;
-  source: "black_students" | "student_profiles";
+  source: "black_students" | "student_profiles" | "fallback";
 };
 
 function jsonResponse(message: string, status = 200) {
@@ -272,6 +272,21 @@ function mapStudentProfile(row: StudentProfileRow): ResolvedContact {
   };
 }
 
+function buildFallbackContact(name: string | null, phone: string | null): ResolvedContact {
+  return {
+    userId: "guest",
+    fullName: name,
+    email: null,
+    phone,
+    yearClass: null,
+    track: null,
+    status: null,
+    subscriptionTier: null,
+    isBlack: false,
+    source: "fallback",
+  };
+}
+
 async function resolveContact(
   db: ReturnType<typeof supabaseServer>,
   phone: string
@@ -395,39 +410,30 @@ export async function POST(req: Request) {
     return jsonResponse("Non ho ricevuto nessun messaggio da elaborare 😅");
   }
 
+  const subscriberName = extractSubscriberName(payload);
   const rawPhone = extractPhone(payload);
-  if (!rawPhone) {
-    return jsonResponse(
-      "Non riesco ad identificare il numero di telefono. Puoi verificare le impostazioni di ManyChat?"
-    );
-  }
 
   const db = supabaseServer();
   let contact: ResolvedContact | null = null;
-  try {
-    contact = await resolveContact(db, rawPhone);
-  } catch (error) {
-    console.error("[manychat-whatsapp] lookup error", error);
-    return jsonResponse(
-      "Sto avendo problemi a recuperare il tuo profilo, riprovo tra poco 🙏"
-    );
+  if (rawPhone) {
+    try {
+      contact = await resolveContact(db, rawPhone);
+    } catch (error) {
+      console.error("[manychat-whatsapp] lookup error", error);
+    }
+  } else {
+    console.warn("[manychat-whatsapp] missing phone number in payload");
   }
 
-  if (!contact) {
-    return jsonResponse(
-      "Non trovo un profilo Theoremz Black associato a questo numero. Scrivimi dall'app o aggiorniamo la scheda via supporto."
-    );
-  }
-
-  if (!contact.isBlack) {
+  if (contact && contact.source !== "fallback" && !contact.isBlack) {
     return jsonResponse(
       "Questo numero non risulta abbonato a Theoremz Black. Se pensi sia un errore, scrivimi a team@theoremz.com 💌"
     );
   }
 
   try {
-    const subscriberName = extractSubscriberName(payload);
-    const reply = await generateAiReply(contact, messageText, subscriberName);
+    const resolvedContact = contact ?? buildFallbackContact(subscriberName, rawPhone);
+    const reply = await generateAiReply(resolvedContact, messageText, subscriberName);
     return jsonResponse(reply);
   } catch (error) {
     console.error("[manychat-whatsapp] ai error", error);

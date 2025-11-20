@@ -68,7 +68,7 @@ L'API restituisce sempre un JSON conforme a ManyChat v2:
 - **Log**: tutti gli errori operativi vengono loggati lato server con prefisso `[manychat-whatsapp]`.
 
 ## Comportamento di fallback
-- Se il numero non è trovato o lo studente non risulta Black, il webhook risponde con un messaggio di cortesia (non viene chiamata l'AI).
+- Se il numero non è trovato, l'endpoint genera comunque la risposta AI usando un profilo "guest" (quindi niente dati extra, solo il contenuto del messaggio). Se invece troviamo il contatto ma risulta non-Black, blocchiamo ancora la risposta e mostriamo il messaggio di cortesia.
 - Se OpenAI dà errore, inviamo una risposta di errore soft e ManyChat può riprovare o deviare il flusso.
 
 Adatta il flow di ManyChat per intercettare questi messaggi e inoltrarli a un operatore umano se necessario.
