@@ -64,6 +64,15 @@ type ConversationMessage = {
   content: string;
 };
 
+type InquiryRecord = {
+  id: string;
+  phone_tail: string;
+  intent: string | null;
+  status: string;
+  email?: string | null;
+  message_count?: number | null;
+};
+
 type JsonResponseOptions = {
   status?: number;
   isBlack?: boolean;
@@ -431,7 +440,8 @@ async function summarizeConversation({
     return;
   }
   const existingSummary = studentRow?.ai_description || "";
-  const studentName = studentRow?.profiles?.full_name || "studente";
+  const profileEntry = unwrapProfile(studentRow?.profiles);
+  const studentName = profileEntry?.full_name || "studente";
   const transcriptText = transcript
     .map((entry) => `${entry.role === "user" ? "Studente" : "Luigi"}: ${entry.content}`)
     .join("\n");
@@ -488,6 +498,351 @@ async function handleConversationRetention({
   if (totalCount <= 70) return;
   await summarizeConversation({ studentId, phoneTail, db });
   await pruneOldMessages({ db, studentId, phoneTail, deleteCount: 50 });
+}
+
+function inferLeadIntent(message: string) {
+  const text = message.toLowerCase();
+  const infoKeywords = [
+    "prezzo",
+    "prezzi",
+    "costo",
+    "quanto",
+    "abbon",
+    "piano",
+    "informazioni",
+    "info",
+    "iscriver",
+    "come funziona",
+    "pagare",
+    "quanto costa",
+    "theoremz black",
+  ];
+  if (infoKeywords.some((keyword) => text.includes(keyword))) return "info" as const;
+  return "academic" as const;
+}
+
+function extractEmailCandidate(text: string) {
+  const match = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match ? match[0].toLowerCase() : null;
+}
+
+function normalizeE164Phone(value?: string | null) {
+  if (!value) return null;
+  const digits = value.replace(/\D+/g, "");
+  if (!digits) return null;
+  let normalized = digits;
+  if (normalized.startsWith("00")) normalized = normalized.slice(2);
+  if (normalized.startsWith("0") && normalized.length > 9) normalized = normalized.replace(/^0+/, "");
+  if (!normalized.startsWith("39") && normalized.length === 10) {
+    normalized = `39${normalized}`;
+  }
+  return `+${normalized}`;
+}
+
+function escapeSupabaseValue(value: string) {
+  return value.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
+async function linkEmailToPhone(db: ReturnType<typeof supabaseServer>, email: string, phone: string) {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return { status: "invalid" as const };
+  const escaped = escapeSupabaseValue(normalized);
+  const { data, error } = await db
+    .from("black_students")
+    .select("id")
+    .or(`student_email.ilike.${escaped},parent_email.ilike.${escaped}`)
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error("[manychat-whatsapp] link email failed", error.message);
+    return { status: "error" as const };
+  }
+  if (!data?.id) {
+    return { status: "not_found" as const };
+  }
+  const stamp = new Date().toISOString();
+  const { error: updateErr } = await db
+    .from("black_students")
+    .update({ student_phone: phone, updated_at: stamp })
+    .eq("id", data.id);
+  if (updateErr) {
+    console.error("[manychat-whatsapp] phone update failed", updateErr.message);
+    return { status: "error" as const };
+  }
+  return { status: "linked" as const, studentId: data.id };
+}
+
+async function getInquiryByPhoneTail(db: ReturnType<typeof supabaseServer>, phoneTail: string) {
+  const { data, error } = await db
+    .from("black_whatsapp_inquiries")
+    .select("id, phone_tail, intent, status, email, message_count")
+    .eq("phone_tail", phoneTail)
+    .maybeSingle();
+  if (error) {
+    console.error("[manychat-whatsapp] inquiry lookup failed", error.message);
+    return null;
+  }
+  return (data as InquiryRecord) || null;
+}
+
+async function createInquiryRecord({
+  db,
+  phoneTail,
+  intent,
+  subscriberName,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  phoneTail: string;
+  intent: string;
+  subscriberName: string | null;
+}) {
+  const payload = {
+    phone_tail: phoneTail,
+    intent,
+    status: "open",
+    meta: subscriberName ? { name: subscriberName } : null,
+  };
+  const { data, error } = await db
+    .from("black_whatsapp_inquiries")
+    .insert(payload)
+    .select("id, phone_tail, intent, status, email, message_count")
+    .single();
+  if (error) {
+    console.error("[manychat-whatsapp] inquiry insert failed", error.message);
+    throw new Error(error.message);
+  }
+  return data as InquiryRecord;
+}
+
+async function updateInquiryCounters({
+  db,
+  inquiryId,
+  increment,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  inquiryId: string;
+  increment: number;
+}) {
+  const { data, error } = await db
+    .from("black_whatsapp_inquiries")
+    .select("message_count")
+    .eq("id", inquiryId)
+    .maybeSingle();
+  if (error) {
+    console.error("[manychat-whatsapp] inquiry counter read failed", error.message);
+    return;
+  }
+  const current = Number(data?.message_count ?? 0);
+  const nextCount = current + increment;
+  const { error: updateErr } = await db
+    .from("black_whatsapp_inquiries")
+    .update({
+      message_count: nextCount,
+      last_message_at: new Date().toISOString(),
+    })
+    .eq("id", inquiryId);
+  if (updateErr) {
+    console.error("[manychat-whatsapp] inquiry counter update failed", updateErr.message);
+  }
+}
+
+async function generateInfoReply({
+  message,
+  history,
+  subscriberName,
+}: {
+  message: string;
+  history: ConversationMessage[];
+  subscriberName: string | null;
+}) {
+  if (!openai) {
+    return "Ciao! Sono Luigi di Theoremz Black 👋 Ti spiego subito come funziona il programma se mi dai qualche dettaglio in più.";
+  }
+  const leadName = subscriberName || "potenziale cliente";
+  const formattedHistory = history.map((entry) =>
+    entry.role === "user"
+      ? `Richiesta precedente: ${entry.content}`
+      : `Risposta precedente: ${entry.content}`
+  );
+  const context = formattedHistory.length ? formattedHistory.join("\n") : "(nessuno)";
+  const completion = await openai.chat.completions.create({
+    model: aiModel,
+    temperature: 0.6,
+    max_tokens: 320,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Sei Luigi Miraglia e stai parlando con un potenziale studente interessato a Theoremz Black su WhatsApp. Spiega il valore del programma, rispondi alle domande commerciali e sii cordiale (tono umano, massimo 3 paragrafi).",
+      },
+      {
+        role: "user",
+        content: `Conversazione precedente:
+${context}
+
+Nuovo messaggio da ${leadName}:
+"""
+${message}
+"""
+
+Rispondi con tono amichevole, chiaro e professionale, includendo call-to-action concrete (es. link theoremz.com/black).`,
+      },
+    ],
+  });
+  return completion.choices[0]?.message?.content?.trim() ||
+    "Ti racconto volentieri come funziona Theoremz Black: è un percorso personalizzato con tutor e AI, ti mando tutte le info e i link ❤️";
+}
+
+async function handleBlackConversation({
+  db,
+  resolvedContact,
+  messageText,
+  subscriberName,
+  phoneTail,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  resolvedContact: ResolvedContact;
+  messageText: string;
+  subscriberName: string | null;
+  phoneTail: string | null;
+}) {
+  const { history, total } = await fetchConversationHistory(db, resolvedContact.studentId, phoneTail);
+  let runningCount = total;
+  const canLog = Boolean(phoneTail || resolvedContact.studentId);
+  if (canLog) {
+    await logConversationMessage({
+      db,
+      studentId: resolvedContact.studentId,
+      phoneTail,
+      role: "user",
+      content: messageText,
+      meta: { subscriberName },
+    });
+    runningCount += 1;
+  }
+  try {
+    const reply = await generateAiReply(resolvedContact, messageText, subscriberName, history);
+    if (canLog) {
+      await logConversationMessage({
+        db,
+        studentId: resolvedContact.studentId,
+        phoneTail,
+        role: "assistant",
+        content: reply,
+        meta: { model: aiModel },
+      });
+      runningCount += 1;
+      await handleConversationRetention({
+        db,
+        studentId: resolvedContact.studentId,
+        phoneTail,
+        totalCount: runningCount,
+      });
+    }
+    return jsonResponse(reply, { isBlack: resolvedContact.isBlack });
+  } catch (error) {
+    console.error("[manychat-whatsapp] ai error", error);
+    const fallbackMessage =
+      "Mi sfugge proprio la risposta giusta 😅 Riprovo tra un attimo oppure scrivimi dentro l'app.";
+    if (canLog) {
+      await logConversationMessage({
+        db,
+        studentId: resolvedContact.studentId,
+        phoneTail,
+        role: "assistant",
+        content: fallbackMessage,
+        meta: { model: aiModel, error: (error as Error)?.message },
+      });
+      runningCount += 1;
+      await handleConversationRetention({
+        db,
+        studentId: resolvedContact.studentId,
+        phoneTail,
+        totalCount: runningCount,
+      });
+    }
+    return jsonResponse(fallbackMessage, { isBlack: resolvedContact.isBlack });
+  }
+}
+
+async function handleLeadConversation({
+  db,
+  messageText,
+  subscriberName,
+  rawPhone,
+  phoneTail,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  messageText: string;
+  subscriberName: string | null;
+  rawPhone: string | null;
+  phoneTail: string | null;
+}) {
+  const emailCandidate = extractEmailCandidate(messageText);
+  if (emailCandidate) {
+    const normalizedPhone = normalizeE164Phone(rawPhone || phoneTail);
+    if (!normalizedPhone) {
+      return jsonResponse("Per collegarti ho bisogno del numero completo con cui mi stai scrivendo 😊");
+    }
+    const link = await linkEmailToPhone(db, emailCandidate, normalizedPhone);
+    if (link.status === "linked" && link.studentId) {
+      const refreshedContact = await resolveContact(db, normalizedPhone);
+      if (refreshedContact && refreshedContact.isBlack) {
+        return handleBlackConversation({
+          db,
+          resolvedContact: refreshedContact,
+          messageText,
+          subscriberName,
+          phoneTail: extractPhoneTail(normalizedPhone),
+        });
+      }
+      return jsonResponse("Grazie! Ho collegato la tua mail: scrivimi ora dall'app per riprendere la chat ✌️");
+    }
+    return jsonResponse("Questa mail non risulta nei nostri account, puoi ricontrollare? 😊");
+  }
+
+  if (!phoneTail) {
+    return jsonResponse("Per aiutarti devo avere il tuo numero completo su WhatsApp. Puoi riprovare? 😊");
+  }
+
+  let inquiry = await getInquiryByPhoneTail(db, phoneTail);
+  if (!inquiry) {
+    const intent = inferLeadIntent(messageText);
+    if (intent !== "info") {
+      return jsonResponse("Certo ti aiuto subito! Posso avere prima la mail del tuo account?");
+    }
+    inquiry = await createInquiryRecord({ db, phoneTail, intent, subscriberName });
+  }
+
+  if (inquiry.intent !== "info") {
+    return jsonResponse("Certo ti aiuto subito! Posso avere prima la mail del tuo account?");
+  }
+
+  const { history, total } = await fetchConversationHistory(db, null, phoneTail);
+  let runningCount = total;
+  await logConversationMessage({
+    db,
+    studentId: null,
+    phoneTail,
+    role: "user",
+    content: messageText,
+    meta: { subscriberName, inquiryId: inquiry.id },
+  });
+  runningCount += 1;
+
+  const reply = await generateInfoReply({ message: messageText, history, subscriberName });
+  await logConversationMessage({
+    db,
+    studentId: null,
+    phoneTail,
+    role: "assistant",
+    content: reply,
+    meta: { inquiryId: inquiry.id },
+  });
+  runningCount += 1;
+  await handleConversationRetention({ db, studentId: null, phoneTail, totalCount: runningCount });
+  await updateInquiryCounters({ db, inquiryId: inquiry.id, increment: 2 });
+  return jsonResponse(reply, { isBlack: false });
 }
 
 function buildSystemPrompt(contact: ResolvedContact) {
@@ -613,73 +968,24 @@ export async function POST(req: Request) {
   }
 
   const resolvedContact = contact ?? buildFallbackContact(subscriberName, rawPhone);
-  let history: ConversationMessage[] = [];
-  let historyTotal = 0;
-  try {
-    const { history: items, total } = await fetchConversationHistory(db, resolvedContact.studentId, phoneTail);
-    history = items;
-    historyTotal = total;
-  } catch (err) {
-    console.error("[manychat-whatsapp] conversation history error", err);
-  }
 
-  const canLogConversation = Boolean(phoneTail || resolvedContact.studentId);
-  let totalCountAfterLogs = historyTotal;
-  if (canLogConversation) {
-    await logConversationMessage({
+  if (resolvedContact.isBlack) {
+    return handleBlackConversation({
       db,
-      studentId: resolvedContact.studentId,
+      resolvedContact,
+      messageText,
+      subscriberName,
       phoneTail,
-      role: "user",
-      content: messageText,
-      meta: { subscriberName },
     });
-    totalCountAfterLogs += 1;
   }
 
-  try {
-    const reply = await generateAiReply(resolvedContact, messageText, subscriberName, history);
-    if (canLogConversation) {
-      await logConversationMessage({
-        db,
-        studentId: resolvedContact.studentId,
-        phoneTail,
-        role: "assistant",
-        content: reply,
-        meta: { model: aiModel },
-      });
-      totalCountAfterLogs += 1;
-      await handleConversationRetention({
-        db,
-        studentId: resolvedContact.studentId,
-        phoneTail,
-        totalCount: totalCountAfterLogs,
-      });
-    }
-    return jsonResponse(reply, { isBlack: resolvedContact.isBlack });
-  } catch (error) {
-    console.error("[manychat-whatsapp] ai error", error);
-    const fallbackMessage =
-      "Mi sfugge proprio la risposta giusta 😅 Riprovo tra un attimo oppure scrivimi dentro l'app.";
-    if (canLogConversation) {
-      await logConversationMessage({
-        db,
-        studentId: resolvedContact.studentId,
-        phoneTail,
-        role: "assistant",
-        content: fallbackMessage,
-        meta: { model: aiModel, error: (error as Error)?.message },
-      });
-      totalCountAfterLogs += 1;
-      await handleConversationRetention({
-        db,
-        studentId: resolvedContact.studentId,
-        phoneTail,
-        totalCount: totalCountAfterLogs,
-      });
-    }
-    return jsonResponse(fallbackMessage, { isBlack: resolvedContact.isBlack });
-  }
+  return handleLeadConversation({
+    db,
+    messageText,
+    subscriberName,
+    rawPhone,
+    phoneTail,
+  });
 }
 
 export async function GET() {

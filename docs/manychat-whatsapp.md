@@ -7,6 +7,10 @@ Questa nota spiega come funziona l'endpoint `/api/manychat/whatsapp` e come coll
 2. L'API cerca il contatto su Supabase (tabelle `black_students` → `student_profiles`).
 3. Se il profilo risulta Black attivo, genera la risposta usando OpenAI impersonando Luigi.
 4. La risposta viene rimandata a ManyChat nel formato `External Request`, pronta per essere inviata allo studente: è in prima persona (Luigi), senza firme e senza inviti a call.
+5. Se il numero non è ancora associato a uno studente Black, il bot crea una conversazione “lead” (tabella `black_whatsapp_inquiries`), distingue tra richieste commerciali e domande scolastiche e gestisce:
+   - **Richieste info/prezzi** → AI commerciale che spiega Theoremz Black e salva lo storico nel DB.
+   - **Domande scolastiche/altro** → chiede la mail dell'account per collegare il profilo.
+   - **Email fornite** → se trovate in Supabase, il numero viene collegato allo studente e la conversazione passa automaticamente al flusso Black; se l'email non esiste, viene richiesto di reinserirla.
 
 ## Variabili d'ambiente
 Imposta questi valori in `.env.local`, Vercel o nell'infrastruttura di deploy:
@@ -74,6 +78,22 @@ create index if not exists black_whatsapp_messages_student_id_idx
 
 create index if not exists black_whatsapp_messages_phone_tail_idx
   on public.black_whatsapp_messages(phone_tail, created_at desc);
+
+create table if not exists public.black_whatsapp_inquiries (
+  id uuid primary key default gen_random_uuid(),
+  phone_tail text unique not null,
+  intent text not null default 'info',
+  status text not null default 'open',
+  email text,
+  message_count integer default 0,
+  meta jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  last_message_at timestamptz
+);
+
+create unique index if not exists black_whatsapp_inquiries_phone_tail_key
+  on public.black_whatsapp_inquiries(phone_tail);
 ```
 
 > `phone_tail` contiene le ultime 10 cifre del numero, così da collegare anche i contatti senza profilazione completa. Solo gli ultimi 20 messaggi vengono passati all'AI per ogni risposta; il resto viene compresso nel summary quando superi i 70 messaggi totali.
