@@ -6,7 +6,7 @@ Questa nota spiega come funziona l'endpoint `/api/manychat/whatsapp` e come coll
 1. ManyChat invia un `POST` all'endpoint con il testo ricevuto su WhatsApp e il numero dello studente.
 2. L'API cerca il contatto su Supabase (tabelle `black_students` → `student_profiles`).
 3. Se il profilo risulta Black attivo, genera la risposta usando OpenAI impersonando Luigi.
-4. La risposta viene rimandata a ManyChat nel formato `External Request`, pronta per essere inviata allo studente.
+4. La risposta viene rimandata a ManyChat nel formato `External Request`, pronta per essere inviata allo studente: è in prima persona (Luigi), senza firme e senza inviti a call.
 
 ## Variabili d'ambiente
 Imposta questi valori in `.env.local`, Vercel o nell'infrastruttura di deploy:
@@ -64,7 +64,7 @@ L'API restituisce sempre un JSON conforme a ManyChat v2:
 
 ## Debug & test
 - **Ping rapido**: `GET /api/manychat/whatsapp` restituisce `{ "ok": true }` ed è utile per verificare routing e deploy.
-- **Verifica Supabase**: assicurati che il numero sia salvato su `black_students.student_phone` (o `parent_phone`). In fallback viene usata la colonna `phone` di `student_profiles` con matching fuzzy sugli ultimi 6–8 numeri.
+- **Verifica Supabase**: assicurati che il numero sia salvato su `black_students.student_phone` (o `parent_phone`). L'aggancio ignora il prefisso e confronta solo le ultime 10 cifre (stesso comportamento per `student_profiles.phone`).
 - **Log**: tutti gli errori operativi vengono loggati lato server con prefisso `[manychat-whatsapp]`.
 
 ## Comportamento di fallback

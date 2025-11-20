@@ -175,56 +175,17 @@ function normalizeDigits(value: string | null) {
   return digits || null;
 }
 
-function buildFuzzyPattern(digits: string) {
-  const tailLength = Math.min(8, digits.length);
-  const tail = digits.slice(-tailLength);
-  if (tail.length < 6) return null;
-  return `%${tail.split("").join("%")}%`;
-}
-
-function buildPhoneFilters(rawPhone: string) {
+function extractPhoneTail(rawPhone: string) {
   const digits = normalizeDigits(rawPhone);
-  if (!digits) return { eq: [], fuzzy: null };
-  const variants = new Set<string>();
-  const push = (value?: string | null) => {
-    if (!value) return;
-    const cleaned = value.replace(/\s+/g, "");
-    if (cleaned.length >= 6) variants.add(cleaned);
-  };
-
-  push(digits);
-  if (digits.startsWith("00") && digits.length > 6) push(digits.slice(2));
-  if (digits.startsWith("0039") && digits.length > 6) push(digits.slice(4));
-  if (digits.startsWith("39") && digits.length > 6) push(digits.slice(2));
-  if (digits.startsWith("0") && digits.length > 6) push(digits.slice(1));
-
-  const trimmedLeadingZeros = digits.replace(/^0+/, "");
-  if (trimmedLeadingZeros.length >= 6) {
-    push(`39${trimmedLeadingZeros}`);
-    push(`0039${trimmedLeadingZeros}`);
-  }
-
-  const eqValues = new Set<string>();
-  for (const value of variants) {
-    eqValues.add(value);
-    eqValues.add(`+${value.replace(/^\+/, "")}`);
-  }
-
-  const fuzzy = buildFuzzyPattern(digits);
-  return { eq: Array.from(eqValues), fuzzy };
+  if (!digits) return null;
+  const tail = digits.slice(-10);
+  return tail.length >= 6 ? tail : null;
 }
 
-function buildOrFilter(columns: string[], eqValues: string[], fuzzy?: string | null) {
-  const parts: string[] = [];
-  for (const column of columns) {
-    for (const value of eqValues) {
-      parts.push(`${column}.eq.${value}`);
-    }
-    if (fuzzy) {
-      parts.push(`${column}.ilike.${fuzzy}`);
-    }
-  }
-  return parts.join(",");
+function buildSuffixFilter(columns: string[], tail: string | null) {
+  if (!tail) return "";
+  const escaped = tail.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
+  return columns.map((column) => `${column}.ilike.%${escaped}`).join(",");
 }
 
 function unwrapProfile<T>(value: T | T[] | null | undefined) {
@@ -291,10 +252,10 @@ async function resolveContact(
   db: ReturnType<typeof supabaseServer>,
   phone: string
 ): Promise<ResolvedContact | null> {
-  const { eq, fuzzy } = buildPhoneFilters(phone);
-  if (!eq.length && !fuzzy) return null;
+  const tail = extractPhoneTail(phone);
+  if (!tail) return null;
 
-  const studentFilter = buildOrFilter(["student_phone", "parent_phone"], eq, fuzzy);
+  const studentFilter = buildSuffixFilter(["student_phone", "parent_phone"], tail);
   if (studentFilter) {
     const { data, error } = await db
       .from("black_students")
@@ -309,7 +270,7 @@ async function resolveContact(
     }
   }
 
-  const profileFilter = buildOrFilter(["phone"], eq, fuzzy);
+  const profileFilter = buildSuffixFilter(["phone"], tail);
   if (profileFilter) {
     const { data, error } = await db
       .from("student_profiles")
@@ -347,9 +308,9 @@ ${details.join("\n")}`
 ${header}
 
 Regole:
-- Rispondi sempre in italiano e firma idealmente come Luigi.
+- Rispondi sempre in italiano e in prima persona come Luigi, ma non aggiungere firme o nomi alla fine.
 - Mantieni uno stile da WhatsApp: frasi brevi, niente markdown complesso.
-- Se servono follow-up, proponili in modo naturale (es. "ti va se ne parliamo in call?").
+- Non proporre chiamate o call a meno che lo studente non lo chieda esplicitamente; se serve un follow-up limita la risposta al testo.
 - Se non hai abbastanza contesto, fai domande mirate invece di inventare dettagli.`;
 }
 
