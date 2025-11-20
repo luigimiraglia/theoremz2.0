@@ -48,9 +48,12 @@ L'API restituisce sempre un JSON conforme a ManyChat v2:
   "content": {
     "type": "text",
     "text": "Risposta generata"
-  }
+  },
+  "black": true
 }
 ```
+
+Il campo `black` è `true` solo se il numero è stato agganciato a uno studente Black attivo; in fallback o per numeri non riconosciuti rimane `false`.
 
 ## Configurazione ManyChat (WhatsApp)
 1. **Automation → Flows**: crea (o apri) il flow associato all'evento "Incoming Message" del canale WhatsApp.
@@ -59,7 +62,7 @@ L'API restituisce sempre un JSON conforme a ManyChat v2:
    - **Metodo**: `POST`.
    - **Headers**: `Content-Type: application/json` e `Authorization: Bearer <MANYCHAT_WEBHOOK_SECRET>`.
    - **Body**: JSON come nell'esempio sopra con i merge field di ManyChat (`{{contact.phone}}`, `{{last_received_input}}`, ecc.).
-3. Imposta l'opzione "Response Mapping" del blocco per usare il testo di ritorno. In genere basta collegare la risposta del webhook a un blocco "Send Message" con il contenuto `{{request.body.content.text}}`.
+3. Imposta l'opzione "Response Mapping" del blocco per usare il testo di ritorno. In genere basta collegare la risposta del webhook a un blocco "Send Message" con il contenuto `{{request.body.content.text}}`. Se vuoi sapere se il contatto è stato riconosciuto come Black, mappa anche `$.black` in un Custom Field boolean (es. `Ai__Is_Black`).
 4. Collega eventuali fallback (es. se la risposta contiene "non trovo un profilo" manda a un umano).
 
 ## Debug & test

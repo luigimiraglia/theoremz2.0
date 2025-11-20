@@ -57,11 +57,19 @@ type ResolvedContact = {
   source: "black_students" | "student_profiles" | "fallback";
 };
 
-function jsonResponse(message: string, status = 200) {
+type JsonResponseOptions = {
+  status?: number;
+  isBlack?: boolean;
+};
+
+function jsonResponse(message: string, options?: JsonResponseOptions) {
+  const status = options?.status ?? 200;
+  const isBlack = options?.isBlack ?? false;
   return NextResponse.json(
     {
       version: "v2",
       content: { type: "text", text: message },
+      black: isBlack,
     },
     { status }
   );
@@ -388,18 +396,20 @@ export async function POST(req: Request) {
 
   if (contact && contact.source !== "fallback" && !contact.isBlack) {
     return jsonResponse(
-      "Questo numero non risulta abbonato a Theoremz Black. Se pensi sia un errore, scrivimi a team@theoremz.com 💌"
+      "Questo numero non risulta abbonato a Theoremz Black. Se pensi sia un errore, scrivimi a team@theoremz.com 💌",
+      { isBlack: false }
     );
   }
 
+  const resolvedContact = contact ?? buildFallbackContact(subscriberName, rawPhone);
   try {
-    const resolvedContact = contact ?? buildFallbackContact(subscriberName, rawPhone);
     const reply = await generateAiReply(resolvedContact, messageText, subscriberName);
-    return jsonResponse(reply);
+    return jsonResponse(reply, { isBlack: resolvedContact.isBlack });
   } catch (error) {
     console.error("[manychat-whatsapp] ai error", error);
     return jsonResponse(
-      "Mi sfugge proprio la risposta giusta 😅 Riprovo tra un attimo oppure scrivimi dentro l'app."
+      "Mi sfugge proprio la risposta giusta 😅 Riprovo tra un attimo oppure scrivimi dentro l'app.",
+      { isBlack: resolvedContact.isBlack }
     );
   }
 }
