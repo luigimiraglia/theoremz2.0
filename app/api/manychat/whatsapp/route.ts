@@ -14,6 +14,7 @@ const aiTemperature = Number(process.env.MANYCHAT_OPENAI_TEMPERATURE || 0.4);
 const NON_BLACK_ACADEMIC_REPLY =
   "Certo ti aiuto subito! Posso avere prima la mail del tuo account? Ricorda che il supporto sugli esercizi è riservato agli abbonati Theoremz Black.";
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // 6 MB safety limit
+export const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata, ti spiego come risolverla.";
 
 const ACTIVE_BLACK_STATUSES = new Set([
   "active",
@@ -104,12 +105,17 @@ export function missingConfigResponse(reason: string) {
 }
 
 function getStringAtPath(payload: any, path: string[]) {
+  const value = getValueAtPath(payload, path);
+  return typeof value === "string" ? value.trim() || null : null;
+}
+
+function getValueAtPath(payload: any, path: string[]) {
   let current: any = payload;
   for (const key of path) {
     if (current === null || current === undefined) return null;
     current = current[key];
   }
-  return typeof current === "string" ? current.trim() || null : null;
+  return current;
 }
 
 function extractFirstString(payload: any, paths: string[][]) {
@@ -178,35 +184,121 @@ export function extractMessageText(payload: any) {
   return deepFindStringByKey(payload, (key) => key.toLowerCase() === "text" || key.toLowerCase() === "body");
 }
 
-function extractResponseText(response: any) {
-  if (!response) return "";
-  const direct = response.output_text;
-  if (typeof direct === "string") return direct;
-  if (Array.isArray(direct)) {
-    const combined = direct.join("\n").trim();
-    if (combined) return combined;
+function resolveImageUrlCandidate(value: any): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const lower = trimmed.toLowerCase();
+    if (lower.startsWith("data:") || lower.startsWith("http://") || lower.startsWith("https://")) {
+      return trimmed;
+    }
+    const looksJson =
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"));
+    if (looksJson) {
+      try {
+        return resolveImageUrlCandidate(JSON.parse(trimmed));
+      } catch {
+        const match = trimmed.match(/https?:\/\/[^\s"'}]+/i);
+        return match ? match[0] : null;
+      }
+    }
+    const match = trimmed.match(/https?:\/\/[^\s"'}]+/i);
+    return match ? match[0] : null;
   }
-  const output = Array.isArray(response.output) ? response.output : [];
-  const chunks: string[] = [];
-  for (const item of output) {
-    const content = Array.isArray(item?.content) ? item.content : [];
-    for (const block of content) {
-      if (block && typeof block === "object") {
-        const textValue =
-          typeof block.text === "string"
-            ? block.text
-            : typeof block.output_text === "string"
-            ? block.output_text
-            : typeof block.content === "string"
-            ? block.content
-            : null;
-        if (textValue) chunks.push(textValue);
-      } else if (typeof block === "string") {
-        chunks.push(block);
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const resolved = resolveImageUrlCandidate(entry);
+      if (resolved) return resolved;
+    }
+    return null;
+  }
+  if (typeof value === "object") {
+    const directKeys = ["image_url", "url", "href", "link", "src", "media_url"];
+    for (const key of directKeys) {
+      if (key in value) {
+        const resolved = resolveImageUrlCandidate((value as any)[key]);
+        if (resolved) return resolved;
+      }
+    }
+    const nestedKeys = [
+      "payload",
+      "data",
+      "attachment",
+      "attachments",
+      "image",
+      "images",
+      "media",
+      "content",
+      "message",
+      "file",
+      "value",
+    ];
+    for (const key of nestedKeys) {
+      if (key in value) {
+        const resolved = resolveImageUrlCandidate((value as any)[key]);
+        if (resolved) return resolved;
       }
     }
   }
-  return chunks.join("\n").trim();
+  return null;
+}
+
+export function extractImageUrl(payload: any) {
+  const imagePaths = [
+    ["image_url"],
+    ["image"],
+    ["media_url"],
+    ["message", "image_url"],
+    ["message", "image"],
+    ["message", "media_url"],
+    ["message", "attachment"],
+    ["message", "attachments", "0"],
+    ["raw_message", "image"],
+    ["raw_message", "image_url"],
+    ["raw_message", "attachments", "0"],
+    ["data", "message", "image"],
+    ["data", "message", "image_url"],
+    ["data", "message", "attachments", "0"],
+    ["data", "raw_message", "image"],
+    ["data", "raw_message", "image_url"],
+    ["data", "raw_message", "attachments", "0"],
+    ["content", "image_url"],
+    ["content", "image"],
+    ["attachments", "0"],
+    ["attachment"],
+    ["last_received_attachment"],
+  ];
+  for (const path of imagePaths) {
+    const value = getValueAtPath(payload, path);
+    const resolved = resolveImageUrlCandidate(value);
+    if (resolved) return resolved;
+  }
+
+  const fallbackSources = [
+    payload?.message?.attachments,
+    payload?.message?.attachment,
+    payload?.raw_message?.attachments,
+    payload?.raw_message?.attachment,
+    payload?.data?.message?.attachments,
+    payload?.data?.message?.attachment,
+    payload?.data?.raw_message?.attachments,
+    payload?.data?.raw_message?.attachment,
+    payload?.attachments,
+    payload?.attachment,
+    payload?.content?.attachments,
+    payload?.image,
+  ];
+  for (const source of fallbackSources) {
+    const resolved = resolveImageUrlCandidate(source);
+    if (resolved) return resolved;
+  }
+
+  const deepString = deepFindStringByKey(payload, (key) => {
+    const lower = key.toLowerCase();
+    return lower.includes("image_url") || lower === "image" || lower === "media_url";
+  });
+  return resolveImageUrlCandidate(deepString);
 }
 
 export function extractSubscriberName(payload: any) {
@@ -1001,42 +1093,25 @@ Rispondi come Luigi.`;
         : entry.content,
   }));
 
-  const temperature = Number.isFinite(aiTemperature) ? aiTemperature : 0.4;
-  const maxTokens = Number.isFinite(aiMaxTokens) ? aiMaxTokens : 320;
+  const userMessage: any = imageUrl
+    ? {
+        role: "user",
+        content: [
+          { type: "text", text: userContent },
+          { type: "image_url", image_url: { url: imageUrl } },
+        ],
+      }
+    : { role: "user", content: userContent };
 
-  if (imageUrl) {
-    const historyForResponses = formattedHistory.map((entry) => ({
-      role: entry.role,
-      content: [{ type: "text", text: entry.content }],
-    }));
-    const response = await openai.responses.create({
-      model: aiVisionModel || aiModel,
-      temperature,
-      max_output_tokens: maxTokens,
-      input: [
-        { role: "system", content: [{ type: "text", text: systemPrompt }] },
-        ...historyForResponses,
-        {
-          role: "user",
-          content: [
-            { type: "text", text: userContent },
-            { type: "input_image", image_url: { url: imageUrl } },
-          ],
-        },
-      ],
-    });
-    const responseText = extractResponseText(response);
-    return responseText || "Fammi un attimo capire meglio la situazione 😊";
-  }
-
+  const modelToUse = imageUrl ? aiVisionModel || aiModel : aiModel;
   const completion = await openai.chat.completions.create({
-    model: aiModel,
-    temperature,
-    max_tokens: maxTokens,
+    model: modelToUse,
+    temperature: Number.isFinite(aiTemperature) ? aiTemperature : 0.4,
+    max_tokens: Number.isFinite(aiMaxTokens) ? aiMaxTokens : 320,
     messages: [
       { role: "system", content: systemPrompt },
       ...formattedHistory,
-      { role: "user", content: userContent },
+      userMessage,
     ],
   });
 
