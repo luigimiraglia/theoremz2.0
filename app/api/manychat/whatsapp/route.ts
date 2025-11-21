@@ -963,22 +963,21 @@ Rispondi come Luigi.`;
 
   const formattedHistory = (history || []).map((entry) => ({
     role: entry.role,
-    content: [
-      {
-        type: "input_text",
-        text:
-          entry.role === "user"
-            ? `Messaggio precedente dello studente:\n"""${entry.content}"""`
-            : entry.content,
-      },
-    ],
+    content:
+      entry.role === "user"
+        ? `Messaggio precedente dello studente:\n"""${entry.content}"""`
+        : entry.content,
   }));
 
-  const userContentBlocks: any[] = [{ type: "input_text", text: userContent }];
-  if (imageUrl) {
-    userContentBlocks.push({ type: "input_image", image_url: { url: imageUrl } });
-  }
-  const userMessage: any = { role: "user", content: userContentBlocks };
+  const userMessage: any = imageUrl
+    ? {
+        role: "user",
+        content: [
+          { type: "text", text: userContent },
+          { type: "image_url", image_url: { url: imageUrl } },
+        ],
+      }
+    : { role: "user", content: userContent };
 
   const completion = await openai.chat.completions.create({
     model: aiModel,
