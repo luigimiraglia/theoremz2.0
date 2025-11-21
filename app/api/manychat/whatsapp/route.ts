@@ -1438,7 +1438,8 @@ export async function POST(req: Request) {
   }
 
   const messageText = extractMessageText(payload);
-  if (!messageText) {
+  const imageSource = extractImageSource(payload);
+  if (!messageText && !imageSource?.url) {
     return jsonResponse("Non ho ricevuto nessun messaggio da elaborare 😅");
   }
 
@@ -1446,9 +1447,10 @@ export async function POST(req: Request) {
   const rawPhone = extractPhone(payload);
 
   return handleWhatsAppMessage({
-    messageText,
+    messageText: messageText || IMAGE_ONLY_PROMPT,
     subscriberName,
     rawPhone,
+    imageSource,
   });
 }
 
