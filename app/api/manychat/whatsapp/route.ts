@@ -309,7 +309,6 @@ export function extractImageUrl(payload: any) {
   return resolveImageUrlCandidate(deepString);
 }
 
-type ImageBufferResult = { buffer: Buffer; contentType: string | null };
 
 let sharpModulePromise: Promise<any> | null = null;
 async function loadSharp() {
@@ -356,7 +355,6 @@ async function maybeNormalizeImage(result: ImageBufferResult): Promise<ImageBuff
   return normalizeImageBuffer(result);
 }
 
-type ImageBufferResult = { buffer: Buffer; contentType: string | null };
 
 async function fetchImageUsingFetch(imageUrl: string): Promise<ImageBufferResult> {
   const controller = new AbortController();
