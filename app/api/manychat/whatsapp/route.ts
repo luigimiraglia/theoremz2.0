@@ -394,6 +394,8 @@ async function maybeNormalizeImage(result: ImageBufferResult): Promise<ImageBuff
 }
 
 
+type ImageBufferResult = { buffer: Buffer; contentType: string | null };
+
 function buildRequestHeaders(extra?: Record<string, string> | null) {
   return {
     "User-Agent": IMAGE_FETCH_USER_AGENT,
