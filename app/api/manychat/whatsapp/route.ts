@@ -1184,25 +1184,63 @@ Rispondi come Luigi.`;
         : entry.content,
   }));
 
-  const userMessage: any = imageUrl
-    ? {
-        role: "user",
-        content: [
-          { type: "text", text: userContent },
-          { type: "image_url", image_url: { url: imageUrl } },
-        ],
-      }
-    : { role: "user", content: userContent };
+  const temperature = Number.isFinite(aiTemperature) ? aiTemperature : 0.4;
+  const maxTokens = Number.isFinite(aiMaxTokens) ? aiMaxTokens : 320;
 
-  const modelToUse = imageUrl ? aiVisionModel || aiModel : aiModel;
+  if (imageUrl) {
+    const userMessage: any = {
+      role: "user",
+      content: [
+        { type: "text", text: userContent },
+        { type: "image_url", image_url: { url: imageUrl } },
+      ],
+    };
+    const baseMessages = [{ role: "system", content: systemPrompt }, ...formattedHistory];
+    const candidates = Array.from(
+      new Set(
+        [
+          (aiVisionModel && aiVisionModel.trim()) || "gpt-4o",
+          aiModel && aiModel.trim(),
+        ].filter(Boolean)
+      )
+    );
+    let lastError: any = null;
+    for (const modelName of candidates) {
+      try {
+        const completion = await openai.chat.completions.create({
+          model: modelName,
+          temperature,
+          max_tokens: maxTokens,
+          messages: [...baseMessages, userMessage],
+        });
+        const content = completion.choices[0]?.message?.content || "";
+        const trimmed = content.trim();
+        if (trimmed) return trimmed;
+        return "Fammi un attimo capire meglio la situazione 😊";
+      } catch (error) {
+        lastError = error;
+        const status = (error as any)?.status ?? (error as any)?.response?.status;
+        if (status === 401 || status === 403 || status === 404) {
+          console.warn("[manychat-whatsapp] vision model unavailable, retrying fallback", {
+            model: modelName,
+            error: (error as Error).message,
+          });
+          continue;
+        }
+        throw error;
+      }
+    }
+    if (lastError) throw lastError;
+  }
+
   const completion = await openai.chat.completions.create({
-    model: modelToUse,
-    temperature: Number.isFinite(aiTemperature) ? aiTemperature : 0.4,
-    max_tokens: Number.isFinite(aiMaxTokens) ? aiMaxTokens : 320,
+    model: aiModel,
+    temperature,
+    max_tokens: maxTokens,
     messages: [
       { role: "system", content: systemPrompt },
       ...formattedHistory,
-      userMessage,
+      { role: "user", content: userContent },
     ],
   });
 

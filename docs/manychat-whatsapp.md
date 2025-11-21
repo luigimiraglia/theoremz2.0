@@ -24,7 +24,7 @@ Imposta questi valori in `.env.local`, Vercel o nell'infrastruttura di deploy:
 | `MANYCHAT_OPENAI_MODEL` | opzionale | Default `gpt-4o-mini`. Cambialo se vuoi un modello diverso. |
 | `MANYCHAT_OPENAI_TEMPERATURE` | opzionale | Default `0.4`. Valore numerico compatibile con OpenAI. |
 | `MANYCHAT_OPENAI_MAX_TOKENS` | opzionale | Default `320`. Limita la lunghezza delle risposte. |
-| `MANYCHAT_OPENAI_VISION_MODEL` | opzionale | Di default usa lo stesso modello testuale (es. `gpt-4o-mini`). Impostalo solo se vuoi forzare un modello vision diverso a cui hai accesso. |
+| `MANYCHAT_OPENAI_VISION_MODEL` | opzionale | Se non lo imposti, l'API prova prima `gpt-4o` e se non disponibile torna al modello testuale. Impostalo solo se vuoi forzare un modello vision specifico. |
 
 ## Payload atteso
 L'endpoint prova a estrarre:
