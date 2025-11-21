@@ -12,6 +12,7 @@ const aiMaxTokens = Number(process.env.MANYCHAT_OPENAI_MAX_TOKENS || 320);
 const aiTemperature = Number(process.env.MANYCHAT_OPENAI_TEMPERATURE || 0.4);
 const NON_BLACK_ACADEMIC_REPLY =
   "Certo ti aiuto subito! Posso avere prima la mail del tuo account? Ricorda che il supporto sugli esercizi è riservato agli abbonati Theoremz Black.";
+const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // 6 MB safety limit
 
 const ACTIVE_BLACK_STATUSES = new Set([
   "active",
@@ -509,6 +510,42 @@ async function handleConversationRetention({
   await pruneOldMessages({ db, studentId, phoneTail, deleteCount: 50 });
 }
 
+async function resolveImageDataUrl(imageUrl?: string | null): Promise<string | null> {
+  if (!imageUrl) return null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12_000);
+    const response = await fetch(imageUrl, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!response.ok) {
+      console.error("[manychat-whatsapp] image fetch failed", {
+        imageUrl,
+        status: response.status,
+      });
+      return null;
+    }
+    const contentLength = Number(response.headers.get("content-length") || "0");
+    if (contentLength && contentLength > MAX_IMAGE_BYTES) {
+      console.warn("[manychat-whatsapp] image too large", { contentLength, imageUrl });
+      return null;
+    }
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > MAX_IMAGE_BYTES) {
+      console.warn("[manychat-whatsapp] image exceeded limit after download", {
+        size: arrayBuffer.byteLength,
+        imageUrl,
+      });
+      return null;
+    }
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error("[manychat-whatsapp] image fetch error", { imageUrl, error });
+    return null;
+  }
+}
+
 function inferLeadIntent(message: string) {
   const text = message.toLowerCase();
   const infoKeywords = [
@@ -709,6 +746,7 @@ async function handleBlackConversation({
   subscriberName,
   phoneTail,
   imageUrl,
+  imageDataUrl,
 }: {
   db: ReturnType<typeof supabaseServer>;
   resolvedContact: ResolvedContact;
@@ -716,6 +754,7 @@ async function handleBlackConversation({
   subscriberName: string | null;
   phoneTail: string | null;
   imageUrl?: string | null;
+  imageDataUrl?: string | null;
 }) {
   const { history, total } = await fetchConversationHistory(db, resolvedContact.studentId, phoneTail);
   let runningCount = total;
@@ -732,7 +771,13 @@ async function handleBlackConversation({
     runningCount += 1;
   }
   try {
-    const reply = await generateAiReply(resolvedContact, messageText, subscriberName, history, imageUrl);
+    const reply = await generateAiReply(
+      resolvedContact,
+      messageText,
+      subscriberName,
+      history,
+      imageDataUrl || imageUrl || undefined
+    );
     if (canLog) {
       await logConversationMessage({
         db,
@@ -973,6 +1018,14 @@ export async function handleWhatsAppMessage({
   const db = supabaseServer();
   const phoneTail = rawPhone ? extractPhoneTail(rawPhone) : null;
 
+  let resolvedImageDataUrl: string | null = null;
+  if (imageUrl) {
+    resolvedImageDataUrl = await resolveImageDataUrl(imageUrl);
+    if (!resolvedImageDataUrl) {
+      console.warn("[manychat-whatsapp] image normalization failed", { imageUrl });
+    }
+  }
+
   let contact: ResolvedContact | null = null;
   if (rawPhone) {
     try {
@@ -1001,6 +1054,7 @@ export async function handleWhatsAppMessage({
       subscriberName,
       phoneTail,
       imageUrl: imageUrl ?? null,
+      imageDataUrl: resolvedImageDataUrl,
     });
   }
 

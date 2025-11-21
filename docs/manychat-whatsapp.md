@@ -40,6 +40,8 @@ Per i messaggi con immagine puoi usare l'endpoint dedicato `POST /api/manychat/w
 ```
 Il testo è opzionale: se vuoi includerlo, aggiungi `"text": "{{last_received_input}}"`. In assenza, il backend usa un prompt standard (“Guarda l'immagine…”).
 
+> Nota: l'API scarica l'immagine da `image_url` e la converte in base64 prima di mandarla a OpenAI. Assicurati che il link sia pubblico (o firmato) e che il file sia <6MB, altrimenti tornerà il fallback “non riesco a vedere l'immagine”.
+
 Esempio minimale di payload funzionante (da usare nell'External Request di ManyChat):
 
 ```json
