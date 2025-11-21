@@ -4,6 +4,7 @@ import {
   extractSubscriberName,
   extractPhone,
   extractImageSource,
+  enrichImageSource,
   jsonResponse,
   missingConfigResponse,
   verifySecret,
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  const imageSource = extractImageSource(payload);
+  const imageSource = enrichImageSource(extractImageSource(payload));
   if (!imageSource?.url) {
     return jsonResponse("Non ho ricevuto l'immagine da analizzare 😅", { status: 400 });
   }

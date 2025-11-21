@@ -24,6 +24,8 @@ const IMAGE_FETCH_USER_AGENT = "Mozilla/5.0 (compatible; TheoremzWhatsAppBot/1.0
 const IMAGE_MAX_WIDTH = 1600;
 const IMAGE_JPEG_QUALITY = 82;
 export const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata, ti spiego come risolverla.";
+const manychatAttachmentToken = process.env.MANYCHAT_ATTACHMENT_TOKEN?.trim() || "";
+const whatsappGraphToken = process.env.WHATSAPP_GRAPH_TOKEN?.trim() || "";
 
 const ACTIVE_BLACK_STATUSES = new Set([
   "active",
@@ -289,6 +291,40 @@ function buildImageSource(value: any): ImageSource | null {
     }
   }
   return null;
+}
+
+export function enrichImageSource(source: ImageSource | null): ImageSource | null {
+  if (!source?.url) return source;
+  try {
+    const parsed = new URL(source.url);
+    const host = parsed.hostname.toLowerCase();
+    const headers = { ...(source.headers || {}) };
+    let mutated = false;
+    if (manychatAttachmentToken && host.includes("manychat")) {
+      if (!headers.Authorization) {
+        headers.Authorization = `Bearer ${manychatAttachmentToken}`;
+        mutated = true;
+      }
+    }
+    if (whatsappGraphToken && (host.includes("facebook.com") || host.includes("whatsapp.net"))) {
+      if (!headers.Authorization) {
+        headers.Authorization = `Bearer ${whatsappGraphToken}`;
+        mutated = true;
+      }
+      if (!parsed.searchParams.get("access_token")) {
+        parsed.searchParams.set("access_token", whatsappGraphToken);
+        mutated = true;
+      }
+    }
+    return mutated
+      ? {
+          url: parsed.toString(),
+          headers,
+        }
+      : source;
+  } catch {
+    return source;
+  }
 }
 
 export function extractImageSource(payload: any) {
@@ -1507,7 +1543,7 @@ export async function POST(req: Request) {
   }
 
   const messageText = extractMessageText(payload);
-  const imageSource = extractImageSource(payload);
+  const imageSource = enrichImageSource(extractImageSource(payload));
   if (!messageText && !imageSource?.url) {
     return jsonResponse("Non ho ricevuto nessun messaggio da elaborare 😅");
   }
