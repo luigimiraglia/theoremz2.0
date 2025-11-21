@@ -178,6 +178,37 @@ export function extractMessageText(payload: any) {
   return deepFindStringByKey(payload, (key) => key.toLowerCase() === "text" || key.toLowerCase() === "body");
 }
 
+function extractResponseText(response: any) {
+  if (!response) return "";
+  const direct = response.output_text;
+  if (typeof direct === "string") return direct;
+  if (Array.isArray(direct)) {
+    const combined = direct.join("\n").trim();
+    if (combined) return combined;
+  }
+  const output = Array.isArray(response.output) ? response.output : [];
+  const chunks: string[] = [];
+  for (const item of output) {
+    const content = Array.isArray(item?.content) ? item.content : [];
+    for (const block of content) {
+      if (block && typeof block === "object") {
+        const textValue =
+          typeof block.text === "string"
+            ? block.text
+            : typeof block.output_text === "string"
+            ? block.output_text
+            : typeof block.content === "string"
+            ? block.content
+            : null;
+        if (textValue) chunks.push(textValue);
+      } else if (typeof block === "string") {
+        chunks.push(block);
+      }
+    }
+  }
+  return chunks.join("\n").trim();
+}
+
 export function extractSubscriberName(payload: any) {
   const namePaths = [
     ["subscriber", "name"],
@@ -970,25 +1001,42 @@ Rispondi come Luigi.`;
         : entry.content,
   }));
 
-  const userMessage: any = imageUrl
-    ? {
-        role: "user",
-        content: [
-          { type: "text", text: userContent },
-          { type: "image_url", image_url: { url: imageUrl } },
-        ],
-      }
-    : { role: "user", content: userContent };
+  const temperature = Number.isFinite(aiTemperature) ? aiTemperature : 0.4;
+  const maxTokens = Number.isFinite(aiMaxTokens) ? aiMaxTokens : 320;
 
-  const modelToUse = imageUrl ? aiVisionModel || aiModel : aiModel;
+  if (imageUrl) {
+    const historyForResponses = formattedHistory.map((entry) => ({
+      role: entry.role,
+      content: [{ type: "text", text: entry.content }],
+    }));
+    const response = await openai.responses.create({
+      model: aiVisionModel || aiModel,
+      temperature,
+      max_output_tokens: maxTokens,
+      input: [
+        { role: "system", content: [{ type: "text", text: systemPrompt }] },
+        ...historyForResponses,
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userContent },
+            { type: "input_image", image_url: { url: imageUrl } },
+          ],
+        },
+      ],
+    });
+    const responseText = extractResponseText(response);
+    return responseText || "Fammi un attimo capire meglio la situazione 😊";
+  }
+
   const completion = await openai.chat.completions.create({
-    model: modelToUse,
-    temperature: Number.isFinite(aiTemperature) ? aiTemperature : 0.4,
-    max_tokens: Number.isFinite(aiMaxTokens) ? aiMaxTokens : 320,
+    model: aiModel,
+    temperature,
+    max_tokens: maxTokens,
     messages: [
       { role: "system", content: systemPrompt },
       ...formattedHistory,
-      userMessage,
+      { role: "user", content: userContent },
     ],
   });
 
