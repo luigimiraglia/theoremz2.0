@@ -1,3 +1,5 @@
+import http from "http";
+import https from "https";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { supabaseServer } from "@/lib/supabase";
@@ -14,6 +16,9 @@ const aiTemperature = Number(process.env.MANYCHAT_OPENAI_TEMPERATURE || 0.4);
 const NON_BLACK_ACADEMIC_REPLY =
   "Certo ti aiuto subito! Posso avere prima la mail del tuo account? Ricorda che il supporto sugli esercizi è riservato agli abbonati Theoremz Black.";
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // 6 MB safety limit
+const IMAGE_FETCH_TIMEOUT_MS = 12_000;
+const MAX_IMAGE_REDIRECTS = 3;
+const IMAGE_FETCH_USER_AGENT = "Mozilla/5.0 (compatible; TheoremzWhatsAppBot/1.0)";
 export const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata, ti spiego come risolverla.";
 
 const ACTIVE_BLACK_STATUSES = new Set([
@@ -299,6 +304,105 @@ export function extractImageUrl(payload: any) {
     return lower.includes("image_url") || lower === "image" || lower === "media_url";
   });
   return resolveImageUrlCandidate(deepString);
+}
+
+type ImageBufferResult = { buffer: Buffer; contentType: string | null };
+
+async function fetchImageUsingFetch(imageUrl: string): Promise<ImageBufferResult> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(imageUrl, {
+      signal: controller.signal,
+      cache: "no-store",
+      headers: { "User-Agent": IMAGE_FETCH_USER_AGENT },
+    });
+    if (!response.ok) {
+      throw new Error(`fetch_failed_${response.status}`);
+    }
+    const contentLength = Number(response.headers.get("content-length") || "0");
+    if (contentLength && contentLength > MAX_IMAGE_BYTES) {
+      throw new Error("image_too_large");
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > MAX_IMAGE_BYTES) {
+      throw new Error("image_too_large");
+    }
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      contentType: response.headers.get("content-type"),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function downloadImageWithNode(imageUrl: string, depth = 0): Promise<ImageBufferResult> {
+  return new Promise((resolve, reject) => {
+    if (depth > MAX_IMAGE_REDIRECTS) {
+      reject(new Error("too_many_redirects"));
+      return;
+    }
+    const urlObject = new URL(imageUrl);
+    const client = urlObject.protocol === "https:" ? https : http;
+    const request = client.request(
+      urlObject,
+      {
+        method: "GET",
+        headers: { "User-Agent": IMAGE_FETCH_USER_AGENT },
+      },
+      (response) => {
+        const status = response.statusCode || 0;
+        if (status >= 300 && status < 400 && response.headers.location) {
+          const nextUrl = new URL(response.headers.location, imageUrl).toString();
+          response.resume();
+          request.destroy();
+          downloadImageWithNode(nextUrl, depth + 1).then(resolve).catch(reject);
+          return;
+        }
+        if (status < 200 || status >= 300) {
+          response.resume();
+          reject(new Error(`http_status_${status}`));
+          return;
+        }
+        const chunks: Buffer[] = [];
+        let total = 0;
+        response.on("data", (chunk) => {
+          const bufferChunk = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          total += bufferChunk.length;
+          if (total > MAX_IMAGE_BYTES) {
+            response.destroy();
+            reject(new Error("image_too_large"));
+            return;
+          }
+          chunks.push(bufferChunk);
+        });
+        response.on("end", () => {
+          resolve({
+            buffer: Buffer.concat(chunks),
+            contentType: response.headers["content-type"] || null,
+          });
+        });
+        response.on("error", (error) => {
+          reject(error);
+        });
+      }
+    );
+    request.setTimeout(IMAGE_FETCH_TIMEOUT_MS, () => {
+      request.destroy(new Error("timeout"));
+      reject(new Error("timeout"));
+    });
+    request.on("error", (error) => {
+      reject(error);
+    });
+    request.end();
+  });
+}
+
+function encodeImageBuffer(buffer: Buffer, contentType?: string | null) {
+  const finalType = contentType && contentType.includes("/") ? contentType : "image/jpeg";
+  const base64 = buffer.toString("base64");
+  return `data:${finalType};base64,${base64}`;
 }
 
 export function extractSubscriberName(payload: any) {
@@ -637,36 +741,23 @@ async function handleConversationRetention({
 async function resolveImageDataUrl(imageUrl?: string | null): Promise<string | null> {
   if (!imageUrl) return null;
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12_000);
-    const response = await fetch(imageUrl, { signal: controller.signal });
-    clearTimeout(timeout);
-    if (!response.ok) {
-      console.error("[manychat-whatsapp] image fetch failed", {
+    const direct = await fetchImageUsingFetch(imageUrl);
+    return encodeImageBuffer(direct.buffer, direct.contentType);
+  } catch (primaryError) {
+    console.warn("[manychat-whatsapp] primary image fetch failed", {
+      imageUrl,
+      error: (primaryError as Error).message,
+    });
+    try {
+      const fallback = await downloadImageWithNode(imageUrl);
+      return encodeImageBuffer(fallback.buffer, fallback.contentType);
+    } catch (secondaryError) {
+      console.error("[manychat-whatsapp] fallback image fetch failed", {
         imageUrl,
-        status: response.status,
+        error: (secondaryError as Error).message,
       });
       return null;
     }
-    const contentLength = Number(response.headers.get("content-length") || "0");
-    if (contentLength && contentLength > MAX_IMAGE_BYTES) {
-      console.warn("[manychat-whatsapp] image too large", { contentLength, imageUrl });
-      return null;
-    }
-    const contentType = response.headers.get("content-type") || "image/jpeg";
-    const arrayBuffer = await response.arrayBuffer();
-    if (arrayBuffer.byteLength > MAX_IMAGE_BYTES) {
-      console.warn("[manychat-whatsapp] image exceeded limit after download", {
-        size: arrayBuffer.byteLength,
-        imageUrl,
-      });
-      return null;
-    }
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    return `data:${contentType};base64,${base64}`;
-  } catch (error) {
-    console.error("[manychat-whatsapp] image fetch error", { imageUrl, error });
-    return null;
   }
 }
 
