@@ -15,10 +15,13 @@ const aiMaxTokens = Number(process.env.MANYCHAT_OPENAI_MAX_TOKENS || 320);
 const aiTemperature = Number(process.env.MANYCHAT_OPENAI_TEMPERATURE || 0.4);
 const NON_BLACK_ACADEMIC_REPLY =
   "Certo ti aiuto subito! Posso avere prima la mail del tuo account? Ricorda che il supporto sugli esercizi è riservato agli abbonati Theoremz Black.";
-const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // 6 MB safety limit
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // allow larger WhatsApp uploads
+const INLINE_IMAGE_TARGET_BYTES = 4 * 1024 * 1024;
 const IMAGE_FETCH_TIMEOUT_MS = 12_000;
 const MAX_IMAGE_REDIRECTS = 3;
 const IMAGE_FETCH_USER_AGENT = "Mozilla/5.0 (compatible; TheoremzWhatsAppBot/1.0)";
+const IMAGE_MAX_WIDTH = 1600;
+const IMAGE_JPEG_QUALITY = 82;
 export const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata, ti spiego come risolverla.";
 
 const ACTIVE_BLACK_STATUSES = new Set([
@@ -304,6 +307,53 @@ export function extractImageUrl(payload: any) {
     return lower.includes("image_url") || lower === "image" || lower === "media_url";
   });
   return resolveImageUrlCandidate(deepString);
+}
+
+type ImageBufferResult = { buffer: Buffer; contentType: string | null };
+
+let sharpModulePromise: Promise<any> | null = null;
+async function loadSharp() {
+  if (!sharpModulePromise) {
+    sharpModulePromise = import("sharp")
+      .then((mod) => (mod.default ? mod.default : mod))
+      .catch((error) => {
+        console.warn("[manychat-whatsapp] sharp import failed", error);
+        return null;
+      });
+  }
+  return sharpModulePromise;
+}
+
+async function normalizeImageBuffer(result: ImageBufferResult): Promise<ImageBufferResult> {
+  const sharp = await loadSharp();
+  if (!sharp) return result;
+  try {
+    const base = sharp(result.buffer, { failOn: "none", limitInputPixels: 64_000_000 });
+    const metadata = await base.metadata();
+    let pipeline = sharp(result.buffer, { failOn: "none", limitInputPixels: 64_000_000 }).rotate();
+    const width = metadata.width ?? 0;
+    if (width > IMAGE_MAX_WIDTH) {
+      pipeline = pipeline.resize({
+        width: IMAGE_MAX_WIDTH,
+        withoutEnlargement: true,
+        fit: "inside",
+      });
+    }
+    const output = await pipeline.jpeg({ quality: IMAGE_JPEG_QUALITY }).toBuffer();
+    return { buffer: output, contentType: "image/jpeg" };
+  } catch (error) {
+    console.warn("[manychat-whatsapp] image normalization skipped", (error as Error).message);
+    return result;
+  }
+}
+
+async function maybeNormalizeImage(result: ImageBufferResult): Promise<ImageBufferResult> {
+  if (!result.buffer?.length) return result;
+  const type = (result.contentType || "").toLowerCase();
+  const needsResize =
+    result.buffer.byteLength > INLINE_IMAGE_TARGET_BYTES || !type.includes("jpeg");
+  if (!needsResize) return result;
+  return normalizeImageBuffer(result);
 }
 
 type ImageBufferResult = { buffer: Buffer; contentType: string | null };
@@ -742,7 +792,8 @@ async function resolveImageDataUrl(imageUrl?: string | null): Promise<string | n
   if (!imageUrl) return null;
   try {
     const direct = await fetchImageUsingFetch(imageUrl);
-    return encodeImageBuffer(direct.buffer, direct.contentType);
+    const normalized = await maybeNormalizeImage(direct);
+    return encodeImageBuffer(normalized.buffer, normalized.contentType || direct.contentType);
   } catch (primaryError) {
     console.warn("[manychat-whatsapp] primary image fetch failed", {
       imageUrl,
@@ -750,7 +801,8 @@ async function resolveImageDataUrl(imageUrl?: string | null): Promise<string | n
     });
     try {
       const fallback = await downloadImageWithNode(imageUrl);
-      return encodeImageBuffer(fallback.buffer, fallback.contentType);
+      const normalized = await maybeNormalizeImage(fallback);
+      return encodeImageBuffer(normalized.buffer, normalized.contentType || fallback.contentType);
     } catch (secondaryError) {
       console.error("[manychat-whatsapp] fallback image fetch failed", {
         imageUrl,
