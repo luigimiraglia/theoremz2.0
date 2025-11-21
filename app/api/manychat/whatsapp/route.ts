@@ -1057,10 +1057,12 @@ async function generateInfoReply({
   message,
   history,
   subscriberName,
+  imageDataUrl,
 }: {
   message: string;
   history: ConversationMessage[];
   subscriberName: string | null;
+  imageDataUrl?: string | null;
 }) {
   if (!openai) {
     return "Ciao! Sono Luigi di Theoremz Black 👋 Ti spiego subito come funziona il programma se mi dai qualche dettaglio in più.";
@@ -1072,8 +1074,26 @@ async function generateInfoReply({
       : `Risposta precedente: ${entry.content}`
   );
   const context = formattedHistory.length ? formattedHistory.join("\n") : "(nessuno)";
+  const userPrompt = `Conversazione precedente:
+${context}
+
+Nuovo messaggio da ${leadName}:
+"""
+${message || "Guarda l'immagine allegata e rispondi di conseguenza."}
+"""
+
+Rispondi con tono amichevole, chiaro e professionale, includendo call-to-action concrete (es. link theoremz.com/black).`;
+
+  const userContent: any = imageDataUrl
+    ? [
+        { type: "text", text: userPrompt },
+        { type: "image_url", image_url: { url: imageDataUrl } },
+      ]
+    : userPrompt;
+
+  const modelToUse = imageDataUrl ? aiVisionModel || "gpt-4o" : aiModel;
   const completion = await openai.chat.completions.create({
-    model: aiModel,
+    model: modelToUse,
     temperature: 0.6,
     max_tokens: 320,
     messages: [
@@ -1084,20 +1104,14 @@ async function generateInfoReply({
       },
       {
         role: "user",
-        content: `Conversazione precedente:
-${context}
-
-Nuovo messaggio da ${leadName}:
-"""
-${message}
-"""
-
-Rispondi con tono amichevole, chiaro e professionale, includendo call-to-action concrete (es. link theoremz.com/black).`,
+        content: userContent,
       },
     ],
   });
-  return completion.choices[0]?.message?.content?.trim() ||
-    "Ti racconto volentieri come funziona Theoremz Black: è un percorso personalizzato con tutor e AI, ti mando tutte le info e i link ❤️";
+  return (
+    completion.choices[0]?.message?.content?.trim() ||
+    "Ti racconto volentieri come funziona Theoremz Black: è un percorso personalizzato con tutor e AI, ti mando tutte le info e i link ❤️"
+  );
 }
 
 async function handleBlackConversation({
@@ -1189,6 +1203,7 @@ async function handleLeadConversation({
   rawPhone,
   phoneTail,
   imageUrl,
+  imageDataUrl,
 }: {
   db: ReturnType<typeof supabaseServer>;
   messageText: string;
@@ -1196,6 +1211,7 @@ async function handleLeadConversation({
   rawPhone: string | null;
   phoneTail: string | null;
   imageUrl?: string | null;
+  imageDataUrl?: string | null;
 }) {
   const emailCandidate = extractEmailCandidate(messageText);
   if (emailCandidate) {
@@ -1250,7 +1266,12 @@ async function handleLeadConversation({
   });
   runningCount += 1;
 
-  const reply = await generateInfoReply({ message: messageText, history, subscriberName });
+  const reply = await generateInfoReply({
+    message: messageText,
+    history,
+    subscriberName,
+    imageDataUrl: imageDataUrl || imageUrl || null,
+  });
   await logConversationMessage({
     db,
     studentId: null,
@@ -1469,6 +1490,7 @@ export async function handleWhatsAppMessage({
     rawPhone,
     phoneTail,
     imageUrl: remoteImageUrl,
+    imageDataUrl: resolvedImageDataUrl,
   });
 }
 
