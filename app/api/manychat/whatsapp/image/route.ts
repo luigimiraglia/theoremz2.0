@@ -3,12 +3,10 @@ import {
   handleWhatsAppMessage,
   extractSubscriberName,
   extractPhone,
-  extractImageUrl,
   jsonResponse,
   missingConfigResponse,
   verifySecret,
   hasOpenAIClient,
-  IMAGE_ONLY_PROMPT,
 } from "../route";
 
 export async function POST(req: Request) {
@@ -23,12 +21,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  const imageUrl = extractImageUrl(payload);
+  const imageUrl =
+    payload?.image_url || payload?.message?.image_url || payload?.message?.image || payload?.image;
   if (!imageUrl || typeof imageUrl !== "string") {
     return jsonResponse("Non ho ricevuto l'immagine da analizzare 😅", { status: 400 });
   }
 
-  const messageText = payload?.message?.text || payload?.text || IMAGE_ONLY_PROMPT;
+  const messageText =
+    payload?.message?.text || payload?.text || "Guarda l'immagine allegata, ti spiego come risolverla.";
   const subscriberName = extractSubscriberName(payload);
   const rawPhone = payload?.phone || extractPhone(payload);
   if (!rawPhone) {
