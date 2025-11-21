@@ -8,11 +8,13 @@ export const hasOpenAIClient = Boolean(openai);
 const webhookSecret = process.env.MANYCHAT_WEBHOOK_SECRET;
 const personaOverride = process.env.MANYCHAT_WHATSAPP_PERSONA;
 const aiModel = process.env.MANYCHAT_OPENAI_MODEL || "gpt-4o-mini";
+const aiVisionModel = process.env.MANYCHAT_OPENAI_VISION_MODEL || "gpt-4o";
 const aiMaxTokens = Number(process.env.MANYCHAT_OPENAI_MAX_TOKENS || 320);
 const aiTemperature = Number(process.env.MANYCHAT_OPENAI_TEMPERATURE || 0.4);
 const NON_BLACK_ACADEMIC_REPLY =
   "Certo ti aiuto subito! Posso avere prima la mail del tuo account? Ricorda che il supporto sugli esercizi è riservato agli abbonati Theoremz Black.";
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // 6 MB safety limit
+export const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata, ti spiego come risolverla.";
 
 const ACTIVE_BLACK_STATUSES = new Set([
   "active",
@@ -175,6 +177,99 @@ export function extractMessageText(payload: any) {
   const direct = extractFirstString(payload, messagePaths);
   if (direct) return direct;
   return deepFindStringByKey(payload, (key) => key.toLowerCase() === "text" || key.toLowerCase() === "body");
+}
+
+function coerceString(value: any) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function extractUrlFromAttachments(value: any): string | null {
+  if (!value) return null;
+  const list = Array.isArray(value) ? value : [value];
+  for (const entry of list) {
+    if (!entry || typeof entry !== "object") continue;
+    const direct = coerceString(entry.url || entry.href || entry.link || entry.src || entry.image_url);
+    if (direct) return direct;
+    const payloadUrl = coerceString(
+      entry.payload?.url || entry.payload?.href || entry.payload?.link || entry.payload?.src
+    );
+    if (payloadUrl) return payloadUrl;
+  }
+  return null;
+}
+
+export function extractImageUrl(payload: any) {
+  const imagePaths = [
+    ["image_url"],
+    ["image"],
+    ["media_url"],
+    ["message", "image_url"],
+    ["message", "image"],
+    ["message", "media_url"],
+    ["message", "attachment", "url"],
+    ["message", "attachment", "payload", "url"],
+    ["message", "attachments", "0", "url"],
+    ["message", "attachments", "0", "payload", "url"],
+    ["raw_message", "image", "url"],
+    ["raw_message", "image_url"],
+    ["raw_message", "attachments", "0", "url"],
+    ["raw_message", "attachments", "0", "payload", "url"],
+    ["data", "message", "image", "url"],
+    ["data", "message", "image_url"],
+    ["data", "message", "attachments", "0", "url"],
+    ["data", "message", "attachments", "0", "payload", "url"],
+    ["data", "raw_message", "image", "url"],
+    ["data", "raw_message", "image_url"],
+    ["data", "raw_message", "attachments", "0", "url"],
+    ["data", "raw_message", "attachments", "0", "payload", "url"],
+    ["content", "image_url"],
+    ["content", "image"],
+    ["attachments", "0", "url"],
+    ["attachments", "0", "payload", "url"],
+    ["attachment", "url"],
+    ["attachment", "payload", "url"],
+    ["last_received_attachment"],
+  ];
+  const direct = extractFirstString(payload, imagePaths);
+  if (direct) return direct;
+
+  const attachmentSources = [
+    payload?.message?.attachments,
+    payload?.message?.attachment,
+    payload?.raw_message?.attachments,
+    payload?.raw_message?.attachment,
+    payload?.data?.message?.attachments,
+    payload?.data?.message?.attachment,
+    payload?.data?.raw_message?.attachments,
+    payload?.data?.raw_message?.attachment,
+    payload?.attachments,
+    payload?.attachment,
+    payload?.content?.attachments,
+  ];
+  for (const source of attachmentSources) {
+    const url = extractUrlFromAttachments(source);
+    if (url) return url;
+  }
+
+  const imageObjects = [
+    payload?.message?.image,
+    payload?.raw_message?.image,
+    payload?.data?.message?.image,
+    payload?.data?.raw_message?.image,
+    payload?.content?.image,
+  ];
+  for (const obj of imageObjects) {
+    if (!obj || typeof obj !== "object") continue;
+    const url = coerceString(obj.url || obj.href || obj.link || obj.src);
+    if (url) return url;
+  }
+
+  return deepFindStringByKey(payload, (key) => {
+    const lower = key.toLowerCase();
+    return lower.includes("image_url") || lower === "image" || lower === "media_url";
+  });
 }
 
 export function extractSubscriberName(payload: any) {
@@ -979,8 +1074,9 @@ Rispondi come Luigi.`;
       }
     : { role: "user", content: userContent };
 
+  const modelToUse = imageUrl ? aiVisionModel || aiModel : aiModel;
   const completion = await openai.chat.completions.create({
-    model: aiModel,
+    model: modelToUse,
     temperature: Number.isFinite(aiTemperature) ? aiTemperature : 0.4,
     max_tokens: Number.isFinite(aiMaxTokens) ? aiMaxTokens : 320,
     messages: [
@@ -1081,7 +1177,8 @@ export async function POST(req: Request) {
   }
 
   const messageText = extractMessageText(payload);
-  if (!messageText) {
+  const imageUrl = extractImageUrl(payload);
+  if (!messageText && !imageUrl) {
     return jsonResponse("Non ho ricevuto nessun messaggio da elaborare 😅");
   }
 
@@ -1089,9 +1186,10 @@ export async function POST(req: Request) {
   const rawPhone = extractPhone(payload);
 
   return handleWhatsAppMessage({
-    messageText,
+    messageText: messageText || IMAGE_ONLY_PROMPT,
     subscriberName,
     rawPhone,
+    imageUrl,
   });
 }
 
