@@ -192,41 +192,75 @@ export function extractMessageText(payload: any) {
   return deepFindStringByKey(payload, (key) => key.toLowerCase() === "text" || key.toLowerCase() === "body");
 }
 
-function resolveImageUrlCandidate(value: any): string | null {
+type ImageSource = {
+  url: string;
+  headers?: Record<string, string> | null;
+};
+
+function sanitizeHeaderValue(value: any) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function mergeHeaders(...sources: Array<Record<string, any> | undefined | null>) {
+  const result: Record<string, string> = {};
+  for (const source of sources) {
+    if (!source || typeof source !== "object") continue;
+    for (const [key, rawValue] of Object.entries(source)) {
+      const normalizedKey = key.trim();
+      if (!normalizedKey) continue;
+      const value = sanitizeHeaderValue(rawValue);
+      if (!value) continue;
+      result[normalizedKey] = value;
+    }
+  }
+  return Object.keys(result).length ? result : null;
+}
+
+function buildImageSource(value: any): ImageSource | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") {
     const trimmed = value.trim();
     if (!trimmed) return null;
-    const lower = trimmed.toLowerCase();
-    if (lower.startsWith("data:") || lower.startsWith("http://") || lower.startsWith("https://")) {
-      return trimmed;
+    if (trimmed.toLowerCase().startsWith("data:")) {
+      return { url: trimmed };
     }
     const looksJson =
-      (trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"));
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]"));
     if (looksJson) {
       try {
-        return resolveImageUrlCandidate(JSON.parse(trimmed));
+        return buildImageSource(JSON.parse(trimmed));
       } catch {
         const match = trimmed.match(/https?:\/\/[^\s"'}]+/i);
-        return match ? match[0] : null;
+        return match ? { url: match[0] } : null;
       }
     }
     const match = trimmed.match(/https?:\/\/[^\s"'}]+/i);
-    return match ? match[0] : null;
+    if (match) return { url: match[0] };
+    return null;
   }
   if (Array.isArray(value)) {
     for (const entry of value) {
-      const resolved = resolveImageUrlCandidate(entry);
+      const resolved = buildImageSource(entry);
       if (resolved) return resolved;
     }
     return null;
   }
   if (typeof value === "object") {
-    const directKeys = ["image_url", "url", "href", "link", "src", "media_url"];
+    const headers =
+      mergeHeaders(
+        (value as any).headers,
+        (value as any).meta?.headers,
+        (value as any).payload?.headers
+      ) || null;
+    const directKeys = ["image_url", "url", "href", "link", "src", "media_url", "download_url"];
     for (const key of directKeys) {
-      if (key in value) {
-        const resolved = resolveImageUrlCandidate((value as any)[key]);
-        if (resolved) return resolved;
+      const candidate = (value as any)[key];
+      const resolved = buildImageSource(candidate);
+      if (resolved) {
+        return { url: resolved.url, headers: resolved.headers || headers };
       }
     }
     const nestedKeys = [
@@ -243,16 +277,20 @@ function resolveImageUrlCandidate(value: any): string | null {
       "value",
     ];
     for (const key of nestedKeys) {
-      if (key in value) {
-        const resolved = resolveImageUrlCandidate((value as any)[key]);
-        if (resolved) return resolved;
+      if (!(key in value)) continue;
+      const resolved = buildImageSource((value as any)[key]);
+      if (resolved) {
+        return {
+          url: resolved.url,
+          headers: headers || resolved.headers || null,
+        };
       }
     }
   }
   return null;
 }
 
-export function extractImageUrl(payload: any) {
+export function extractImageSource(payload: any) {
   const imagePaths = [
     ["image_url"],
     ["image"],
@@ -279,7 +317,7 @@ export function extractImageUrl(payload: any) {
   ];
   for (const path of imagePaths) {
     const value = getValueAtPath(payload, path);
-    const resolved = resolveImageUrlCandidate(value);
+    const resolved = buildImageSource(value);
     if (resolved) return resolved;
   }
 
@@ -298,7 +336,7 @@ export function extractImageUrl(payload: any) {
     payload?.image,
   ];
   for (const source of fallbackSources) {
-    const resolved = resolveImageUrlCandidate(source);
+    const resolved = buildImageSource(source);
     if (resolved) return resolved;
   }
 
@@ -306,7 +344,7 @@ export function extractImageUrl(payload: any) {
     const lower = key.toLowerCase();
     return lower.includes("image_url") || lower === "image" || lower === "media_url";
   });
-  return resolveImageUrlCandidate(deepString);
+  return buildImageSource(deepString);
 }
 
 
@@ -356,14 +394,21 @@ async function maybeNormalizeImage(result: ImageBufferResult): Promise<ImageBuff
 }
 
 
-async function fetchImageUsingFetch(imageUrl: string): Promise<ImageBufferResult> {
+function buildRequestHeaders(extra?: Record<string, string> | null) {
+  return {
+    "User-Agent": IMAGE_FETCH_USER_AGENT,
+    ...((extra as Record<string, string>) || {}),
+  };
+}
+
+async function fetchImageUsingFetch(image: ImageSource): Promise<ImageBufferResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS);
   try {
-    const response = await fetch(imageUrl, {
+    const response = await fetch(image.url, {
       signal: controller.signal,
       cache: "no-store",
-      headers: { "User-Agent": IMAGE_FETCH_USER_AGENT },
+      headers: buildRequestHeaders(image.headers),
     });
     if (!response.ok) {
       throw new Error(`fetch_failed_${response.status}`);
@@ -385,27 +430,27 @@ async function fetchImageUsingFetch(imageUrl: string): Promise<ImageBufferResult
   }
 }
 
-function downloadImageWithNode(imageUrl: string, depth = 0): Promise<ImageBufferResult> {
+function downloadImageWithNode(image: ImageSource, depth = 0): Promise<ImageBufferResult> {
   return new Promise((resolve, reject) => {
     if (depth > MAX_IMAGE_REDIRECTS) {
       reject(new Error("too_many_redirects"));
       return;
     }
-    const urlObject = new URL(imageUrl);
+    const urlObject = new URL(image.url);
     const client = urlObject.protocol === "https:" ? https : http;
     const request = client.request(
       urlObject,
       {
         method: "GET",
-        headers: { "User-Agent": IMAGE_FETCH_USER_AGENT },
+        headers: buildRequestHeaders(image.headers),
       },
       (response) => {
         const status = response.statusCode || 0;
         if (status >= 300 && status < 400 && response.headers.location) {
-          const nextUrl = new URL(response.headers.location, imageUrl).toString();
+          const nextUrl = new URL(response.headers.location, image.url).toString();
           response.resume();
           request.destroy();
-          downloadImageWithNode(nextUrl, depth + 1).then(resolve).catch(reject);
+          downloadImageWithNode({ ...image, url: nextUrl }, depth + 1).then(resolve).catch(reject);
           return;
         }
         if (status < 200 || status >= 300) {
@@ -786,24 +831,26 @@ async function handleConversationRetention({
   await pruneOldMessages({ db, studentId, phoneTail, deleteCount: 50 });
 }
 
-async function resolveImageDataUrl(imageUrl?: string | null): Promise<string | null> {
-  if (!imageUrl) return null;
+async function resolveImageDataUrl(image?: ImageSource | null): Promise<string | null> {
+  if (!image?.url) return null;
   try {
-    const direct = await fetchImageUsingFetch(imageUrl);
+    const direct = await fetchImageUsingFetch(image);
     const normalized = await maybeNormalizeImage(direct);
     return encodeImageBuffer(normalized.buffer, normalized.contentType || direct.contentType);
   } catch (primaryError) {
     console.warn("[manychat-whatsapp] primary image fetch failed", {
-      imageUrl,
+      imageUrl: image?.url,
+      hasCustomHeaders: Boolean(image?.headers),
       error: (primaryError as Error).message,
     });
     try {
-      const fallback = await downloadImageWithNode(imageUrl);
+      const fallback = await downloadImageWithNode(image);
       const normalized = await maybeNormalizeImage(fallback);
       return encodeImageBuffer(normalized.buffer, normalized.contentType || fallback.contentType);
     } catch (secondaryError) {
       console.error("[manychat-whatsapp] fallback image fetch failed", {
-        imageUrl,
+        imageUrl: image?.url,
+        hasCustomHeaders: Boolean(image?.headers),
         error: (secondaryError as Error).message,
       });
       return null;
@@ -1310,25 +1357,29 @@ type WhatsAppMessageInput = {
   messageText: string;
   subscriberName: string | null;
   rawPhone: string | null;
-  imageUrl?: string | null;
+  imageSource?: ImageSource | null;
 };
 
 export async function handleWhatsAppMessage({
   messageText,
   subscriberName,
   rawPhone,
-  imageUrl,
+  imageSource,
 }: WhatsAppMessageInput) {
   const db = supabaseServer();
   const phoneTail = rawPhone ? extractPhoneTail(rawPhone) : null;
 
   let resolvedImageDataUrl: string | null = null;
-  if (imageUrl) {
-    resolvedImageDataUrl = await resolveImageDataUrl(imageUrl);
+  if (imageSource?.url) {
+    resolvedImageDataUrl = await resolveImageDataUrl(imageSource);
     if (!resolvedImageDataUrl) {
-      console.warn("[manychat-whatsapp] image normalization failed", { imageUrl });
+      console.warn("[manychat-whatsapp] image normalization failed", {
+        imageUrl: imageSource.url,
+        hasCustomHeaders: Boolean(imageSource.headers),
+      });
     }
   }
+  const remoteImageUrl = imageSource?.url ?? null;
 
   let contact: ResolvedContact | null = null;
   if (rawPhone) {
@@ -1357,7 +1408,7 @@ export async function handleWhatsAppMessage({
       messageText,
       subscriberName,
       phoneTail,
-      imageUrl: imageUrl ?? null,
+      imageUrl: remoteImageUrl,
       imageDataUrl: resolvedImageDataUrl,
     });
   }
@@ -1368,7 +1419,7 @@ export async function handleWhatsAppMessage({
     subscriberName,
     rawPhone,
     phoneTail,
-    imageUrl: imageUrl ?? null,
+    imageUrl: remoteImageUrl,
   });
 }
 
