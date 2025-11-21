@@ -1,5 +1,6 @@
 import http from "http";
 import https from "https";
+import { spawn } from "child_process";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { supabaseServer } from "@/lib/supabase";
@@ -833,6 +834,41 @@ async function handleConversationRetention({
   await pruneOldMessages({ db, studentId, phoneTail, deleteCount: 50 });
 }
 
+async function downloadImageWithCurl(image: ImageSource): Promise<ImageBufferResult> {
+  return new Promise((resolve, reject) => {
+    const args = ["-sS", "-L", "--max-time", String(Math.ceil(IMAGE_FETCH_TIMEOUT_MS / 1000)), "-k"];
+    if (image.headers) {
+      for (const [key, value] of Object.entries(image.headers)) {
+        if (!value) continue;
+        args.push("-H", `${key}: ${value}`);
+      }
+    }
+    args.push(image.url);
+    const proc = spawn("curl", args);
+    const chunks: Buffer[] = [];
+    let total = 0;
+    proc.stdout.on("data", (chunk) => {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      total += buf.length;
+      if (total > MAX_IMAGE_BYTES) {
+        proc.kill("SIGKILL");
+        reject(new Error("image_too_large"));
+        return;
+      }
+      chunks.push(buf);
+    });
+    proc.stderr.resume();
+    proc.on("error", reject);
+    proc.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(`curl_exit_${code}`));
+        return;
+      }
+      resolve({ buffer: Buffer.concat(chunks), contentType: null });
+    });
+  });
+}
+
 async function resolveImageDataUrl(image?: ImageSource | null): Promise<string | null> {
   if (!image?.url) return null;
   try {
@@ -850,12 +886,23 @@ async function resolveImageDataUrl(image?: ImageSource | null): Promise<string |
       const normalized = await maybeNormalizeImage(fallback);
       return encodeImageBuffer(normalized.buffer, normalized.contentType || fallback.contentType);
     } catch (secondaryError) {
-      console.error("[manychat-whatsapp] fallback image fetch failed", {
+      console.warn("[manychat-whatsapp] http fallback failed, trying curl", {
         imageUrl: image?.url,
         hasCustomHeaders: Boolean(image?.headers),
         error: (secondaryError as Error).message,
       });
-      return null;
+      try {
+        const curlResult = await downloadImageWithCurl(image);
+        const normalized = await maybeNormalizeImage(curlResult);
+        return encodeImageBuffer(normalized.buffer, normalized.contentType || curlResult.contentType);
+      } catch (curlError) {
+        console.error("[manychat-whatsapp] curl image fetch failed", {
+          imageUrl: image?.url,
+          hasCustomHeaders: Boolean(image?.headers),
+          error: (curlError as Error).message,
+        });
+        return null;
+      }
     }
   }
 }
