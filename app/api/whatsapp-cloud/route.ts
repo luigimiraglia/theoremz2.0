@@ -131,7 +131,7 @@ export async function POST(req: Request) {
       }
 
       const finalReply = imageLink
-        ? `Ho ricevuto la tua immagine, link diretto: ${imageLink}`
+        ? `Immagine scaricata correttamente ✅\nURL: ${imageLink}`
         : replyText;
 
       await sendCloudReply({ phoneNumberId, to: rawPhone, body: finalReply });

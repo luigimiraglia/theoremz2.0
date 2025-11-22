@@ -975,6 +975,10 @@ async function resolveImageDataUrl(image?: ImageSource | null): Promise<string |
   if (!image?.url) return null;
   try {
     const direct = await fetchImageUsingFetch(image);
+    console.info("[manychat-whatsapp] primary image fetch success", {
+      imageUrl: image.url,
+      hasCustomHeaders: Boolean(image.headers),
+    });
     const normalized = await maybeNormalizeImage(direct);
     return encodeImageBuffer(normalized.buffer, normalized.contentType || direct.contentType);
   } catch (primaryError) {
@@ -985,6 +989,9 @@ async function resolveImageDataUrl(image?: ImageSource | null): Promise<string |
     });
     try {
       const fallback = await downloadImageWithNode(image);
+      console.info("[manychat-whatsapp] http fallback success", {
+        imageUrl: image.url,
+      });
       const normalized = await maybeNormalizeImage(fallback);
       return encodeImageBuffer(normalized.buffer, normalized.contentType || fallback.contentType);
     } catch (secondaryError) {
@@ -995,6 +1002,9 @@ async function resolveImageDataUrl(image?: ImageSource | null): Promise<string |
       });
       try {
         const curlResult = await downloadImageWithCurl(image);
+        console.info("[manychat-whatsapp] curl image fetch success", {
+          imageUrl: image.url,
+        });
         const normalized = await maybeNormalizeImage(curlResult);
         return encodeImageBuffer(normalized.buffer, normalized.contentType || curlResult.contentType);
       } catch (curlError) {
