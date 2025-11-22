@@ -1615,14 +1615,53 @@ export async function handleWhatsAppMessage({
 
 export async function POST(req: Request) {
   if (!openai) return missingConfigResponse("missing_openai_api_key");
-  const authError = verifySecret(req);
-  if (authError) return NextResponse.json({ error: authError }, { status: 401 });
-
   let payload: any;
   try {
     payload = await req.json();
   } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
+
+  const entry = payload?.entry?.[0];
+  const change = entry?.changes?.[0];
+  const value = change?.value;
+  const messages = value?.messages;
+  if (!messages?.length) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const phoneNumberId = value?.metadata?.phone_number_id || cloudPhoneNumberId;
+  if (!phoneNumberId) {
+    console.error("[whatsapp-cloud] missing phone_number_id");
+    return NextResponse.json({ error: "missing_phone_number_id" }, { status: 500 });
+  }
+
+  for (const message of messages) {
+    const rawPhone = message?.from || value?.contacts?.[0]?.wa_id || null;
+    if (!rawPhone) continue;
+    const subscriberName = value?.contacts?.[0]?.profile?.name || null;
+    const text = extractCloudText(message);
+    let imageUrl: string | null = null;
+    if (message?.type === "image") {
+      imageUrl = buildGraphImageUrl(message.image?.id);
+    } else if (message?.document?.mime_type?.startsWith("image/")) {
+      imageUrl = buildGraphImageUrl(message.document?.id);
+    }
+
+    const response = await handleWhatsAppMessage({
+      messageText: text || IMAGE_ONLY_PROMPT,
+      subscriberName,
+      rawPhone,
+      imageUrl,
+    });
+
+    const replyPayload = await response.json().catch(() => null);
+    const replyText =
+      replyPayload?.content?.text ||
+      replyPayload?.text ||
+      replyPayload?.message ||
+      "Fammi capire meglio la situazione 😊";
+    await sendCloudReply({ phoneNumberId, to: rawPhone, body: replyText });
   }
 
   return NextResponse.json({ ok: true });
@@ -1697,58 +1736,4 @@ export async function GET(req: Request) {
     return new Response(challenge, { status: 200 });
   }
   return NextResponse.json({ error: "forbidden" }, { status: 403 });
-}
-
-export async function POST(req: Request) {
-  if (!openai) return missingConfigResponse("missing_openai_api_key");
-  let payload: any;
-  try {
-    payload = await req.json();
-  } catch {
-    return NextResponse.json({ ok: true });
-  }
-
-  const entry = payload?.entry?.[0];
-  const change = entry?.changes?.[0];
-  const value = change?.value;
-  const messages = value?.messages;
-  if (!messages?.length) {
-    return NextResponse.json({ ok: true });
-  }
-
-  const phoneNumberId = value?.metadata?.phone_number_id || cloudPhoneNumberId;
-  if (!phoneNumberId) {
-    console.error("[whatsapp-cloud] missing phone_number_id");
-    return NextResponse.json({ error: "missing_phone_number_id" }, { status: 500 });
-  }
-
-  for (const message of messages) {
-    const rawPhone = message?.from || value?.contacts?.[0]?.wa_id || null;
-    if (!rawPhone) continue;
-    const subscriberName = value?.contacts?.[0]?.profile?.name || null;
-    const text = extractCloudText(message);
-    let imageUrl: string | null = null;
-    if (message?.type === "image") {
-      imageUrl = buildGraphImageUrl(message.image?.id);
-    } else if (message?.document?.mime_type?.startsWith("image/")) {
-      imageUrl = buildGraphImageUrl(message.document?.id);
-    }
-
-    const response = await handleWhatsAppMessage({
-      messageText: text || IMAGE_ONLY_PROMPT,
-      subscriberName,
-      rawPhone,
-      imageUrl,
-    });
-
-    const replyPayload = await response.json().catch(() => null);
-    const replyText =
-      replyPayload?.content?.text ||
-      replyPayload?.text ||
-      replyPayload?.message ||
-      "Fammi capire meglio la situazione 😊";
-    await sendCloudReply({ phoneNumberId, to: rawPhone, body: replyText });
-  }
-
-  return NextResponse.json({ ok: true });
 }
