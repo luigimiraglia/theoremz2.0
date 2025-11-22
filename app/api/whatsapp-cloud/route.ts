@@ -115,7 +115,19 @@ function buildSystemPrompt(subscriberName?: string | null) {
 Obiettivi:
 - Capisci cosa chiede lo studente (anche dalle immagini) e fornisci spiegazioni chiare.
 - Se la domanda è ambigua, chiedi tu chiarimenti specifici.
-- Non offrire call o link promozionali finché non sono richiesti.`;
+- Non offrire call o link promozionali finché non sono richiesti.
+- Niente Markdown, Latex, grassetti o simboli speciali: rispondi solo testo normale.`;
+}
+
+function sanitizeReply(text: string) {
+  if (!text) return text;
+  return text
+    .replace(/\*\*/g, "")
+    .replace(/__+/g, "")
+    .replace(/`+/g, "")
+    .replace(/#+\s*/g, "")
+    .replace(/\$+/g, "")
+    .trim();
 }
 
 async function generateVisionReply({
@@ -144,14 +156,13 @@ async function generateVisionReply({
     const completion = await openai.chat.completions.create({
       model: VISION_MODEL,
       temperature: 0.4,
-      max_tokens: 320,
       messages: [
         { role: "system", content: systemPrompt },
         userMessage,
       ],
     });
     const content = completion.choices[0]?.message?.content?.trim();
-    if (content) return content;
+    if (content) return sanitizeReply(content);
     return "Sto cercando di interpretare il tuo messaggio, descrivimi meglio cosa ti serve?";
   } catch (error) {
     console.error("[whatsapp-cloud] openai error", error);
