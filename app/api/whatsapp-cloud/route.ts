@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import {
-  handleWhatsAppMessage,
-  enrichImageSource,
-  IMAGE_ONLY_PROMPT,
-} from "../manychat/whatsapp/route";
+import OpenAI from "openai";
 
 const verifyToken = process.env.WHATSAPP_CLOUD_VERIFY_TOKEN?.trim() || "";
 const graphApiVersion = process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v20.0";
 const cloudPhoneNumberId = process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID?.trim() || "";
 const metaAccessToken = process.env.META_ACCESS_TOKEN?.trim() || "";
+const openaiApiKey = process.env.OPENAI_API_KEY?.trim() || "";
+const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
+const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata e dimmi come posso aiutarti.";
+const VISION_MODEL = "gpt-4o";
 
 type CloudImage = {
   id: string;
@@ -47,6 +47,72 @@ function buildImageSourceFromCloud(image: CloudImage | null): { url: string; hea
   const headers: Record<string, string> = {};
   if (metaAccessToken) headers.Authorization = `Bearer ${metaAccessToken}`;
   return { url, headers: Object.keys(headers).length ? headers : undefined };
+}
+
+async function downloadImageAsDataUrl(source: { url: string; headers?: Record<string, string> }) {
+  if (!source?.url) return null;
+  try {
+    const response = await fetch(source.url, {
+      headers: source.headers,
+    });
+    if (!response.ok) {
+      throw new Error(`graph_fetch_${response.status}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    console.info("[whatsapp-cloud] image downloaded", { url: source.url, contentType });
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error("[whatsapp-cloud] image download failed", { url: source.url, error });
+    return null;
+  }
+}
+
+function buildSystemPrompt(subscriberName?: string | null) {
+  return `Sei Luigi Miraglia, tutor di matematica di Theoremz Black. Rispondi ai messaggi WhatsApp in italiano, con tono umano e poche frasi.
+Obiettivi:
+- Capisci cosa chiede lo studente (anche dalle immagini) e fornisci spiegazioni chiare.
+- Se la domanda è ambigua, chiedi tu chiarimenti specifici.
+- Non offrire call o link promozionali finché non sono richiesti.`;
+}
+
+async function generateVisionReply({
+  text,
+  imageDataUrl,
+  subscriberName,
+}: {
+  text: string;
+  imageDataUrl?: string | null;
+  subscriberName?: string | null;
+}) {
+  if (!openai) {
+    return "Non riesco a rispondere ora perché manca la configurazione dell'AI.";
+  }
+  const systemPrompt = buildSystemPrompt(subscriberName);
+  const userContent = imageDataUrl
+    ? [
+        { type: "text", text },
+        { type: "image_url", image_url: { url: imageDataUrl } },
+      ]
+    : text;
+  try {
+    const completion = await openai.chat.completions.create({
+      model: VISION_MODEL,
+      temperature: 0.4,
+      max_tokens: 320,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+    });
+    const content = completion.choices[0]?.message?.content?.trim();
+    if (content) return content;
+    return "Sto cercando di interpretare il tuo messaggio, descrivimi meglio cosa ti serve?";
+  } catch (error) {
+    console.error("[whatsapp-cloud] openai error", error);
+    return `Non riesco a generare una risposta perché ho ricevuto un errore tecnico (${(error as Error)?.message}).`;
+  }
 }
 
 export async function GET(req: Request) {
@@ -106,37 +172,29 @@ export async function POST(req: Request) {
     } else if (message?.document?.mime_type?.startsWith("image/")) {
       imageSource = buildImageSourceFromCloud(message.document);
     }
-    const enrichedSource = enrichImageSource(imageSource);
-    const imageLink = enrichedSource?.url || imageSource?.url || null;
+    const imageLink = imageSource?.url || null;
 
     try {
-      const aiResponse = await handleWhatsAppMessage({
-        messageText: extractedText || IMAGE_ONLY_PROMPT,
-        originalMessageText: extractedText || null,
+      const imageDataUrl = imageSource ? await downloadImageAsDataUrl(imageSource) : null;
+      const promptText =
+        extractedText && imageDataUrl
+          ? `${extractedText}\n\n(Nota: è presente anche un'immagine allegata.)`
+          : extractedText || IMAGE_ONLY_PROMPT;
+      const replyText = await generateVisionReply({
+        text: promptText,
+        imageDataUrl,
         subscriberName,
-        rawPhone,
-        imageSource: enrichedSource,
       });
 
-      let replyText = "";
-      try {
-        const parsed = await aiResponse.json();
-        replyText =
-          parsed?.content?.text ||
-          parsed?.text ||
-          "Fammi capire meglio la situazione 😊";
-      } catch (error) {
-        console.error("[whatsapp-cloud] failed to read AI response", error);
-        replyText = "Fammi capire meglio la situazione 😊";
-      }
-
       const finalReply = imageLink
-        ? `Immagine scaricata correttamente ✅\nURL: ${imageLink}`
+        ? `Immagine scaricata correttamente ✅\nURL: ${imageLink}\n\n${replyText}`
         : replyText;
 
       await sendCloudReply({ phoneNumberId, to: rawPhone, body: finalReply });
     } catch (error) {
       console.error("[whatsapp-cloud] processing error", error);
+      const fallbackMsg = `Ho ricevuto il tuo messaggio ma c'è stato un errore tecnico: ${(error as Error)?.message}`;
+      await sendCloudReply({ phoneNumberId, to: rawPhone, body: fallbackMsg });
     }
   }
 
