@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { supabaseServer } from "@/lib/supabase";
 
 const verifyToken = process.env.WHATSAPP_CLOUD_VERIFY_TOKEN?.trim() || "";
 const graphApiVersion = process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v20.0";
@@ -9,11 +10,25 @@ const openaiApiKey = process.env.OPENAI_API_KEY?.trim() || "";
 const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
 const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata e dimmi come posso aiutarti.";
 const VISION_MODEL = "gpt-4o";
+const WHATSAPP_MESSAGES_TABLE = "black_whatsapp_messages";
 
 type CloudImage = {
   id: string;
   mime_type?: string;
 };
+
+function normalizeDigits(value?: string | null) {
+  if (!value) return null;
+  const digits = value.replace(/\D+/g, "");
+  return digits || null;
+}
+
+function extractPhoneTail(rawPhone?: string | null) {
+  const digits = normalizeDigits(rawPhone);
+  if (!digits) return null;
+  const tail = digits.slice(-10);
+  return tail.length >= 6 ? tail : null;
+}
 
 function extractCloudText(message: any): string | null {
   if (!message) return null;
@@ -215,15 +230,22 @@ export async function POST(req: Request) {
         subscriberName,
       });
 
-      const finalReply = imageLink
-        ? `Immagine scaricata correttamente ✅\nURL: ${imageLink}\n\n${replyText}`
-        : replyText;
-
-      await sendCloudReply({ phoneNumberId, to: rawPhone, body: finalReply });
+      await sendCloudReply({ phoneNumberId, to: rawPhone, body: replyText });
+      await logCloudConversation({
+        rawPhone,
+        subscriberName,
+        userMessage: promptText,
+        assistantMessage: replyText,
+        imageUrl: imageLink,
+      });
     } catch (error) {
       console.error("[whatsapp-cloud] processing error", error);
       const fallbackMsg = `Ho ricevuto il tuo messaggio ma c'è stato un errore tecnico: ${(error as Error)?.message}`;
-      await sendCloudReply({ phoneNumberId, to: rawPhone, body: fallbackMsg });
+      try {
+        await sendCloudReply({ phoneNumberId, to: rawPhone, body: fallbackMsg });
+      } catch (sendError) {
+        console.error("[whatsapp-cloud] fallback send error", sendError);
+      }
     }
   }
 
@@ -263,5 +285,46 @@ async function sendCloudReply({
       .catch(() => ({ error: response.statusText }));
     console.error("[whatsapp-cloud] send failed", errPayload);
     throw new Error(`whatsapp_send_failed_${response.status}`);
+  }
+}
+
+async function logCloudConversation({
+  rawPhone,
+  subscriberName,
+  userMessage,
+  assistantMessage,
+  imageUrl,
+}: {
+  rawPhone: string | null;
+  subscriberName: string | null;
+  userMessage: string;
+  assistantMessage: string;
+  imageUrl?: string | null;
+}) {
+  const phoneTail = extractPhoneTail(rawPhone);
+  if (!phoneTail) return;
+  const db = supabaseServer();
+  const meta = {
+    subscriberName,
+    channel: "whatsapp_cloud",
+    imageUrl: imageUrl || null,
+  };
+  try {
+    await db.from(WHATSAPP_MESSAGES_TABLE).insert([
+      {
+        phone_tail: phoneTail,
+        role: "user",
+        content: userMessage,
+        meta,
+      },
+      {
+        phone_tail: phoneTail,
+        role: "assistant",
+        content: assistantMessage,
+        meta: { ...meta, model: VISION_MODEL },
+      },
+    ]);
+  } catch (error) {
+    console.error("[whatsapp-cloud] logging failed", error);
   }
 }
