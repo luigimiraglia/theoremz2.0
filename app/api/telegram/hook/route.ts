@@ -82,7 +82,7 @@ async function send(
 }
 
 async function cmdDARIATTIVARE({ db, chatId }: CmdCtx) {
-  const { error } = await db
+  const { data, error } = await db
     .from("black_students")
     .select(
       "id, user_id, year_class, student_email, parent_email, student_phone, parent_phone, last_active_at, profiles:profiles!black_students_user_id_fkey(full_name)"
