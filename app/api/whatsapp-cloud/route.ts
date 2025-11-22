@@ -90,12 +90,15 @@ async function generateVisionReply({
     return "Non riesco a rispondere ora perché manca la configurazione dell'AI.";
   }
   const systemPrompt = buildSystemPrompt(subscriberName);
-  const userContent = imageDataUrl
-    ? [
-        { type: "text", text },
-        { type: "image_url", image_url: { url: imageDataUrl } },
-      ]
-    : text;
+  const userMessage: OpenAI.Chat.Completions.ChatCompletionMessageParam = imageDataUrl
+    ? {
+        role: "user",
+        content: [
+          { type: "text", text },
+          { type: "image_url", image_url: { url: imageDataUrl } },
+        ],
+      }
+    : { role: "user", content: text };
   try {
     const completion = await openai.chat.completions.create({
       model: VISION_MODEL,
@@ -103,7 +106,7 @@ async function generateVisionReply({
       max_tokens: 320,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: userContent },
+        userMessage,
       ],
     });
     const content = completion.choices[0]?.message?.content?.trim();
