@@ -44,7 +44,9 @@ function extractCloudText(message: any): string | null {
 function buildImageSourceFromCloud(image: CloudImage | null): { url: string; headers?: Record<string, string> } | null {
   if (!image?.id) return null;
   const url = `https://graph.facebook.com/${graphApiVersion}/${image.id}`;
-  return { url };
+  const headers: Record<string, string> = {};
+  if (metaAccessToken) headers.Authorization = `Bearer ${metaAccessToken}`;
+  return { url, headers: Object.keys(headers).length ? headers : undefined };
 }
 
 export async function GET(req: Request) {
