@@ -7,7 +7,7 @@ import { supabaseServer } from "@/lib/supabase";
 
 const openaiApiKey = process.env.OPENAI_API_KEY;
 const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
-export const hasOpenAIClient = Boolean(openai);
+const hasOpenAIClient = Boolean(openai);
 const personaOverride = process.env.MANYCHAT_WHATSAPP_PERSONA;
 const aiModel = process.env.MANYCHAT_OPENAI_MODEL || "gpt-4o-mini";
 const aiVisionModel = process.env.MANYCHAT_OPENAI_VISION_MODEL || "gpt-4o";
@@ -26,7 +26,7 @@ const MAX_IMAGE_REDIRECTS = 3;
 const IMAGE_FETCH_USER_AGENT = "Mozilla/5.0 (compatible; TheoremzWhatsAppBot/1.0)";
 const IMAGE_MAX_WIDTH = 1600;
 const IMAGE_JPEG_QUALITY = 82;
-export const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata, ti spiego come risolverla.";
+const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata e dimmi come posso aiutarti.";
 const manychatAttachmentToken = process.env.MANYCHAT_ATTACHMENT_TOKEN?.trim() || "";
 const whatsappGraphToken = process.env.WHATSAPP_GRAPH_TOKEN?.trim() || "";
 const telegramMonitorChats = (process.env.TELEGRAM_WHATSAPP_MONITOR_CHATS || "")
@@ -106,7 +106,7 @@ type JsonResponseOptions = {
   isBlack?: boolean;
 };
 
-export function jsonResponse(message: string, options?: JsonResponseOptions) {
+function jsonResponse(message: string, options?: JsonResponseOptions) {
   const status = options?.status ?? 200;
   const isBlack = options?.isBlack ?? false;
   return NextResponse.json(
@@ -119,7 +119,7 @@ export function jsonResponse(message: string, options?: JsonResponseOptions) {
   );
 }
 
-export function missingConfigResponse(reason: string) {
+function missingConfigResponse(reason: string) {
   return NextResponse.json({ error: reason }, { status: 500 });
 }
 
@@ -164,7 +164,7 @@ function deepFindStringByKey(payload: any, matcher: (key: string) => boolean) {
   return null;
 }
 
-export function extractPhone(payload: any) {
+function extractPhone(payload: any) {
   const phonePaths = [
     ["subscriber", "phone"],
     ["subscriber", "whatsapp"],
@@ -183,7 +183,7 @@ export function extractPhone(payload: any) {
   return deepFindStringByKey(payload, (key) => key.toLowerCase().includes("phone"));
 }
 
-export function extractMessageText(payload: any) {
+function extractMessageText(payload: any) {
   const messagePaths = [
     ["message", "text"],
     ["message", "body"],
@@ -301,7 +301,7 @@ function buildImageSource(value: any): ImageSource | null {
   return null;
 }
 
-export function enrichImageSource(source: ImageSource | null): ImageSource | null {
+function enrichImageSource(source: ImageSource | null): ImageSource | null {
   if (!source?.url) return source;
   try {
     const parsed = new URL(source.url);
@@ -335,7 +335,7 @@ export function enrichImageSource(source: ImageSource | null): ImageSource | nul
   }
 }
 
-export function extractImageSource(payload: any) {
+function extractImageSource(payload: any) {
   const imagePaths = [
     ["image_url"],
     ["image"],
@@ -545,7 +545,7 @@ function encodeImageBuffer(buffer: Buffer, contentType?: string | null) {
   return `data:${finalType};base64,${base64}`;
 }
 
-export function extractSubscriberName(payload: any) {
+function extractSubscriberName(payload: any) {
   const namePaths = [
     ["subscriber", "name"],
     ["subscriber", "full_name"],
@@ -1549,7 +1549,7 @@ type WhatsAppMessageInput = {
   imageUrl?: string | null;
 };
 
-export async function handleWhatsAppMessage({
+async function handleWhatsAppMessage({
   messageText,
   subscriberName,
   rawPhone,
