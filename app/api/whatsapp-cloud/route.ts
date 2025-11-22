@@ -52,16 +52,42 @@ function buildImageSourceFromCloud(image: CloudImage | null): { url: string; hea
 async function downloadImageAsDataUrl(source: { url: string; headers?: Record<string, string> }) {
   if (!source?.url) return null;
   try {
-    const response = await fetch(source.url, {
+    let targetUrl = source.url;
+    let mimeType: string | null = null;
+    const metaRes = await fetch(targetUrl, {
       headers: source.headers,
     });
-    if (!response.ok) {
-      throw new Error(`graph_fetch_${response.status}`);
+    if (!metaRes.ok) {
+      throw new Error(`graph_meta_${metaRes.status}`);
     }
-    const arrayBuffer = await response.arrayBuffer();
-    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const metaContentType = metaRes.headers.get("content-type") || "";
+    if (metaContentType.includes("application/json")) {
+      const metaJson = await metaRes.json();
+      if (metaJson?.url) {
+        targetUrl = metaJson.url;
+        mimeType = metaJson?.mime_type || null;
+      } else {
+        throw new Error("graph_meta_missing_url");
+      }
+    } else {
+      // metadata call already returned the binary
+      const arrayBuffer = await metaRes.arrayBuffer();
+      const contentType = metaRes.headers.get("content-type") || mimeType || "image/jpeg";
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      console.info("[whatsapp-cloud] image downloaded", { url: source.url, contentType });
+      return `data:${contentType};base64,${base64}`;
+    }
+
+    const mediaRes = await fetch(targetUrl, {
+      headers: source.headers,
+    });
+    if (!mediaRes.ok) {
+      throw new Error(`graph_media_${mediaRes.status}`);
+    }
+    const arrayBuffer = await mediaRes.arrayBuffer();
+    const contentType = mediaRes.headers.get("content-type") || mimeType || "image/jpeg";
     const base64 = Buffer.from(arrayBuffer).toString("base64");
-    console.info("[whatsapp-cloud] image downloaded", { url: source.url, contentType });
+    console.info("[whatsapp-cloud] image downloaded", { url: targetUrl, contentType });
     return `data:${contentType};base64,${base64}`;
   } catch (error) {
     console.error("[whatsapp-cloud] image download failed", { url: source.url, error });
