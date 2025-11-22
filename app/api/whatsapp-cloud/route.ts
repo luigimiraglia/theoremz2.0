@@ -974,7 +974,7 @@ async function downloadImageWithCurl(image: ImageSource): Promise<ImageBufferRes
   });
 }
 
-async function resolveImageDataUrl(image?: ImageSource | null): Promise<string | null> {
+async function resolveImageDataUrl(image?: ImageSource | string | null): Promise<string | null> {
   if (!image?.url) return null;
   try {
     const direct = await fetchImageUsingFetch(image);
