@@ -1306,6 +1306,7 @@ async function handleLeadConversation({
   phoneTail,
   imageUrl,
   imageDataUrl,
+  contact,
 }: {
   db: ReturnType<typeof supabaseServer>;
   messageText: string;
@@ -1314,6 +1315,7 @@ async function handleLeadConversation({
   phoneTail: string | null;
   imageUrl?: string | null;
   imageDataUrl?: string | null;
+  contact?: ResolvedContact | null;
 }) {
   const emailCandidate = extractEmailCandidate(messageText);
   if (emailCandidate) {
@@ -1356,15 +1358,25 @@ async function handleLeadConversation({
     return jsonResponse(NON_BLACK_ACADEMIC_REPLY);
   }
 
-  const { history, total } = await fetchConversationHistory(db, null, phoneTail);
+  const logStudentId = contact?.studentId || null;
+  const { history, total } = await fetchConversationHistory(
+    db,
+    logStudentId,
+    phoneTail
+  );
   let runningCount = total;
   await logConversationMessage({
     db,
-    studentId: null,
+    studentId: logStudentId,
     phoneTail,
     role: "user",
     content: messageText,
-    meta: { subscriberName, inquiryId: inquiry.id, imageUrl },
+    meta: {
+      subscriberName,
+      inquiryId: inquiry.id,
+      imageUrl,
+      contactSource: contact?.source,
+    },
   });
   runningCount += 1;
 
@@ -1376,11 +1388,11 @@ async function handleLeadConversation({
   });
   await logConversationMessage({
     db,
-    studentId: null,
+    studentId: logStudentId,
     phoneTail,
     role: "assistant",
     content: reply,
-    meta: { inquiryId: inquiry.id },
+    meta: { inquiryId: inquiry.id, contactSource: contact?.source },
   });
   runningCount += 1;
   await handleConversationRetention({ db, studentId: null, phoneTail, totalCount: runningCount });
@@ -1566,13 +1578,6 @@ export async function handleWhatsAppMessage({
     console.warn("[manychat-whatsapp] missing phone number in payload");
   }
 
-  if (contact && contact.source !== "fallback" && !contact.isBlack) {
-    return jsonResponse(
-      "Questo numero non risulta abbonato a Theoremz Black. Se pensi sia un errore, scrivimi a team@theoremz.com 💌",
-      { isBlack: false }
-    );
-  }
-
   const resolvedContact = contact ?? buildFallbackContact(subscriberName, rawPhone);
 
   notifyWhatsappMonitor({
@@ -1604,6 +1609,7 @@ export async function handleWhatsAppMessage({
     phoneTail,
     imageUrl: remoteImageUrl,
     imageDataUrl: resolvedImageDataUrl,
+    contact: resolvedContact,
   });
 }
 
