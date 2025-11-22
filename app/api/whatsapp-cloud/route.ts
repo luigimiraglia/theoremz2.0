@@ -107,6 +107,7 @@ export async function POST(req: Request) {
       imageSource = buildImageSourceFromCloud(message.document);
     }
     const enrichedSource = enrichImageSource(imageSource);
+    const imageLink = enrichedSource?.url || imageSource?.url || null;
 
     try {
       const aiResponse = await handleWhatsAppMessage({
@@ -129,7 +130,11 @@ export async function POST(req: Request) {
         replyText = "Fammi capire meglio la situazione 😊";
       }
 
-      await sendCloudReply({ phoneNumberId, to: rawPhone, body: replyText });
+      const finalReply = imageLink
+        ? `Ho ricevuto la tua immagine, link diretto: ${imageLink}`
+        : replyText;
+
+      await sendCloudReply({ phoneNumberId, to: rawPhone, body: finalReply });
     } catch (error) {
       console.error("[whatsapp-cloud] processing error", error);
     }
