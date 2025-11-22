@@ -975,12 +975,17 @@ async function downloadImageWithCurl(image: ImageSource): Promise<ImageBufferRes
 }
 
 async function resolveImageDataUrl(image?: ImageSource | string | null): Promise<string | null> {
-  if (!image?.url) return null;
+  if (!image) return null;
+  const source =
+    typeof image === "string"
+      ? { url: image, headers: metaAccessToken ? { Authorization: `Bearer ${metaAccessToken}` } : undefined }
+      : image;
+  if (!source?.url) return null;
   try {
-    const direct = await fetchImageUsingFetch(image);
+    const direct = await fetchImageUsingFetch(source);
     console.info("[manychat-whatsapp] primary image fetch success", {
-      imageUrl: image.url,
-      hasCustomHeaders: Boolean(image.headers),
+      imageUrl: source.url,
+      hasCustomHeaders: Boolean(source.headers),
     });
     const normalized = await maybeNormalizeImage(direct);
     return encodeImageBuffer(normalized.buffer, normalized.contentType || direct.contentType);
@@ -991,7 +996,7 @@ async function resolveImageDataUrl(image?: ImageSource | string | null): Promise
       error: (primaryError as Error).message,
     });
     try {
-      const fallback = await downloadImageWithNode(image);
+      const fallback = await downloadImageWithNode(source);
       console.info("[manychat-whatsapp] http fallback success", {
         imageUrl: image.url,
       });
@@ -1004,7 +1009,7 @@ async function resolveImageDataUrl(image?: ImageSource | string | null): Promise
         error: (secondaryError as Error).message,
       });
       try {
-        const curlResult = await downloadImageWithCurl(image);
+        const curlResult = await downloadImageWithCurl(source);
         console.info("[manychat-whatsapp] curl image fetch success", {
           imageUrl: image.url,
         });
