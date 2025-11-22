@@ -7,6 +7,8 @@ import {
 
 const verifyToken = process.env.WHATSAPP_CLOUD_VERIFY_TOKEN?.trim() || "";
 const graphApiVersion = process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v20.0";
+const cloudPhoneNumberId = process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID?.trim() || "";
+const metaAccessToken = process.env.META_ACCESS_TOKEN?.trim() || "";
 
 type CloudImage = {
   id: string;
@@ -96,11 +98,74 @@ export async function POST(req: Request) {
 
   const enrichedSource = enrichImageSource(imageSource);
 
-  return handleWhatsAppMessage({
+  const aiResponse = await handleWhatsAppMessage({
     messageText: extractedText || IMAGE_ONLY_PROMPT,
     originalMessageText: extractedText || null,
     subscriberName,
     rawPhone,
     imageSource: enrichedSource,
   });
+
+  let replyText = "";
+  try {
+    const parsed = await aiResponse.json();
+    replyText =
+      parsed?.content?.text ||
+      parsed?.text ||
+      "Fammi capire meglio la situazione 😊";
+  } catch (error) {
+    console.error("[whatsapp-cloud] failed to read AI response", error);
+    replyText = "Fammi capire meglio la situazione 😊";
+  }
+
+  if (rawPhone) {
+    const phoneNumberId = value?.metadata?.phone_number_id || cloudPhoneNumberId;
+    if (!phoneNumberId) {
+      console.error("[whatsapp-cloud] missing phone_number_id in payload");
+    } else {
+      try {
+        await sendCloudReply({ phoneNumberId, to: rawPhone, body: replyText });
+      } catch (error) {
+        console.error("[whatsapp-cloud] send error", error);
+      }
+    }
+  }
+
+  return NextResponse.json({ ok: true });
+}
+async function sendCloudReply({
+  phoneNumberId,
+  to,
+  body,
+}: {
+  phoneNumberId: string;
+  to: string;
+  body: string;
+}) {
+  if (!metaAccessToken) {
+    console.error("[whatsapp-cloud] missing META_ACCESS_TOKEN");
+    return;
+  }
+  const endpoint = `https://graph.facebook.com/${graphApiVersion}/${phoneNumberId}/messages`;
+  const payload = {
+    messaging_product: "whatsapp",
+    to,
+    type: "text",
+    text: { body },
+  };
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${metaAccessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errPayload = await response
+      .json()
+      .catch(() => ({ error: response.statusText }));
+    console.error("[whatsapp-cloud] send failed", errPayload);
+    throw new Error(`whatsapp_send_failed_${response.status}`);
+  }
 }
