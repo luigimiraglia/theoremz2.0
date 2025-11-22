@@ -29,7 +29,8 @@ export async function POST(req: Request) {
     return jsonResponse("Non ho ricevuto l'immagine da analizzare 😅", { status: 400 });
   }
 
-  const messageText = payload?.message?.text || payload?.text || IMAGE_ONLY_PROMPT;
+  const rawMessageText = payload?.message?.text || payload?.text || null;
+  const messageText = rawMessageText || IMAGE_ONLY_PROMPT;
   const subscriberName = extractSubscriberName(payload);
   const rawPhone = payload?.phone || extractPhone(payload);
   if (!rawPhone) {
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
 
   return handleWhatsAppMessage({
     messageText,
+    originalMessageText: rawMessageText,
     subscriberName,
     rawPhone,
     imageSource,

@@ -26,6 +26,11 @@ const IMAGE_JPEG_QUALITY = 82;
 export const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata, ti spiego come risolverla.";
 const manychatAttachmentToken = process.env.MANYCHAT_ATTACHMENT_TOKEN?.trim() || "";
 const whatsappGraphToken = process.env.WHATSAPP_GRAPH_TOKEN?.trim() || "";
+const telegramMonitorChats = (process.env.TELEGRAM_WHATSAPP_MONITOR_CHATS || "")
+  .split(",")
+  .map((entry) => entry.trim())
+  .filter(Boolean);
+const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN?.trim() || "";
 
 const ACTIVE_BLACK_STATUSES = new Set([
   "active",
@@ -643,6 +648,67 @@ function buildFallbackContact(name: string | null, phone: string | null): Resolv
     source: "fallback",
     aiSummary: null,
   };
+}
+
+function escapeTelegramHtml(text: string) {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+async function notifyWhatsappMonitor({
+  contact,
+  subscriberName,
+  rawPhone,
+  rawMessage,
+  processedMessage,
+  imageUrl,
+}: {
+  contact: ResolvedContact;
+  subscriberName: string | null;
+  rawPhone: string | null;
+  rawMessage?: string | null;
+  processedMessage: string;
+  imageUrl?: string | null;
+}) {
+  if (!telegramBotToken || !telegramMonitorChats.length) return;
+  const name = contact.fullName || subscriberName || "Sconosciuto";
+  const intro = contact.isBlack ? "👨‍🎓 Studente Black" : "🧲 Lead WhatsApp";
+  const parts: string[] = [
+    `${intro}`,
+    `👤 <b>${escapeTelegramHtml(name)}</b>`,
+  ];
+  if (contact.email) parts.push(`✉️ ${escapeTelegramHtml(contact.email)}`);
+  if (rawPhone) parts.push(`📞 ${escapeTelegramHtml(rawPhone)}`);
+  else if (contact.phone) parts.push(`📞 ${escapeTelegramHtml(contact.phone)}`);
+  if (contact.yearClass) parts.push(`🏫 Classe: ${escapeTelegramHtml(contact.yearClass)}`);
+  if (contact.track) parts.push(`📚 Percorso: ${escapeTelegramHtml(contact.track)}`);
+  const shownText = rawMessage?.trim()
+    ? rawMessage
+    : imageUrl
+    ? "Messaggio senza testo (solo immagine)."
+    : processedMessage;
+  parts.push(`💬 ${escapeTelegramHtml(shownText)}`);
+  if (imageUrl) {
+    parts.push(`🖼️ <a href="${escapeTelegramHtml(imageUrl)}">Apri immagine</a>`);
+  }
+  const text = parts.join("\n");
+  await Promise.all(
+    telegramMonitorChats.map(async (chatId) => {
+      try {
+        await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text,
+            parse_mode: "HTML",
+            disable_web_page_preview: !imageUrl,
+          }),
+        });
+      } catch (err) {
+        console.error("[manychat-whatsapp] telegram notify failed", err);
+      }
+    })
+  );
 }
 
 async function resolveContact(
@@ -1461,6 +1527,7 @@ export function verifySecret(req: Request) {
 
 type WhatsAppMessageInput = {
   messageText: string;
+  originalMessageText?: string | null;
   subscriberName: string | null;
   rawPhone: string | null;
   imageSource?: ImageSource | null;
@@ -1468,6 +1535,7 @@ type WhatsAppMessageInput = {
 
 export async function handleWhatsAppMessage({
   messageText,
+  originalMessageText,
   subscriberName,
   rawPhone,
   imageSource,
@@ -1507,6 +1575,15 @@ export async function handleWhatsAppMessage({
 
   const resolvedContact = contact ?? buildFallbackContact(subscriberName, rawPhone);
 
+  notifyWhatsappMonitor({
+    contact: resolvedContact,
+    subscriberName,
+    rawPhone,
+    rawMessage: originalMessageText || null,
+    processedMessage: messageText,
+    imageUrl: imageSource?.url ?? null,
+  }).catch((err) => console.error("[manychat-whatsapp] telegram monitor error", err));
+
   if (resolvedContact.isBlack) {
     return handleBlackConversation({
       db,
@@ -1542,9 +1619,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  const messageText = extractMessageText(payload);
+  const extractedText = extractMessageText(payload);
   const imageSource = enrichImageSource(extractImageSource(payload));
-  if (!messageText && !imageSource?.url) {
+  if (!extractedText && !imageSource?.url) {
     return jsonResponse("Non ho ricevuto nessun messaggio da elaborare 😅");
   }
 
@@ -1552,7 +1629,8 @@ export async function POST(req: Request) {
   const rawPhone = extractPhone(payload);
 
   return handleWhatsAppMessage({
-    messageText: messageText || IMAGE_ONLY_PROMPT,
+    messageText: extractedText || IMAGE_ONLY_PROMPT,
+    originalMessageText: extractedText || null,
     subscriberName,
     rawPhone,
     imageSource,
