@@ -30,7 +30,7 @@ function parsePortableText(content: any[]): string {
 
 export async function POST(req: Request) {
   try {
-    const { messages, lessonId, userId, isSubscribed } = await req.json();
+    const { messages, lessonId, isSubscribed } = await req.json();
 
     // Controllo abbonamento (soft check dal client)
     if (!isSubscribed) {
