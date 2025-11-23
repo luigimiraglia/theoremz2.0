@@ -631,6 +631,12 @@ function extractPhoneTail(rawPhone: string) {
   return tail.length >= 6 ? tail : null;
 }
 
+function buildExactFilter(columns: string[], value: string | null) {
+  if (!value) return "";
+  const escaped = value.replace(/,/g, "\\,").replace(/\./g, "\\.");
+  return columns.map((column) => `${column}.eq.${escaped}`).join(",");
+}
+
 function buildFuzzyTailPattern(tail: string | null) {
   if (!tail) return "";
   const digits = tail.replace(/\D+/g, "");
@@ -927,34 +933,66 @@ async function resolveContact(
   db: ReturnType<typeof supabaseServer>,
   phone: string
 ): Promise<ResolvedContact | null> {
+  const normalizedFull = normalizeE164Phone(phone);
   const tail = extractPhoneTail(phone);
-  if (!tail) return null;
 
-  const studentFilter = buildSuffixFilter(["student_phone", "parent_phone"], tail);
-  if (studentFilter) {
+  const tryBlackLookup = async (filter: string) => {
     const { data, error } = await db
       .from("black_students")
       .select(
         "id, user_id, status, year_class, track, student_name, student_email, parent_email, student_phone, parent_phone, ai_description, goal, difficulty_focus, readiness, risk_level, next_assessment_subject, next_assessment_date, last_contacted_at, last_active_at, initial_avg, current_avg, profiles:profiles!black_students_user_id_fkey(full_name, subscription_tier)"
       )
-      .or(studentFilter)
+      .or(filter)
       .limit(1);
     if (error) throw new Error(`black_students lookup failed: ${error.message}`);
     if (data && data.length) {
       return mapBlackStudent(data[0] as BlackStudentRow);
     }
+    return null;
+  };
+
+  if (normalizedFull) {
+    const exactFilter = buildExactFilter(["student_phone", "parent_phone"], normalizedFull);
+    if (exactFilter) {
+      const hit = await tryBlackLookup(exactFilter);
+      if (hit) return hit;
+    }
   }
 
-  const profileFilter = buildSuffixFilter(["phone"], tail);
-  if (profileFilter) {
+  if (tail) {
+    const studentFilter = buildSuffixFilter(["student_phone", "parent_phone"], tail);
+    if (studentFilter) {
+      const hit = await tryBlackLookup(studentFilter);
+      if (hit) return hit;
+    }
+  }
+
+  const tryProfileLookup = async (filter: string) => {
     const { data, error } = await db
       .from("student_profiles")
       .select("user_id, full_name, phone, email, is_black")
-      .or(profileFilter)
+      .or(filter)
       .limit(1);
     if (error) throw new Error(`student_profiles lookup failed: ${error.message}`);
     if (data && data.length) {
       return mapStudentProfile(data[0] as StudentProfileRow);
+    }
+    return null;
+  };
+
+  if (normalizedFull) {
+    const exactProfileFilter = buildExactFilter(["phone"], normalizedFull);
+    if (exactProfileFilter) {
+      const hit = await tryProfileLookup(exactProfileFilter);
+      if (hit) return hit;
+    }
+  }
+
+  if (tail) {
+    const profileFilter = buildSuffixFilter(["phone"], tail);
+    if (profileFilter) {
+      const hit = await tryProfileLookup(profileFilter);
+      if (hit) return hit;
     }
   }
 
