@@ -43,6 +43,8 @@ const ACTIVE_BLACK_STATUSES = new Set([
   "unpaid",
 ]);
 const WHATSAPP_MESSAGES_TABLE = "black_whatsapp_messages";
+const RECENT_GRADES_LIMIT = 3;
+const UPCOMING_ASSESSMENTS_LIMIT = 3;
 
 type SupabaseProfileRow = {
   full_name?: string | null;
@@ -62,6 +64,16 @@ type BlackStudentRow = {
   parent_phone?: string | null;
   ai_description?: string | null;
   profiles?: SupabaseProfileRow | SupabaseProfileRow[] | null;
+  goal?: string | null;
+  difficulty_focus?: string | null;
+  readiness?: number | null;
+  risk_level?: string | null;
+  next_assessment_subject?: string | null;
+  next_assessment_date?: string | null;
+  last_contacted_at?: string | null;
+  last_active_at?: string | null;
+  initial_avg?: number | null;
+  current_avg?: number | null;
 };
 
 type StudentProfileRow = {
@@ -85,6 +97,21 @@ type ResolvedContact = {
   isBlack: boolean;
   source: "black_students" | "student_profiles" | "fallback";
   aiSummary?: string | null;
+  studentEmail?: string | null;
+  parentEmail?: string | null;
+  studentPhone?: string | null;
+  parentPhone?: string | null;
+  goal?: string | null;
+  difficultyFocus?: string | null;
+  readiness?: number | null;
+  riskLevel?: string | null;
+  nextAssessmentSubject?: string | null;
+  nextAssessmentDate?: string | null;
+  lastContactedAt?: string | null;
+  lastActiveAt?: string | null;
+  initialAvg?: number | null;
+  currentAvg?: number | null;
+  academicSnapshot?: StudentAcademicSnapshot | null;
 };
 
 type ConversationMessage = {
@@ -99,6 +126,23 @@ type InquiryRecord = {
   status: string;
   email?: string | null;
   message_count?: number | null;
+};
+
+type GradeSnapshot = {
+  subject: string | null;
+  score: number | null;
+  max_score: number | null;
+  when_at: string | null;
+};
+
+type AssessmentSnapshot = {
+  subject: string | null;
+  when_at: string | null;
+};
+
+type StudentAcademicSnapshot = {
+  latestGrades: GradeSnapshot[];
+  upcomingAssessments: AssessmentSnapshot[];
 };
 
 type JsonResponseOptions = {
@@ -574,6 +618,12 @@ function normalizeDigits(value: string | null) {
   return digits || null;
 }
 
+function toNumberOrNull(value: any) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function extractPhoneTail(rawPhone: string) {
   const digits = normalizeDigits(rawPhone);
   if (!digits) return null;
@@ -599,14 +649,23 @@ function mapBlackStudent(row: BlackStudentRow): ResolvedContact {
   const isBlack = Boolean(
     (status && ACTIVE_BLACK_STATUSES.has(status)) || subscriptionTier === "black"
   );
-  const fullName = row.student_name || profile?.full_name || row.student_email || row.parent_email || null;
+  const studentEmail = row.student_email || null;
+  const parentEmail = row.parent_email || null;
+  const studentPhone = row.student_phone || null;
+  const parentPhone = row.parent_phone || null;
+  const fullName =
+    row.student_name || profile?.full_name || studentEmail || parentEmail || null;
 
   return {
     userId: row.user_id,
     studentId: row.id,
     fullName,
-    email: row.student_email || row.parent_email || null,
-    phone: row.student_phone || row.parent_phone || null,
+    email: studentEmail || parentEmail || null,
+    phone: studentPhone || parentPhone || null,
+    studentEmail,
+    parentEmail,
+    studentPhone,
+    parentPhone,
     yearClass: row.year_class || null,
     track: row.track || null,
     status,
@@ -614,6 +673,17 @@ function mapBlackStudent(row: BlackStudentRow): ResolvedContact {
     isBlack,
     source: "black_students",
     aiSummary: row.ai_description || null,
+    goal: row.goal || null,
+    difficultyFocus: row.difficulty_focus || null,
+    readiness: toNumberOrNull(row.readiness),
+    riskLevel: row.risk_level || null,
+    nextAssessmentSubject: row.next_assessment_subject || null,
+    nextAssessmentDate: row.next_assessment_date || null,
+    lastContactedAt: row.last_contacted_at || null,
+    lastActiveAt: row.last_active_at || null,
+    initialAvg: toNumberOrNull(row.initial_avg),
+    currentAvg: toNumberOrNull(row.current_avg),
+    academicSnapshot: null,
   };
 }
 
@@ -626,6 +696,10 @@ function mapStudentProfile(row: StudentProfileRow): ResolvedContact {
     fullName: row.full_name || row.email || null,
     email: row.email || null,
     phone: row.phone || null,
+    studentEmail: row.email || null,
+    parentEmail: null,
+    studentPhone: row.phone || null,
+    parentPhone: null,
     yearClass: null,
     track: null,
     status: null,
@@ -633,6 +707,17 @@ function mapStudentProfile(row: StudentProfileRow): ResolvedContact {
     isBlack,
     source: "student_profiles",
     aiSummary: null,
+    goal: null,
+    difficultyFocus: null,
+    readiness: null,
+    riskLevel: null,
+    nextAssessmentSubject: null,
+    nextAssessmentDate: null,
+    lastContactedAt: null,
+    lastActiveAt: null,
+    initialAvg: null,
+    currentAvg: null,
+    academicSnapshot: null,
   };
 }
 
@@ -640,9 +725,13 @@ function buildFallbackContact(name: string | null, phone: string | null): Resolv
   return {
     userId: "guest",
     studentId: null,
-    fullName: name,
+    fullName: name || phone,
     email: null,
     phone,
+    studentEmail: null,
+    parentEmail: null,
+    studentPhone: phone,
+    parentPhone: null,
     yearClass: null,
     track: null,
     status: null,
@@ -650,7 +739,117 @@ function buildFallbackContact(name: string | null, phone: string | null): Resolv
     isBlack: false,
     source: "fallback",
     aiSummary: null,
+    goal: null,
+    difficultyFocus: null,
+    readiness: null,
+    riskLevel: null,
+    nextAssessmentSubject: null,
+    nextAssessmentDate: null,
+    lastContactedAt: null,
+    lastActiveAt: null,
+    initialAvg: null,
+    currentAvg: null,
+    academicSnapshot: null,
   };
+}
+
+function formatDateForPrompt(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+}
+
+function sanitizeWhatsappText(value: string) {
+  if (!value) return "";
+  let text = value.replace(/\r/g, "");
+  const emphasisRegexes = [
+    /\*\*([\s\S]*?)\*\*/g,
+    /__([\s\S]*?)__/g,
+    /~~([\s\S]*?)~~/g,
+    /`([^`]+)`/g,
+  ];
+  for (const regex of emphasisRegexes) {
+    text = text.replace(regex, "$1");
+  }
+  text = text.replace(/\\\(/g, "(").replace(/\\\)/g, ")");
+  text = text.replace(/\\\[/g, "[").replace(/\\\]/g, "]");
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, "$1");
+  text = text.replace(/\$(.*?)\$/g, "$1");
+  text = text.replace(/\\begin\{[^}]+\}[\s\S]*?\\end\{[^}]+\}/g, (match) =>
+    match.replace(/\\[a-zA-Z]+/g, "")
+  );
+  text = text.replace(/\\([a-zA-Z]+)/g, "$1");
+  text = text.replace(/^[#>*-]+\s+/gm, "");
+  text = text.replace(/[ \t]+\n/g, "\n");
+  text = text
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .trim();
+  return text;
+}
+
+async function fetchStudentAcademicSnapshot(
+  db: ReturnType<typeof supabaseServer>,
+  studentId: string
+): Promise<StudentAcademicSnapshot> {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [gradesRes, assessmentsRes] = await Promise.all([
+    db
+      .from("black_grades")
+      .select("subject, score, max_score, when_at")
+      .eq("student_id", studentId)
+      .order("when_at", { ascending: false })
+      .limit(RECENT_GRADES_LIMIT),
+    db
+      .from("black_assessments")
+      .select("subject, when_at")
+      .eq("student_id", studentId)
+      .gte("when_at", todayIso)
+      .order("when_at", { ascending: true })
+      .limit(UPCOMING_ASSESSMENTS_LIMIT),
+  ]);
+
+  if (gradesRes.error) {
+    console.warn("[manychat-whatsapp] grades fetch failed", gradesRes.error.message);
+  }
+  if (assessmentsRes.error) {
+    console.warn("[manychat-whatsapp] assessments fetch failed", assessmentsRes.error.message);
+  }
+
+  const latestGrades =
+    gradesRes.data?.map((row: any) => ({
+      subject: row.subject || null,
+      score: toNumberOrNull(row.score),
+      max_score: toNumberOrNull(row.max_score),
+      when_at: row.when_at || null,
+    })) ?? [];
+
+  const upcomingAssessments =
+    assessmentsRes.data?.map((row: any) => ({
+      subject: row.subject || null,
+      when_at: row.when_at || null,
+    })) ?? [];
+
+  return { latestGrades, upcomingAssessments };
+}
+
+async function ensureAcademicSnapshot({
+  db,
+  contact,
+}: {
+  db: ReturnType<typeof supabaseServer>;
+  contact: ResolvedContact;
+}): Promise<ResolvedContact> {
+  if (!contact.studentId || contact.academicSnapshot) return contact;
+  try {
+    const snapshot = await fetchStudentAcademicSnapshot(db, contact.studentId);
+    return { ...contact, academicSnapshot: snapshot };
+  } catch (error) {
+    console.error("[manychat-whatsapp] academic snapshot failed", error);
+    return contact;
+  }
 }
 
 function escapeTelegramHtml(text: string) {
@@ -726,7 +925,7 @@ async function resolveContact(
     const { data, error } = await db
       .from("black_students")
       .select(
-        "id, user_id, status, year_class, track, student_name, student_email, parent_email, student_phone, parent_phone, ai_description, profiles:profiles!black_students_user_id_fkey(full_name, subscription_tier)"
+        "id, user_id, status, year_class, track, student_name, student_email, parent_email, student_phone, parent_phone, ai_description, goal, difficulty_focus, readiness, risk_level, next_assessment_subject, next_assessment_date, last_contacted_at, last_active_at, initial_avg, current_avg, profiles:profiles!black_students_user_id_fkey(full_name, subscription_tier)"
       )
       .or(studentFilter)
       .limit(1);
@@ -1184,8 +1383,10 @@ async function generateInfoReply({
   subscriberName: string | null;
   imageDataUrl?: string | null;
 }) {
+  const defaultReply =
+    "Ciao! Sono Luigi di Theoremz Black 👋 Ti spiego subito come funziona il programma se mi dai qualche dettaglio in più.";
   if (!openai) {
-    return "Ciao! Sono Luigi di Theoremz Black 👋 Ti spiego subito come funziona il programma se mi dai qualche dettaglio in più.";
+    return sanitizeWhatsappText(defaultReply);
   }
   const leadName = subscriberName || "potenziale cliente";
   const formattedHistory = history.map((entry) =>
@@ -1228,10 +1429,10 @@ Rispondi con tono amichevole, chiaro e professionale, includendo call-to-action 
       },
     ],
   });
-  return (
-    completion.choices[0]?.message?.content?.trim() ||
-    "Ti racconto volentieri come funziona Theoremz Black: è un percorso personalizzato con tutor e AI, ti mando tutte le info e i link ❤️"
-  );
+  const content = completion.choices[0]?.message?.content?.trim();
+  const fallback =
+    "Ti racconto volentieri come funziona Theoremz Black: è un percorso personalizzato con tutor e AI, ti mando tutte le info e i link ❤️";
+  return sanitizeWhatsappText(content || fallback);
 }
 
 async function handleBlackConversation({
@@ -1254,6 +1455,7 @@ async function handleBlackConversation({
   const { history, total } = await fetchConversationHistory(db, resolvedContact.studentId, phoneTail);
   let runningCount = total;
   const canLog = Boolean(phoneTail || resolvedContact.studentId);
+  const contactForAI = await ensureAcademicSnapshot({ db, contact: resolvedContact });
   if (canLog) {
     await logConversationMessage({
       db,
@@ -1267,7 +1469,7 @@ async function handleBlackConversation({
   }
   try {
     const reply = await generateAiReply(
-      resolvedContact,
+      contactForAI,
       messageText,
       subscriberName,
       history,
@@ -1293,8 +1495,9 @@ async function handleBlackConversation({
     return jsonResponse(reply, { isBlack: resolvedContact.isBlack });
   } catch (error) {
     console.error("[manychat-whatsapp] ai error", error);
-    const fallbackMessage =
-      "Mi sfugge proprio la risposta giusta 😅 Riprovo tra un attimo oppure scrivimi dentro l'app.";
+    const fallbackMessage = sanitizeWhatsappText(
+      "Mi sfugge proprio la risposta giusta 😅 Riprovo tra un attimo oppure scrivimi dentro l'app."
+    );
     if (canLog) {
       await logConversationMessage({
         db,
@@ -1418,6 +1621,65 @@ async function handleLeadConversation({
   return jsonResponse(reply, { isBlack: false });
 }
 
+function formatAverageForPrompt(current?: number | null, initial?: number | null) {
+  const formatValue = (value: number) =>
+    Number.isInteger(value) ? String(value) : value?.toFixed(1) ?? "";
+  if (current == null && initial == null) return null;
+  const currentText = current != null ? `${formatValue(current)}/10` : null;
+  const initialText = initial != null ? `${formatValue(initial)}/10` : null;
+  if (currentText && initialText) {
+    return `Media attuale ${currentText} (iniziale ${initialText})`;
+  }
+  if (currentText) return `Media attuale ${currentText}`;
+  if (initialText) return `Media iniziale ${initialText}`;
+  return null;
+}
+
+function formatReadinessForPrompt(readiness?: number | null, risk?: string | null) {
+  if (readiness == null && !risk) return null;
+  const rounded = typeof readiness === "number" ? Math.round(readiness) : null;
+  const riskLabel = risk ? ` (${risk})` : "";
+  if (rounded == null) return `Livello di rischio${riskLabel}`.trim();
+  return `Readiness ${rounded}/100${riskLabel}`;
+}
+
+function formatScoreForPrompt(score?: number | null, max?: number | null) {
+  const formatValue = (value: number) =>
+    Number.isInteger(value) ? String(value) : value?.toFixed(1) ?? "";
+  if (score == null && max == null) return null;
+  if (score != null && max != null) return `${formatValue(score)}/${formatValue(max)}`;
+  const value = score ?? max;
+  if (value == null) return null;
+  return formatValue(value);
+}
+
+function buildGradeSummary(grades?: GradeSnapshot[] | null) {
+  if (!grades?.length) return null;
+  const formatted = grades
+    .map((grade) => {
+      if (!grade.subject && grade.score == null) return null;
+      const subject = grade.subject || "materia";
+      const score = formatScoreForPrompt(grade.score ?? null, grade.max_score ?? null);
+      const date = formatDateForPrompt(grade.when_at);
+      return [subject, score, date ? `(${date})` : null].filter(Boolean).join(" ");
+    })
+    .filter(Boolean);
+  return formatted.length ? formatted.join("; ") : null;
+}
+
+function buildAssessmentSummary(entries?: AssessmentSnapshot[] | null) {
+  if (!entries?.length) return null;
+  const formatted = entries
+    .map((assessment) => {
+      if (!assessment.subject && !assessment.when_at) return null;
+      const subject = assessment.subject || "verifica";
+      const date = formatDateForPrompt(assessment.when_at);
+      return date ? `${subject} ${date}` : subject;
+    })
+    .filter(Boolean);
+  return formatted.length ? formatted.join("; ") : null;
+}
+
 function buildSystemPrompt(contact: ResolvedContact) {
   const persona =
     personaOverride?.trim() ||
@@ -1427,26 +1689,63 @@ function buildSystemPrompt(contact: ResolvedContact) {
   if (contact.fullName) details.push(`Nome: ${contact.fullName}`);
   if (contact.yearClass) details.push(`Classe: ${contact.yearClass}`);
   if (contact.track) details.push(`Percorso: ${contact.track}`);
-  if (contact.email) details.push(`Email: ${contact.email}`);
-  if (contact.phone) details.push(`Telefono: ${contact.phone}`);
+  if (contact.studentEmail) details.push(`Email studente: ${contact.studentEmail}`);
+  if (contact.parentEmail) details.push(`Email genitore: ${contact.parentEmail}`);
+  if (!contact.studentEmail && contact.email) details.push(`Email principale: ${contact.email}`);
+  if (contact.studentPhone) details.push(`Telefono studente: ${contact.studentPhone}`);
+  if (contact.parentPhone && contact.parentPhone !== contact.studentPhone) {
+    details.push(`Telefono genitore: ${contact.parentPhone}`);
+  } else if (contact.phone && !contact.studentPhone) {
+    details.push(`Telefono principale: ${contact.phone}`);
+  }
 
   const header = details.length
     ? `Dati sullo studente:
 ${details.join("\n")}`
     : "Non hai dati aggiuntivi sullo studente oltre al messaggio.";
 
-  const summarySection = contact.aiSummary
-    ? `\nNota tutor esistente:\n${contact.aiSummary}`
+  const academicLines: string[] = [];
+  const readinessLine = formatReadinessForPrompt(contact.readiness, contact.riskLevel);
+  if (readinessLine) academicLines.push(readinessLine);
+  const avgLine = formatAverageForPrompt(contact.currentAvg, contact.initialAvg);
+  if (avgLine) academicLines.push(avgLine);
+  if (contact.goal) academicLines.push(`Goal dichiarato: ${contact.goal}`);
+  if (contact.difficultyFocus) {
+    academicLines.push(`Difficoltà principali: ${contact.difficultyFocus}`);
+  }
+  if (contact.nextAssessmentSubject || contact.nextAssessmentDate) {
+    const date = formatDateForPrompt(contact.nextAssessmentDate);
+    academicLines.push(
+      `Prossima verifica: ${contact.nextAssessmentSubject || "materia"}${
+        date ? ` ${date}` : ""
+      }`
+    );
+  }
+  const latestGradesSummary = buildGradeSummary(contact.academicSnapshot?.latestGrades);
+  if (latestGradesSummary) academicLines.push(`Ultimi voti: ${latestGradesSummary}`);
+  const upcomingAssessmentsSummary = buildAssessmentSummary(
+    contact.academicSnapshot?.upcomingAssessments
+  );
+  if (upcomingAssessmentsSummary) {
+    academicLines.push(`Verifiche in agenda: ${upcomingAssessmentsSummary}`);
+  }
+
+  const academicBlock = academicLines.length
+    ? `Dati accademici disponibili:
+${academicLines.join("\n")}`
     : "";
+
+  const summarySection = contact.aiSummary ? `Nota tutor esistente:\n${contact.aiSummary}` : "";
+  const contextSections = [header, academicBlock, summarySection].filter(Boolean);
+  const contextText = contextSections.join("\n\n");
 
   return `${persona}
 
-${header}
-${summarySection}
+${contextText}
 
 Regole:
 - Rispondi sempre in italiano e in prima persona come Luigi, ma non aggiungere firme o nomi alla fine.
-- Mantieni uno stile da WhatsApp: frasi brevi, niente markdown complesso.
+- Mantieni uno stile da WhatsApp: frasi brevi, niente markdown complesso o Latex.
 - Non proporre chiamate o call a meno che lo studente non lo chieda esplicitamente; se serve un follow-up limita la risposta al testo.
 - Se non hai abbastanza contesto, fai domande mirate invece di inventare dettagli.`;
 }
@@ -1514,8 +1813,8 @@ Rispondi come Luigi.`;
         });
         const content = completion.choices[0]?.message?.content || "";
         const trimmed = content.trim();
-        if (trimmed) return trimmed;
-        return "Fammi un attimo capire meglio la situazione 😊";
+        if (trimmed) return sanitizeWhatsappText(trimmed);
+        return sanitizeWhatsappText("Fammi un attimo capire meglio la situazione 😊");
       } catch (error) {
         lastError = error;
         const status = (error as any)?.status ?? (error as any)?.response?.status;
@@ -1544,7 +1843,8 @@ Rispondi come Luigi.`;
   });
 
   const content = completion.choices[0]?.message?.content || "";
-  return content.trim() || "Fammi un attimo capire meglio la situazione 😊";
+  const trimmed = content.trim();
+  return sanitizeWhatsappText(trimmed || "Fammi un attimo capire meglio la situazione 😊");
 }
 
 type WhatsAppMessageInput = {
