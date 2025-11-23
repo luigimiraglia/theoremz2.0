@@ -452,7 +452,7 @@ async function fetchImageUsingFetch(image: ImageSource): Promise<ImageBufferResu
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS);
   try {
-    const response = await fetch(source.url, {
+    const response = await fetch(image.url, {
       signal: controller.signal,
       cache: "no-store",
       headers: buildRequestHeaders(image.headers),
@@ -483,7 +483,7 @@ function downloadImageWithNode(image: ImageSource, depth = 0): Promise<ImageBuff
       reject(new Error("too_many_redirects"));
       return;
     }
-    const urlObject = new URL(source.url);
+    const urlObject = new URL(image.url);
     const client = urlObject.protocol === "https:" ? https : http;
     const request = client.request(
       urlObject,
@@ -494,7 +494,7 @@ function downloadImageWithNode(image: ImageSource, depth = 0): Promise<ImageBuff
       (response) => {
         const status = response.statusCode || 0;
         if (status >= 300 && status < 400 && response.headers.location) {
-          const nextUrl = new URL(response.headers.location, source.url).toString();
+          const nextUrl = new URL(response.headers.location, image.url).toString();
           response.resume();
           request.destroy();
           downloadImageWithNode({ ...image, url: nextUrl }, depth + 1).then(resolve).catch(reject);
