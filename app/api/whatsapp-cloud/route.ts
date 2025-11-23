@@ -948,7 +948,7 @@ async function downloadImageWithCurl(image: ImageSource): Promise<ImageBufferRes
         args.push("-H", `${key}: ${value}`);
       }
     }
-    args.push(source.url);
+    args.push(image.url);
     const proc = spawn("curl", args);
     const chunks: Buffer[] = [];
     let total = 0;
