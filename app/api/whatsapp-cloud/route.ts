@@ -452,7 +452,7 @@ async function fetchImageUsingFetch(image: ImageSource): Promise<ImageBufferResu
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS);
   try {
-    const response = await fetch(image.url, {
+    const response = await fetch(source.url, {
       signal: controller.signal,
       cache: "no-store",
       headers: buildRequestHeaders(image.headers),
@@ -483,7 +483,7 @@ function downloadImageWithNode(image: ImageSource, depth = 0): Promise<ImageBuff
       reject(new Error("too_many_redirects"));
       return;
     }
-    const urlObject = new URL(image.url);
+    const urlObject = new URL(source.url);
     const client = urlObject.protocol === "https:" ? https : http;
     const request = client.request(
       urlObject,
@@ -494,7 +494,7 @@ function downloadImageWithNode(image: ImageSource, depth = 0): Promise<ImageBuff
       (response) => {
         const status = response.statusCode || 0;
         if (status >= 300 && status < 400 && response.headers.location) {
-          const nextUrl = new URL(response.headers.location, image.url).toString();
+          const nextUrl = new URL(response.headers.location, source.url).toString();
           response.resume();
           request.destroy();
           downloadImageWithNode({ ...image, url: nextUrl }, depth + 1).then(resolve).catch(reject);
@@ -948,7 +948,7 @@ async function downloadImageWithCurl(image: ImageSource): Promise<ImageBufferRes
         args.push("-H", `${key}: ${value}`);
       }
     }
-    args.push(image.url);
+    args.push(source.url);
     const proc = spawn("curl", args);
     const chunks: Buffer[] = [];
     let total = 0;
@@ -991,34 +991,34 @@ async function resolveImageDataUrl(image?: ImageSource | string | null): Promise
     return encodeImageBuffer(normalized.buffer, normalized.contentType || direct.contentType);
   } catch (primaryError) {
     console.warn("[manychat-whatsapp] primary image fetch failed", {
-      imageUrl: image?.url,
-      hasCustomHeaders: Boolean(image?.headers),
+      imageUrl: source?.url,
+      hasCustomHeaders: Boolean(source?.headers),
       error: (primaryError as Error).message,
     });
     try {
       const fallback = await downloadImageWithNode(source);
       console.info("[manychat-whatsapp] http fallback success", {
-        imageUrl: image.url,
+        imageUrl: source.url,
       });
       const normalized = await maybeNormalizeImage(fallback);
       return encodeImageBuffer(normalized.buffer, normalized.contentType || fallback.contentType);
     } catch (secondaryError) {
       console.warn("[manychat-whatsapp] http fallback failed, trying curl", {
-        imageUrl: image?.url,
-        hasCustomHeaders: Boolean(image?.headers),
+        imageUrl: source?.url,
+        hasCustomHeaders: Boolean(source?.headers),
         error: (secondaryError as Error).message,
       });
       try {
         const curlResult = await downloadImageWithCurl(source);
         console.info("[manychat-whatsapp] curl image fetch success", {
-          imageUrl: image.url,
+          imageUrl: source.url,
         });
         const normalized = await maybeNormalizeImage(curlResult);
         return encodeImageBuffer(normalized.buffer, normalized.contentType || curlResult.contentType);
       } catch (curlError) {
         console.error("[manychat-whatsapp] curl image fetch failed", {
-          imageUrl: image?.url,
-          hasCustomHeaders: Boolean(image?.headers),
+          imageUrl: source?.url,
+          hasCustomHeaders: Boolean(source?.headers),
           error: (curlError as Error).message,
         });
         return null;
