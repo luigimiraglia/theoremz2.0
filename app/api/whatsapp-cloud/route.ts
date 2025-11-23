@@ -631,10 +631,20 @@ function extractPhoneTail(rawPhone: string) {
   return tail.length >= 6 ? tail : null;
 }
 
+function buildFuzzyTailPattern(tail: string | null) {
+  if (!tail) return "";
+  const digits = tail.replace(/\D+/g, "");
+  if (!digits) return "";
+  const fuzzy = digits.split("").join("%");
+  return `%${fuzzy}%`;
+}
+
 function buildSuffixFilter(columns: string[], tail: string | null) {
   if (!tail) return "";
-  const escaped = tail.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
-  return columns.map((column) => `${column}.ilike.%${escaped}`).join(",");
+  const pattern = buildFuzzyTailPattern(tail);
+  if (!pattern) return "";
+  const escaped = pattern.replace(/,/g, "\\,");
+  return columns.map((column) => `${column}.ilike.${escaped}`).join(",");
 }
 
 function unwrapProfile<T>(value: T | T[] | null | undefined) {
