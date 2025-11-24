@@ -71,11 +71,17 @@ export async function POST(req: Request) {
           if (refreshed) {
             const { student, contextText } = refreshed;
             const historyResult = await fetchConversationHistory(student.id, phoneTail, HISTORY_LIMIT);
+            const emailOnly =
+              emailCandidate &&
+              text &&
+              text.trim().toLowerCase() === emailCandidate.trim().toLowerCase();
             const promptText =
               text && imageDataUrl
                 ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
                 : text || IMAGE_ONLY_PROMPT;
-            const reply = await generateReply(promptText, imageDataUrl, contextText, historyResult.history);
+            const reply = emailOnly
+              ? "Perfetto, ho collegato la tua email all'account. Scrivimi pure la domanda o manda una foto dell'esercizio."
+              : await generateReply(promptText, imageDataUrl, contextText, historyResult.history);
             await logConversationMessage(student.id, phoneTail, "user", promptText);
             await logConversationMessage(student.id, phoneTail, "assistant", reply);
             const totalCount = historyResult.total + 2;
