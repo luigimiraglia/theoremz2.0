@@ -1474,37 +1474,34 @@ async function linkEmailToPhone(db: ReturnType<typeof supabaseServer>, email: st
     }
   }
 
-  if (profileRow.is_black) {
-    const { data: blackByUser, error: blackByUserErr } = await db
-      .from("black_students")
-      .select(baseSelect)
-      .eq("user_id", profileRow.user_id)
-      .limit(1)
-      .maybeSingle();
-    if (blackByUserErr) {
-      console.error("[manychat-whatsapp] link email black lookup by user failed", blackByUserErr.message);
-    }
-    if (blackByUser) {
-      const targetColumn = blackByUser.student_phone ? "parent_phone" : "student_phone";
-      const needsUpdate = !blackByUser[targetColumn as keyof typeof blackByUser] ||
-        blackByUser[targetColumn as keyof typeof blackByUser] !== phone;
-      if (needsUpdate) {
-        const { error: updateErr } = await db
-          .from("black_students")
-          .update({ [targetColumn]: phone, updated_at: stamp })
-          .eq("id", blackByUser.id);
-        if (updateErr) {
-          console.error("[manychat-whatsapp] phone update failed", updateErr.message);
-        } else {
-          (blackByUser as any)[targetColumn] = phone;
-        }
+  const { data: blackByUser, error: blackByUserErr } = await db
+    .from("black_students")
+    .select(baseSelect)
+    .eq("user_id", profileRow.user_id)
+    .limit(1)
+    .maybeSingle();
+  if (blackByUserErr) {
+    console.error("[manychat-whatsapp] link email black lookup by user failed", blackByUserErr.message);
+  }
+  if (blackByUser) {
+    const targetColumn = blackByUser.student_phone ? "parent_phone" : "student_phone";
+    const needsUpdate = !blackByUser[targetColumn as keyof typeof blackByUser] ||
+      blackByUser[targetColumn as keyof typeof blackByUser] !== phone;
+    if (needsUpdate) {
+      const { error: updateErr } = await db
+        .from("black_students")
+        .update({ [targetColumn]: phone, updated_at: stamp })
+        .eq("id", blackByUser.id);
+      if (updateErr) {
+        console.error("[manychat-whatsapp] phone update failed", updateErr.message);
+      } else {
+        (blackByUser as any)[targetColumn] = phone;
       }
-      return { status: "linked" as const, studentId: blackByUser.id, contact: mapBlackStudent(blackByUser as BlackStudentRow) };
     }
-    return { status: "linked" as const, studentId: null, contact: mapStudentProfile(updatedProfile as StudentProfileRow) };
+    return { status: "linked" as const, studentId: blackByUser.id, contact: mapBlackStudent(blackByUser as BlackStudentRow) };
   }
 
-  return { status: "not_found" as const, contact: mapStudentProfile(updatedProfile as StudentProfileRow) };
+  return { status: "linked" as const, studentId: null, contact: mapStudentProfile(updatedProfile as StudentProfileRow) };
 }
 
 async function getInquiryByPhoneTail(db: ReturnType<typeof supabaseServer>, phoneTail: string) {
