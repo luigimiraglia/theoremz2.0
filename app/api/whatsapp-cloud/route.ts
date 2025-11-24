@@ -17,6 +17,8 @@ const HISTORY_LIMIT = 20;
 const SUMMARY_THRESHOLD = 70;
 const PRUNE_DELETE_COUNT = 50;
 const ASK_EMAIL_MESSAGE = "Non trovo un abbonamento Black con questo numero. Scrivimi l'email del tuo account così lo collego.";
+const NON_BLACK_CLARIFY_MESSAGE =
+  "Dimmi se vuoi info sui nostri programmi (Black, quiz, percorsi) oppure se ti serve una mano su matematica: ti indirizzo subito.";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -63,50 +65,16 @@ export async function POST(req: Request) {
     const studentResult = await fetchBlackStudentWithContext(phoneTail);
 
     if (!studentResult) {
-      const emailCandidate = extractEmailCandidate(text);
-      if (emailCandidate && supabase) {
-        const linked = await linkEmailToPhone(emailCandidate, rawPhone);
-        if (linked) {
-          const refreshed = await fetchBlackStudentWithContext(extractPhoneTail(rawPhone));
-          if (refreshed) {
-            const { student, contextText } = refreshed;
-            const historyResult = await fetchConversationHistory(student.id, phoneTail, HISTORY_LIMIT);
-            const emailOnly =
-              emailCandidate &&
-              text &&
-              text.trim().toLowerCase() === emailCandidate.trim().toLowerCase();
-            const promptText =
-              text && imageDataUrl
-                ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
-                : text || IMAGE_ONLY_PROMPT;
-            const reply = emailOnly
-              ? "Perfetto, ho collegato la tua email all'account. Scrivimi pure la domanda o manda una foto dell'esercizio."
-              : await generateReply(promptText, imageDataUrl, contextText, historyResult.history);
-            await logConversationMessage(student.id, phoneTail, "user", promptText);
-            await logConversationMessage(student.id, phoneTail, "assistant", reply);
-            const totalCount = historyResult.total + 2;
-            if (totalCount >= SUMMARY_THRESHOLD) {
-              await summarizeAndPrune(student.id);
-            }
-            await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
-            continue;
-          }
-          await sendCloudReply({
-            phoneNumberId,
-            to: rawPhone,
-            body: "Ho collegato la mail, scrivimi di nuovo il messaggio così ti rispondo.",
-          });
-          continue;
-        } else {
-          await sendCloudReply({
-            phoneNumberId,
-            to: rawPhone,
-            body: "Questa mail non risulta nei nostri abbonati, puoi ricontrollare?",
-          });
-          continue;
-        }
+      const handled = await handleNonBlackFlow({
+        rawPhone,
+        phoneTail,
+        phoneNumberId,
+        text,
+        imageDataUrl,
+      });
+      if (!handled) {
+        await sendCloudReply({ phoneNumberId, to: rawPhone, body: NON_BLACK_CLARIFY_MESSAGE });
       }
-      await sendCloudReply({ phoneNumberId, to: rawPhone, body: ASK_EMAIL_MESSAGE });
       continue;
     }
 
@@ -283,6 +251,116 @@ async function linkEmailToPhone(email: string, rawPhone: string | null) {
     return false;
   }
 }
+
+type NonBlackPayload = {
+  rawPhone: string;
+  phoneTail: string | null;
+  phoneNumberId: string;
+  text: string | null;
+  imageDataUrl: string | null;
+};
+
+async function handleNonBlackFlow(payload: NonBlackPayload) {
+  const { rawPhone, phoneTail, phoneNumberId, text, imageDataUrl } = payload;
+  const emailCandidate = extractEmailCandidate(text);
+  if (emailCandidate && supabase) {
+    const linked = await linkEmailToPhone(emailCandidate, rawPhone);
+    if (linked) {
+      const refreshed = await fetchBlackStudentWithContext(extractPhoneTail(rawPhone));
+      if (refreshed) {
+        const { student, contextText } = refreshed;
+        const historyResult = await fetchConversationHistory(student.id, phoneTail, HISTORY_LIMIT);
+        const emailOnly =
+          emailCandidate &&
+          text &&
+          text.trim().toLowerCase() === emailCandidate.trim().toLowerCase();
+        const promptText =
+          text && imageDataUrl
+            ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
+            : text || IMAGE_ONLY_PROMPT;
+        const reply = emailOnly
+          ? "Perfetto, ho collegato la tua email all'account. Scrivimi pure la domanda o manda una foto dell'esercizio."
+          : await generateReply(promptText, imageDataUrl, contextText, historyResult.history);
+        await logConversationMessage(student.id, phoneTail, "user", promptText);
+        await logConversationMessage(student.id, phoneTail, "assistant", reply);
+        const totalCount = historyResult.total + 2;
+        if (totalCount >= SUMMARY_THRESHOLD) {
+          await summarizeAndPrune(student.id);
+        }
+        await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
+        return true;
+      }
+      await sendCloudReply({
+        phoneNumberId,
+        to: rawPhone,
+        body: "Ho collegato la mail, scrivimi di nuovo il messaggio così ti rispondo.",
+      });
+      return true;
+    } else {
+      await sendCloudReply({
+        phoneNumberId,
+        to: rawPhone,
+        body: "Questa mail non risulta nei nostri abbonati, puoi ricontrollare?",
+      });
+      return true;
+    }
+  }
+
+  const intent = classifyNonBlackIntent(text);
+  if (intent === "sales") {
+    const reply = await generateSalesReply(text || "");
+    await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply });
+    return true;
+  }
+  if (intent === "math") {
+    await sendCloudReply({ phoneNumberId, to: rawPhone, body: ASK_EMAIL_MESSAGE });
+    return true;
+  }
+  return false;
+}
+
+function classifyNonBlackIntent(text?: string | null): "sales" | "math" | "clarify" {
+  if (!text) return "clarify";
+  const lower = text.toLowerCase();
+  const salesKeywords = [
+    "prezzo",
+    "prezzi",
+    "costo",
+    "quanto",
+    "abbon",
+    "piano",
+    "iscriver",
+    "programma",
+    "offerta",
+    "black",
+    "theoremz",
+  ];
+  const mathKeywords = ["esercizio", "esercizi", "problema", "calcolo", "integrale", "derivata", "teorema", "matematica", "mate"];
+  if (salesKeywords.some((k) => lower.includes(k))) return "sales";
+  if (mathKeywords.some((k) => lower.includes(k))) return "math";
+  return "clarify";
+}
+
+async function generateSalesReply(text: string) {
+  if (!openai) return "Ciao! Vuoi info sui nostri programmi? Ti racconto Black e come funziona.";
+  const prompt = `Sei Luigi Miraglia e rispondi su WhatsApp a un potenziale cliente. Spiega il valore di Theoremz Black (o altri prodotti Theoremz se menzionati) in modo chiaro, naturale e umano. Fai domande mirate per capire cosa cerca, niente call forzate. Testo semplice, senza markdown o latex.`;
+  try {
+    const completion = await openai.chat.completions.create({
+      model: VISION_MODEL,
+      temperature: 0.6,
+      max_tokens: 320,
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: text || "Chiedo info sui vostri programmi." },
+      ],
+    });
+    return completion.choices[0]?.message?.content?.trim() || "Ti racconto come funziona Theoremz Black: percorso personalizzato con tutor e AI. Dimmi cosa cerchi.";
+  } catch (err) {
+    console.error("[whatsapp-cloud] sales ai error", err);
+    return "Posso spiegarti come funziona Theoremz Black e le offerte attive, dimmi pure cosa ti interessa.";
+  }
+}
+
 
 function buildImageSourceFromCloud(message: any): CloudImage | null {
   if (!message) return null;
