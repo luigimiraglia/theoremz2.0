@@ -336,6 +336,26 @@ function deriveConversationType(existing: ConversationType | null | undefined, s
   return student ? "black" : "prospect";
 }
 
+async function generateSalesReply(text: string) {
+  if (!openai) return "Ciao! Vuoi info sui nostri programmi? Ti racconto Black e come funziona.";
+  const prompt = `Sei Luigi Miraglia e rispondi su WhatsApp a un potenziale cliente. Spiega il valore di Theoremz Black (o altri prodotti se citati) in modo chiaro, naturale e umano. Fai domande mirate per capire cosa cerca. Testo semplice, niente markdown o latex.`;
+  try {
+    const completion = await openai.chat.completions.create({
+      model: VISION_MODEL,
+      temperature: 0.6,
+      max_tokens: 320,
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: text || "Raccontami cosa fate." },
+      ],
+    });
+    return completion.choices[0]?.message?.content?.trim() || "Posso aiutarti con info su Theoremz Black, dimmi cosa cerchi.";
+  } catch (err) {
+    console.error("[whatsapp-cloud] sales reply failed", err);
+    return "Posso aiutarti con info su Theoremz Black, dimmi cosa cerchi.";
+  }
+}
+
 async function fetchConversation(phoneTail: string | null): Promise<ConversationRow | null> {
   if (!supabase || !phoneTail) return null;
   try {
