@@ -1358,9 +1358,13 @@ async function linkEmailToPhone(db: ReturnType<typeof supabaseServer>, email: st
   const normalized = email.trim().toLowerCase();
   if (!normalized) return { status: "invalid" as const };
   const escaped = escapeSupabaseValue(normalized);
-  const { data, error } = await db
+  const stamp = new Date().toISOString();
+  const baseSelect =
+    "id, user_id, status, year_class, track, student_name, student_email, parent_email, student_phone, parent_phone, ai_description, goal, difficulty_focus, readiness, risk_level, next_assessment_subject, next_assessment_date, last_contacted_at, last_active_at, initial_avg, current_avg, profiles:profiles!black_students_user_id_fkey(full_name, subscription_tier)";
+
+  const { data: studentRow, error } = await db
     .from("black_students")
-    .select("id")
+    .select(baseSelect)
     .or(`student_email.ilike.${escaped},parent_email.ilike.${escaped}`)
     .limit(1)
     .maybeSingle();
@@ -1368,19 +1372,85 @@ async function linkEmailToPhone(db: ReturnType<typeof supabaseServer>, email: st
     console.error("[manychat-whatsapp] link email failed", error.message);
     return { status: "error" as const };
   }
-  if (!data?.id) {
-    return { status: "not_found" as const };
+
+  if (studentRow?.id) {
+    const lowerStudentEmail = (studentRow.student_email || "").toLowerCase();
+    const lowerParentEmail = (studentRow.parent_email || "").toLowerCase();
+    const isParentEmail = lowerParentEmail === normalized && lowerParentEmail !== lowerStudentEmail;
+    const targetColumn = isParentEmail ? "parent_phone" : "student_phone";
+    const needsUpdate = !studentRow[targetColumn as keyof typeof studentRow] ||
+      studentRow[targetColumn as keyof typeof studentRow] !== phone;
+    if (needsUpdate) {
+      const { error: updateErr } = await db
+        .from("black_students")
+        .update({ [targetColumn]: phone, updated_at: stamp })
+        .eq("id", studentRow.id);
+      if (updateErr) {
+        console.error("[manychat-whatsapp] phone update failed", updateErr.message);
+        return { status: "error" as const };
+      }
+      (studentRow as any)[targetColumn] = phone;
+    }
+    return { status: "linked" as const, studentId: studentRow.id, contact: mapBlackStudent(studentRow as BlackStudentRow) };
   }
-  const stamp = new Date().toISOString();
-  const { error: updateErr } = await db
-    .from("black_students")
-    .update({ student_phone: phone, updated_at: stamp })
-    .eq("id", data.id);
-  if (updateErr) {
-    console.error("[manychat-whatsapp] phone update failed", updateErr.message);
+
+  const { data: profileRow, error: profileErr } = await db
+    .from("student_profiles")
+    .select("user_id, full_name, phone, email, is_black")
+    .ilike("email", escaped)
+    .maybeSingle();
+  if (profileErr) {
+    console.error("[manychat-whatsapp] link email profile lookup failed", profileErr.message);
     return { status: "error" as const };
   }
-  return { status: "linked" as const, studentId: data.id };
+  if (!profileRow) {
+    return { status: "not_found" as const };
+  }
+
+  let updatedProfile = profileRow;
+  if (phone && phone !== profileRow.phone) {
+    const { error: updateProfileErr } = await db
+      .from("student_profiles")
+      .update({ phone, updated_at: stamp })
+      .eq("user_id", profileRow.user_id);
+    if (updateProfileErr) {
+      console.error("[manychat-whatsapp] profile phone update failed", updateProfileErr.message);
+    } else {
+      updatedProfile = { ...profileRow, phone };
+    }
+  }
+
+  if (profileRow.is_black) {
+    const { data: blackByUser, error: blackByUserErr } = await db
+      .from("black_students")
+      .select(baseSelect)
+      .eq("user_id", profileRow.user_id)
+      .limit(1)
+      .maybeSingle();
+    if (blackByUserErr) {
+      console.error("[manychat-whatsapp] link email black lookup by user failed", blackByUserErr.message);
+    }
+    if (blackByUser) {
+      const targetColumn = blackByUser.student_phone ? "parent_phone" : "student_phone";
+      const needsUpdate = !blackByUser[targetColumn as keyof typeof blackByUser] ||
+        blackByUser[targetColumn as keyof typeof blackByUser] !== phone;
+      if (needsUpdate) {
+        const { error: updateErr } = await db
+          .from("black_students")
+          .update({ [targetColumn]: phone, updated_at: stamp })
+          .eq("id", blackByUser.id);
+        if (updateErr) {
+          console.error("[manychat-whatsapp] phone update failed", updateErr.message);
+        } else {
+          (blackByUser as any)[targetColumn] = phone;
+        }
+      }
+      return { status: "linked" as const, studentId: blackByUser.id, contact: mapBlackStudent(blackByUser as BlackStudentRow) };
+    }
+    return { status: "linked" as const, studentId: null, contact: mapStudentProfile(updatedProfile as StudentProfileRow) };
+  }
+
+  return { status: "not_found" as const, contact: mapStudentProfile(updatedProfile as StudentProfileRow) };
 }
 
 async function getInquiryByPhoneTail(db: ReturnType<typeof supabaseServer>, phoneTail: string) {
@@ -1630,8 +1700,10 @@ async function handleLeadConversation({
       return jsonResponse("Per collegarti ho bisogno del numero completo con cui mi stai scrivendo 😊");
     }
     const link = await linkEmailToPhone(db, emailCandidate, normalizedPhone);
-    if (link.status === "linked" && link.studentId) {
-      const refreshedContact = await resolveContact(db, normalizedPhone);
+    if (link.status === "linked") {
+      const refreshedContact =
+        (link.contact && link.contact.isBlack ? link.contact : null) ||
+        (await resolveContact(db, normalizedPhone));
       if (refreshedContact && refreshedContact.isBlack) {
         return handleBlackConversation({
           db,
@@ -1639,6 +1711,8 @@ async function handleLeadConversation({
           messageText,
           subscriberName,
           phoneTail: extractPhoneTail(normalizedPhone),
+          imageUrl,
+          imageDataUrl,
         });
       }
       return jsonResponse("Grazie! Ho collegato la tua mail: scrivimi ora dall'app per riprendere la chat ✌️");
