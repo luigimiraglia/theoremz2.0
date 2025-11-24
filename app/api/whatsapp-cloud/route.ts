@@ -62,11 +62,13 @@ export async function POST(req: Request) {
       continue;
     }
 
+    const extraContext = await fetchBlackContext(phoneTail);
+
     const promptText =
       text && imageDataUrl
         ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
         : text || IMAGE_ONLY_PROMPT;
-    const reply = await generateReply(promptText, imageDataUrl);
+    const reply = await generateReply(promptText, imageDataUrl, extraContext);
 
     await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
   }
@@ -139,6 +141,45 @@ async function isBlackSubscriber(phoneTail: string | null) {
   return Boolean(data?.id);
 }
 
+async function fetchBlackContext(phoneTail: string | null) {
+  if (!phoneTail || !supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from("black_students")
+      .select(
+        "student_name, year_class, track, goal, difficulty_focus, readiness, ai_description, student_email, parent_email, next_assessment_subject, next_assessment_date"
+      )
+      .or(`student_phone.ilike.%${phoneTail},parent_phone.ilike.%${phoneTail}`)
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error("[whatsapp-cloud] supabase context lookup error", error);
+      return null;
+    }
+    if (!data) return null;
+    const parts: string[] = [];
+    if (data.student_name) parts.push(`Nome: ${data.student_name}`);
+    if (data.student_email) parts.push(`Email studente: ${data.student_email}`);
+    if (data.parent_email) parts.push(`Email genitore: ${data.parent_email}`);
+    if (data.year_class) parts.push(`Classe: ${data.year_class}`);
+    if (data.track) parts.push(`Percorso: ${data.track}`);
+    if (data.goal) parts.push(`Goal: ${data.goal}`);
+    if (data.difficulty_focus) parts.push(`Difficoltà: ${data.difficulty_focus}`);
+    if (typeof data.readiness === "number") parts.push(`Readiness: ${data.readiness}/100`);
+    if (data.next_assessment_subject || data.next_assessment_date) {
+      const dateLabel = data.next_assessment_date || "";
+      parts.push(`Prossima verifica: ${data.next_assessment_subject || "—"} ${dateLabel}`.trim());
+    }
+    if (data.ai_description) {
+      parts.push(`Nota tutor: ${data.ai_description}`);
+    }
+    return parts.length ? parts.join("\n") : null;
+  } catch (err) {
+    console.error("[whatsapp-cloud] context fetch failed", err);
+    return null;
+  }
+}
+
 async function downloadImageAsDataUrl(image: CloudImage) {
   if (!image?.id || !metaAccessToken) return null;
   const url = `https://graph.facebook.com/${graphApiVersion}/${image.id}`;
@@ -181,13 +222,18 @@ async function downloadImageAsDataUrl(image: CloudImage) {
   }
 }
 
-async function generateReply(text: string, imageDataUrl?: string | null) {
+async function generateReply(text: string, imageDataUrl?: string | null, studentContext?: string | null) {
   if (!openai) return "Ciao! Non riesco a rispondere ora perché manca la configurazione dell'AI.";
-  const systemPrompt = `Sei Luigi Miraglia, tutor di matematica di Theoremz Black. Rispondi ai messaggi WhatsApp in italiano, con tono umano e poche frasi.
+  const systemPromptBase = `Sei Luigi Miraglia, tutor di matematica di Theoremz Black. Rispondi ai messaggi WhatsApp in italiano, con tono umano e poche frasi.
 Obiettivi:
 - Capisci cosa chiede lo studente (anche dalle immagini) e fornisci spiegazioni chiare.
 - Se la domanda è ambigua, chiedi tu chiarimenti specifici.
 - Non offrire call o link promozionali finché non sono richiesti.`;
+  const contextBlock =
+    studentContext && typeof studentContext === "string"
+      ? `\n\nDati sullo studente (usa solo se pertinenti, altrimenti ignora):\n${studentContext}`
+      : "";
+  const systemPrompt = `${systemPromptBase}${contextBlock}`;
 
   const userMessage: OpenAI.Chat.Completions.ChatCompletionMessageParam = imageDataUrl
     ? {
