@@ -259,6 +259,40 @@ async function linkEmailToPhone(email: string, rawPhone: string | null) {
   }
 }
 
+function normalizeAssessmentDate(raw: string): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  const today = new Date();
+  const currentYear = today.getFullYear();
+
+  const parseWithYear = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+
+  const tryIso = parseWithYear(trimmed);
+  if (tryIso) {
+    if (tryIso < today) return null;
+    return tryIso.toISOString().slice(0, 10);
+  }
+
+  const ddMm = trimmed.match(/^(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?$/);
+  if (ddMm) {
+    const day = Number(ddMm[1]);
+    const month = Number(ddMm[2]) - 1;
+    let year = ddMm[3] ? Number(ddMm[3]) : currentYear;
+    if (year < 100) year = 2000 + year;
+    let candidate = new Date(Date.UTC(year, month, day));
+    if (candidate < today) {
+      candidate = new Date(Date.UTC(year + 1, month, day));
+    }
+    if (Number.isNaN(candidate.getTime())) return null;
+    return candidate.toISOString().slice(0, 10);
+  }
+
+  return null;
+}
+
 type NonBlackPayload = {
   rawPhone: string;
   phoneTail: string | null;
@@ -530,7 +564,7 @@ Se non trovi un campo, mettilo null o ometti. Nessun testo extra, solo JSON.`;
     const updatePayload: Record<string, any> = {};
 
     const incomingName = parsed.student_name;
-    if (incomingName && typeof incomingName === "string" && !currentRow?.student_name) {
+    if (incomingName && typeof incomingName === "string") {
       updatePayload.student_name = incomingName;
     }
 
@@ -574,7 +608,10 @@ Se non trovi un campo, mettilo null o ometti. Nessun testo extra, solo JSON.`;
       typeof incomingDate === "string" &&
       !currentRow?.next_assessment_date
     ) {
-      updatePayload.next_assessment_date = incomingDate;
+      const adjusted = normalizeAssessmentDate(incomingDate);
+      if (adjusted) {
+        updatePayload.next_assessment_date = adjusted;
+      }
     }
 
     if (!Object.keys(updatePayload).length) return;
