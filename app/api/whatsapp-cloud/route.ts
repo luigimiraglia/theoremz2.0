@@ -147,9 +147,12 @@ function extractPhoneTail(rawPhone: string | null) {
 
 type BlackStudentRow = {
   id: string;
-  student_name?: string | null;
+  preferred_name?: string | null;
+  profiles?: { full_name?: string | null }[] | { full_name?: string | null } | null;
   student_email?: string | null;
   parent_email?: string | null;
+  student_phone?: string | null;
+  parent_phone?: string | null;
   year_class?: string | null;
   track?: string | null;
   goal?: string | null;
@@ -171,7 +174,7 @@ async function fetchBlackStudentWithContext(phoneTail: string | null): Promise<{
     const { data, error } = await supabase
       .from("black_students")
       .select(
-        "id, student_name, student_email, parent_email, year_class, track, goal, difficulty_focus, readiness, ai_description, next_assessment_subject, next_assessment_date, metrics"
+        "id, preferred_name, student_email, parent_email, student_phone, parent_phone, year_class, track, goal, difficulty_focus, readiness, ai_description, next_assessment_subject, next_assessment_date, metrics, profiles:profiles!black_students_user_id_fkey(full_name)"
       )
       .eq("status", "active")
       .or(`student_phone.ilike.%${phoneTail},parent_phone.ilike.%${phoneTail}`)
@@ -192,8 +195,17 @@ async function fetchBlackStudentWithContext(phoneTail: string | null): Promise<{
 
 function buildStudentContext(student: BlackStudentRow | null) {
   if (!student) return null;
+  const profile = Array.isArray(student.profiles)
+    ? student.profiles[0]
+    : (student.profiles as any);
+  const displayName =
+    student.preferred_name ||
+    profile?.full_name ||
+    student.student_email ||
+    student.parent_email ||
+    null;
   const parts: string[] = [];
-  if (student.student_name) parts.push(`Nome: ${student.student_name}`);
+  if (displayName) parts.push(`Nome: ${displayName}`);
   if (student.student_email) parts.push(`Email studente: ${student.student_email}`);
   if (student.parent_email) parts.push(`Email genitore: ${student.parent_email}`);
   if (student.year_class) parts.push(`Classe: ${student.year_class}`);
