@@ -13,6 +13,7 @@ const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata e dimmi come posso aiutart
 const HAS_SUPABASE_ENV = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const supabase = HAS_SUPABASE_ENV ? supabaseServer() : null;
 const WHATSAPP_MESSAGES_TABLE = "black_whatsapp_messages";
+const WHATSAPP_CONVERSATIONS_TABLE = "black_whatsapp_conversations";
 const HISTORY_LIMIT = 20;
 const SUMMARY_THRESHOLD = 70;
 const PRUNE_DELETE_COUNT = 50;
@@ -137,6 +138,9 @@ type ConversationMessage = {
   role: "user" | "assistant";
   content: string;
 };
+
+type ConversationStatus = "bot" | "waiting_tutor" | "tutor";
+type ConversationCategory = "activation" | "info" | "black" | "other";
 
 function extractPhoneTail(rawPhone: string | null) {
   if (!rawPhone) return null;
