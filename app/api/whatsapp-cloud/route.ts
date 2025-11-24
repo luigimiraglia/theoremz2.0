@@ -631,12 +631,6 @@ function extractPhoneTail(rawPhone: string) {
   return tail.length >= 6 ? tail : null;
 }
 
-function buildExactFilter(columns: string[], value: string | null) {
-  if (!value) return "";
-  const escaped = value.replace(/,/g, "\\,").replace(/\./g, "\\.");
-  return columns.map((column) => `${column}.eq.${escaped}`).join(",");
-}
-
 function buildFuzzyTailPattern(tail: string | null) {
   if (!tail) return "";
   const digits = tail.replace(/\D+/g, "");
@@ -653,22 +647,6 @@ function buildSuffixFilter(columns: string[], tail: string | null) {
   return columns.map((column) => `${column}.ilike.${escaped}`).join(",");
 }
 
-function buildContainsFilter(columns: string[], value: string | null) {
-  if (!value) return "";
-  const escaped = value.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
-  return columns.map((column) => `${column}.ilike.%${escaped}%`).join(",");
-}
-
-function matchesPhoneTail(phoneValue: string | null | undefined, tail: string | null) {
-  if (!phoneValue || !tail) return false;
-  const phoneDigits = normalizeDigits(phoneValue);
-  const tailDigits = normalizeDigits(tail);
-  if (!phoneDigits || !tailDigits) return false;
-  const phoneSuffix = phoneDigits.slice(-10);
-  const tailSuffix = tailDigits.slice(-10);
-  return phoneSuffix === tailSuffix;
-}
-
 function unwrapProfile<T>(value: T | T[] | null | undefined) {
   if (!value) return null;
   return Array.isArray(value) ? value[0] ?? null : value;
@@ -678,11 +656,9 @@ function mapBlackStudent(row: BlackStudentRow): ResolvedContact {
   const profile = unwrapProfile(row.profiles);
   const status = row.status ? row.status.toLowerCase() : null;
   const subscriptionTier = profile?.subscription_tier || null;
-  const isActiveBlack = Boolean(
+  const isBlack = Boolean(
     (status && ACTIVE_BLACK_STATUSES.has(status)) || subscriptionTier === "black"
   );
-  // Consider any row in black_students as Black for routing, even if status is outside ACTIVE set.
-  const isBlack = isActiveBlack || Boolean(row.id);
   const studentEmail = row.student_email || null;
   const parentEmail = row.parent_email || null;
   const studentPhone = row.student_phone || null;
@@ -951,143 +927,38 @@ async function resolveContact(
   db: ReturnType<typeof supabaseServer>,
   phone: string
 ): Promise<ResolvedContact | null> {
-  const normalizedFull = normalizeE164Phone(phone);
-  const digitsOnly = normalizeDigits(phone);
-  const localDigits = digitsOnly?.replace(/^39/, "");
   const tail = extractPhoneTail(phone);
-  const exactCandidates = Array.from(
-    new Set(
-      [
-        normalizedFull,
-        digitsOnly ? `+${digitsOnly}` : null,
-        digitsOnly || null,
-        localDigits ? `+${localDigits}` : null,
-        localDigits || null,
-      ].filter(Boolean)
-    )
-  );
+  if (!tail) return null;
 
-  const tryBlackLookup = async (filter: string, tailHint?: string | null) => {
+  const studentFilter = buildSuffixFilter(["student_phone", "parent_phone"], tail);
+  if (studentFilter) {
     const { data, error } = await db
       .from("black_students")
       .select(
         "id, user_id, status, year_class, track, student_name, student_email, parent_email, student_phone, parent_phone, ai_description, goal, difficulty_focus, readiness, risk_level, next_assessment_subject, next_assessment_date, last_contacted_at, last_active_at, initial_avg, current_avg, profiles:profiles!black_students_user_id_fkey(full_name, subscription_tier)"
       )
-      .or(filter)
-      .limit(5);
+      .or(studentFilter)
+      .limit(1);
     if (error) throw new Error(`black_students lookup failed: ${error.message}`);
-    const rows = (data as BlackStudentRow[]) || [];
-    if (!rows.length) return null;
-    const matchByTail =
-      tailHint &&
-      rows.find(
-        (row) =>
-          matchesPhoneTail(row.student_phone, tailHint) ||
-          matchesPhoneTail(row.parent_phone, tailHint)
-      );
-    const picked = matchByTail || rows[0];
-    if (picked) return mapBlackStudent(picked);
-    return null;
-  };
-
-  for (const candidate of exactCandidates) {
-    const exactFilter = buildExactFilter(["student_phone", "parent_phone"], candidate);
-    if (exactFilter) {
-      const hit = await tryBlackLookup(exactFilter, tail);
-      if (hit) return hit;
+    if (data && data.length) {
+      return mapBlackStudent(data[0] as BlackStudentRow);
     }
   }
 
-  if (tail) {
-    const studentFilter = buildSuffixFilter(["student_phone", "parent_phone"], tail);
-    if (studentFilter) {
-      const hit = await tryBlackLookup(studentFilter, tail);
-      if (hit) return hit;
-    }
-  }
-
-  const containsCandidates = Array.from(
-    new Set(
-      [digitsOnly, localDigits].filter((v): v is string => typeof v === "string" && v.length >= 6)
-    )
-  );
-  for (const candidate of containsCandidates) {
-    const filter = buildContainsFilter(["student_phone", "parent_phone"], candidate);
-    if (filter) {
-      const hit = await tryBlackLookup(filter, tail);
-      if (hit) return hit;
-    }
-  }
-
-  const tryProfileLookup = async (filter: string, tailHint?: string | null) => {
+  const profileFilter = buildSuffixFilter(["phone"], tail);
+  if (profileFilter) {
     const { data, error } = await db
       .from("student_profiles")
       .select("user_id, full_name, phone, email, is_black")
-      .or(filter)
-      .limit(5);
+      .or(profileFilter)
+      .limit(1);
     if (error) throw new Error(`student_profiles lookup failed: ${error.message}`);
-    const rows = (data as StudentProfileRow[]) || [];
-    if (!rows.length) return null;
-    const matchByTail =
-      tailHint && rows.find((row) => matchesPhoneTail(row.phone, tailHint));
-    const picked = matchByTail || rows[0];
-    if (picked) return mapStudentProfile(picked);
-    return null;
-  };
-
-  for (const candidate of exactCandidates) {
-    const exactProfileFilter = buildExactFilter(["phone"], candidate);
-    if (!exactProfileFilter) continue;
-    const hit = await tryProfileLookup(exactProfileFilter, tail);
-    if (hit) return hit;
-  }
-
-  if (tail) {
-    const profileFilter = buildSuffixFilter(["phone"], tail);
-    if (profileFilter) {
-      const hit = await tryProfileLookup(profileFilter, tail);
-      if (hit) return hit;
+    if (data && data.length) {
+      return mapStudentProfile(data[0] as StudentProfileRow);
     }
   }
 
-  if (tail) {
-    const fallback = await resolveContactFromLogs(db, tail);
-    if (fallback) return fallback;
-  }
-
   return null;
-}
-
-async function resolveContactFromLogs(
-  db: ReturnType<typeof supabaseServer>,
-  phoneTail: string
-): Promise<ResolvedContact | null> {
-  const { data, error } = await db
-    .from(WHATSAPP_MESSAGES_TABLE)
-    .select("student_id")
-    .eq("phone_tail", phoneTail)
-    .not("student_id", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (error) {
-    console.error("[manychat-whatsapp] history contact lookup failed", error.message);
-    return null;
-  }
-  const studentId = data?.[0]?.student_id;
-  if (!studentId) return null;
-  const { data: studentRow, error: studentError } = await db
-    .from("black_students")
-    .select(
-      "id, user_id, status, year_class, track, student_name, student_email, parent_email, student_phone, parent_phone, ai_description, goal, difficulty_focus, readiness, risk_level, next_assessment_subject, next_assessment_date, last_contacted_at, last_active_at, initial_avg, current_avg, profiles:profiles!black_students_user_id_fkey(full_name, subscription_tier)"
-    )
-    .eq("id", studentId)
-    .maybeSingle();
-  if (studentError) {
-    console.error("[manychat-whatsapp] history contact student fetch failed", studentError.message);
-    return null;
-  }
-  if (!studentRow) return null;
-  return mapBlackStudent(studentRow as BlackStudentRow);
 }
 
 async function fetchConversationHistory(
@@ -1412,13 +1283,9 @@ async function linkEmailToPhone(db: ReturnType<typeof supabaseServer>, email: st
   const normalized = email.trim().toLowerCase();
   if (!normalized) return { status: "invalid" as const };
   const escaped = escapeSupabaseValue(normalized);
-  const stamp = new Date().toISOString();
-  const baseSelect =
-    "id, user_id, status, year_class, track, student_name, student_email, parent_email, student_phone, parent_phone, ai_description, goal, difficulty_focus, readiness, risk_level, next_assessment_subject, next_assessment_date, last_contacted_at, last_active_at, initial_avg, current_avg, profiles:profiles!black_students_user_id_fkey(full_name, subscription_tier)";
-
-  const { data: studentRow, error } = await db
+  const { data, error } = await db
     .from("black_students")
-    .select(baseSelect)
+    .select("id")
     .or(`student_email.ilike.${escaped},parent_email.ilike.${escaped}`)
     .limit(1)
     .maybeSingle();
@@ -1426,82 +1293,19 @@ async function linkEmailToPhone(db: ReturnType<typeof supabaseServer>, email: st
     console.error("[manychat-whatsapp] link email failed", error.message);
     return { status: "error" as const };
   }
-
-  if (studentRow?.id) {
-    const lowerStudentEmail = (studentRow.student_email || "").toLowerCase();
-    const lowerParentEmail = (studentRow.parent_email || "").toLowerCase();
-    const isParentEmail = lowerParentEmail === normalized && lowerParentEmail !== lowerStudentEmail;
-    const targetColumn = isParentEmail ? "parent_phone" : "student_phone";
-    const needsUpdate = !studentRow[targetColumn as keyof typeof studentRow] ||
-      studentRow[targetColumn as keyof typeof studentRow] !== phone;
-    if (needsUpdate) {
-      const { error: updateErr } = await db
-        .from("black_students")
-        .update({ [targetColumn]: phone, updated_at: stamp })
-        .eq("id", studentRow.id);
-      if (updateErr) {
-        console.error("[manychat-whatsapp] phone update failed", updateErr.message);
-        return { status: "error" as const };
-      }
-      (studentRow as any)[targetColumn] = phone;
-    }
-    return { status: "linked" as const, studentId: studentRow.id, contact: mapBlackStudent(studentRow as BlackStudentRow) };
-  }
-
-  const { data: profileRow, error: profileErr } = await db
-    .from("student_profiles")
-    .select("user_id, full_name, phone, email, is_black")
-    .ilike("email", escaped)
-    .maybeSingle();
-  if (profileErr) {
-    console.error("[manychat-whatsapp] link email profile lookup failed", profileErr.message);
-    return { status: "error" as const };
-  }
-  if (!profileRow) {
+  if (!data?.id) {
     return { status: "not_found" as const };
   }
-
-  let updatedProfile = profileRow;
-  if (phone && phone !== profileRow.phone) {
-    const { error: updateProfileErr } = await db
-      .from("student_profiles")
-      .update({ phone, updated_at: stamp })
-      .eq("user_id", profileRow.user_id);
-    if (updateProfileErr) {
-      console.error("[manychat-whatsapp] profile phone update failed", updateProfileErr.message);
-    } else {
-      updatedProfile = { ...profileRow, phone };
-    }
-  }
-
-  const { data: blackByUser, error: blackByUserErr } = await db
+  const stamp = new Date().toISOString();
+  const { error: updateErr } = await db
     .from("black_students")
-    .select(baseSelect)
-    .eq("user_id", profileRow.user_id)
-    .limit(1)
-    .maybeSingle();
-  if (blackByUserErr) {
-    console.error("[manychat-whatsapp] link email black lookup by user failed", blackByUserErr.message);
+    .update({ student_phone: phone, updated_at: stamp })
+    .eq("id", data.id);
+  if (updateErr) {
+    console.error("[manychat-whatsapp] phone update failed", updateErr.message);
+    return { status: "error" as const };
   }
-  if (blackByUser) {
-    const targetColumn = blackByUser.student_phone ? "parent_phone" : "student_phone";
-    const needsUpdate = !blackByUser[targetColumn as keyof typeof blackByUser] ||
-      blackByUser[targetColumn as keyof typeof blackByUser] !== phone;
-    if (needsUpdate) {
-      const { error: updateErr } = await db
-        .from("black_students")
-        .update({ [targetColumn]: phone, updated_at: stamp })
-        .eq("id", blackByUser.id);
-      if (updateErr) {
-        console.error("[manychat-whatsapp] phone update failed", updateErr.message);
-      } else {
-        (blackByUser as any)[targetColumn] = phone;
-      }
-    }
-    return { status: "linked" as const, studentId: blackByUser.id, contact: mapBlackStudent(blackByUser as BlackStudentRow) };
-  }
-
-  return { status: "linked" as const, studentId: null, contact: mapStudentProfile(updatedProfile as StudentProfileRow) };
+  return { status: "linked" as const, studentId: data.id };
 }
 
 async function getInquiryByPhoneTail(db: ReturnType<typeof supabaseServer>, phoneTail: string) {
@@ -1744,88 +1548,35 @@ async function handleLeadConversation({
   imageDataUrl?: string | null;
   contact?: ResolvedContact | null;
 }) {
-  const logStudentId = contact?.studentId || null;
-  const canLog = Boolean(logStudentId || phoneTail);
-  const historyPayload = canLog
-    ? await fetchConversationHistory(db, logStudentId, phoneTail)
-    : { history: [] as ConversationMessage[], total: 0 };
-  let runningCount = historyPayload.total;
-
-  const logUserMessage = async (meta?: Record<string, any>) => {
-    if (!canLog) return;
-    await logConversationMessage({
-      db,
-      studentId: logStudentId,
-      phoneTail,
-      role: "user",
-      content: messageText,
-      meta: { subscriberName, imageUrl, contactSource: contact?.source, ...(meta || {}) },
-    });
-    runningCount += 1;
-  };
-
-  const logAssistantMessage = async (reply: string, meta?: Record<string, any>) => {
-    if (!canLog) return;
-    await logConversationMessage({
-      db,
-      studentId: logStudentId,
-      phoneTail,
-      role: "assistant",
-      content: reply,
-      meta: meta || null,
-    });
-    runningCount += 1;
-    await handleConversationRetention({ db, studentId: logStudentId, phoneTail, totalCount: runningCount });
-  };
-
   const emailCandidate = extractEmailCandidate(messageText);
   if (emailCandidate) {
     const normalizedPhone = normalizeE164Phone(rawPhone || phoneTail);
     if (!normalizedPhone) {
-      const reply = "Per collegarti ho bisogno del numero completo con cui mi stai scrivendo 😊";
-      await logUserMessage();
-      await logAssistantMessage(reply);
-      return jsonResponse(reply);
+      return jsonResponse("Per collegarti ho bisogno del numero completo con cui mi stai scrivendo 😊");
     }
     const link = await linkEmailToPhone(db, emailCandidate, normalizedPhone);
-    if (link.status === "linked") {
-      const refreshedContact =
-        (link.contact && link.contact.isBlack ? link.contact : null) ||
-        (await resolveContact(db, normalizedPhone));
+    if (link.status === "linked" && link.studentId) {
+      const refreshedContact = await resolveContact(db, normalizedPhone);
       if (refreshedContact && refreshedContact.isBlack) {
-        // Delegate to Black flow (which will log conversation).
         return handleBlackConversation({
           db,
           resolvedContact: refreshedContact,
           messageText,
           subscriberName,
           phoneTail: extractPhoneTail(normalizedPhone),
-          imageUrl,
-          imageDataUrl,
         });
       }
-      const reply = "Grazie! Ho collegato la tua mail: scrivimi ora dall'app per riprendere la chat ✌️";
-      await logUserMessage();
-      await logAssistantMessage(reply);
-      return jsonResponse(reply);
+      return jsonResponse("Grazie! Ho collegato la tua mail: scrivimi ora dall'app per riprendere la chat ✌️");
     }
-    const reply = "Questa mail non risulta nei nostri account, puoi ricontrollare? 😊";
-    await logUserMessage();
-    await logAssistantMessage(reply);
-    return jsonResponse(reply);
+    return jsonResponse("Questa mail non risulta nei nostri account, puoi ricontrollare? 😊");
   }
 
   if (!phoneTail) {
-    const reply = "Per aiutarti devo avere il tuo numero completo su WhatsApp. Puoi riprovare? 😊";
-    await logUserMessage();
-    await logAssistantMessage(reply);
-    return jsonResponse(reply);
+    return jsonResponse("Per aiutarti devo avere il tuo numero completo su WhatsApp. Puoi riprovare? 😊");
   }
 
   const intent = inferLeadIntent(messageText);
   if (intent !== "info") {
-    await logUserMessage();
-    await logAssistantMessage(NON_BLACK_ACADEMIC_REPLY);
     return jsonResponse(NON_BLACK_ACADEMIC_REPLY);
   }
 
@@ -1838,21 +1589,44 @@ async function handleLeadConversation({
     return jsonResponse(NON_BLACK_ACADEMIC_REPLY);
   }
 
-  await logUserMessage({
-    inquiryId: inquiry.id,
-    contactSource: contact?.source,
+  const logStudentId = contact?.studentId || null;
+  const { history, total } = await fetchConversationHistory(
+    db,
+    logStudentId,
+    phoneTail
+  );
+  let runningCount = total;
+  await logConversationMessage({
+    db,
+    studentId: logStudentId,
+    phoneTail,
+    role: "user",
+    content: messageText,
+    meta: {
+      subscriberName,
+      inquiryId: inquiry.id,
+      imageUrl,
+      contactSource: contact?.source,
+    },
   });
+  runningCount += 1;
 
   const reply = await generateInfoReply({
     message: messageText,
-    history: historyPayload.history,
+    history,
     subscriberName,
     imageDataUrl: imageDataUrl || imageUrl || null,
   });
-  await logAssistantMessage(reply, {
-    inquiryId: inquiry.id,
-    contactSource: contact?.source,
+  await logConversationMessage({
+    db,
+    studentId: logStudentId,
+    phoneTail,
+    role: "assistant",
+    content: reply,
+    meta: { inquiryId: inquiry.id, contactSource: contact?.source },
   });
+  runningCount += 1;
+  await handleConversationRetention({ db, studentId: null, phoneTail, totalCount: runningCount });
   await updateInquiryCounters({ db, inquiryId: inquiry.id, increment: 2 });
   return jsonResponse(reply, { isBlack: false });
 }
