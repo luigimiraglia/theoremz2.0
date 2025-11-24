@@ -996,7 +996,44 @@ async function resolveContact(
     }
   }
 
+  if (tail) {
+    const fallback = await resolveContactFromLogs(db, tail);
+    if (fallback) return fallback;
+  }
+
   return null;
+}
+
+async function resolveContactFromLogs(
+  db: ReturnType<typeof supabaseServer>,
+  phoneTail: string
+): Promise<ResolvedContact | null> {
+  const { data, error } = await db
+    .from(WHATSAPP_MESSAGES_TABLE)
+    .select("student_id")
+    .eq("phone_tail", phoneTail)
+    .not("student_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) {
+    console.error("[manychat-whatsapp] history contact lookup failed", error.message);
+    return null;
+  }
+  const studentId = data?.[0]?.student_id;
+  if (!studentId) return null;
+  const { data: studentRow, error: studentError } = await db
+    .from("black_students")
+    .select(
+      "id, user_id, status, year_class, track, student_name, student_email, parent_email, student_phone, parent_phone, ai_description, goal, difficulty_focus, readiness, risk_level, next_assessment_subject, next_assessment_date, last_contacted_at, last_active_at, initial_avg, current_avg, profiles:profiles!black_students_user_id_fkey(full_name, subscription_tier)"
+    )
+    .eq("id", studentId)
+    .maybeSingle();
+  if (studentError) {
+    console.error("[manychat-whatsapp] history contact student fetch failed", studentError.message);
+    return null;
+  }
+  if (!studentRow) return null;
+  return mapBlackStudent(studentRow as BlackStudentRow);
 }
 
 async function fetchConversationHistory(
