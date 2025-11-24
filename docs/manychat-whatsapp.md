@@ -128,6 +128,8 @@ create table if not exists public.black_whatsapp_conversations (
   bot text,
   last_message_at timestamptz,
   last_message_preview text,
+  followup_due_at timestamptz,
+  followup_sent_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -139,6 +141,8 @@ create index if not exists black_whatsapp_conversations_status_idx
 > `phone_tail` contiene le ultime 10 cifre del numero, così da collegare anche i contatti senza profilazione completa. Solo gli ultimi 20 messaggi vengono passati all'AI per ogni risposta; il resto viene compresso nel summary quando superi i 70 messaggi totali.
 
 Stati: `waiting_tutor` (default, inoltro verso Telegram), `tutor` (gestione manuale), `bot` (risponde in automatico). Tipi: `black`, `prospect`, `genitore`, `insegnante`, `altro`. Il campo `bot` è libero e si imposta dai comandi Telegram per scegliere il copione da usare quando `status=bot`.
+
+Il bot sales usa lo storico (via `black_whatsapp_messages` filtrato per `phone_tail`) per generare risposte coerenti e programma un follow-up automatico impostando `followup_due_at` (ritardo dinamico: 1–6h in base all’urgenza percepita). `followup_sent_at` viene valorizzato quando il recall parte. Nota: il recall scatta quando arriva un nuovo webhook per quel numero o da un job che controlla le conversazioni scadute; aggiungi un cron se vuoi inviarli anche senza nuovi messaggi.
 
 ## Configurazione ManyChat (WhatsApp)
 

@@ -91,6 +91,13 @@ export async function POST(req: Request) {
     // Log inbound message
   await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
 
+  // follow-up sales se scaduto
+  await maybeSendSalesFollowup({
+    conversation: baseConversation,
+    phoneNumberId,
+    rawPhone,
+  });
+
   if (conversationStatus !== "bot") {
     const safeTail = phoneTail || conversation?.phone_tail || "unknown";
     await notifyOperators({
@@ -107,6 +114,7 @@ export async function POST(req: Request) {
 
     // BOT mode
     if (!studentResult) {
+      const historyResult = await fetchConversationHistory(null, phoneTail, HISTORY_LIMIT);
       const emailCandidate = extractEmailCandidate(text);
       if (emailCandidate && supabase) {
         const linked = await linkEmailToPhone(emailCandidate, rawPhone);
@@ -152,7 +160,7 @@ export async function POST(req: Request) {
       }
       const reply =
         conversationType === "prospect" || conversationType === "altro"
-          ? await generateSalesReply(text || "")
+          ? await generateSalesReply(text || "", historyResult.history)
           : ASK_EMAIL_MESSAGE;
       await logConversationMessage(null, phoneTail, "assistant", reply);
       await upsertConversation({
@@ -161,6 +169,8 @@ export async function POST(req: Request) {
         status: "bot",
         type: conversationType,
         lastMessage: reply,
+        followupDueAt: new Date(Date.now() + deriveFollowupDelayMs(text)).toISOString(),
+        followupSentAt: null,
       });
       await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
       continue;
@@ -183,6 +193,7 @@ export async function POST(req: Request) {
       status: "bot",
       type: "black",
       lastMessage: reply,
+      followupDueAt: null,
     });
 
     await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
@@ -321,6 +332,8 @@ type ConversationRow = {
   bot?: string | null;
   last_message_at?: string | null;
   last_message_preview?: string | null;
+  followup_due_at?: string | null;
+  followup_sent_at?: string | null;
 };
 
 function deriveConversationType(existing: ConversationType | null | undefined, student: BlackStudentRow | null) {
@@ -328,9 +341,31 @@ function deriveConversationType(existing: ConversationType | null | undefined, s
   return student ? "black" : "prospect";
 }
 
-async function generateSalesReply(text: string) {
-  if (!openai) return "Ciao! Vuoi info sui nostri programmi? Ti racconto Black e come funziona.";
-  const prompt = `Sei Luigi Miraglia e rispondi su WhatsApp a un potenziale cliente. Spiega il valore di Theoremz Black (o altri prodotti se citati) in modo chiaro, naturale e umano. Fai domande mirate per capire cosa cerca. Testo semplice, niente markdown o latex.`;
+function deriveFollowupDelayMs(text: string | null | undefined) {
+  const lower = (text || "").toLowerCase();
+  if (!lower) return 3 * 3600 * 1000; // default 3h
+  if (/\bsubito\b|\bora\b|\boggi\b/.test(lower)) return 1 * 3600 * 1000;
+  if (/\bdomani\b|\bentro domani\b/.test(lower)) return 2.5 * 3600 * 1000;
+  if (/\bsettimana\b|\bweek\b/.test(lower)) return 6 * 3600 * 1000;
+  if (/\bpiù tardi\b|\bpoi\b/.test(lower)) return 4 * 3600 * 1000;
+  return 3 * 3600 * 1000;
+}
+
+async function generateSalesReply(text: string, history: ConversationMessage[] = []) {
+  if (!openai) {
+    return "Ciao! Sono Luigi di Theoremz. Ti aiuto a capire se Black (tutor dedicato, verifiche, preparazione a verifiche/esami) è adatto a te. Raccontami classe, materia e obiettivo.";
+  }
+  const prompt = `
+Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp a chi chiede info.
+- Tone: empatico, conciso, zero fluff. Massimo 5 frasi brevi.
+- Business: Theoremz Black = tutor personale per matematica/fisica, preparazione verifiche/esami, piani personalizzati, feedback continuo, contatto umano. Offri consigli sul piano migliore in base a classe/obiettivo/difficoltà.
+- Obiettivo: capire bisogno (classe, materia, prossime verifiche, obiettivo) e proporre il percorso giusto senza pressare. Offri follow-up (“se non rispondi, ti scrivo più tardi per aiutarti”).
+- Evita markdown o emoji; niente latex.
+`;
+  const historyText = history
+    .slice(-6)
+    .map((h) => `${h.role === "user" ? "Utente" : "Theoremz"}: ${h.content}`)
+    .join("\n");
   try {
     const completion = await openai.chat.completions.create({
       model: VISION_MODEL,
@@ -338,13 +373,14 @@ async function generateSalesReply(text: string) {
       max_tokens: 320,
       messages: [
         { role: "system", content: prompt },
+        historyText ? { role: "system", content: `Cronologia breve:\n${historyText}` } : null,
         { role: "user", content: text || "Raccontami cosa fate." },
-      ],
+      ].filter(Boolean) as any,
     });
     return completion.choices[0]?.message?.content?.trim() || "Posso aiutarti con info su Theoremz Black, dimmi cosa cerchi.";
   } catch (err) {
     console.error("[whatsapp-cloud] sales reply failed", err);
-    return "Posso aiutarti con info su Theoremz Black, dimmi cosa cerchi.";
+    return "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia e obiettivo e ti consiglio il piano giusto.";
   }
 }
 
@@ -372,6 +408,8 @@ async function upsertConversation({
   type,
   bot,
   lastMessage,
+  followupDueAt,
+  followupSentAt,
 }: {
   phoneTail: string | null;
   phoneE164?: string | null;
@@ -380,6 +418,8 @@ async function upsertConversation({
   type?: ConversationType | null;
   bot?: string | null;
   lastMessage?: string | null;
+  followupDueAt?: string | null;
+  followupSentAt?: string | null;
 }): Promise<ConversationRow | null> {
   if (!supabase || !phoneTail) return null;
   const now = new Date().toISOString();
@@ -392,6 +432,8 @@ async function upsertConversation({
   if (status) payload.status = status;
   if (type) payload.type = type;
   if (bot !== undefined) payload.bot = bot;
+  if (followupDueAt !== undefined) payload.followup_due_at = followupDueAt;
+  if (followupSentAt !== undefined) payload.followup_sent_at = followupSentAt;
   if (lastMessage) {
     payload.last_message_at = now;
     payload.last_message_preview = lastMessage.replace(/\s+/g, " ").slice(0, 200);
@@ -434,6 +476,44 @@ async function notifyOperators({
       )
     )
   );
+}
+
+async function maybeSendSalesFollowup({
+  conversation,
+  phoneNumberId,
+  rawPhone,
+}: {
+  conversation: ConversationRow | null;
+  phoneNumberId: string;
+  rawPhone: string | null;
+}) {
+  if (
+    !conversation ||
+    conversation.status !== "bot" ||
+    !conversation.type ||
+    (conversation.type !== "prospect" && conversation.type !== "altro")
+  ) {
+    return;
+  }
+  const due = conversation.followup_due_at ? new Date(conversation.followup_due_at).getTime() : null;
+  const sent = conversation.followup_sent_at ? new Date(conversation.followup_sent_at).getTime() : null;
+  if (!due || sent) return;
+  const now = Date.now();
+  if (now < due) return;
+  const followup =
+    "Ciao, torno a scriverti per aiutarti con matematica/fisica. Qual è la prossima verifica e su quali argomenti hai bisogno di supporto? Ti consiglio il percorso giusto.";
+  await sendCloudReply({ phoneNumberId, to: rawPhone!, body: followup });
+  await upsertConversation({
+    phoneTail: conversation.phone_tail,
+    phoneE164: conversation.phone_e164,
+    studentId: conversation.student_id || null,
+    status: "bot",
+    type: conversation.type,
+    followupDueAt: null,
+    followupSentAt: new Date().toISOString(),
+    lastMessage: followup,
+  });
+  await logConversationMessage(conversation.student_id || null, conversation.phone_tail, "assistant", followup);
 }
 
 async function sendTelegramMessage(chatId: number, text: string) {
