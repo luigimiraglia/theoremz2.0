@@ -937,7 +937,7 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
   const { data: studentMeta } = await db
     .from("black_students")
     .select(
-      "last_contacted_at, last_active_at, readiness, year_class, track, next_assessment_subject, next_assessment_date, goal, difficulty_focus"
+      "last_contacted_at, last_active_at, readiness, year_class, track, next_assessment_subject, next_assessment_date, goal, difficulty_focus, student_phone, parent_phone"
     )
     .eq("id", id)
     .maybeSingle();
@@ -973,8 +973,14 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
     studentMeta?.goal
       ? `│ ${italic("Goal")}: ${escapeMarkdown(studentMeta.goal)}`
       : null,
-    studentMeta?.difficulty_focus
+      studentMeta?.difficulty_focus
       ? `│ ${italic("Focus")}: ${escapeMarkdown(studentMeta.difficulty_focus)}`
+      : null,
+    studentMeta?.student_phone
+      ? `│ ${italic("Telefono studente")}: ${escapeMarkdown(studentMeta.student_phone)}`
+      : null,
+    studentMeta?.parent_phone
+      ? `│ ${italic("Telefono genitore")}: ${escapeMarkdown(studentMeta.parent_phone)}`
       : null,
     "╰────────────────────────",
   ]

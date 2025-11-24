@@ -653,6 +653,16 @@ function buildSuffixFilter(columns: string[], tail: string | null) {
   return columns.map((column) => `${column}.ilike.${escaped}`).join(",");
 }
 
+function matchesPhoneTail(phoneValue: string | null | undefined, tail: string | null) {
+  if (!phoneValue || !tail) return false;
+  const phoneDigits = normalizeDigits(phoneValue);
+  const tailDigits = normalizeDigits(tail);
+  if (!phoneDigits || !tailDigits) return false;
+  const phoneSuffix = phoneDigits.slice(-10);
+  const tailSuffix = tailDigits.slice(-10);
+  return phoneSuffix === tailSuffix;
+}
+
 function unwrapProfile<T>(value: T | T[] | null | undefined) {
   if (!value) return null;
   return Array.isArray(value) ? value[0] ?? null : value;
@@ -936,25 +946,33 @@ async function resolveContact(
   const normalizedFull = normalizeE164Phone(phone);
   const tail = extractPhoneTail(phone);
 
-  const tryBlackLookup = async (filter: string) => {
+  const tryBlackLookup = async (filter: string, tailHint?: string | null) => {
     const { data, error } = await db
       .from("black_students")
       .select(
         "id, user_id, status, year_class, track, student_name, student_email, parent_email, student_phone, parent_phone, ai_description, goal, difficulty_focus, readiness, risk_level, next_assessment_subject, next_assessment_date, last_contacted_at, last_active_at, initial_avg, current_avg, profiles:profiles!black_students_user_id_fkey(full_name, subscription_tier)"
       )
       .or(filter)
-      .limit(1);
+      .limit(5);
     if (error) throw new Error(`black_students lookup failed: ${error.message}`);
-    if (data && data.length) {
-      return mapBlackStudent(data[0] as BlackStudentRow);
-    }
+    const rows = (data as BlackStudentRow[]) || [];
+    if (!rows.length) return null;
+    const matchByTail =
+      tailHint &&
+      rows.find(
+        (row) =>
+          matchesPhoneTail(row.student_phone, tailHint) ||
+          matchesPhoneTail(row.parent_phone, tailHint)
+      );
+    const picked = matchByTail || rows[0];
+    if (picked) return mapBlackStudent(picked);
     return null;
   };
 
   if (normalizedFull) {
     const exactFilter = buildExactFilter(["student_phone", "parent_phone"], normalizedFull);
     if (exactFilter) {
-      const hit = await tryBlackLookup(exactFilter);
+      const hit = await tryBlackLookup(exactFilter, tail);
       if (hit) return hit;
     }
   }
@@ -962,28 +980,31 @@ async function resolveContact(
   if (tail) {
     const studentFilter = buildSuffixFilter(["student_phone", "parent_phone"], tail);
     if (studentFilter) {
-      const hit = await tryBlackLookup(studentFilter);
+      const hit = await tryBlackLookup(studentFilter, tail);
       if (hit) return hit;
     }
   }
 
-  const tryProfileLookup = async (filter: string) => {
+  const tryProfileLookup = async (filter: string, tailHint?: string | null) => {
     const { data, error } = await db
       .from("student_profiles")
       .select("user_id, full_name, phone, email, is_black")
       .or(filter)
-      .limit(1);
+      .limit(5);
     if (error) throw new Error(`student_profiles lookup failed: ${error.message}`);
-    if (data && data.length) {
-      return mapStudentProfile(data[0] as StudentProfileRow);
-    }
+    const rows = (data as StudentProfileRow[]) || [];
+    if (!rows.length) return null;
+    const matchByTail =
+      tailHint && rows.find((row) => matchesPhoneTail(row.phone, tailHint));
+    const picked = matchByTail || rows[0];
+    if (picked) return mapStudentProfile(picked);
     return null;
   };
 
   if (normalizedFull) {
     const exactProfileFilter = buildExactFilter(["phone"], normalizedFull);
     if (exactProfileFilter) {
-      const hit = await tryProfileLookup(exactProfileFilter);
+      const hit = await tryProfileLookup(exactProfileFilter, tail);
       if (hit) return hit;
     }
   }
@@ -991,7 +1012,7 @@ async function resolveContact(
   if (tail) {
     const profileFilter = buildSuffixFilter(["phone"], tail);
     if (profileFilter) {
-      const hit = await tryProfileLookup(profileFilter);
+      const hit = await tryProfileLookup(profileFilter, tail);
       if (hit) return hit;
     }
   }
