@@ -653,6 +653,12 @@ function buildSuffixFilter(columns: string[], tail: string | null) {
   return columns.map((column) => `${column}.ilike.${escaped}`).join(",");
 }
 
+function buildContainsFilter(columns: string[], value: string | null) {
+  if (!value) return "";
+  const escaped = value.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
+  return columns.map((column) => `${column}.ilike.%${escaped}%`).join(",");
+}
+
 function matchesPhoneTail(phoneValue: string | null | undefined, tail: string | null) {
   if (!phoneValue || !tail) return false;
   const phoneDigits = normalizeDigits(phoneValue);
@@ -996,6 +1002,19 @@ async function resolveContact(
     const studentFilter = buildSuffixFilter(["student_phone", "parent_phone"], tail);
     if (studentFilter) {
       const hit = await tryBlackLookup(studentFilter, tail);
+      if (hit) return hit;
+    }
+  }
+
+  const containsCandidates = Array.from(
+    new Set(
+      [digitsOnly, localDigits].filter((v) => (v ? v.length >= 6 : false))
+    )
+  );
+  for (const candidate of containsCandidates) {
+    const filter = buildContainsFilter(["student_phone", "parent_phone"], candidate);
+    if (filter) {
+      const hit = await tryBlackLookup(filter, tail);
       if (hit) return hit;
     }
   }
