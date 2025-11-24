@@ -19,6 +19,7 @@ const PRUNE_DELETE_COUNT = 50;
 const ASK_EMAIL_MESSAGE = "Non trovo un abbonamento Black con questo numero. Scrivimi l'email del tuo account così lo collego.";
 const NON_BLACK_CLARIFY_MESSAGE =
   "Dimmi se vuoi info sui nostri programmi (Black, quiz, percorsi) oppure se ti serve una mano su matematica: ti indirizzo subito.";
+const INSIGHTS_MODEL = "gpt-4o-mini";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -89,6 +90,12 @@ export async function POST(req: Request) {
 
     await logConversationMessage(student.id, phoneTail, "user", promptText);
     await logConversationMessage(student.id, phoneTail, "assistant", reply);
+    await extractAndStoreInsights({
+      studentId: student.id,
+      phoneTail,
+      messageText: text || "",
+      history: historyResult.history,
+    });
     const totalCount = historyResult.total + 2;
     if (totalCount >= SUMMARY_THRESHOLD) {
       await summarizeAndPrune(student.id);
@@ -467,6 +474,114 @@ Obiettivi:
   } catch (error) {
     console.error("[whatsapp-cloud] openai error", error);
     return "Non riesco a rispondere ora per un errore tecnico.";
+  }
+}
+
+type InsightPayload = {
+  studentId: string;
+  phoneTail: string | null;
+  messageText: string;
+  history: ConversationMessage[];
+};
+
+async function extractAndStoreInsights(payload: InsightPayload) {
+  if (!openai || !supabase) return;
+  const { studentId, messageText, history } = payload;
+  const trimmed = messageText.trim();
+  if (!trimmed) return;
+  try {
+    const contextText = (history || [])
+      .slice(-5)
+      .map((h) => `${h.role === "user" ? "Studente" : "Luigi"}: ${h.content}`)
+      .join("\n");
+    const prompt = `Estrai eventuali dati strutturati dal messaggio seguente (tono WhatsApp).
+Restituisci JSON con chiavi opzionali:
+- student_name: string
+- difficulty_focus: string (difficoltà citate)
+- next_assessment_subject: string
+- next_assessment_date: YYYY-MM-DD se menzionata una data, altrimenti null
+- goal: string
+Se non trovi un campo, mettilo null o ometti. Nessun testo extra, solo JSON.`;
+
+    const completion = await openai.chat.completions.create({
+      model: INSIGHTS_MODEL,
+      temperature: 0,
+      max_tokens: 200,
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: `Storico recente:\n${contextText || "(vuoto)"}\n\nMessaggio:\n${trimmed}` },
+      ],
+      response_format: { type: "json_object" },
+    });
+    const raw = completion.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(raw);
+    const { data: currentRow, error: currentErr } = await supabase
+      .from("black_students")
+      .select(
+        "student_name, difficulty_focus, next_assessment_subject, next_assessment_date, goal"
+      )
+      .eq("id", studentId)
+      .maybeSingle();
+    if (currentErr) {
+      console.error("[whatsapp-cloud] insight current fetch failed", currentErr);
+      return;
+    }
+
+    const updatePayload: Record<string, any> = {};
+
+    const incomingName = parsed.student_name;
+    if (incomingName && typeof incomingName === "string" && !currentRow?.student_name) {
+      updatePayload.student_name = incomingName;
+    }
+
+    const mergeDistinct = (existing: string | null | undefined, incoming: string | null | undefined) => {
+      if (!incoming || typeof incoming !== "string" || !incoming.trim()) return existing || null;
+      if (!existing) return incoming;
+      const lowerExisting = existing.toLowerCase();
+      const lowerIncoming = incoming.toLowerCase();
+      if (lowerExisting.includes(lowerIncoming)) return existing;
+      return `${existing}; ${incoming}`.trim();
+    };
+
+    const incomingDifficulty = parsed.difficulty_focus;
+    if (incomingDifficulty && typeof incomingDifficulty === "string") {
+      const merged = mergeDistinct(currentRow?.difficulty_focus, incomingDifficulty);
+      if (merged && merged !== currentRow?.difficulty_focus) {
+        updatePayload.difficulty_focus = merged;
+      }
+    }
+
+    const incomingGoal = parsed.goal;
+    if (incomingGoal && typeof incomingGoal === "string") {
+      const merged = mergeDistinct(currentRow?.goal, incomingGoal);
+      if (merged && merged !== currentRow?.goal) {
+        updatePayload.goal = merged;
+      }
+    }
+
+    const incomingSubject = parsed.next_assessment_subject;
+    if (
+      incomingSubject &&
+      typeof incomingSubject === "string" &&
+      !currentRow?.next_assessment_subject
+    ) {
+      updatePayload.next_assessment_subject = incomingSubject;
+    }
+
+    const incomingDate = parsed.next_assessment_date;
+    if (
+      incomingDate &&
+      typeof incomingDate === "string" &&
+      !currentRow?.next_assessment_date
+    ) {
+      updatePayload.next_assessment_date = incomingDate;
+    }
+
+    if (!Object.keys(updatePayload).length) return;
+    updatePayload.updated_at = new Date().toISOString();
+    await supabase.from("black_students").update(updatePayload).eq("id", studentId);
+  } catch (err) {
+    console.error("[whatsapp-cloud] insight extraction failed", err);
   }
 }
 
