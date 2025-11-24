@@ -348,7 +348,9 @@ async function generateReply(
 Obiettivi:
 - Capisci cosa chiede lo studente (anche dalle immagini) e fornisci spiegazioni chiare.
 - Se la domanda è ambigua, chiedi tu chiarimenti specifici.
-- Non offrire call o link promozionali finché non sono richiesti.`;
+- Non offrire call o link promozionali finché non sono richiesti.
+- NON usare Latex, Markdown, simboli speciali o formattazioni: rispondi solo in testo semplice, con formule scritte in modo leggibile su WhatsApp (es: 2x^2 + 3x = 5, (a+b)^2 = a^2 + 2ab + b^2).
+- Spiega in modo facilissimo e super esplicito, tono naturale e umano. Spezza in frasi brevi, aggiungi righe vuote per leggibilità quando utile.`;
   const contextBlock =
     studentContext && typeof studentContext === "string"
       ? `\n\nDati sullo studente (usa solo se pertinenti, altrimenti ignora):\n${studentContext}`
