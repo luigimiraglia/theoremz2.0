@@ -1728,11 +1728,48 @@ async function handleLeadConversation({
   imageDataUrl?: string | null;
   contact?: ResolvedContact | null;
 }) {
+  const logStudentId = contact?.studentId || null;
+  const canLog = Boolean(logStudentId || phoneTail);
+  const historyPayload = canLog
+    ? await fetchConversationHistory(db, logStudentId, phoneTail)
+    : { history: [] as ConversationMessage[], total: 0 };
+  let runningCount = historyPayload.total;
+
+  const logUserMessage = async (meta?: Record<string, any>) => {
+    if (!canLog) return;
+    await logConversationMessage({
+      db,
+      studentId: logStudentId,
+      phoneTail,
+      role: "user",
+      content: messageText,
+      meta: { subscriberName, imageUrl, contactSource: contact?.source, ...(meta || {}) },
+    });
+    runningCount += 1;
+  };
+
+  const logAssistantMessage = async (reply: string, meta?: Record<string, any>) => {
+    if (!canLog) return;
+    await logConversationMessage({
+      db,
+      studentId: logStudentId,
+      phoneTail,
+      role: "assistant",
+      content: reply,
+      meta: meta || null,
+    });
+    runningCount += 1;
+    await handleConversationRetention({ db, studentId: logStudentId, phoneTail, totalCount: runningCount });
+  };
+
   const emailCandidate = extractEmailCandidate(messageText);
   if (emailCandidate) {
     const normalizedPhone = normalizeE164Phone(rawPhone || phoneTail);
     if (!normalizedPhone) {
-      return jsonResponse("Per collegarti ho bisogno del numero completo con cui mi stai scrivendo 😊");
+      const reply = "Per collegarti ho bisogno del numero completo con cui mi stai scrivendo 😊";
+      await logUserMessage();
+      await logAssistantMessage(reply);
+      return jsonResponse(reply);
     }
     const link = await linkEmailToPhone(db, emailCandidate, normalizedPhone);
     if (link.status === "linked") {
@@ -1740,6 +1777,7 @@ async function handleLeadConversation({
         (link.contact && link.contact.isBlack ? link.contact : null) ||
         (await resolveContact(db, normalizedPhone));
       if (refreshedContact && refreshedContact.isBlack) {
+        // Delegate to Black flow (which will log conversation).
         return handleBlackConversation({
           db,
           resolvedContact: refreshedContact,
@@ -1750,17 +1788,28 @@ async function handleLeadConversation({
           imageDataUrl,
         });
       }
-      return jsonResponse("Grazie! Ho collegato la tua mail: scrivimi ora dall'app per riprendere la chat ✌️");
+      const reply = "Grazie! Ho collegato la tua mail: scrivimi ora dall'app per riprendere la chat ✌️";
+      await logUserMessage();
+      await logAssistantMessage(reply);
+      return jsonResponse(reply);
     }
-    return jsonResponse("Questa mail non risulta nei nostri account, puoi ricontrollare? 😊");
+    const reply = "Questa mail non risulta nei nostri account, puoi ricontrollare? 😊";
+    await logUserMessage();
+    await logAssistantMessage(reply);
+    return jsonResponse(reply);
   }
 
   if (!phoneTail) {
-    return jsonResponse("Per aiutarti devo avere il tuo numero completo su WhatsApp. Puoi riprovare? 😊");
+    const reply = "Per aiutarti devo avere il tuo numero completo su WhatsApp. Puoi riprovare? 😊";
+    await logUserMessage();
+    await logAssistantMessage(reply);
+    return jsonResponse(reply);
   }
 
   const intent = inferLeadIntent(messageText);
   if (intent !== "info") {
+    await logUserMessage();
+    await logAssistantMessage(NON_BLACK_ACADEMIC_REPLY);
     return jsonResponse(NON_BLACK_ACADEMIC_REPLY);
   }
 
@@ -1773,44 +1822,21 @@ async function handleLeadConversation({
     return jsonResponse(NON_BLACK_ACADEMIC_REPLY);
   }
 
-  const logStudentId = contact?.studentId || null;
-  const { history, total } = await fetchConversationHistory(
-    db,
-    logStudentId,
-    phoneTail
-  );
-  let runningCount = total;
-  await logConversationMessage({
-    db,
-    studentId: logStudentId,
-    phoneTail,
-    role: "user",
-    content: messageText,
-    meta: {
-      subscriberName,
-      inquiryId: inquiry.id,
-      imageUrl,
-      contactSource: contact?.source,
-    },
+  await logUserMessage({
+    inquiryId: inquiry.id,
+    contactSource: contact?.source,
   });
-  runningCount += 1;
 
   const reply = await generateInfoReply({
     message: messageText,
-    history,
+    history: historyPayload.history,
     subscriberName,
     imageDataUrl: imageDataUrl || imageUrl || null,
   });
-  await logConversationMessage({
-    db,
-    studentId: logStudentId,
-    phoneTail,
-    role: "assistant",
-    content: reply,
-    meta: { inquiryId: inquiry.id, contactSource: contact?.source },
+  await logAssistantMessage(reply, {
+    inquiryId: inquiry.id,
+    contactSource: contact?.source,
   });
-  runningCount += 1;
-  await handleConversationRetention({ db, studentId: null, phoneTail, totalCount: runningCount });
   await updateInquiryCounters({ db, inquiryId: inquiry.id, increment: 2 });
   return jsonResponse(reply, { isBlack: false });
 }
