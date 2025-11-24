@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { supabaseServer } from "@/lib/supabase";
 
 const verifyToken = process.env.WHATSAPP_CLOUD_VERIFY_TOKEN?.trim() || "";
 const graphApiVersion = process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v20.0";
@@ -9,6 +10,9 @@ const openaiApiKey = process.env.OPENAI_API_KEY?.trim() || "";
 const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
 const VISION_MODEL = "gpt-4o";
 const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata e dimmi come posso aiutarti.";
+const NOT_SUBSCRIBED_MESSAGE = "Non sei abbonato a Theoremz Black.";
+const HAS_SUPABASE_ENV = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+const supabase = HAS_SUPABASE_ENV ? supabaseServer() : null;
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -51,6 +55,12 @@ export async function POST(req: Request) {
     const text = extractCloudText(message);
     const imageSource = buildImageSourceFromCloud(message);
     const imageDataUrl = imageSource ? await downloadImageAsDataUrl(imageSource) : null;
+    const phoneTail = extractPhoneTail(rawPhone);
+
+    if (!(await isBlackSubscriber(phoneTail))) {
+      await sendCloudReply({ phoneNumberId, to: rawPhone, body: NOT_SUBSCRIBED_MESSAGE });
+      continue;
+    }
 
     const promptText =
       text && imageDataUrl
@@ -89,6 +99,13 @@ type CloudImage = {
   mime_type?: string;
 };
 
+function extractPhoneTail(rawPhone: string | null) {
+  if (!rawPhone) return null;
+  const digits = rawPhone.replace(/\D+/g, "");
+  if (digits.length < 6) return null;
+  return digits.slice(-10);
+}
+
 function buildImageSourceFromCloud(message: any): CloudImage | null {
   if (!message) return null;
   if (message.type === "image" && message.image?.id) {
@@ -98,6 +115,28 @@ function buildImageSourceFromCloud(message: any): CloudImage | null {
     return { id: message.document.id, mime_type: message.document.mime_type };
   }
   return null;
+}
+
+async function isBlackSubscriber(phoneTail: string | null) {
+  if (!phoneTail) return false;
+  if (!supabase) {
+    console.error("[whatsapp-cloud] supabase env missing, skipping phone check");
+    return false;
+  }
+  const { data, error } = await supabase
+    .from("black_students")
+    .select("id")
+    .eq("status", "active")
+    .or(`student_phone.ilike.%${phoneTail},parent_phone.ilike.%${phoneTail}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[whatsapp-cloud] supabase phone lookup error", error);
+    return false;
+  }
+
+  return Boolean(data?.id);
 }
 
 async function downloadImageAsDataUrl(image: CloudImage) {
