@@ -19,23 +19,15 @@ async function handle(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const now = new Date();
-  const hour = now.getUTCHours();
-  const minute = now.getUTCMinutes();
   const results: Record<string, any> = {};
 
   // WhatsApp followup every run
   results.followup = await callFollowup();
 
-  // Digest once in the 18:00 UTC window
-  if (hour === 18 && minute < 15) {
-    results.digest = await callInternal("/api/telegram/digest");
-  }
+  // Digest and sync once per run (cron now daily)
+  results.digest = await callInternal("/api/telegram/digest");
 
-  // Stripe sync once in the 00:00 UTC window
-  if (hour === 0 && minute < 15) {
-    results.sync = await callInternal("/api/cron/sync-black-subscriptions");
-  }
+  results.sync = await callInternal("/api/cron/sync-black-subscriptions");
 
   return NextResponse.json({ ok: true, results });
 }
