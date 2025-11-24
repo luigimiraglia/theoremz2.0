@@ -13,6 +13,13 @@ const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata e dimmi come posso aiutart
 const HAS_SUPABASE_ENV = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const supabase = HAS_SUPABASE_ENV ? supabaseServer() : null;
 const WHATSAPP_MESSAGES_TABLE = "black_whatsapp_messages";
+const WHATSAPP_CONVERSATIONS_TABLE = "black_whatsapp_conversations";
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN?.trim() || "";
+const OPERATOR_CHAT_IDS: number[] = (process.env.WHATSAPP_OPERATOR_CHAT_IDS || "")
+  .split(",")
+  .map((v) => Number(v.trim()))
+  .filter((v) => Number.isFinite(v))
+  .slice(0, 5);
 const HISTORY_LIMIT = 20;
 const SUMMARY_THRESHOLD = 70;
 const PRUNE_DELETE_COUNT = 50;
@@ -56,12 +63,56 @@ export async function POST(req: Request) {
   for (const message of messages) {
     const rawPhone = message?.from || value?.contacts?.[0]?.wa_id || null;
     if (!rawPhone) continue;
+    const phoneE164 = normalizePhone(rawPhone);
     const text = extractCloudText(message);
     const imageSource = buildImageSourceFromCloud(message);
     const imageDataUrl = imageSource ? await downloadImageAsDataUrl(imageSource) : null;
     const phoneTail = extractPhoneTail(rawPhone);
     const studentResult = await fetchBlackStudentWithContext(phoneTail);
+    const baseConversation = await fetchConversation(phoneTail);
+    const conversationType = deriveConversationType(baseConversation?.type as ConversationType, studentResult?.student || null);
+    const conversationStatus = (baseConversation?.status as ConversationStatus) || "waiting_tutor";
 
+    const inboundText =
+      text && imageDataUrl
+        ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
+        : text || IMAGE_ONLY_PROMPT;
+
+    const conversation = await upsertConversation({
+      phoneTail,
+      phoneE164,
+      studentId: studentResult?.student.id,
+      status: conversationStatus,
+      type: conversationType,
+      lastMessage: inboundText,
+      bot: baseConversation?.bot ?? null,
+    });
+
+    // Log inbound message
+    await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
+
+    if (conversationStatus !== "bot") {
+      await notifyOperators({
+        conversation: {
+          ...(conversation || { phone_tail: phoneTail }),
+          status: conversationStatus,
+          type: conversationType,
+        },
+        text: text || "(nessun testo, solo media)",
+        rawPhone,
+      });
+      // Optional soft ack for first contact
+      if (!baseConversation?.last_message_at && phoneE164) {
+        await sendCloudReply({
+          phoneNumberId,
+          to: rawPhone,
+          body: "Grazie, ti risponde un tutor a breve.",
+        });
+      }
+      continue;
+    }
+
+    // BOT mode
     if (!studentResult) {
       const emailCandidate = extractEmailCandidate(text);
       if (emailCandidate && supabase) {
@@ -82,12 +133,19 @@ export async function POST(req: Request) {
             const reply = emailOnly
               ? "Perfetto, ho collegato la tua email all'account. Scrivimi pure la domanda o manda una foto dell'esercizio."
               : await generateReply(promptText, imageDataUrl, contextText, historyResult.history);
-            await logConversationMessage(student.id, phoneTail, "user", promptText);
             await logConversationMessage(student.id, phoneTail, "assistant", reply);
-            const totalCount = historyResult.total + 2;
+            const totalCount = historyResult.total + 1;
             if (totalCount >= SUMMARY_THRESHOLD) {
               await summarizeAndPrune(student.id);
             }
+            await upsertConversation({
+              phoneTail,
+              phoneE164,
+              studentId: student.id,
+              status: "bot",
+              type: "black",
+              lastMessage: reply,
+            });
             await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
             continue;
           }
@@ -97,34 +155,42 @@ export async function POST(req: Request) {
             body: "Ho collegato la mail, scrivimi di nuovo il messaggio così ti rispondo.",
           });
           continue;
-        } else {
-          await sendCloudReply({
-            phoneNumberId,
-            to: rawPhone,
-            body: "Questa mail non risulta nei nostri abbonati, puoi ricontrollare?",
-          });
-          continue;
         }
       }
-      await sendCloudReply({ phoneNumberId, to: rawPhone, body: ASK_EMAIL_MESSAGE });
+      const reply =
+        conversationType === "prospect" || conversationType === "altro"
+          ? await generateSalesReply(text || "")
+          : ASK_EMAIL_MESSAGE;
+      await logConversationMessage(null, phoneTail, "assistant", reply);
+      await upsertConversation({
+        phoneTail,
+        phoneE164,
+        status: "bot",
+        type: conversationType,
+        lastMessage: reply,
+      });
+      await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
       continue;
     }
 
     const { student, contextText } = studentResult;
     const historyResult = await fetchConversationHistory(student.id, phoneTail, HISTORY_LIMIT);
+    const reply = await generateReply(inboundText, imageDataUrl, contextText, historyResult.history);
 
-    const promptText =
-      text && imageDataUrl
-        ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
-        : text || IMAGE_ONLY_PROMPT;
-    const reply = await generateReply(promptText, imageDataUrl, contextText, historyResult.history);
-
-    await logConversationMessage(student.id, phoneTail, "user", promptText);
     await logConversationMessage(student.id, phoneTail, "assistant", reply);
-    const totalCount = historyResult.total + 2;
+    const totalCount = historyResult.total + 1;
     if (totalCount >= SUMMARY_THRESHOLD) {
       await summarizeAndPrune(student.id);
     }
+
+    await upsertConversation({
+      phoneTail,
+      phoneE164,
+      studentId: student.id,
+      status: "bot",
+      type: "black",
+      lastMessage: reply,
+    });
 
     await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
   }
@@ -161,6 +227,9 @@ type ConversationMessage = {
   role: "user" | "assistant";
   content: string;
 };
+
+type ConversationStatus = "bot" | "waiting_tutor" | "tutor";
+type ConversationType = "black" | "prospect" | "genitore" | "insegnante" | "altro";
 
 function extractPhoneTail(rawPhone: string | null) {
   if (!rawPhone) return null;
@@ -247,6 +316,125 @@ function normalizePhone(raw: string | null) {
     normalized = `39${normalized}`;
   }
   return `+${normalized}`;
+}
+
+type ConversationRow = {
+  id?: string;
+  phone_tail: string;
+  phone_e164?: string | null;
+  student_id?: string | null;
+  status?: ConversationStatus;
+  type?: ConversationType;
+  bot?: string | null;
+  last_message_at?: string | null;
+  last_message_preview?: string | null;
+};
+
+function deriveConversationType(existing: ConversationType | null | undefined, student: BlackStudentRow | null) {
+  if (existing) return existing;
+  return student ? "black" : "prospect";
+}
+
+async function fetchConversation(phoneTail: string | null): Promise<ConversationRow | null> {
+  if (!supabase || !phoneTail) return null;
+  try {
+    const { data, error } = await supabase
+      .from(WHATSAPP_CONVERSATIONS_TABLE)
+      .select("*")
+      .eq("phone_tail", phoneTail)
+      .maybeSingle();
+    if (error) throw error;
+    return (data as ConversationRow) || null;
+  } catch (err) {
+    console.error("[whatsapp-cloud] conversation fetch failed", err);
+    return null;
+  }
+}
+
+async function upsertConversation({
+  phoneTail,
+  phoneE164,
+  studentId,
+  status,
+  type,
+  bot,
+  lastMessage,
+}: {
+  phoneTail: string | null;
+  phoneE164?: string | null;
+  studentId?: string | null;
+  status?: ConversationStatus | null;
+  type?: ConversationType | null;
+  bot?: string | null;
+  lastMessage?: string | null;
+}): Promise<ConversationRow | null> {
+  if (!supabase || !phoneTail) return null;
+  const now = new Date().toISOString();
+  const payload: Record<string, any> = {
+    phone_tail: phoneTail,
+    updated_at: now,
+  };
+  if (phoneE164) payload.phone_e164 = phoneE164;
+  if (studentId) payload.student_id = studentId;
+  if (status) payload.status = status;
+  if (type) payload.type = type;
+  if (bot !== undefined) payload.bot = bot;
+  if (lastMessage) {
+    payload.last_message_at = now;
+    payload.last_message_preview = lastMessage.replace(/\s+/g, " ").slice(0, 200);
+  }
+  try {
+    const { data, error } = await supabase
+      .from(WHATSAPP_CONVERSATIONS_TABLE)
+      .upsert(payload, { onConflict: "phone_tail" })
+      .select("*")
+      .maybeSingle();
+    if (error) throw error;
+    return (data as ConversationRow) || null;
+  } catch (err) {
+    console.error("[whatsapp-cloud] conversation upsert failed", err);
+    return null;
+  }
+}
+
+async function notifyOperators({
+  conversation,
+  text,
+  rawPhone,
+}: {
+  conversation: ConversationRow;
+  text: string | null | undefined;
+  rawPhone: string | null;
+}) {
+  if (!TELEGRAM_BOT_TOKEN || !OPERATOR_CHAT_IDS.length) return;
+  const status = conversation.status || "waiting_tutor";
+  const type = conversation.type || "prospect";
+  const header = `💬 WA (${status}) — ${type}`;
+  const phoneLine = `Numero: ${rawPhone || conversation.phone_e164 || conversation.phone_tail}`;
+  const convIdLine = conversation.id ? `ID: ${conversation.id}` : null;
+  const body = text || "(messaggio senza testo)";
+  const hints =
+    "Comandi: /wa <telefono|email|nome> messaggio · /wastatus <telefono> bot|waiting|tutor · /watype <telefono> black|prospect|genitore|insegnante|altro · /wabot <telefono> nome_bot";
+  const message = [header, phoneLine, convIdLine, "", body, "", hints]
+    .filter(Boolean)
+    .join("\n");
+  await Promise.all(
+    OPERATOR_CHAT_IDS.map((chatId) =>
+      sendTelegramMessage(chatId, message).catch((err) =>
+        console.error("[whatsapp-cloud] notify operator failed", { chatId, err })
+      )
+    )
+  );
+}
+
+async function sendTelegramMessage(chatId: number, text: string) {
+  if (!TELEGRAM_BOT_TOKEN) return;
+  const endpoint = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text }),
+  });
 }
 
 async function linkEmailToPhone(email: string, rawPhone: string | null) {
@@ -427,18 +615,21 @@ async function sendCloudReply({
 }
 
 async function fetchConversationHistory(
-  studentId: string,
+  studentId: string | null,
   phoneTail: string | null,
   limit = HISTORY_LIMIT
 ): Promise<{ history: ConversationMessage[]; total: number }> {
   if (!supabase) return { history: [], total: 0 };
   try {
-    const { data, error, count } = await supabase
-      .from(WHATSAPP_MESSAGES_TABLE)
-      .select("role, content", { count: "exact" })
-      .eq("student_id", studentId)
-      .order("created_at", { ascending: false })
-      .limit(limit);
+    const query = supabase.from(WHATSAPP_MESSAGES_TABLE).select("role, content", { count: "exact" });
+    if (studentId) {
+      query.eq("student_id", studentId);
+    } else if (phoneTail) {
+      query.eq("phone_tail", phoneTail);
+    } else {
+      return { history: [], total: 0 };
+    }
+    const { data, error, count } = await query.order("created_at", { ascending: false }).limit(limit);
     if (error) throw error;
     return {
       history: (data || []).reverse() as ConversationMessage[],
@@ -451,7 +642,7 @@ async function fetchConversationHistory(
 }
 
 async function logConversationMessage(
-  studentId: string,
+  studentId: string | null,
   phoneTail: string | null,
   role: "user" | "assistant",
   content: string

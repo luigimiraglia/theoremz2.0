@@ -37,6 +37,13 @@ const CHAT_LABELS = new Map(
     .map((entry) => [entry.id, entry.label as string])
 );
 const CONTACT_LOG_TABLE = "black_contact_logs";
+const WHATSAPP_MESSAGES_TABLE = "black_whatsapp_messages";
+const WHATSAPP_CONVERSATIONS_TABLE = "black_whatsapp_conversations";
+const WHATSAPP_GRAPH_VERSION =
+  process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v20.0";
+const WHATSAPP_PHONE_NUMBER_ID =
+  process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID?.trim() || "";
+const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN?.trim() || "";
 
 async function send(
   chat_id: number | string,
@@ -528,6 +535,153 @@ function sanitizePhoneInput(raw: string) {
   }
   if (!normalized) return null;
   return `+${normalized}`;
+}
+
+function phoneTail(raw: string | null | undefined) {
+  if (!raw) return null;
+  const digits = raw.replace(/\D+/g, "");
+  if (!digits) return null;
+  return digits.slice(-10) || null;
+}
+
+type WaConversationStatus = "bot" | "waiting_tutor" | "tutor";
+type WaConversationType = "black" | "prospect" | "genitore" | "insegnante" | "altro";
+
+function parseWaStatus(raw: string | null | undefined): WaConversationStatus | null {
+  const s = raw?.toLowerCase();
+  if (s === "waiting" || s === "waiting_tutor") return "waiting_tutor";
+  if (s === "bot") return "bot";
+  if (s === "tutor") return "tutor";
+  return null;
+}
+
+function parseWaType(raw: string | null | undefined): WaConversationType | null {
+  const s = raw?.toLowerCase();
+  if (!s) return null;
+  if (["black", "prospect", "genitore", "insegnante", "altro"].includes(s)) return s as WaConversationType;
+  return null;
+}
+
+async function resolveConversationTarget(
+  db: ReturnType<typeof supabaseServer>,
+  query: string
+): Promise<{ phone: string; phoneTail: string; studentId: string | null; type: WaConversationType } | { err: string }> {
+  const normalizedQuery = query.trim();
+  const isEmail = normalizedQuery.includes("@");
+  const phoneCandidate = normalizedQuery.replace(/\s+/g, "");
+  const looksLikePhone = /^\+?\d{6,}$/.test(phoneCandidate);
+
+  if (looksLikePhone) {
+    const phone = sanitizePhoneInput(normalizedQuery);
+    if (!phone) return { err: "❌ Numero non valido." };
+    const tail = phoneTail(phone);
+    if (!tail) return { err: "❌ Impossibile estrarre il numero." };
+    return { phone, phoneTail: tail, studentId: null, type: "prospect" };
+  }
+
+  let studentId: string | null = null;
+  if (isEmail) {
+    const lookup = await lookupStudentByEmail(db, normalizedQuery.toLowerCase());
+    if ((lookup as any).err) return { err: (lookup as any).err };
+    studentId = (lookup as any).id;
+  } else {
+    const res = await resolveStudentId(db, normalizedQuery);
+    if ((res as any).err) return { err: (res as any).err };
+    studentId = (res as any).id;
+  }
+
+  const { data, error } = await db
+    .from("black_students")
+    .select("student_phone, parent_phone")
+    .eq("id", studentId)
+    .maybeSingle();
+  if (error) return { err: `❌ Errore lettura telefono: ${error.message}` };
+  const phone = sanitizePhoneInput(data?.student_phone || data?.parent_phone || "");
+  if (!phone) return { err: "❌ Nessun numero WhatsApp salvato per questo profilo." };
+  const tail = phoneTail(phone);
+  if (!tail) return { err: "❌ Impossibile normalizzare il numero." };
+  return { phone, phoneTail: tail, studentId, type: "black" };
+}
+
+async function upsertWaConversation(
+  db: ReturnType<typeof supabaseServer>,
+  payload: {
+    phoneTail: string;
+    phone: string;
+    studentId?: string | null;
+    status?: WaConversationStatus | null;
+    type?: WaConversationType | null;
+    bot?: string | null;
+    lastMessage?: string | null;
+  }
+) {
+  const now = new Date().toISOString();
+  const record: Record<string, any> = {
+    phone_tail: payload.phoneTail,
+    phone_e164: payload.phone,
+    updated_at: now,
+  };
+  if (payload.studentId) record.student_id = payload.studentId;
+  if (payload.status) record.status = payload.status;
+  if (payload.type) record.type = payload.type;
+  if (payload.bot !== undefined) record.bot = payload.bot;
+  if (payload.lastMessage) {
+    record.last_message_at = now;
+    record.last_message_preview = payload.lastMessage.replace(/\s+/g, " ").slice(0, 200);
+  }
+  const { error } = await db
+    .from(WHATSAPP_CONVERSATIONS_TABLE)
+    .upsert(record, { onConflict: "phone_tail" });
+  if (error) throw new Error(error.message);
+}
+
+async function sendWhatsAppText(to: string, body: string) {
+  if (!META_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+    throw new Error("Config WhatsApp mancante (META_ACCESS_TOKEN o WHATSAPP_CLOUD_PHONE_NUMBER_ID).");
+  }
+  const endpoint = `https://graph.facebook.com/${WHATSAPP_GRAPH_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  const payload = {
+    messaging_product: "whatsapp",
+    to,
+    type: "text",
+    text: { body },
+  };
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${META_ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  let responseBody: any = null;
+  try {
+    responseBody = await res.json();
+  } catch {
+    // ignore
+  }
+  if (!res.ok || (responseBody && responseBody.error)) {
+    throw new Error(responseBody?.error?.message || `WhatsApp send failed (${res.status})`);
+  }
+}
+
+async function logManualWaMessage(
+  db: ReturnType<typeof supabaseServer>,
+  studentId: string | null,
+  phoneTail: string,
+  body: string
+) {
+  try {
+    await db.from(WHATSAPP_MESSAGES_TABLE).insert({
+      student_id: studentId,
+      phone_tail: phoneTail,
+      role: "assistant",
+      content: body,
+      meta: { source: "telegram_bot" },
+    });
+  } catch (err: any) {
+    console.error("[telegram-bot] whatsapp log failed", err);
+  }
 }
 
 function formatHours(value: number) {
@@ -1467,6 +1621,117 @@ async function cmdLOGS({ db, chatId, text }: CmdCtx) {
   await send(chatId, textLines.join("\n"));
 }
 
+/** /wa <telefono|email|cognome> <messaggio...> → invia su WhatsApp e passa a tutor */
+async function cmdWA({ db, chatId, text }: CmdCtx) {
+  const m = text.match(/^\/wa(?:@\w+)?\s+(\S+)(?:\s+([\s\S]+))?$/i);
+  if (!m) return send(chatId, "Uso: /wa telefono|email|cognome messaggio");
+  const [, query, bodyRaw] = m;
+  const body = bodyRaw?.trim();
+  if (!body) return send(chatId, "Scrivi anche il messaggio da inviare.");
+
+  const target = await resolveConversationTarget(db, query);
+  if ((target as any).err) return send(chatId, (target as any).err);
+  const { phone, phoneTail, studentId, type } = target as any;
+
+  try {
+    await sendWhatsAppText(phone, body);
+    await logManualWaMessage(db, studentId, phoneTail, body);
+    await upsertWaConversation(db, {
+      phoneTail,
+      phone,
+      studentId,
+      status: "tutor",
+      type,
+      lastMessage: body,
+    });
+    await send(
+      chatId,
+      `📨 Inviato a ${escapeMarkdown(phone)} (${type})\nStato: tutor`
+    );
+  } catch (err: any) {
+    await send(chatId, `❌ Invio WhatsApp fallito: ${err?.message || err}`);
+  }
+}
+
+/** /wastatus <telefono|email|cognome> <bot|waiting|tutor> */
+async function cmdWASTATUS({ db, chatId, text }: CmdCtx) {
+  const m = text.match(/^\/wastatus(?:@\w+)?\s+(\S+)\s+(\S+)/i);
+  if (!m) return send(chatId, "Uso: /wastatus telefono|email|cognome bot|waiting|tutor");
+  const [, query, statusRaw] = m;
+  const status = parseWaStatus(statusRaw);
+  if (!status) return send(chatId, "Stato valido: bot, waiting, tutor");
+
+  const target = await resolveConversationTarget(db, query);
+  if ((target as any).err) return send(chatId, (target as any).err);
+  const { phone, phoneTail, studentId, type } = target as any;
+
+  try {
+    await upsertWaConversation(db, {
+      phoneTail,
+      phone,
+      studentId,
+      status,
+      type,
+    });
+    await send(chatId, `✅ Stato conversazione ${escapeMarkdown(phoneTail)} → ${status}`);
+  } catch (err: any) {
+    await send(chatId, `❌ Update stato fallito: ${err?.message || err}`);
+  }
+}
+
+/** /watype <telefono|email|cognome> <black|prospect|genitore|insegnante|altro> */
+async function cmdWATYPE({ db, chatId, text }: CmdCtx) {
+  const m = text.match(/^\/watype(?:@\w+)?\s+(\S+)\s+(\S+)/i);
+  if (!m)
+    return send(
+      chatId,
+      "Uso: /watype telefono|email|cognome black|prospect|genitore|insegnante|altro"
+    );
+  const [, query, typeRaw] = m;
+  const type = parseWaType(typeRaw);
+  if (!type) return send(chatId, "Tipo non valido.");
+
+  const target = await resolveConversationTarget(db, query);
+  if ((target as any).err) return send(chatId, (target as any).err);
+  const { phone, phoneTail, studentId } = target as any;
+
+  try {
+    await upsertWaConversation(db, {
+      phoneTail,
+      phone,
+      studentId,
+      type,
+    });
+    await send(chatId, `✅ Tipo conversazione ${escapeMarkdown(phoneTail)} → ${type}`);
+  } catch (err: any) {
+    await send(chatId, `❌ Update tipo fallito: ${err?.message || err}`);
+  }
+}
+
+/** /wabot <telefono|email|cognome> <nome_bot> → setta il bot e attiva stato bot */
+async function cmdWABOT({ db, chatId, text }: CmdCtx) {
+  const m = text.match(/^\/wabot(?:@\w+)?\s+(\S+)\s+(\S+)/i);
+  if (!m) return send(chatId, "Uso: /wabot telefono|email|cognome nome_bot");
+  const [, query, bot] = m;
+  const target = await resolveConversationTarget(db, query);
+  if ((target as any).err) return send(chatId, (target as any).err);
+  const { phone, phoneTail, studentId, type } = target as any;
+
+  try {
+    await upsertWaConversation(db, {
+      phoneTail,
+      phone,
+      studentId,
+      type,
+      bot,
+      status: "bot",
+    });
+    await send(chatId, `🤖 Bot impostato su ${escapeMarkdown(phoneTail)} → ${bot} (stato bot)`);
+  } catch (err: any) {
+    await send(chatId, `❌ Update bot fallito: ${err?.message || err}`);
+  }
+}
+
 /** /nomebreve <nome|email> <Nome> */
 async function cmdNOMEBREVE({ db, chatId, text }: CmdCtx) {
   const m = text.match(/^\/nomebreve(?:@\w+)?\s+(\S+)\s+(.+)$/i);
@@ -1994,6 +2259,10 @@ export async function POST(req: Request) {
           "`/desc cognome testo...` — aggiorna overview studente",
           "`/telefono cognome|email +39333... [studente|genitore]` — aggiorna telefono",
           "`/nome email@example.com Nuovo Nome` — aggiorna il nome in anagrafica",
+          "`/wa tel|email|nome messaggio` — rispondi su WhatsApp e passa a tutor",
+          "`/wastatus tel|email|nome bot|waiting|tutor` — cambia stato conversazione",
+          "`/watype tel|email|nome black|prospect|genitore|insegnante|altro` — cambia tipo conversazione",
+          "`/wabot tel|email|nome nome_bot` — assegna bot e attiva stato bot",
           "`/checked cognome|email [nota]` — segna ultimo contatto + log",
         ].join("\n")
       );
@@ -2001,6 +2270,14 @@ export async function POST(req: Request) {
       await cmdOGGI(ctx);
     } else if (/^\/logs(\s|@)/i.test(text)) {
       await cmdLOGS(ctx);
+    } else if (/^\/wa(\s|@)/i.test(text)) {
+      await cmdWA(ctx);
+    } else if (/^\/wastatus(\s|@)/i.test(text)) {
+      await cmdWASTATUS(ctx);
+    } else if (/^\/watype(\s|@)/i.test(text)) {
+      await cmdWATYPE(ctx);
+    } else if (/^\/wabot(\s|@)/i.test(text)) {
+      await cmdWABOT(ctx);
     } else if (/^\/nomebreve(\s|@)/i.test(text)) {
       await cmdNOMEBREVE(ctx);
     } else if (/^\/votoiniziale(\s|@)/i.test(text)) {

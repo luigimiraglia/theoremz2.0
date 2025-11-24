@@ -117,9 +117,28 @@ create table if not exists public.black_whatsapp_inquiries (
 
 create unique index if not exists black_whatsapp_inquiries_phone_tail_key
   on public.black_whatsapp_inquiries(phone_tail);
+
+create table if not exists public.black_whatsapp_conversations (
+  id uuid primary key default gen_random_uuid(),
+  phone_tail text unique not null,
+  phone_e164 text,
+  student_id uuid references public.black_students(id) on delete set null,
+  status text not null default 'waiting_tutor' check (status in ('bot','waiting_tutor','tutor')),
+  type text not null default 'prospect' check (type in ('black','prospect','genitore','insegnante','altro')),
+  bot text,
+  last_message_at timestamptz,
+  last_message_preview text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists black_whatsapp_conversations_status_idx
+  on public.black_whatsapp_conversations(status, type);
 ```
 
 > `phone_tail` contiene le ultime 10 cifre del numero, così da collegare anche i contatti senza profilazione completa. Solo gli ultimi 20 messaggi vengono passati all'AI per ogni risposta; il resto viene compresso nel summary quando superi i 70 messaggi totali.
+
+Stati: `waiting_tutor` (default, inoltro verso Telegram), `tutor` (gestione manuale), `bot` (risponde in automatico). Tipi: `black`, `prospect`, `genitore`, `insegnante`, `altro`. Il campo `bot` è libero e si imposta dai comandi Telegram per scegliere il copione da usare quando `status=bot`.
 
 ## Configurazione ManyChat (WhatsApp)
 
