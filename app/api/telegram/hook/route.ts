@@ -937,7 +937,7 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
   const { data: studentMeta } = await db
     .from("black_students")
     .select(
-      "last_contacted_at, last_active_at, readiness, year_class, track, next_assessment_subject, next_assessment_date, goal, difficulty_focus, student_phone, parent_phone"
+      "last_contacted_at, last_active_at, readiness, year_class, track, next_assessment_subject, next_assessment_date, goal, difficulty_focus, student_phone, parent_phone, student_email, parent_email, ai_description"
     )
     .eq("id", id)
     .maybeSingle();
@@ -954,37 +954,33 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
         studentMeta.next_assessment_date
       )}`
     : "—";
+  const fmt = (label: string, value: string | null | undefined) =>
+    `│ ${italic(label)}: ${escapeMarkdown(value ?? "—")}`;
   const infoCard = [
     "╭────────────────────────",
     `│ ${bold(name)}`,
-    studentMeta?.year_class
-      ? `│ ${italic("Classe")}: ${escapeMarkdown(studentMeta.year_class)}${
-          studentMeta?.track
-            ? ` · ${italic("Track")}: ${escapeMarkdown(studentMeta.track)}`
-            : ""
-        }`
-      : studentMeta?.track
-        ? `│ ${italic("Track")}: ${escapeMarkdown(studentMeta.track)}`
-        : null,
-    `│ ${italic("Ultimo contatto")}: ${escapeMarkdown(lastContact)}`,
-    `│ ${italic("Ultimo accesso")}: ${escapeMarkdown(lastAccess)}`,
-    `│ ${italic("Readiness")}: ${escapeMarkdown(readiness)}`,
-    `│ ${italic("Prossima verifica")}: ${escapeMarkdown(nextAssessment)}`,
-    studentMeta?.goal
-      ? `│ ${italic("Goal")}: ${escapeMarkdown(studentMeta.goal)}`
-      : null,
-      studentMeta?.difficulty_focus
-      ? `│ ${italic("Focus")}: ${escapeMarkdown(studentMeta.difficulty_focus)}`
-      : null,
-    studentMeta?.student_phone
-      ? `│ ${italic("Telefono studente")}: ${escapeMarkdown(studentMeta.student_phone)}`
-      : null,
-    studentMeta?.parent_phone
-      ? `│ ${italic("Telefono genitore")}: ${escapeMarkdown(studentMeta.parent_phone)}`
-      : null,
+    fmt(
+      "Classe / Track",
+      [
+        studentMeta?.year_class || "—",
+        studentMeta?.track ? `Track: ${studentMeta.track}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ") || "—"
+    ),
+    fmt("Ultimo contatto", lastContact),
+    fmt("Ultimo accesso", lastAccess),
+    fmt("Readiness", readiness),
+    fmt("Prossima verifica", nextAssessment),
+    fmt("Goal", studentMeta?.goal || "—"),
+    fmt("Focus", studentMeta?.difficulty_focus || "—"),
+    fmt("Telefono studente", studentMeta?.student_phone || "—"),
+    fmt("Telefono genitore", studentMeta?.parent_phone || "—"),
+    fmt("Email studente", studentMeta?.student_email || "—"),
+    fmt("Email genitore", studentMeta?.parent_email || "—"),
+    fmt("Nota tutor AI", studentMeta?.ai_description || "—"),
     "╰────────────────────────",
   ]
-    .filter(Boolean)
     .join("\n");
 
   const body = brief?.brief_md || italic("Nessun brief.");
