@@ -71,7 +71,9 @@ export async function POST(req: Request) {
     const studentResult = await fetchBlackStudentWithContext(phoneTail);
     const baseConversation = await fetchConversation(phoneTail);
     const conversationType = deriveConversationType(baseConversation?.type as ConversationType, studentResult?.student || null);
-    const conversationStatus = (baseConversation?.status as ConversationStatus) || "waiting_tutor";
+    const conversationStatus =
+      (baseConversation?.status as ConversationStatus) ||
+      (conversationType === "prospect" || conversationType === "altro" ? "bot" : "waiting_tutor");
 
     const inboundText =
       text && imageDataUrl

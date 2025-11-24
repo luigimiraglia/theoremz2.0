@@ -144,6 +144,11 @@ Stati: `waiting_tutor` (default, inoltro verso Telegram), `tutor` (gestione manu
 
 Il bot sales usa lo storico (via `black_whatsapp_messages` filtrato per `phone_tail`) per generare risposte coerenti e programma un follow-up automatico impostando `followup_due_at` (ritardo dinamico: 1–6h in base all’urgenza percepita). `followup_sent_at` viene valorizzato quando il recall parte. Nota: il recall scatta quando arriva un nuovo webhook per quel numero o da un job che controlla le conversazioni scadute; aggiungi un cron se vuoi inviarli anche senza nuovi messaggi.
 
+### Cron follow-up
+Endpoint: `POST /api/whatsapp-cloud/followup?secret=XYZ&limit=20`  
+Env: `WHATSAPP_FOLLOWUP_SECRET` (richiesto), `META_ACCESS_TOKEN`, `WHATSAPP_CLOUD_PHONE_NUMBER_ID`, `WHATSAPP_GRAPH_VERSION` (opzionale).  
+Logica: cerca conversazioni `status=bot`, `type in (prospect, altro)`, `followup_due_at <= now`, `followup_sent_at is null`, invia il messaggio di recall e aggiorna `followup_sent_at` + log su `black_whatsapp_messages`. Usa `limit` (default 20) per batch.
+
 ## Configurazione ManyChat (WhatsApp)
 
 1. **Automation → Flows**: crea (o apri) il flow associato all'evento "Incoming Message" del canale WhatsApp.
