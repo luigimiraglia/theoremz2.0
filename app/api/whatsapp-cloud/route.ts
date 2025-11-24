@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     });
 
     // Log inbound message
-  await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
+    await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
 
   // follow-up sales se scaduto
   await maybeSendSalesFollowup({
@@ -107,10 +107,37 @@ export async function POST(req: Request) {
         type: conversationType,
       },
       text: text || "(nessun testo, solo media)",
-      rawPhone,
-    });
-    continue;
-  }
+        rawPhone,
+      });
+      continue;
+    }
+
+    // BOT mode con tipo prospect/altro forzato, anche se esiste uno studente
+    if (conversationType === "prospect" || conversationType === "altro") {
+      const historyResult = await fetchConversationHistory(
+        studentResult?.student.id || null,
+        phoneTail,
+        HISTORY_LIMIT
+      );
+      const reply = await generateSalesReply(inboundText, historyResult.history);
+      await logConversationMessage(studentResult?.student.id || null, phoneTail, "assistant", reply);
+      const totalCount = historyResult.total + 1;
+      if (totalCount >= SUMMARY_THRESHOLD && studentResult?.student?.id) {
+        await summarizeAndPrune(studentResult.student.id);
+      }
+      await upsertConversation({
+        phoneTail,
+        phoneE164,
+        studentId: studentResult?.student.id || null,
+        status: "bot",
+        type: conversationType,
+        lastMessage: reply,
+        followupDueAt: new Date(Date.now() + deriveFollowupDelayMs(inboundText)).toISOString(),
+        followupSentAt: null,
+      });
+      await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
+      continue;
+    }
 
     // BOT mode
     if (!studentResult) {
