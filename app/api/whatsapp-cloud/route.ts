@@ -13,6 +13,10 @@ const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata e dimmi come posso aiutart
 const NOT_SUBSCRIBED_MESSAGE = "Non sei abbonato a Theoremz Black.";
 const HAS_SUPABASE_ENV = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const supabase = HAS_SUPABASE_ENV ? supabaseServer() : null;
+const WHATSAPP_MESSAGES_TABLE = "black_whatsapp_messages";
+const HISTORY_LIMIT = 20;
+const SUMMARY_THRESHOLD = 70;
+const PRUNE_DELETE_COUNT = 50;
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -56,19 +60,28 @@ export async function POST(req: Request) {
     const imageSource = buildImageSourceFromCloud(message);
     const imageDataUrl = imageSource ? await downloadImageAsDataUrl(imageSource) : null;
     const phoneTail = extractPhoneTail(rawPhone);
+    const studentResult = await fetchBlackStudentWithContext(phoneTail);
 
-    if (!(await isBlackSubscriber(phoneTail))) {
+    if (!studentResult) {
       await sendCloudReply({ phoneNumberId, to: rawPhone, body: NOT_SUBSCRIBED_MESSAGE });
       continue;
     }
 
-    const extraContext = await fetchBlackContext(phoneTail);
+    const { student, contextText } = studentResult;
+    const historyResult = await fetchConversationHistory(student.id, phoneTail, HISTORY_LIMIT);
 
     const promptText =
       text && imageDataUrl
         ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
         : text || IMAGE_ONLY_PROMPT;
-    const reply = await generateReply(promptText, imageDataUrl, extraContext);
+    const reply = await generateReply(promptText, imageDataUrl, contextText, historyResult.history);
+
+    await logConversationMessage(student.id, phoneTail, "user", promptText);
+    await logConversationMessage(student.id, phoneTail, "assistant", reply);
+    const totalCount = historyResult.total + 2;
+    if (totalCount >= SUMMARY_THRESHOLD) {
+      await summarizeAndPrune(student.id);
+    }
 
     await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
   }
@@ -101,11 +114,77 @@ type CloudImage = {
   mime_type?: string;
 };
 
+type ConversationMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 function extractPhoneTail(rawPhone: string | null) {
   if (!rawPhone) return null;
   const digits = rawPhone.replace(/\D+/g, "");
   if (digits.length < 6) return null;
   return digits.slice(-10);
+}
+
+type BlackStudentRow = {
+  id: string;
+  student_name?: string | null;
+  student_email?: string | null;
+  parent_email?: string | null;
+  year_class?: string | null;
+  track?: string | null;
+  goal?: string | null;
+  difficulty_focus?: string | null;
+  readiness?: number | null;
+  ai_description?: string | null;
+  next_assessment_subject?: string | null;
+  next_assessment_date?: string | null;
+};
+
+async function fetchBlackStudentWithContext(phoneTail: string | null): Promise<{ student: BlackStudentRow; contextText: string | null } | null> {
+  if (!phoneTail || !supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from("black_students")
+      .select(
+        "id, student_name, student_email, parent_email, year_class, track, goal, difficulty_focus, readiness, ai_description, next_assessment_subject, next_assessment_date"
+      )
+      .eq("status", "active")
+      .or(`student_phone.ilike.%${phoneTail},parent_phone.ilike.%${phoneTail}`)
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error("[whatsapp-cloud] supabase context lookup error", error);
+      return null;
+    }
+    if (!data) return null;
+    const contextText = buildStudentContext(data as BlackStudentRow);
+    return { student: data as BlackStudentRow, contextText };
+  } catch (err) {
+    console.error("[whatsapp-cloud] context fetch failed", err);
+    return null;
+  }
+}
+
+function buildStudentContext(student: BlackStudentRow | null) {
+  if (!student) return null;
+  const parts: string[] = [];
+  if (student.student_name) parts.push(`Nome: ${student.student_name}`);
+  if (student.student_email) parts.push(`Email studente: ${student.student_email}`);
+  if (student.parent_email) parts.push(`Email genitore: ${student.parent_email}`);
+  if (student.year_class) parts.push(`Classe: ${student.year_class}`);
+  if (student.track) parts.push(`Percorso: ${student.track}`);
+  if (student.goal) parts.push(`Goal: ${student.goal}`);
+  if (student.difficulty_focus) parts.push(`Difficoltà: ${student.difficulty_focus}`);
+  if (typeof student.readiness === "number") parts.push(`Readiness: ${student.readiness}/100`);
+  if (student.next_assessment_subject || student.next_assessment_date) {
+    const dateLabel = student.next_assessment_date || "";
+    parts.push(`Prossima verifica: ${student.next_assessment_subject || "—"} ${dateLabel}`.trim());
+  }
+  if (student.ai_description) {
+    parts.push(`Nota tutor: ${student.ai_description}`);
+  }
+  return parts.length ? parts.join("\n") : null;
 }
 
 function buildImageSourceFromCloud(message: any): CloudImage | null {
@@ -117,67 +196,6 @@ function buildImageSourceFromCloud(message: any): CloudImage | null {
     return { id: message.document.id, mime_type: message.document.mime_type };
   }
   return null;
-}
-
-async function isBlackSubscriber(phoneTail: string | null) {
-  if (!phoneTail) return false;
-  if (!supabase) {
-    console.error("[whatsapp-cloud] supabase env missing, skipping phone check");
-    return false;
-  }
-  const { data, error } = await supabase
-    .from("black_students")
-    .select("id")
-    .eq("status", "active")
-    .or(`student_phone.ilike.%${phoneTail},parent_phone.ilike.%${phoneTail}`)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[whatsapp-cloud] supabase phone lookup error", error);
-    return false;
-  }
-
-  return Boolean(data?.id);
-}
-
-async function fetchBlackContext(phoneTail: string | null) {
-  if (!phoneTail || !supabase) return null;
-  try {
-    const { data, error } = await supabase
-      .from("black_students")
-      .select(
-        "student_name, year_class, track, goal, difficulty_focus, readiness, ai_description, student_email, parent_email, next_assessment_subject, next_assessment_date"
-      )
-      .or(`student_phone.ilike.%${phoneTail},parent_phone.ilike.%${phoneTail}`)
-      .limit(1)
-      .maybeSingle();
-    if (error) {
-      console.error("[whatsapp-cloud] supabase context lookup error", error);
-      return null;
-    }
-    if (!data) return null;
-    const parts: string[] = [];
-    if (data.student_name) parts.push(`Nome: ${data.student_name}`);
-    if (data.student_email) parts.push(`Email studente: ${data.student_email}`);
-    if (data.parent_email) parts.push(`Email genitore: ${data.parent_email}`);
-    if (data.year_class) parts.push(`Classe: ${data.year_class}`);
-    if (data.track) parts.push(`Percorso: ${data.track}`);
-    if (data.goal) parts.push(`Goal: ${data.goal}`);
-    if (data.difficulty_focus) parts.push(`Difficoltà: ${data.difficulty_focus}`);
-    if (typeof data.readiness === "number") parts.push(`Readiness: ${data.readiness}/100`);
-    if (data.next_assessment_subject || data.next_assessment_date) {
-      const dateLabel = data.next_assessment_date || "";
-      parts.push(`Prossima verifica: ${data.next_assessment_subject || "—"} ${dateLabel}`.trim());
-    }
-    if (data.ai_description) {
-      parts.push(`Nota tutor: ${data.ai_description}`);
-    }
-    return parts.length ? parts.join("\n") : null;
-  } catch (err) {
-    console.error("[whatsapp-cloud] context fetch failed", err);
-    return null;
-  }
 }
 
 async function downloadImageAsDataUrl(image: CloudImage) {
@@ -222,7 +240,12 @@ async function downloadImageAsDataUrl(image: CloudImage) {
   }
 }
 
-async function generateReply(text: string, imageDataUrl?: string | null, studentContext?: string | null) {
+async function generateReply(
+  text: string,
+  imageDataUrl?: string | null,
+  studentContext?: string | null,
+  history?: ConversationMessage[]
+) {
   if (!openai) return "Ciao! Non riesco a rispondere ora perché manca la configurazione dell'AI.";
   const systemPromptBase = `Sei Luigi Miraglia, tutor di matematica di Theoremz Black. Rispondi ai messaggi WhatsApp in italiano, con tono umano e poche frasi.
 Obiettivi:
@@ -234,6 +257,13 @@ Obiettivi:
       ? `\n\nDati sullo studente (usa solo se pertinenti, altrimenti ignora):\n${studentContext}`
       : "";
   const systemPrompt = `${systemPromptBase}${contextBlock}`;
+
+  const formattedHistory: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = (history || []).map(
+    (item) => ({
+      role: item.role,
+      content: item.content,
+    })
+  );
 
   const userMessage: OpenAI.Chat.Completions.ChatCompletionMessageParam = imageDataUrl
     ? {
@@ -252,6 +282,7 @@ Obiettivi:
       max_tokens: 320,
       messages: [
         { role: "system", content: systemPrompt },
+        ...formattedHistory,
         userMessage,
       ],
     });
@@ -293,5 +324,102 @@ async function sendCloudReply({
   if (!response.ok) {
     const errPayload = await response.json().catch(() => ({ error: response.statusText }));
     console.error("[whatsapp-cloud] send failed", errPayload);
+  }
+}
+
+async function fetchConversationHistory(
+  studentId: string,
+  phoneTail: string | null,
+  limit = HISTORY_LIMIT
+): Promise<{ history: ConversationMessage[]; total: number }> {
+  if (!supabase) return { history: [], total: 0 };
+  try {
+    const { data, error, count } = await supabase
+      .from(WHATSAPP_MESSAGES_TABLE)
+      .select("role, content", { count: "exact" })
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return {
+      history: (data || []).reverse() as ConversationMessage[],
+      total: typeof count === "number" ? count : data?.length || 0,
+    };
+  } catch (err) {
+    console.error("[whatsapp-cloud] history fetch failed", err);
+    return { history: [], total: 0 };
+  }
+}
+
+async function logConversationMessage(
+  studentId: string,
+  phoneTail: string | null,
+  role: "user" | "assistant",
+  content: string
+) {
+  if (!supabase) return;
+  try {
+    await supabase.from(WHATSAPP_MESSAGES_TABLE).insert({
+      student_id: studentId,
+      phone_tail: phoneTail,
+      role,
+      content,
+    });
+  } catch (err) {
+    console.error("[whatsapp-cloud] log insert failed", err);
+  }
+}
+
+async function summarizeAndPrune(studentId: string) {
+  if (!openai || !supabase) return;
+  try {
+    const { data, error } = await supabase
+      .from(WHATSAPP_MESSAGES_TABLE)
+      .select("role, content")
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: true })
+      .limit(70);
+    if (error) throw error;
+    if (!data?.length) return;
+
+    const transcript = data
+      .map((entry) => `${entry.role === "user" ? "Studente" : "Luigi"}: ${entry.content}`)
+      .join("\n");
+
+    const completion = await openai.chat.completions.create({
+      model: VISION_MODEL,
+      temperature: 0.3,
+      max_tokens: 320,
+      messages: [
+        {
+          role: "system",
+          content: "Sei un tutor Theoremz Black. Riassumi la chat in 4-6 frasi chiare come nota tutor.",
+        },
+        { role: "user", content: transcript },
+      ],
+    });
+    const summary = completion.choices[0]?.message?.content?.trim();
+    if (summary) {
+      await supabase
+        .from("black_students")
+        .update({ ai_description: summary, updated_at: new Date().toISOString() })
+        .eq("id", studentId);
+    }
+
+    const { data: toDelete, error: selectErr } = await supabase
+      .from(WHATSAPP_MESSAGES_TABLE)
+      .select("id")
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: true })
+      .limit(PRUNE_DELETE_COUNT);
+    if (selectErr) throw selectErr;
+    if (toDelete?.length) {
+      await supabase.from(WHATSAPP_MESSAGES_TABLE).delete().in(
+        "id",
+        toDelete.map((row: any) => row.id)
+      );
+    }
+  } catch (err) {
+    console.error("[whatsapp-cloud] summarize/prune failed", err);
   }
 }
