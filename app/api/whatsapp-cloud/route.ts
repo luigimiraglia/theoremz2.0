@@ -20,6 +20,7 @@ const ASK_EMAIL_MESSAGE = "Non trovo un abbonamento Black con questo numero. Scr
 const NON_BLACK_CLARIFY_MESSAGE =
   "Dimmi se vuoi info sui nostri programmi (Black, quiz, percorsi) oppure se ti serve una mano su matematica: ti indirizzo subito.";
 const INSIGHTS_MODEL = "gpt-4o-mini";
+const GRADES_LIMIT = 5;
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -157,6 +158,11 @@ type BlackStudentRow = {
   ai_description?: string | null;
   next_assessment_subject?: string | null;
   next_assessment_date?: string | null;
+  metrics?: {
+    avg_math?: number | null;
+    avg_physics?: number | null;
+    recent_grades?: { subject?: string | null; score?: number | null; max_score?: number | null; when_at?: string | null }[];
+  } | null;
 };
 
 async function fetchBlackStudentWithContext(phoneTail: string | null): Promise<{ student: BlackStudentRow; contextText: string | null } | null> {
@@ -165,7 +171,7 @@ async function fetchBlackStudentWithContext(phoneTail: string | null): Promise<{
     const { data, error } = await supabase
       .from("black_students")
       .select(
-        "id, student_name, student_email, parent_email, year_class, track, goal, difficulty_focus, readiness, ai_description, next_assessment_subject, next_assessment_date"
+        "id, student_name, student_email, parent_email, year_class, track, goal, difficulty_focus, readiness, ai_description, next_assessment_subject, next_assessment_date, metrics"
       )
       .eq("status", "active")
       .or(`student_phone.ilike.%${phoneTail},parent_phone.ilike.%${phoneTail}`)
@@ -201,6 +207,26 @@ function buildStudentContext(student: BlackStudentRow | null) {
   }
   if (student.ai_description) {
     parts.push(`Nota tutor: ${student.ai_description}`);
+  }
+  const metrics = student.metrics || {};
+  if (typeof metrics.avg_math === "number") parts.push(`Media matematica: ${metrics.avg_math.toFixed(1)}/10`);
+  if (typeof metrics.avg_physics === "number") parts.push(`Media fisica: ${metrics.avg_physics.toFixed(1)}/10`);
+  if (metrics.recent_grades?.length) {
+    const gradesText = metrics.recent_grades
+      .map((g) => {
+        const subj = g.subject || "materia";
+        const score =
+          typeof g.score === "number" && typeof g.max_score === "number"
+            ? `${g.score}/${g.max_score}`
+            : g.score != null
+            ? `${g.score}`
+            : "";
+        const date = g.when_at || "";
+        return [subj, score, date].filter(Boolean).join(" ");
+      })
+      .filter(Boolean)
+      .join("; ");
+    if (gradesText) parts.push(`Voti recenti: ${gradesText}`);
   }
   return parts.length ? parts.join("\n") : null;
 }
@@ -552,7 +578,7 @@ Se non trovi un campo, mettilo null o ometti. Nessun testo extra, solo JSON.`;
     const { data: currentRow, error: currentErr } = await supabase
       .from("black_students")
       .select(
-        "student_name, difficulty_focus, next_assessment_subject, next_assessment_date, goal"
+        "student_name, difficulty_focus, next_assessment_subject, next_assessment_date, goal, metrics"
       )
       .eq("id", studentId)
       .maybeSingle();
@@ -612,6 +638,25 @@ Se non trovi un campo, mettilo null o ometti. Nessun testo extra, solo JSON.`;
       if (adjusted) {
         updatePayload.next_assessment_date = adjusted;
       }
+    }
+
+    if (parsed.recent_grades || parsed.avg_math || parsed.avg_physics) {
+      const existingMetrics = (currentRow?.metrics as any) || {};
+      const metricsUpdate: any = { ...existingMetrics };
+      if (typeof parsed.avg_math === "number") metricsUpdate.avg_math = parsed.avg_math;
+      if (typeof parsed.avg_physics === "number") metricsUpdate.avg_physics = parsed.avg_physics;
+      if (Array.isArray(parsed.recent_grades)) {
+        const normalized = parsed.recent_grades
+          .map((g: any) => ({
+            subject: typeof g.subject === "string" ? g.subject : null,
+            score: typeof g.score === "number" ? g.score : null,
+            max_score: typeof g.max_score === "number" ? g.max_score : null,
+            when_at: typeof g.when_at === "string" ? g.when_at : null,
+          }))
+          .filter((g: any) => g.subject || g.score != null || g.max_score != null);
+        if (normalized.length) metricsUpdate.recent_grades = normalized.slice(0, GRADES_LIMIT);
+      }
+      updatePayload.metrics = metricsUpdate;
     }
 
     if (!Object.keys(updatePayload).length) return;
