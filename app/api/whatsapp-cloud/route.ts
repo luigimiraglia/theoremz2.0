@@ -92,9 +92,10 @@ export async function POST(req: Request) {
     await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
 
     if (conversationStatus !== "bot") {
+      const safeTail = phoneTail || conversation?.phone_tail || "unknown";
       await notifyOperators({
         conversation: {
-          ...(conversation || { phone_tail: phoneTail }),
+          ...(conversation || { phone_tail: safeTail }),
           status: conversationStatus,
           type: conversationType,
         },
