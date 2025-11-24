@@ -1008,7 +1008,7 @@ async function resolveContact(
 
   const containsCandidates = Array.from(
     new Set(
-      [digitsOnly, localDigits].filter((v) => (v ? v.length >= 6 : false))
+      [digitsOnly, localDigits].filter((v): v is string => typeof v === "string" && v.length >= 6)
     )
   );
   for (const candidate of containsCandidates) {
