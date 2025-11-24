@@ -37,6 +37,7 @@ const CHAT_LABELS = new Map(
     .map((entry) => [entry.id, entry.label as string])
 );
 const CONTACT_LOG_TABLE = "black_contact_logs";
+const WHATSAPP_MESSAGES_TABLE = "black_whatsapp_messages";
 
 async function send(
   chat_id: number | string,
@@ -1463,6 +1464,53 @@ async function cmdLOGS({ db, chatId, text }: CmdCtx) {
   await send(chatId, textLines.join("\n"));
 }
 
+/** /chat <nome|email> [limite] → ultimi messaggi WhatsApp */
+async function cmdCHAT({ db, chatId, text }: CmdCtx) {
+  const rest = text.replace(/^\/chat(?:@\w+)?/i, "").trim();
+  if (!rest) return send(chatId, "Uso: /chat cognome|email [limite].");
+  const parts = rest.split(/\s+/);
+  let limit = 10;
+  let query = rest;
+  const maybeLimit = parts[parts.length - 1];
+  if (maybeLimit && /^\d+$/.test(maybeLimit)) {
+    limit = Math.max(1, Math.min(20, Number(maybeLimit)));
+    parts.pop();
+    query = parts.join(" ");
+  }
+  if (!query) return send(chatId, "Specificare cognome o email.");
+
+  const resolved = query.includes("@")
+    ? await lookupStudentByEmail(db, query.toLowerCase())
+    : await resolveStudentId(db, query);
+  if ((resolved as any).err) return send(chatId, (resolved as any).err);
+  const { id, name } = resolved as any;
+
+  const { data, error } = await db
+    .from(WHATSAPP_MESSAGES_TABLE)
+    .select("role, content, created_at")
+    .eq("student_id", id)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) return send(chatId, `❌ Errore chat: ${error.message}`);
+  if (!data?.length)
+    return send(chatId, `Nessun messaggio WhatsApp per ${bold(name)}.`);
+
+  const lines = data
+    .slice()
+    .reverse()
+    .map((row: any) => {
+      const when = formatDateTime(row.created_at);
+      const who = row.role === "assistant" ? "🤖 Bot" : "👤 Studente";
+      const cleaned = (row.content || "—").replace(/\s+/g, " ").trim();
+      const snippet =
+        cleaned.length > 260 ? `${cleaned.slice(0, 260)}…` : cleaned || "—";
+      return `• ${when} — ${who}: ${escapeMarkdown(snippet)}`;
+    });
+
+  const header = `💬 Chat WhatsApp · ${bold(name)} (ultimi ${data.length})`;
+  await send(chatId, [header, ...lines].join("\n"));
+}
+
 /** /nomebreve <nome|email> <Nome> */
 async function cmdNOMEBREVE({ db, chatId, text }: CmdCtx) {
   const m = text.match(/^\/nomebreve(?:@\w+)?\s+(\S+)\s+(.+)$/i);
@@ -1975,6 +2023,7 @@ export async function POST(req: Request) {
           "`/ass cognome YYYY-MM-DD materia [topics]` — nuova verifica",
           "`/verifica email@example.com YYYY-MM-DD materia [topics]` — importa verifica via email",
           "`/logs cognome [limite]` — ultimi log + verifiche/voti",
+          "`/chat cognome|email [limite]` — ultimi messaggi WhatsApp (default 10)",
           "`/nomebreve cognome Nome` — imposta il nome corto",
           "`/votoiniziale cognome 7.0` — salva il voto iniziale",
           "`/dacontattare` — ultimi contatti >5 giorni",
@@ -1997,6 +2046,8 @@ export async function POST(req: Request) {
       await cmdOGGI(ctx);
     } else if (/^\/logs(\s|@)/i.test(text)) {
       await cmdLOGS(ctx);
+    } else if (/^\/chat(\s|@)/i.test(text)) {
+      await cmdCHAT(ctx);
     } else if (/^\/nomebreve(\s|@)/i.test(text)) {
       await cmdNOMEBREVE(ctx);
     } else if (/^\/votoiniziale(\s|@)/i.test(text)) {
