@@ -672,9 +672,11 @@ function mapBlackStudent(row: BlackStudentRow): ResolvedContact {
   const profile = unwrapProfile(row.profiles);
   const status = row.status ? row.status.toLowerCase() : null;
   const subscriptionTier = profile?.subscription_tier || null;
-  const isBlack = Boolean(
+  const isActiveBlack = Boolean(
     (status && ACTIVE_BLACK_STATUSES.has(status)) || subscriptionTier === "black"
   );
+  // Consider any row in black_students as Black for routing, even if status is outside ACTIVE set.
+  const isBlack = isActiveBlack || Boolean(row.id);
   const studentEmail = row.student_email || null;
   const parentEmail = row.parent_email || null;
   const studentPhone = row.student_phone || null;
