@@ -23,11 +23,14 @@ const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // allow larger WhatsApp uploads
 const INLINE_IMAGE_TARGET_BYTES = 4 * 1024 * 1024;
 const IMAGE_FETCH_TIMEOUT_MS = 12_000;
 const MAX_IMAGE_REDIRECTS = 3;
-const IMAGE_FETCH_USER_AGENT = "Mozilla/5.0 (compatible; TheoremzWhatsAppBot/1.0)";
+const IMAGE_FETCH_USER_AGENT =
+  "Mozilla/5.0 (compatible; TheoremzWhatsAppBot/1.0)";
 const IMAGE_MAX_WIDTH = 1600;
 const IMAGE_JPEG_QUALITY = 82;
-const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata e dimmi come posso aiutarti.";
-const manychatAttachmentToken = process.env.MANYCHAT_ATTACHMENT_TOKEN?.trim() || "";
+const IMAGE_ONLY_PROMPT =
+  "Guarda l'immagine allegata e dimmi come posso aiutarti.";
+const manychatAttachmentToken =
+  process.env.MANYCHAT_ATTACHMENT_TOKEN?.trim() || "";
 const whatsappGraphToken = process.env.WHATSAPP_GRAPH_TOKEN?.trim() || "";
 const telegramMonitorChats = (process.env.TELEGRAM_WHATSAPP_MONITOR_CHATS || "")
   .split(",")
@@ -224,7 +227,9 @@ function extractPhone(payload: any) {
   ];
   const direct = extractFirstString(payload, phonePaths);
   if (direct) return direct;
-  return deepFindStringByKey(payload, (key) => key.toLowerCase().includes("phone"));
+  return deepFindStringByKey(payload, (key) =>
+    key.toLowerCase().includes("phone")
+  );
 }
 
 function extractMessageText(payload: any) {
@@ -244,7 +249,10 @@ function extractMessageText(payload: any) {
   ];
   const direct = extractFirstString(payload, messagePaths);
   if (direct) return direct;
-  return deepFindStringByKey(payload, (key) => key.toLowerCase() === "text" || key.toLowerCase() === "body");
+  return deepFindStringByKey(
+    payload,
+    (key) => key.toLowerCase() === "text" || key.toLowerCase() === "body"
+  );
 }
 
 type ImageSource = {
@@ -258,7 +266,9 @@ function sanitizeHeaderValue(value: any) {
   return trimmed || null;
 }
 
-function mergeHeaders(...sources: Array<Record<string, any> | undefined | null>) {
+function mergeHeaders(
+  ...sources: Array<Record<string, any> | undefined | null>
+) {
   const result: Record<string, string> = {};
   for (const source of sources) {
     if (!source || typeof source !== "object") continue;
@@ -310,7 +320,15 @@ function buildImageSource(value: any): ImageSource | null {
         (value as any).meta?.headers,
         (value as any).payload?.headers
       ) || null;
-    const directKeys = ["image_url", "url", "href", "link", "src", "media_url", "download_url"];
+    const directKeys = [
+      "image_url",
+      "url",
+      "href",
+      "link",
+      "src",
+      "media_url",
+      "download_url",
+    ];
     for (const key of directKeys) {
       const candidate = (value as any)[key];
       const resolved = buildImageSource(candidate);
@@ -358,7 +376,10 @@ function enrichImageSource(source: ImageSource | null): ImageSource | null {
         mutated = true;
       }
     }
-    if (whatsappGraphToken && (host.includes("facebook.com") || host.includes("whatsapp.net"))) {
+    if (
+      whatsappGraphToken &&
+      (host.includes("facebook.com") || host.includes("whatsapp.net"))
+    ) {
       if (!headers.Authorization) {
         headers.Authorization = `Bearer ${whatsappGraphToken}`;
         mutated = true;
@@ -431,11 +452,12 @@ function extractImageSource(payload: any) {
 
   const deepString = deepFindStringByKey(payload, (key) => {
     const lower = key.toLowerCase();
-    return lower.includes("image_url") || lower === "image" || lower === "media_url";
+    return (
+      lower.includes("image_url") || lower === "image" || lower === "media_url"
+    );
   });
   return buildImageSource(deepString);
 }
-
 
 let sharpModulePromise: Promise<any> | null = null;
 async function loadSharp() {
@@ -450,13 +472,21 @@ async function loadSharp() {
   return sharpModulePromise;
 }
 
-async function normalizeImageBuffer(result: ImageBufferResult): Promise<ImageBufferResult> {
+async function normalizeImageBuffer(
+  result: ImageBufferResult
+): Promise<ImageBufferResult> {
   const sharp = await loadSharp();
   if (!sharp) return result;
   try {
-    const base = sharp(result.buffer, { failOn: "none", limitInputPixels: 64_000_000 });
+    const base = sharp(result.buffer, {
+      failOn: "none",
+      limitInputPixels: 64_000_000,
+    });
     const metadata = await base.metadata();
-    let pipeline = sharp(result.buffer, { failOn: "none", limitInputPixels: 64_000_000 }).rotate();
+    let pipeline = sharp(result.buffer, {
+      failOn: "none",
+      limitInputPixels: 64_000_000,
+    }).rotate();
     const width = metadata.width ?? 0;
     if (width > IMAGE_MAX_WIDTH) {
       pipeline = pipeline.resize({
@@ -465,23 +495,30 @@ async function normalizeImageBuffer(result: ImageBufferResult): Promise<ImageBuf
         fit: "inside",
       });
     }
-    const output = await pipeline.jpeg({ quality: IMAGE_JPEG_QUALITY }).toBuffer();
+    const output = await pipeline
+      .jpeg({ quality: IMAGE_JPEG_QUALITY })
+      .toBuffer();
     return { buffer: output, contentType: "image/jpeg" };
   } catch (error) {
-    console.warn("[manychat-whatsapp] image normalization skipped", (error as Error).message);
+    console.warn(
+      "[manychat-whatsapp] image normalization skipped",
+      (error as Error).message
+    );
     return result;
   }
 }
 
-async function maybeNormalizeImage(result: ImageBufferResult): Promise<ImageBufferResult> {
+async function maybeNormalizeImage(
+  result: ImageBufferResult
+): Promise<ImageBufferResult> {
   if (!result.buffer?.length) return result;
   const type = (result.contentType || "").toLowerCase();
   const needsResize =
-    result.buffer.byteLength > INLINE_IMAGE_TARGET_BYTES || !type.includes("jpeg");
+    result.buffer.byteLength > INLINE_IMAGE_TARGET_BYTES ||
+    !type.includes("jpeg");
   if (!needsResize) return result;
   return normalizeImageBuffer(result);
 }
-
 
 type ImageBufferResult = { buffer: Buffer; contentType: string | null };
 
@@ -492,7 +529,9 @@ function buildRequestHeaders(extra?: Record<string, string> | null) {
   };
 }
 
-async function fetchImageUsingFetch(image: ImageSource): Promise<ImageBufferResult> {
+async function fetchImageUsingFetch(
+  image: ImageSource
+): Promise<ImageBufferResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS);
   try {
@@ -521,7 +560,10 @@ async function fetchImageUsingFetch(image: ImageSource): Promise<ImageBufferResu
   }
 }
 
-function downloadImageWithNode(image: ImageSource, depth = 0): Promise<ImageBufferResult> {
+function downloadImageWithNode(
+  image: ImageSource,
+  depth = 0
+): Promise<ImageBufferResult> {
   return new Promise((resolve, reject) => {
     if (depth > MAX_IMAGE_REDIRECTS) {
       reject(new Error("too_many_redirects"));
@@ -538,10 +580,15 @@ function downloadImageWithNode(image: ImageSource, depth = 0): Promise<ImageBuff
       (response) => {
         const status = response.statusCode || 0;
         if (status >= 300 && status < 400 && response.headers.location) {
-          const nextUrl = new URL(response.headers.location, image.url).toString();
+          const nextUrl = new URL(
+            response.headers.location,
+            image.url
+          ).toString();
           response.resume();
           request.destroy();
-          downloadImageWithNode({ ...image, url: nextUrl }, depth + 1).then(resolve).catch(reject);
+          downloadImageWithNode({ ...image, url: nextUrl }, depth + 1)
+            .then(resolve)
+            .catch(reject);
           return;
         }
         if (status < 200 || status >= 300) {
@@ -552,7 +599,9 @@ function downloadImageWithNode(image: ImageSource, depth = 0): Promise<ImageBuff
         const chunks: Buffer[] = [];
         let total = 0;
         response.on("data", (chunk) => {
-          const bufferChunk = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          const bufferChunk = Buffer.isBuffer(chunk)
+            ? chunk
+            : Buffer.from(chunk);
           total += bufferChunk.length;
           if (total > MAX_IMAGE_BYTES) {
             response.destroy();
@@ -584,7 +633,8 @@ function downloadImageWithNode(image: ImageSource, depth = 0): Promise<ImageBuff
 }
 
 function encodeImageBuffer(buffer: Buffer, contentType?: string | null) {
-  const finalType = contentType && contentType.includes("/") ? contentType : "image/jpeg";
+  const finalType =
+    contentType && contentType.includes("/") ? contentType : "image/jpeg";
   const base64 = buffer.toString("base64");
   return `data:${finalType};base64,${base64}`;
 }
@@ -649,7 +699,7 @@ function buildSuffixFilter(columns: string[], tail: string | null) {
 
 function unwrapProfile<T>(value: T | T[] | null | undefined) {
   if (!value) return null;
-  return Array.isArray(value) ? value[0] ?? null : value;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
 function mapBlackStudent(row: BlackStudentRow): ResolvedContact {
@@ -657,14 +707,19 @@ function mapBlackStudent(row: BlackStudentRow): ResolvedContact {
   const status = row.status ? row.status.toLowerCase() : null;
   const subscriptionTier = profile?.subscription_tier || null;
   const isBlack = Boolean(
-    (status && ACTIVE_BLACK_STATUSES.has(status)) || subscriptionTier === "black"
+    (status && ACTIVE_BLACK_STATUSES.has(status)) ||
+      subscriptionTier === "black"
   );
   const studentEmail = row.student_email || null;
   const parentEmail = row.parent_email || null;
   const studentPhone = row.student_phone || null;
   const parentPhone = row.parent_phone || null;
   const fullName =
-    row.student_name || profile?.full_name || studentEmail || parentEmail || null;
+    row.student_name ||
+    profile?.full_name ||
+    studentEmail ||
+    parentEmail ||
+    null;
 
   return {
     userId: row.user_id,
@@ -731,7 +786,10 @@ function mapStudentProfile(row: StudentProfileRow): ResolvedContact {
   };
 }
 
-function buildFallbackContact(name: string | null, phone: string | null): ResolvedContact {
+function buildFallbackContact(
+  name: string | null,
+  phone: string | null
+): ResolvedContact {
   return {
     userId: "guest",
     studentId: null,
@@ -822,10 +880,16 @@ async function fetchStudentAcademicSnapshot(
   ]);
 
   if (gradesRes.error) {
-    console.warn("[manychat-whatsapp] grades fetch failed", gradesRes.error.message);
+    console.warn(
+      "[manychat-whatsapp] grades fetch failed",
+      gradesRes.error.message
+    );
   }
   if (assessmentsRes.error) {
-    console.warn("[manychat-whatsapp] assessments fetch failed", assessmentsRes.error.message);
+    console.warn(
+      "[manychat-whatsapp] assessments fetch failed",
+      assessmentsRes.error.message
+    );
   }
 
   const latestGrades =
@@ -863,7 +927,10 @@ async function ensureAcademicSnapshot({
 }
 
 function escapeTelegramHtml(text: string) {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 async function notifyWhatsappMonitor({
@@ -884,38 +951,42 @@ async function notifyWhatsappMonitor({
   if (!telegramBotToken || !telegramMonitorChats.length) return;
   const name = contact.fullName || subscriberName || "Sconosciuto";
   const intro = contact.isBlack ? "👨‍🎓 Studente Black" : "🧲 Lead WhatsApp";
-  const parts: string[] = [
-    `${intro}`,
-    `👤 <b>${escapeTelegramHtml(name)}</b>`,
-  ];
+  const parts: string[] = [`${intro}`, `👤 <b>${escapeTelegramHtml(name)}</b>`];
   if (contact.email) parts.push(`✉️ ${escapeTelegramHtml(contact.email)}`);
   if (rawPhone) parts.push(`📞 ${escapeTelegramHtml(rawPhone)}`);
   else if (contact.phone) parts.push(`📞 ${escapeTelegramHtml(contact.phone)}`);
-  if (contact.yearClass) parts.push(`🏫 Classe: ${escapeTelegramHtml(contact.yearClass)}`);
-  if (contact.track) parts.push(`📚 Percorso: ${escapeTelegramHtml(contact.track)}`);
+  if (contact.yearClass)
+    parts.push(`🏫 Classe: ${escapeTelegramHtml(contact.yearClass)}`);
+  if (contact.track)
+    parts.push(`📚 Percorso: ${escapeTelegramHtml(contact.track)}`);
   const shownText = rawMessage?.trim()
     ? rawMessage
     : imageUrl
-    ? "Messaggio senza testo (solo immagine)."
-    : processedMessage;
+      ? "Messaggio senza testo (solo immagine)."
+      : processedMessage;
   parts.push(`💬 ${escapeTelegramHtml(shownText)}`);
   if (imageUrl) {
-    parts.push(`🖼️ <a href="${escapeTelegramHtml(imageUrl)}">Apri immagine</a>`);
+    parts.push(
+      `🖼️ <a href="${escapeTelegramHtml(imageUrl)}">Apri immagine</a>`
+    );
   }
   const text = parts.join("\n");
   await Promise.all(
     telegramMonitorChats.map(async (chatId) => {
       try {
-        await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text,
-            parse_mode: "HTML",
-            disable_web_page_preview: !imageUrl,
-          }),
-        });
+        await fetch(
+          `https://api.telegram.org/bot${telegramBotToken}/sendMessage`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text,
+              parse_mode: "HTML",
+              disable_web_page_preview: !imageUrl,
+            }),
+          }
+        );
       } catch (err) {
         console.error("[manychat-whatsapp] telegram notify failed", err);
       }
@@ -930,7 +1001,10 @@ async function resolveContact(
   const tail = extractPhoneTail(phone);
   if (!tail) return null;
 
-  const studentFilter = buildSuffixFilter(["student_phone", "parent_phone"], tail);
+  const studentFilter = buildSuffixFilter(
+    ["student_phone", "parent_phone"],
+    tail
+  );
   if (studentFilter) {
     const { data, error } = await db
       .from("black_students")
@@ -939,7 +1013,8 @@ async function resolveContact(
       )
       .or(studentFilter)
       .limit(1);
-    if (error) throw new Error(`black_students lookup failed: ${error.message}`);
+    if (error)
+      throw new Error(`black_students lookup failed: ${error.message}`);
     if (data && data.length) {
       return mapBlackStudent(data[0] as BlackStudentRow);
     }
@@ -952,7 +1027,8 @@ async function resolveContact(
       .select("user_id, full_name, phone, email, is_black")
       .or(profileFilter)
       .limit(1);
-    if (error) throw new Error(`student_profiles lookup failed: ${error.message}`);
+    if (error)
+      throw new Error(`student_profiles lookup failed: ${error.message}`);
     if (data && data.length) {
       return mapStudentProfile(data[0] as StudentProfileRow);
     }
@@ -985,7 +1061,7 @@ async function fetchConversationHistory(
   }
   return {
     history: (data ?? []).reverse() as ConversationMessage[],
-    total: typeof count === "number" ? count : data?.length ?? 0,
+    total: typeof count === "number" ? count : (data?.length ?? 0),
   };
 }
 
@@ -1048,7 +1124,10 @@ async function pruneOldMessages({
   }
   if (!data?.length) return;
   const ids = data.map((row: any) => row.id);
-  const { error: deleteErr } = await db.from(WHATSAPP_MESSAGES_TABLE).delete().in("id", ids);
+  const { error: deleteErr } = await db
+    .from(WHATSAPP_MESSAGES_TABLE)
+    .delete()
+    .in("id", ids);
   if (deleteErr) {
     console.error("[manychat-whatsapp] prune delete failed", deleteErr.message);
   }
@@ -1070,28 +1149,40 @@ async function summarizeConversation({
     .order("created_at", { ascending: true })
     .limit(70);
   if (studentId) transcriptQuery = transcriptQuery.eq("student_id", studentId);
-  else if (phoneTail) transcriptQuery = transcriptQuery.eq("phone_tail", phoneTail);
+  else if (phoneTail)
+    transcriptQuery = transcriptQuery.eq("phone_tail", phoneTail);
   const { data: transcript, error: transcriptErr } = await transcriptQuery;
   if (transcriptErr) {
-    console.error("[manychat-whatsapp] summary fetch failed", transcriptErr.message);
+    console.error(
+      "[manychat-whatsapp] summary fetch failed",
+      transcriptErr.message
+    );
     return;
   }
   if (!transcript?.length || !studentId) return;
 
   const { data: studentRow, error: studentErr } = await db
     .from("black_students")
-    .select("ai_description, profiles:profiles!black_students_user_id_fkey(full_name)")
+    .select(
+      "ai_description, profiles:profiles!black_students_user_id_fkey(full_name)"
+    )
     .eq("id", studentId)
     .maybeSingle();
   if (studentErr) {
-    console.error("[manychat-whatsapp] summary student fetch failed", studentErr.message);
+    console.error(
+      "[manychat-whatsapp] summary student fetch failed",
+      studentErr.message
+    );
     return;
   }
   const existingSummary = studentRow?.ai_description || "";
   const profileEntry = unwrapProfile(studentRow?.profiles);
   const studentName = profileEntry?.full_name || "studente";
   const transcriptText = transcript
-    .map((entry) => `${entry.role === "user" ? "Studente" : "Luigi"}: ${entry.content}`)
+    .map(
+      (entry) =>
+        `${entry.role === "user" ? "Studente" : "Luigi"}: ${entry.content}`
+    )
     .join("\n");
 
   try {
@@ -1102,7 +1193,8 @@ async function summarizeConversation({
       messages: [
         {
           role: "system",
-          content: "Sei un tutor senior di Theoremz Black: sintetizza le conversazioni WhatsApp e aggiorna la descrizione dello studente.",
+          content:
+            "Sei un tutor senior di Theoremz Black: sintetizza le conversazioni WhatsApp e aggiorna la descrizione dello studente.",
         },
         {
           role: "user",
@@ -1124,7 +1216,10 @@ Fondi le informazioni in un'unica nota chiara (4-6 frasi) con tono professionale
     if (summary) {
       await db
         .from("black_students")
-        .update({ ai_description: summary, updated_at: new Date().toISOString() })
+        .update({
+          ai_description: summary,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", studentId);
     }
   } catch (err) {
@@ -1148,9 +1243,17 @@ async function handleConversationRetention({
   await pruneOldMessages({ db, studentId, phoneTail, deleteCount: 50 });
 }
 
-async function downloadImageWithCurl(image: ImageSource): Promise<ImageBufferResult> {
+async function downloadImageWithCurl(
+  image: ImageSource
+): Promise<ImageBufferResult> {
   return new Promise((resolve, reject) => {
-    const args = ["-sS", "-L", "--max-time", String(Math.ceil(IMAGE_FETCH_TIMEOUT_MS / 1000)), "-k"];
+    const args = [
+      "-sS",
+      "-L",
+      "--max-time",
+      String(Math.ceil(IMAGE_FETCH_TIMEOUT_MS / 1000)),
+      "-k",
+    ];
     if (image.headers) {
       for (const [key, value] of Object.entries(image.headers)) {
         if (!value) continue;
@@ -1183,11 +1286,18 @@ async function downloadImageWithCurl(image: ImageSource): Promise<ImageBufferRes
   });
 }
 
-async function resolveImageDataUrl(image?: ImageSource | string | null): Promise<string | null> {
+async function resolveImageDataUrl(
+  image?: ImageSource | string | null
+): Promise<string | null> {
   if (!image) return null;
   const source =
     typeof image === "string"
-      ? { url: image, headers: metaAccessToken ? { Authorization: `Bearer ${metaAccessToken}` } : undefined }
+      ? {
+          url: image,
+          headers: metaAccessToken
+            ? { Authorization: `Bearer ${metaAccessToken}` }
+            : undefined,
+        }
       : image;
   if (!source?.url) return null;
   try {
@@ -1197,7 +1307,10 @@ async function resolveImageDataUrl(image?: ImageSource | string | null): Promise
       hasCustomHeaders: Boolean(source.headers),
     });
     const normalized = await maybeNormalizeImage(direct);
-    return encodeImageBuffer(normalized.buffer, normalized.contentType || direct.contentType);
+    return encodeImageBuffer(
+      normalized.buffer,
+      normalized.contentType || direct.contentType
+    );
   } catch (primaryError) {
     console.warn("[manychat-whatsapp] primary image fetch failed", {
       imageUrl: source?.url,
@@ -1210,7 +1323,10 @@ async function resolveImageDataUrl(image?: ImageSource | string | null): Promise
         imageUrl: source.url,
       });
       const normalized = await maybeNormalizeImage(fallback);
-      return encodeImageBuffer(normalized.buffer, normalized.contentType || fallback.contentType);
+      return encodeImageBuffer(
+        normalized.buffer,
+        normalized.contentType || fallback.contentType
+      );
     } catch (secondaryError) {
       console.warn("[manychat-whatsapp] http fallback failed, trying curl", {
         imageUrl: source?.url,
@@ -1223,7 +1339,10 @@ async function resolveImageDataUrl(image?: ImageSource | string | null): Promise
           imageUrl: source.url,
         });
         const normalized = await maybeNormalizeImage(curlResult);
-        return encodeImageBuffer(normalized.buffer, normalized.contentType || curlResult.contentType);
+        return encodeImageBuffer(
+          normalized.buffer,
+          normalized.contentType || curlResult.contentType
+        );
       } catch (curlError) {
         console.error("[manychat-whatsapp] curl image fetch failed", {
           imageUrl: source?.url,
@@ -1250,10 +1369,11 @@ function inferLeadIntent(message: string) {
     "iscriver",
     "come funziona",
     "pagare",
-    "quanto costa",
+    "quanto costaa",
     "theoremz black",
   ];
-  if (infoKeywords.some((keyword) => text.includes(keyword))) return "info" as const;
+  if (infoKeywords.some((keyword) => text.includes(keyword)))
+    return "info" as const;
   return "academic" as const;
 }
 
@@ -1268,7 +1388,8 @@ function normalizeE164Phone(value?: string | null) {
   if (!digits) return null;
   let normalized = digits;
   if (normalized.startsWith("00")) normalized = normalized.slice(2);
-  if (normalized.startsWith("0") && normalized.length > 9) normalized = normalized.replace(/^0+/, "");
+  if (normalized.startsWith("0") && normalized.length > 9)
+    normalized = normalized.replace(/^0+/, "");
   if (!normalized.startsWith("39") && normalized.length === 10) {
     normalized = `39${normalized}`;
   }
@@ -1279,7 +1400,11 @@ function escapeSupabaseValue(value: string) {
   return value.replace(/,/g, "\\,").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
-async function linkEmailToPhone(db: ReturnType<typeof supabaseServer>, email: string, phone: string) {
+async function linkEmailToPhone(
+  db: ReturnType<typeof supabaseServer>,
+  email: string,
+  phone: string
+) {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return { status: "invalid" as const };
   const escaped = escapeSupabaseValue(normalized);
@@ -1308,7 +1433,10 @@ async function linkEmailToPhone(db: ReturnType<typeof supabaseServer>, email: st
   return { status: "linked" as const, studentId: data.id };
 }
 
-async function getInquiryByPhoneTail(db: ReturnType<typeof supabaseServer>, phoneTail: string) {
+async function getInquiryByPhoneTail(
+  db: ReturnType<typeof supabaseServer>,
+  phoneTail: string
+) {
   const { data, error } = await db
     .from("black_whatsapp_inquiries")
     .select("id, phone_tail, intent, status, email, message_count")
@@ -1365,7 +1493,10 @@ async function updateInquiryCounters({
     .eq("id", inquiryId)
     .maybeSingle();
   if (error) {
-    console.error("[manychat-whatsapp] inquiry counter read failed", error.message);
+    console.error(
+      "[manychat-whatsapp] inquiry counter read failed",
+      error.message
+    );
     return;
   }
   const current = Number(data?.message_count ?? 0);
@@ -1378,7 +1509,10 @@ async function updateInquiryCounters({
     })
     .eq("id", inquiryId);
   if (updateErr) {
-    console.error("[manychat-whatsapp] inquiry counter update failed", updateErr.message);
+    console.error(
+      "[manychat-whatsapp] inquiry counter update failed",
+      updateErr.message
+    );
   }
 }
 
@@ -1404,7 +1538,9 @@ async function generateInfoReply({
       ? `Richiesta precedente: ${entry.content}`
       : `Risposta precedente: ${entry.content}`
   );
-  const context = formattedHistory.length ? formattedHistory.join("\n") : "(nessuno)";
+  const context = formattedHistory.length
+    ? formattedHistory.join("\n")
+    : "(nessuno)";
   const userPrompt = `Conversazione precedente:
 ${context}
 
@@ -1462,10 +1598,17 @@ async function handleBlackConversation({
   imageUrl?: string | null;
   imageDataUrl?: string | null;
 }) {
-  const { history, total } = await fetchConversationHistory(db, resolvedContact.studentId, phoneTail);
+  const { history, total } = await fetchConversationHistory(
+    db,
+    resolvedContact.studentId,
+    phoneTail
+  );
   let runningCount = total;
   const canLog = Boolean(phoneTail || resolvedContact.studentId);
-  const contactForAI = await ensureAcademicSnapshot({ db, contact: resolvedContact });
+  const contactForAI = await ensureAcademicSnapshot({
+    db,
+    contact: resolvedContact,
+  });
   if (canLog) {
     await logConversationMessage({
       db,
@@ -1552,7 +1695,9 @@ async function handleLeadConversation({
   if (emailCandidate) {
     const normalizedPhone = normalizeE164Phone(rawPhone || phoneTail);
     if (!normalizedPhone) {
-      return jsonResponse("Per collegarti ho bisogno del numero completo con cui mi stai scrivendo 😊");
+      return jsonResponse(
+        "Per collegarti ho bisogno del numero completo con cui mi stai scrivendo 😊"
+      );
     }
     const link = await linkEmailToPhone(db, emailCandidate, normalizedPhone);
     if (link.status === "linked" && link.studentId) {
@@ -1566,13 +1711,19 @@ async function handleLeadConversation({
           phoneTail: extractPhoneTail(normalizedPhone),
         });
       }
-      return jsonResponse("Grazie! Ho collegato la tua mail: scrivimi ora dall'app per riprendere la chat ✌️");
+      return jsonResponse(
+        "Grazie! Ho collegato la tua mail: scrivimi ora dall'app per riprendere la chat ✌️"
+      );
     }
-    return jsonResponse("Questa mail non risulta nei nostri account, puoi ricontrollare? 😊");
+    return jsonResponse(
+      "Questa mail non risulta nei nostri account, puoi ricontrollare? 😊"
+    );
   }
 
   if (!phoneTail) {
-    return jsonResponse("Per aiutarti devo avere il tuo numero completo su WhatsApp. Puoi riprovare? 😊");
+    return jsonResponse(
+      "Per aiutarti devo avere il tuo numero completo su WhatsApp. Puoi riprovare? 😊"
+    );
   }
 
   const intent = inferLeadIntent(messageText);
@@ -1582,7 +1733,12 @@ async function handleLeadConversation({
 
   let inquiry = await getInquiryByPhoneTail(db, phoneTail);
   if (!inquiry) {
-    inquiry = await createInquiryRecord({ db, phoneTail, intent, subscriberName });
+    inquiry = await createInquiryRecord({
+      db,
+      phoneTail,
+      intent,
+      subscriberName,
+    });
   }
 
   if (inquiry.intent !== "info") {
@@ -1626,14 +1782,22 @@ async function handleLeadConversation({
     meta: { inquiryId: inquiry.id, contactSource: contact?.source },
   });
   runningCount += 1;
-  await handleConversationRetention({ db, studentId: null, phoneTail, totalCount: runningCount });
+  await handleConversationRetention({
+    db,
+    studentId: null,
+    phoneTail,
+    totalCount: runningCount,
+  });
   await updateInquiryCounters({ db, inquiryId: inquiry.id, increment: 2 });
   return jsonResponse(reply, { isBlack: false });
 }
 
-function formatAverageForPrompt(current?: number | null, initial?: number | null) {
+function formatAverageForPrompt(
+  current?: number | null,
+  initial?: number | null
+) {
   const formatValue = (value: number) =>
-    Number.isInteger(value) ? String(value) : value?.toFixed(1) ?? "";
+    Number.isInteger(value) ? String(value) : (value?.toFixed(1) ?? "");
   if (current == null && initial == null) return null;
   const currentText = current != null ? `${formatValue(current)}/10` : null;
   const initialText = initial != null ? `${formatValue(initial)}/10` : null;
@@ -1645,7 +1809,10 @@ function formatAverageForPrompt(current?: number | null, initial?: number | null
   return null;
 }
 
-function formatReadinessForPrompt(readiness?: number | null, risk?: string | null) {
+function formatReadinessForPrompt(
+  readiness?: number | null,
+  risk?: string | null
+) {
   if (readiness == null && !risk) return null;
   const rounded = typeof readiness === "number" ? Math.round(readiness) : null;
   const riskLabel = risk ? ` (${risk})` : "";
@@ -1655,9 +1822,10 @@ function formatReadinessForPrompt(readiness?: number | null, risk?: string | nul
 
 function formatScoreForPrompt(score?: number | null, max?: number | null) {
   const formatValue = (value: number) =>
-    Number.isInteger(value) ? String(value) : value?.toFixed(1) ?? "";
+    Number.isInteger(value) ? String(value) : (value?.toFixed(1) ?? "");
   if (score == null && max == null) return null;
-  if (score != null && max != null) return `${formatValue(score)}/${formatValue(max)}`;
+  if (score != null && max != null)
+    return `${formatValue(score)}/${formatValue(max)}`;
   const value = score ?? max;
   if (value == null) return null;
   return formatValue(value);
@@ -1669,9 +1837,14 @@ function buildGradeSummary(grades?: GradeSnapshot[] | null) {
     .map((grade) => {
       if (!grade.subject && grade.score == null) return null;
       const subject = grade.subject || "materia";
-      const score = formatScoreForPrompt(grade.score ?? null, grade.max_score ?? null);
+      const score = formatScoreForPrompt(
+        grade.score ?? null,
+        grade.max_score ?? null
+      );
       const date = formatDateForPrompt(grade.when_at);
-      return [subject, score, date ? `(${date})` : null].filter(Boolean).join(" ");
+      return [subject, score, date ? `(${date})` : null]
+        .filter(Boolean)
+        .join(" ");
     })
     .filter(Boolean);
   return formatted.length ? formatted.join("; ") : null;
@@ -1699,10 +1872,14 @@ function buildSystemPrompt(contact: ResolvedContact) {
   if (contact.fullName) details.push(`Nome: ${contact.fullName}`);
   if (contact.yearClass) details.push(`Classe: ${contact.yearClass}`);
   if (contact.track) details.push(`Percorso: ${contact.track}`);
-  if (contact.studentEmail) details.push(`Email studente: ${contact.studentEmail}`);
-  if (contact.parentEmail) details.push(`Email genitore: ${contact.parentEmail}`);
-  if (!contact.studentEmail && contact.email) details.push(`Email principale: ${contact.email}`);
-  if (contact.studentPhone) details.push(`Telefono studente: ${contact.studentPhone}`);
+  if (contact.studentEmail)
+    details.push(`Email studente: ${contact.studentEmail}`);
+  if (contact.parentEmail)
+    details.push(`Email genitore: ${contact.parentEmail}`);
+  if (!contact.studentEmail && contact.email)
+    details.push(`Email principale: ${contact.email}`);
+  if (contact.studentPhone)
+    details.push(`Telefono studente: ${contact.studentPhone}`);
   if (contact.parentPhone && contact.parentPhone !== contact.studentPhone) {
     details.push(`Telefono genitore: ${contact.parentPhone}`);
   } else if (contact.phone && !contact.studentPhone) {
@@ -1715,9 +1892,15 @@ ${details.join("\n")}`
     : "Non hai dati aggiuntivi sullo studente oltre al messaggio.";
 
   const academicLines: string[] = [];
-  const readinessLine = formatReadinessForPrompt(contact.readiness, contact.riskLevel);
+  const readinessLine = formatReadinessForPrompt(
+    contact.readiness,
+    contact.riskLevel
+  );
   if (readinessLine) academicLines.push(readinessLine);
-  const avgLine = formatAverageForPrompt(contact.currentAvg, contact.initialAvg);
+  const avgLine = formatAverageForPrompt(
+    contact.currentAvg,
+    contact.initialAvg
+  );
   if (avgLine) academicLines.push(avgLine);
   if (contact.goal) academicLines.push(`Goal dichiarato: ${contact.goal}`);
   if (contact.difficultyFocus) {
@@ -1731,8 +1914,11 @@ ${details.join("\n")}`
       }`
     );
   }
-  const latestGradesSummary = buildGradeSummary(contact.academicSnapshot?.latestGrades);
-  if (latestGradesSummary) academicLines.push(`Ultimi voti: ${latestGradesSummary}`);
+  const latestGradesSummary = buildGradeSummary(
+    contact.academicSnapshot?.latestGrades
+  );
+  if (latestGradesSummary)
+    academicLines.push(`Ultimi voti: ${latestGradesSummary}`);
   const upcomingAssessmentsSummary = buildAssessmentSummary(
     contact.academicSnapshot?.upcomingAssessments
   );
@@ -1745,8 +1931,12 @@ ${details.join("\n")}`
 ${academicLines.join("\n")}`
     : "";
 
-  const summarySection = contact.aiSummary ? `Nota tutor esistente:\n${contact.aiSummary}` : "";
-  const contextSections = [header, academicBlock, summarySection].filter(Boolean);
+  const summarySection = contact.aiSummary
+    ? `Nota tutor esistente:\n${contact.aiSummary}`
+    : "";
+  const contextSections = [header, academicBlock, summarySection].filter(
+    Boolean
+  );
   const contextText = contextSections.join("\n\n");
 
   return `${persona}
@@ -1803,7 +1993,10 @@ Rispondi come Luigi.`;
         { type: "image_url", image_url: { url: imageUrl } },
       ],
     };
-    const baseMessages = [{ role: "system", content: systemPrompt }, ...formattedHistory];
+    const baseMessages = [
+      { role: "system", content: systemPrompt },
+      ...formattedHistory,
+    ];
     const candidates = Array.from(
       new Set(
         [
@@ -1824,15 +2017,21 @@ Rispondi come Luigi.`;
         const content = completion.choices[0]?.message?.content || "";
         const trimmed = content.trim();
         if (trimmed) return sanitizeWhatsappText(trimmed);
-        return sanitizeWhatsappText("Fammi un attimo capire meglio la situazione 😊");
+        return sanitizeWhatsappText(
+          "Fammi un attimo capire meglio la situazione 😊"
+        );
       } catch (error) {
         lastError = error;
-        const status = (error as any)?.status ?? (error as any)?.response?.status;
+        const status =
+          (error as any)?.status ?? (error as any)?.response?.status;
         if (status === 401 || status === 403 || status === 404) {
-          console.warn("[manychat-whatsapp] vision model unavailable, retrying fallback", {
-            model: modelName,
-            error: (error as Error).message,
-          });
+          console.warn(
+            "[manychat-whatsapp] vision model unavailable, retrying fallback",
+            {
+              model: modelName,
+              error: (error as Error).message,
+            }
+          );
           continue;
         }
         throw error;
@@ -1854,7 +2053,9 @@ Rispondi come Luigi.`;
 
   const content = completion.choices[0]?.message?.content || "";
   const trimmed = content.trim();
-  return sanitizeWhatsappText(trimmed || "Fammi un attimo capire meglio la situazione 😊");
+  return sanitizeWhatsappText(
+    trimmed || "Fammi un attimo capire meglio la situazione 😊"
+  );
 }
 
 type WhatsAppMessageInput = {
@@ -1877,7 +2078,9 @@ async function handleWhatsAppMessage({
   if (imageUrl) {
     resolvedImageDataUrl = await resolveImageDataUrl(imageUrl);
     if (!resolvedImageDataUrl) {
-      console.warn("[manychat-whatsapp] image normalization failed", { imageUrl });
+      console.warn("[manychat-whatsapp] image normalization failed", {
+        imageUrl,
+      });
     }
   }
   const remoteImageUrl = imageUrl ?? null;
@@ -1893,7 +2096,8 @@ async function handleWhatsAppMessage({
     console.warn("[manychat-whatsapp] missing phone number in payload");
   }
 
-  const resolvedContact = contact ?? buildFallbackContact(subscriberName, rawPhone);
+  const resolvedContact =
+    contact ?? buildFallbackContact(subscriberName, rawPhone);
 
   notifyWhatsappMonitor({
     contact: resolvedContact,
@@ -1902,7 +2106,9 @@ async function handleWhatsAppMessage({
     rawMessage: messageText,
     processedMessage: messageText,
     imageUrl,
-  }).catch((err) => console.error("[manychat-whatsapp] telegram monitor error", err));
+  }).catch((err) =>
+    console.error("[manychat-whatsapp] telegram monitor error", err)
+  );
 
   if (resolvedContact.isBlack) {
     return handleBlackConversation({
@@ -1948,7 +2154,10 @@ export async function POST(req: Request) {
   const phoneNumberId = value?.metadata?.phone_number_id || cloudPhoneNumberId;
   if (!phoneNumberId) {
     console.error("[whatsapp-cloud] missing phone_number_id");
-    return NextResponse.json({ error: "missing_phone_number_id" }, { status: 500 });
+    return NextResponse.json(
+      { error: "missing_phone_number_id" },
+      { status: 500 }
+    );
   }
 
   for (const message of messages) {
@@ -1991,7 +2200,11 @@ function extractCloudText(message: any): string | null {
     const interactive = message.interactive;
     if (!interactive) return null;
     if (interactive.type === "list_reply") {
-      return interactive.list_reply?.title || interactive.list_reply?.description || null;
+      return (
+        interactive.list_reply?.title ||
+        interactive.list_reply?.description ||
+        null
+      );
     }
     if (interactive.type === "button_reply") {
       return interactive.button_reply?.title || null;
@@ -2037,7 +2250,9 @@ async function sendCloudReply({
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const errorPayload = await res.json().catch(() => ({ error: res.statusText }));
+    const errorPayload = await res
+      .json()
+      .catch(() => ({ error: res.statusText }));
     console.error("[whatsapp-cloud] send failed", errorPayload);
   }
 }
@@ -2047,7 +2262,12 @@ export async function GET(req: Request) {
   const mode = url.searchParams.get("hub.mode");
   const token = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
-  if (mode === "subscribe" && challenge && graphVerifyToken && token === graphVerifyToken) {
+  if (
+    mode === "subscribe" &&
+    challenge &&
+    graphVerifyToken &&
+    token === graphVerifyToken
+  ) {
     return new Response(challenge, { status: 200 });
   }
   return NextResponse.json({ error: "forbidden" }, { status: 403 });
