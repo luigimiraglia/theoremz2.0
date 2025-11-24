@@ -10,13 +10,13 @@ const openaiApiKey = process.env.OPENAI_API_KEY?.trim() || "";
 const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
 const VISION_MODEL = "gpt-4o";
 const IMAGE_ONLY_PROMPT = "Guarda l'immagine allegata e dimmi come posso aiutarti.";
-const NOT_SUBSCRIBED_MESSAGE = "Non sei abbonato a Theoremz Black.";
 const HAS_SUPABASE_ENV = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const supabase = HAS_SUPABASE_ENV ? supabaseServer() : null;
 const WHATSAPP_MESSAGES_TABLE = "black_whatsapp_messages";
 const HISTORY_LIMIT = 20;
 const SUMMARY_THRESHOLD = 70;
 const PRUNE_DELETE_COUNT = 50;
+const ASK_EMAIL_MESSAGE = "Non trovo un abbonamento Black con questo numero. Scrivimi l'email del tuo account così lo collego.";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -63,7 +63,44 @@ export async function POST(req: Request) {
     const studentResult = await fetchBlackStudentWithContext(phoneTail);
 
     if (!studentResult) {
-      await sendCloudReply({ phoneNumberId, to: rawPhone, body: NOT_SUBSCRIBED_MESSAGE });
+      const emailCandidate = extractEmailCandidate(text);
+      if (emailCandidate && supabase) {
+        const linked = await linkEmailToPhone(emailCandidate, rawPhone);
+        if (linked) {
+          const refreshed = await fetchBlackStudentWithContext(extractPhoneTail(rawPhone));
+          if (refreshed) {
+            const { student, contextText } = refreshed;
+            const historyResult = await fetchConversationHistory(student.id, phoneTail, HISTORY_LIMIT);
+            const promptText =
+              text && imageDataUrl
+                ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
+                : text || IMAGE_ONLY_PROMPT;
+            const reply = await generateReply(promptText, imageDataUrl, contextText, historyResult.history);
+            await logConversationMessage(student.id, phoneTail, "user", promptText);
+            await logConversationMessage(student.id, phoneTail, "assistant", reply);
+            const totalCount = historyResult.total + 2;
+            if (totalCount >= SUMMARY_THRESHOLD) {
+              await summarizeAndPrune(student.id);
+            }
+            await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
+            continue;
+          }
+          await sendCloudReply({
+            phoneNumberId,
+            to: rawPhone,
+            body: "Ho collegato la mail, scrivimi di nuovo il messaggio così ti rispondo.",
+          });
+          continue;
+        } else {
+          await sendCloudReply({
+            phoneNumberId,
+            to: rawPhone,
+            body: "Questa mail non risulta nei nostri abbonati, puoi ricontrollare?",
+          });
+          continue;
+        }
+      }
+      await sendCloudReply({ phoneNumberId, to: rawPhone, body: ASK_EMAIL_MESSAGE });
       continue;
     }
 
@@ -185,6 +222,60 @@ function buildStudentContext(student: BlackStudentRow | null) {
     parts.push(`Nota tutor: ${student.ai_description}`);
   }
   return parts.length ? parts.join("\n") : null;
+}
+
+function extractEmailCandidate(text?: string | null) {
+  if (!text) return null;
+  const match = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match ? match[0].toLowerCase() : null;
+}
+
+function normalizePhone(raw: string | null) {
+  if (!raw) return null;
+  const digits = raw.replace(/\D+/g, "");
+  if (!digits) return null;
+  let normalized = digits;
+  if (normalized.startsWith("00")) normalized = normalized.slice(2);
+  if (normalized.startsWith("0") && normalized.length > 9) normalized = normalized.replace(/^0+/, "");
+  if (!normalized.startsWith("39") && normalized.length === 10) {
+    normalized = `39${normalized}`;
+  }
+  return `+${normalized}`;
+}
+
+async function linkEmailToPhone(email: string, rawPhone: string | null) {
+  if (!supabase) return false;
+  const normalizedPhone = normalizePhone(rawPhone);
+  if (!normalizedPhone) return false;
+  try {
+    const { data, error } = await supabase
+      .from("black_students")
+      .select("id, student_phone, parent_phone")
+      .or(`student_email.ilike.${email},parent_email.ilike.${email}`)
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error("[whatsapp-cloud] link email lookup error", error);
+      return false;
+    }
+    if (!data?.id) return false;
+    const targetColumn = data.student_phone ? "parent_phone" : "student_phone";
+    if (data[targetColumn as "student_phone" | "parent_phone"] === normalizedPhone) {
+      return true;
+    }
+    const { error: updateErr } = await supabase
+      .from("black_students")
+      .update({ [targetColumn]: normalizedPhone, updated_at: new Date().toISOString() })
+      .eq("id", data.id);
+    if (updateErr) {
+      console.error("[whatsapp-cloud] link email update error", updateErr);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[whatsapp-cloud] link email failure", err);
+    return false;
+  }
 }
 
 function buildImageSourceFromCloud(message: any): CloudImage | null {
