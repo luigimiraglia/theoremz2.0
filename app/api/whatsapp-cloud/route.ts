@@ -78,40 +78,32 @@ export async function POST(req: Request) {
         ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
         : text || IMAGE_ONLY_PROMPT;
 
-    const conversation = await upsertConversation({
-      phoneTail,
-      phoneE164,
-      studentId: studentResult?.student.id,
-      status: conversationStatus,
+  const conversation = await upsertConversation({
+    phoneTail,
+    phoneE164,
+    studentId: studentResult?.student.id,
+    status: conversationStatus,
       type: conversationType,
       lastMessage: inboundText,
       bot: baseConversation?.bot ?? null,
     });
 
     // Log inbound message
-    await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
+  await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
 
-    if (conversationStatus !== "bot") {
-      const safeTail = phoneTail || conversation?.phone_tail || "unknown";
-      await notifyOperators({
-        conversation: {
-          ...(conversation || { phone_tail: safeTail }),
-          status: conversationStatus,
-          type: conversationType,
-        },
-        text: text || "(nessun testo, solo media)",
-        rawPhone,
-      });
-      // Optional soft ack for first contact
-      if (!baseConversation?.last_message_at && phoneE164) {
-        await sendCloudReply({
-          phoneNumberId,
-          to: rawPhone,
-          body: "Grazie, ti risponde un tutor a breve.",
-        });
-      }
-      continue;
-    }
+  if (conversationStatus !== "bot") {
+    const safeTail = phoneTail || conversation?.phone_tail || "unknown";
+    await notifyOperators({
+      conversation: {
+        ...(conversation || { phone_tail: safeTail }),
+        status: conversationStatus,
+        type: conversationType,
+      },
+      text: text || "(nessun testo, solo media)",
+      rawPhone,
+    });
+    continue;
+  }
 
     // BOT mode
     if (!studentResult) {
@@ -434,11 +426,7 @@ async function notifyOperators({
   const phoneLine = `Numero: ${rawPhone || conversation.phone_e164 || conversation.phone_tail}`;
   const convIdLine = conversation.id ? `ID: ${conversation.id}` : null;
   const body = text || "(messaggio senza testo)";
-  const hints =
-    "Comandi: /wa <telefono|email|nome> messaggio · /wastatus <telefono> bot|waiting|tutor · /watype <telefono> black|prospect|genitore|insegnante|altro · /wabot <telefono> nome_bot";
-  const message = [header, phoneLine, convIdLine, "", body, "", hints]
-    .filter(Boolean)
-    .join("\n");
+  const message = [header, phoneLine, convIdLine, "", body].filter(Boolean).join("\n");
   await Promise.all(
     OPERATOR_CHAT_IDS.map((chatId) =>
       sendTelegramMessage(chatId, message).catch((err) =>
