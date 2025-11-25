@@ -72,6 +72,7 @@ export async function POST(req: Request) {
     let baseConversation = await fetchConversation(phoneTail);
     let conversationType = deriveConversationType(baseConversation?.type as ConversationType);
     let conversationStatus = (baseConversation?.status as ConversationStatus) || "waiting_tutor";
+    let conversationBot = deriveBotFromType(conversationType);
 
     const inboundText =
       text && imageDataUrl
@@ -90,12 +91,13 @@ export async function POST(req: Request) {
         studentId: studentResult.student.id,
         status: conversationStatus,
         type: baseConversation?.type || conversationType,
-        bot: baseConversation?.bot ?? null,
+        bot: conversationBot,
       });
       if (linked) {
         baseConversation = linked;
         conversationType = linked.type as ConversationType;
         conversationStatus = (linked.status as ConversationStatus) || conversationStatus;
+        conversationBot = deriveBotFromType(conversationType);
       }
     }
 
@@ -113,7 +115,7 @@ export async function POST(req: Request) {
         status: baseConversation.status as ConversationStatus,
         type: (baseConversation.type as ConversationType) || conversationType,
         lastMessage: inboundText,
-        bot: baseConversation.bot || null,
+        bot: conversationBot,
       });
       await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
       const safeTail = phoneTail || baseConversation.phone_tail || "unknown";
@@ -149,11 +151,12 @@ export async function POST(req: Request) {
       status: conversationStatus,
       type: conversationType,
       lastMessage: inboundText,
-      bot: baseConversation?.bot ?? null,
+      bot: conversationBot,
     });
 
     const effectiveStatus = (conversation?.status as ConversationStatus) || conversationStatus;
     const effectiveType = (conversation?.type as ConversationType) || conversationType;
+    conversationBot = deriveBotFromType(effectiveType);
 
     // Log inbound message
     await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
@@ -204,6 +207,7 @@ export async function POST(req: Request) {
         studentId: studentResult?.student.id || null,
         status: "bot",
         type: effectiveType,
+        bot: deriveBotFromType(effectiveType),
         lastMessage: reply,
         followupDueAt: new Date(Date.now() + deriveFollowupDelayMs(inboundText)).toISOString(),
         followupSentAt: null,
@@ -245,6 +249,7 @@ export async function POST(req: Request) {
               studentId: student.id,
               status: "bot",
               type: "black",
+              bot: deriveBotFromType("black"),
               lastMessage: reply,
             });
             await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
@@ -268,6 +273,7 @@ export async function POST(req: Request) {
         phoneE164,
         status: "bot",
         type: effectiveType,
+        bot: deriveBotFromType(effectiveType),
         lastMessage: reply,
         followupDueAt: new Date(Date.now() + deriveFollowupDelayMs(text)).toISOString(),
         followupSentAt: null,
@@ -290,6 +296,7 @@ export async function POST(req: Request) {
         studentId: student.id,
         status: "waiting_tutor",
         type: effectiveType,
+        bot: deriveBotFromType(effectiveType),
         lastMessage: inboundText,
         followupDueAt: null,
         followupSentAt: null,
@@ -328,6 +335,7 @@ export async function POST(req: Request) {
       studentId: student.id,
       status: "bot",
       type: "black",
+      bot: deriveBotFromType("black"),
       lastMessage: reply,
       followupDueAt: null,
     });
@@ -359,6 +367,7 @@ async function handleProspectEscalation({
 }) {
   if (conversationStatus !== "bot" || conversationType === "black") return;
 
+  const conversationBot = deriveBotFromType(conversationType);
   const historyResult = await fetchConversationHistory(null, phoneTail, HISTORY_LIMIT);
   if (await needsTutorEscalation(inboundText, historyResult.history, { type: conversationType })) {
     await upsertConversation({
@@ -367,6 +376,7 @@ async function handleProspectEscalation({
       studentId: null,
       status: "waiting_tutor",
       type: conversationType,
+      bot: conversationBot,
       lastMessage: inboundText,
       followupDueAt: null,
       followupSentAt: null,
@@ -529,6 +539,10 @@ type ConversationRow = {
 
 function deriveConversationType(existing: ConversationType | null | undefined) {
   return existing || "prospect";
+}
+
+function deriveBotFromType(type: ConversationType | null | undefined) {
+  return type === "black" ? "black" : "sales";
 }
 
 function deriveFollowupDelayMs(text: string | null | undefined) {
@@ -809,6 +823,7 @@ async function maybeSendSalesFollowup({
     studentId: conversation.student_id || null,
     status: "bot",
     type: conversation.type,
+    bot: deriveBotFromType(conversation.type as ConversationType),
     followupDueAt: null,
     followupSentAt: new Date().toISOString(),
     lastMessage: followup,

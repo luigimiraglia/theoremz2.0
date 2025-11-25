@@ -89,6 +89,8 @@ export default function AccountPage() {
   const [subscriptionStartMs, setSubscriptionStartMs] = useState<number | null>(
     null
   );
+  const [planTier, setPlanTier] = useState<"Essential" | "Black" | null>(null);
+  const [planLabel, setPlanLabel] = useState<string | null>(null);
   useEffect(() => {
     if (!isSubscribed || !user?.uid) return;
 
@@ -108,6 +110,20 @@ export default function AccountPage() {
           const ms = new Date(data.startDate).getTime();
           console.log("📅 Setting subscription start:", new Date(ms));
           setSubscriptionStartMs(ms);
+          const tier =
+            typeof data.planTier === "string" &&
+            data.planTier.toLowerCase().includes("essential")
+              ? "Essential"
+              : typeof data.planLabel === "string" &&
+                data.planLabel.toLowerCase().includes("essential")
+              ? "Essential"
+              : "Black";
+          setPlanTier(tier as "Essential" | "Black");
+          if (tier === "Essential") {
+            setPlanLabel("Essential");
+          } else if (data.planLabel && typeof data.planLabel === "string") {
+            setPlanLabel(data.planLabel);
+          }
         }
       } catch (error) {
         console.error("Errore caricamento info abbonamento:", error);
@@ -167,6 +183,16 @@ export default function AccountPage() {
     });
   }, [subscriptionSince]);
   /* --------------------------------------------------------------------------- */
+
+  const planDisplayLabel = useMemo(() => {
+    if (!isSubscribed) return "Free";
+    const labels = [planLabel, planTier].filter(Boolean) as string[];
+    const isEssentialPlan = labels.some((l) =>
+      l.toLowerCase().includes("essential")
+    );
+    if (isEssentialPlan) return "Essential";
+    return labels[0] || "Black";
+  }, [isSubscribed, planLabel, planTier]);
 
   // UI state: none (pagina unica, sezioni verticali)
   const [gradesVersion, setGradesVersion] = useState(0);
@@ -302,7 +328,9 @@ export default function AccountPage() {
           }
         >
           <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
-          <span className="font-bold text-white">Black</span>
+          <span className="font-bold text-white">
+            {planDisplayLabel}
+          </span>
           {subscriptionDuration && (
             <span className="text-white/80 font-medium ml-0.5">
               · {subscriptionDuration}
@@ -478,11 +506,9 @@ export default function AccountPage() {
       <Card title="Stato abbonamento">
         <div className="flex items-center justify-between">
           <span className="text-sm text-slate-600 [.dark_&]:text-white">
-            Livello
+            Il mio piano
           </span>
-          <span className="text-sm font-medium">
-            {isSubscribed ? "Black" : "Free"}
-          </span>
+          <span className="text-sm font-medium truncate">{planDisplayLabel}</span>
         </div>
         <div className="flex items-center justify-between mt-2">
           <span className="text-sm text-slate-600 [.dark_&]:text-white">

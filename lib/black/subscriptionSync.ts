@@ -528,6 +528,15 @@ function determineSubscriptionTier(status?: string | null) {
   return PREMIUM_SUB_STATUSES.has(status) ? "black" : "free";
 }
 
+function normalizePlan(planLabel?: string | null) {
+  const label = (planLabel || "").trim();
+  if (!label) return { label: "Black", badge: "Black" };
+  const lower = label.toLowerCase();
+  if (lower.includes("mentor")) return { label, badge: "Mentor" };
+  if (lower.includes("essential")) return { label, badge: "Essential" };
+  return { label, badge: "Black" };
+}
+
 function buildBrief(student: BriefSource) {
   const statusLabel = !student.status
     ? "active"
@@ -536,13 +545,14 @@ function buildBrief(student: BriefSource) {
       : `❌ Disdetto (${student.status})`;
   const subscribedFlag =
     !student.status || PREMIUM_SUB_STATUSES.has(student.status) ? "true" : "false";
+  const { label: planLabel, badge: planBadge } = normalizePlan(student.plan_label);
   return [
-    `${student.full_name || "Studente"} — Theoremz Black`,
+    `${student.full_name || "Studente"} — Theoremz ${planBadge}`,
     "",
     `Classe: ${student.year_class || "N/A"}   Track: ${student.track || "entrambi"}`,
     `Tutor: ${student.tutor_id || "—"}`,
     "",
-    `Piano: ${student.plan_label || "Black"} · Iscritto dal ${student.start_date || "?"}`,
+    `Piano: ${planLabel} · Iscritto dal ${student.start_date || "?"}`,
     "",
     "Contatti",
     `Genitore: ${student.parent_name || "—"} — ${student.parent_phone || "—"} — ${
@@ -559,6 +569,12 @@ function buildBrief(student: BriefSource) {
   ].join("\n");
 }
 
+const ESSENTIAL_PRODUCT_IDS = new Set(["prod_pim5hk5fvbov68", "prod_plm5hk5fvbov68"]);
+const MENTOR_PRODUCT_LABELS: Record<string, string> = {
+  prod_qiu8zzfp0c4gh4: "Mentor Base",
+  prod_qiuduqygn517mm: "Mentor Avanzato",
+};
+
 export function mapPlan(
   price: Stripe.Price | Stripe.Plan | null | undefined,
   fallback = "Black",
@@ -570,8 +586,20 @@ export function mapPlan(
       ? ((price as Stripe.Price).lookup_key as string).toLowerCase()
       : "";
   const priceId = (price.id || "").toLowerCase();
+  const productId =
+    typeof price?.product === "string"
+      ? price.product.toLowerCase()
+      : price?.product?.id?.toLowerCase?.() || "";
   const match = (needle: string) =>
-    nickname.includes(needle) || lookupKey.includes(needle) || priceId.includes(needle);
+    nickname.includes(needle) ||
+    lookupKey.includes(needle) ||
+    priceId.includes(needle) ||
+    productId.includes(needle);
+
+  if (productId && MENTOR_PRODUCT_LABELS[productId]) return MENTOR_PRODUCT_LABELS[productId];
+  if (match("mentor")) return "Mentor";
+
+  if (ESSENTIAL_PRODUCT_IDS.has(productId)) return "Black Essential";
   if (match("essential")) return "Black Essential";
   if (match("standard") || match("std")) return "Black Standard";
   if (match("ann") || match("year") || match("annual")) return "Black Annuale";

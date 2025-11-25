@@ -419,7 +419,7 @@ type PlanTextTemplateContext = {
 const PRODUCT_KIND_MAP: Record<string, PlanKind> = {
   prod_PIltnHyTuX5Qig: "black-standard", // Theoremz Black Standard
   prod_Plm05qNZgUzhbj: "black-annual", // Theoremz Black Annuale
-  prod_Plm5hK5Fvbov68: "essential", // Theoremz Black Essential
+  prod_PIm5hK5Fvbov68: "essential", // Theoremz Black Essential
   prod_QiU8Zzfp0c4Gh4: "mentor-base", // Theoremz Mentor Base
   prod_QiUDUqYgN517MM: "mentor-advanced", // Theoremz Mentor Avanzato
 };

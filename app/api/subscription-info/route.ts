@@ -6,6 +6,68 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-08-27.basil",
 });
 
+const PLAN_LABELS: Record<string, string> = {
+  price_1SQIy3HuThKalaHI4pli489T: "Black Standard",
+  price_1SGtQvHuThKalaHIr1d9ua0D: "Black Standard",
+  price_1Ptv7qHuThKalaHIO45IqjKL: "Black Essential",
+  price_1SII2UHuThKalaHI1g3CgFSb: "Black Annuale",
+};
+
+const ESSENTIAL_PRICE_IDS = new Set(
+  (process.env.ESSENTIAL_PRICE_IDS || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean)
+);
+// includi sempre il price Essential noto
+ESSENTIAL_PRICE_IDS.add("price_1Ptv7qHuThKalaHIO45IqjKL");
+
+const ESSENTIAL_PRODUCT_IDS = new Set(
+  (process.env.ESSENTIAL_PRODUCT_IDS || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean)
+);
+// includi sempre il product Essential noto
+ESSENTIAL_PRODUCT_IDS.add("prod_PIm5hK5Fvbov68");
+
+function resolvePlan(price: Stripe.Price | null | undefined) {
+  const priceId = price?.id || null;
+  const lookup = price?.lookup_key?.toLowerCase?.() || "";
+  const nickname = price?.nickname?.toLowerCase?.() || "";
+  const productName =
+    typeof price?.product === "object" &&
+    price.product &&
+    (price.product as any).name
+      ? String((price.product as any).name).toLowerCase()
+      : "";
+  const productId =
+    typeof price?.product === "string" ? price.product : price?.product?.id;
+
+  const label =
+    (priceId && PLAN_LABELS[priceId]) ||
+    price?.nickname ||
+    price?.lookup_key ||
+    productName ||
+    "Black";
+
+  const isEssential =
+    (priceId && ESSENTIAL_PRICE_IDS.has(priceId)) ||
+    (productId && ESSENTIAL_PRODUCT_IDS.has(productId)) ||
+    lookup.includes("essential") ||
+    nickname.includes("essential") ||
+    productName.includes("essential") ||
+    (label || "").toLowerCase().includes("essential");
+
+  const resolvedLabel = isEssential ? "Essential" : label || "Black";
+
+  return {
+    priceId,
+    label: resolvedLabel,
+    tier: isEssential ? "Essential" : "Black",
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
@@ -64,10 +126,17 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(activeSub.created * 1000).toISOString();
     console.log("✅ Subscription trovata:", { status: activeSub.status, startDate });
 
+    const firstItem = activeSub.items?.data?.[0] || null;
+    const price = firstItem?.price || null;
+    const plan = resolvePlan(price);
+
     return NextResponse.json({
       subscribed: true,
       startDate,
       status: activeSub.status,
+      planLabel: plan.label,
+      planTier: plan.tier,
+      priceId: plan.priceId,
     });
   } catch (error) {
     console.error("Errore recupero subscription info:", error);
