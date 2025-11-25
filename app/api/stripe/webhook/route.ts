@@ -7,6 +7,7 @@ import {
   syncBlackSubscriptionRecord,
   recordStripeSignup,
   linkStripeSignupToStudent,
+  mapPlan,
 } from "@/lib/black/subscriptionSync";
 import { adminDb } from "@/lib/firebaseAdmin";
 
@@ -26,6 +27,11 @@ const SUPPORT_WHATSAPP_MESSAGE_TEMPLATE =
   "Ciao, sono [nome], nuovo abbonato [piano]. Ecco classe, materie e prossime verifiche:";
 const SUPPORT_WHATSAPP_DISPLAY =
   process.env.SUPPORT_WHATSAPP_DISPLAY || SUPPORT_WHATSAPP_NUMBER;
+const WHATSAPP_GRAPH_VERSION =
+  process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v20.0";
+const WHATSAPP_PHONE_NUMBER_ID =
+  process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID?.trim() || "";
+const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN?.trim() || "";
 
 type PersonaKind = "start-studente" | "start-genitore";
 
@@ -84,10 +90,14 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       : undefined) ||
     lineItem?.description ||
     "Theoremz Black";
+  const planLabel = mapPlan(lineItem?.price || null, planName) || planName;
   const productId =
     typeof lineItem?.price?.product === "object"
       ? (lineItem.price.product as Stripe.Product).id
       : (lineItem?.price?.product as string | undefined);
+  const planLabelLower = (planLabel || "").toLowerCase();
+  const isBlackFullPlan =
+    planLabelLower.includes("black") && !planLabelLower.includes("essential");
 
   const persona = (metadata.persona || metadata.profile || metadata.role || "").toLowerCase();
   const isParent = persona.includes("parent") || persona.includes("genitore");
@@ -124,7 +134,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     subscriptionId: subscription?.id || null,
     customerId: stripeCustomer?.id || null,
     planName,
-    planLabel: planName,
+    planLabel,
     priceId: lineItem?.price?.id || null,
     productId,
     amountTotal,
@@ -187,6 +197,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     email,
     name,
   });
+
+  if (isBlackFullPlan) {
+    await triggerStartBlackTemplate({ phone });
+  }
 }
 
 async function logSubscription({
@@ -1209,6 +1223,87 @@ function renderEssentialHtmlTemplate({
   </table>
 </body>
 </html>`;
+}
+
+type WhatsAppTemplateComponent = Record<string, any>;
+
+async function triggerStartBlackTemplate({ phone }: { phone: string | null }) {
+  const to = normalizeWhatsAppNumber(phone);
+  if (!to) return;
+  await sendWhatsAppTemplate({
+    to,
+    templateName: "start_black",
+    language: "it",
+  });
+}
+
+async function sendWhatsAppTemplate({
+  to,
+  templateName,
+  language = "it",
+  components,
+}: {
+  to: string;
+  templateName: string;
+  language?: string;
+  components?: WhatsAppTemplateComponent[];
+}) {
+  if (!WHATSAPP_PHONE_NUMBER_ID || !META_ACCESS_TOKEN) {
+    console.warn("[stripe-webhook] missing WhatsApp config");
+    return { ok: false, error: "missing_whatsapp_config" as const };
+  }
+  const endpoint = `https://graph.facebook.com/${WHATSAPP_GRAPH_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  const payload: any = {
+    messaging_product: "whatsapp",
+    to,
+    type: "template",
+    template: {
+      name: templateName,
+      language: { code: language },
+    },
+  };
+  if (components?.length) {
+    payload.template.components = components;
+  }
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${META_ACCESS_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || (data && (data as any).error)) {
+      console.error("[stripe-webhook] WhatsApp template send failed", {
+        status: res.status,
+        body: data,
+      });
+      return {
+        ok: false,
+        error: (data as any)?.error?.message || `status_${res.status}`,
+      };
+    }
+    return { ok: true };
+  } catch (error: any) {
+    console.error("[stripe-webhook] WhatsApp template send error", error);
+    return { ok: false, error: error?.message || "unknown_error" };
+  }
+}
+
+function normalizeWhatsAppNumber(raw?: string | null) {
+  if (!raw) return null;
+  let digits = raw.replace(/\D+/g, "");
+  if (!digits || digits.length < 6) return null;
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.startsWith("0") && digits.length >= 10) {
+    digits = digits.replace(/^0+/, "");
+  }
+  if (!digits.startsWith("39") && digits.length === 10) {
+    digits = `39${digits}`;
+  }
+  return digits;
 }
 
 function formatAmount(amount: number, currency?: string | null) {
