@@ -1112,10 +1112,11 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
     .eq("id", id)
     .maybeSingle();
 
-  const profile =
-    Array.isArray(studentMeta?.profiles) && studentMeta.profiles.length
-      ? studentMeta.profiles[0]
-      : studentMeta?.profiles;
+  type ProfileLite = { stripe_price_id?: string | null; subscription_tier?: string | null };
+  const rawProfile = studentMeta?.profiles;
+  const profile: ProfileLite | null = Array.isArray(rawProfile)
+    ? (rawProfile[0] as ProfileLite | undefined) || null
+    : (rawProfile as ProfileLite | null);
 
   const { data: latestSignup } = await db
     .from("black_stripe_signups")
