@@ -537,7 +537,9 @@ type ConversationRow = {
   followup_sent_at?: string | null;
 };
 
-function deriveConversationType(existing: ConversationType | null | undefined) {
+function deriveConversationType(
+  existing: ConversationType | null | undefined
+): ConversationType {
   // Forziamo tutte le conversazioni WhatsApp a essere trattate come "black"
   // per usare sempre il bot Black e non il sales bot.
   return "black";
