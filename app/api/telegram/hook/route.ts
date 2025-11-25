@@ -1792,17 +1792,22 @@ async function cmdWABOT({ db, chatId, text }: CmdCtx) {
   const target = await resolveConversationTarget(db, query);
   if ((target as any).err) return send(chatId, (target as any).err);
   const { phone, phoneTail, studentId, type } = target as any;
+  const resolvedType: WaConversationType =
+    type && type !== "prospect" ? type : studentId ? "black" : "prospect";
 
   try {
     await upsertWaConversation(db, {
       phoneTail,
       phone,
       studentId,
-      type,
+      type: resolvedType,
       bot,
       status: "bot",
     });
-    await send(chatId, `🤖 Bot impostato su ${escapeMarkdown(phoneTail)} → ${bot} (stato bot)`);
+    await send(
+      chatId,
+      `🤖 Bot impostato su ${escapeMarkdown(phoneTail)} → ${bot} (stato bot, tipo ${resolvedType})`
+    );
   } catch (err: any) {
     await send(chatId, `❌ Update bot fallito: ${err?.message || err}`);
   }

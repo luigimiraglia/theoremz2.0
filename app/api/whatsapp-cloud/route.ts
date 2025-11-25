@@ -69,14 +69,35 @@ export async function POST(req: Request) {
     const imageDataUrl = imageSource ? await downloadImageAsDataUrl(imageSource) : null;
     const phoneTail = extractPhoneTail(rawPhone);
     const studentResult = await fetchBlackStudentWithContext(phoneTail);
-    const baseConversation = await fetchConversation(phoneTail);
-    const conversationType = deriveConversationType(baseConversation?.type as ConversationType, studentResult?.student || null);
-    const conversationStatus = (baseConversation?.status as ConversationStatus) || "waiting_tutor";
+    let baseConversation = await fetchConversation(phoneTail);
+    let conversationType = deriveConversationType(baseConversation?.type as ConversationType);
+    let conversationStatus = (baseConversation?.status as ConversationStatus) || "waiting_tutor";
 
     const inboundText =
       text && imageDataUrl
         ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
         : text || IMAGE_ONLY_PROMPT;
+
+    // Collega student_id se noto, senza forzare il tipo
+    if (
+      studentResult?.student?.id &&
+      phoneTail &&
+      baseConversation?.student_id !== studentResult.student.id
+    ) {
+      const linked = await upsertConversation({
+        phoneTail,
+        phoneE164,
+        studentId: studentResult.student.id,
+        status: conversationStatus,
+        type: baseConversation?.type || conversationType,
+        bot: baseConversation?.bot ?? null,
+      });
+      if (linked) {
+        baseConversation = linked;
+        conversationType = linked.type as ConversationType;
+        conversationStatus = (linked.status as ConversationStatus) || conversationStatus;
+      }
+    }
 
     // Se già in waiting_tutor/tutor, non rispondere col bot: logga e inoltra a Telegram
     if (baseConversation?.status && baseConversation.status !== "bot") {
@@ -506,9 +527,8 @@ type ConversationRow = {
   followup_sent_at?: string | null;
 };
 
-function deriveConversationType(existing: ConversationType | null | undefined, student: BlackStudentRow | null) {
-  if (existing) return existing;
-  return student ? "black" : "prospect";
+function deriveConversationType(existing: ConversationType | null | undefined) {
+  return existing || "prospect";
 }
 
 function deriveFollowupDelayMs(text: string | null | undefined) {
