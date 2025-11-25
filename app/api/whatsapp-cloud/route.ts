@@ -233,15 +233,18 @@ export async function POST(req: Request) {
         followupDueAt: null,
         followupSentAt: null,
       });
-      await notifyOperators({
-        conversation: {
-          ...(conversation || { phone_tail: phoneTail || "unknown" }),
-          status: "waiting_tutor",
-          type: conversationType,
-        },
-        text: inboundText,
-        rawPhone,
-      });
+      await notifyOperators(
+        {
+          conversation: {
+            ...(conversation || { phone_tail: phoneTail || "unknown" }),
+            status: "waiting_tutor",
+            type: conversationType,
+          },
+          text: inboundText,
+          rawPhone,
+          history: historyResult.history,
+        }
+      );
       await sendCloudReply({
         phoneNumberId,
         to: rawPhone,
@@ -307,15 +310,18 @@ async function handleProspectEscalation({
       followupDueAt: null,
       followupSentAt: null,
     });
-    await notifyOperators({
-      conversation: {
-        ...(baseConversation || { phone_tail: phoneTail || "unknown" }),
-        status: "waiting_tutor",
-        type: conversationType,
-      },
-      text: inboundText,
-      rawPhone,
-    });
+    await notifyOperators(
+      {
+        conversation: {
+          ...(baseConversation || { phone_tail: phoneTail || "unknown" }),
+          status: "waiting_tutor",
+          type: conversationType,
+        },
+        text: inboundText,
+        rawPhone,
+        history: historyResult.history,
+      }
+    );
     await sendCloudReply({
       phoneNumberId,
       to: rawPhone!,
@@ -645,10 +651,12 @@ async function notifyOperators({
   conversation,
   text,
   rawPhone,
+  history,
 }: {
   conversation: ConversationRow;
   text: string | null | undefined;
   rawPhone: string | null;
+  history?: ConversationMessage[];
 }) {
   if (!TELEGRAM_BOT_TOKEN || !OPERATOR_CHAT_IDS.length) return;
   const status = conversation.status || "waiting_tutor";
@@ -657,7 +665,19 @@ async function notifyOperators({
   const phoneLine = `Numero: ${rawPhone || conversation.phone_e164 || conversation.phone_tail}`;
   const convIdLine = conversation.id ? `ID: ${conversation.id}` : null;
   const body = text || "(messaggio senza testo)";
-  const message = [header, phoneLine, convIdLine, "", body].filter(Boolean).join("\n");
+  const historyLines =
+    history && history.length
+      ? history
+          .slice(-10)
+          .map((m) => {
+            const who = m.role === "assistant" ? "🤖" : "👤";
+            return `${who} ${m.content.slice(0, 160)}`;
+          })
+          .join("\n")
+      : null;
+  const message = [header, phoneLine, convIdLine, "", body, historyLines ? "\nUltimi messaggi:" : null, historyLines]
+    .filter(Boolean)
+    .join("\n");
   await Promise.all(
     OPERATOR_CHAT_IDS.map((chatId) =>
       sendTelegramMessage(chatId, message).catch((err) =>
