@@ -477,6 +477,7 @@ export default function BlackPage() {
               ["ok", "Correzione verifiche"],
               ["ok", "Risorse aggiuntive illimitate"],
               ["ok", "Tutti i vantaggi di Free"],
+              ["ok", "100% Soddisfatti o Rimborsati"],
               ["no", "Tutor umano"],
               ["no", "Domanda settimanale"],
               ["no", "Programma di studio"],
@@ -548,6 +549,7 @@ export default function BlackPage() {
               ["ok", "Risorse aggiuntive illimitate"],
               ["ok", "Tutti i vantaggi di Essential"],
               ["ok", "Tutti i vantaggi di Free"],
+              ["ok", "100% Soddisfatti o Rimborsati"],
             ]}
           />
 

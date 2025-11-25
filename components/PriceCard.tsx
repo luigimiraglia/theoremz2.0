@@ -30,6 +30,7 @@ type PriceCardProps = {
   plan?: string;
   defaultToggleId?: string;
   toggleOptions?: ToggleOption[];
+  tag?: ReactNode;
 };
 
 function defaultPlanFrom(price?: string, unit?: string) {
