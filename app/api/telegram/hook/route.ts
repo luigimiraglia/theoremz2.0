@@ -1621,6 +1621,82 @@ async function cmdLOGS({ db, chatId, text }: CmdCtx) {
   await send(chatId, textLines.join("\n"));
 }
 
+/** /waclist → ultime 7 conversazioni WA */
+async function cmdWALIST({ db, chatId }: CmdCtx) {
+  const { data, error } = await db
+    .from(WHATSAPP_CONVERSATIONS_TABLE)
+    .select("phone_tail, phone_e164, status, type, bot, last_message_at, last_message_preview, followup_due_at, followup_sent_at, updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(7);
+  if (error) return send(chatId, `❌ Errore elenco: ${error.message}`);
+  if (!data?.length) return send(chatId, "Nessuna conversazione WhatsApp trovata.");
+  const lines = data.map((row: any) => {
+    const status = row.status || "—";
+    const type = row.type || "—";
+    const last = row.last_message_at ? formatDateTime(row.last_message_at) : "—";
+    const preview = row.last_message_preview ? ` · ${escapeMarkdown(row.last_message_preview.slice(0, 80))}` : "";
+    const follow = row.followup_due_at
+      ? ` | FU: ${formatDateTime(row.followup_due_at)}${row.followup_sent_at ? " (inviato)" : ""}`
+      : "";
+    return `• ${escapeMarkdown(row.phone_tail || row.phone_e164 || "??")} — ${status}/${type} — ${last}${preview}${follow}`;
+  });
+  await send(chatId, `*Ultime conversazioni WA*\n${lines.join("\n")}`);
+}
+
+/** /wainfo <telefono|email|cognome> → dettaglio conversazione WA */
+async function cmdWAINFO({ db, chatId, text }: CmdCtx) {
+  const m = text.match(/^\/wainfo(?:@\w+)?\s+(.+)/i);
+  if (!m) return send(chatId, "Uso: /wainfo telefono|email|cognome");
+  const query = m[1].trim();
+  const target = await resolveConversationTarget(db, query);
+  if ((target as any).err) return send(chatId, (target as any).err);
+  const { phoneTail, phone, studentId } = target as any;
+
+  const { data: convo, error } = await db
+    .from(WHATSAPP_CONVERSATIONS_TABLE)
+    .select("*")
+    .eq("phone_tail", phoneTail)
+    .maybeSingle();
+  if (error) return send(chatId, `❌ Errore conversazione: ${error.message}`);
+  if (!convo) return send(chatId, `Nessuna conversazione trovata per ${escapeMarkdown(phoneTail)}.`);
+
+  const { data: messages } = await db
+    .from(WHATSAPP_MESSAGES_TABLE)
+    .select("role, content, created_at")
+    .eq("phone_tail", phoneTail)
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  const infoLines = [
+    `📱 ${escapeMarkdown(convo.phone_e164 || phone || phoneTail)}`,
+    `Stato: ${convo.status || "—"} · Tipo: ${convo.type || "—"}`,
+    convo.bot ? `Bot: ${escapeMarkdown(convo.bot)}` : null,
+    convo.student_id ? `Studente: ${convo.student_id}` : studentId ? `Studente (resolved): ${studentId}` : null,
+    convo.last_message_at ? `Ultimo: ${formatDateTime(convo.last_message_at)}` : null,
+    convo.followup_due_at
+      ? `Follow-up: ${formatDateTime(convo.followup_due_at)}${convo.followup_sent_at ? " (inviato)" : ""}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const msgLines =
+    messages && messages.length
+      ? messages
+          .slice()
+          .reverse()
+          .map((m: any) => {
+            const when = formatDateTime(m.created_at);
+            const who = m.role === "assistant" ? "🤖" : "👤";
+            const text = escapeMarkdown((m.content || "").slice(0, 160));
+            return `${when} ${who} ${text}`;
+          })
+          .join("\n")
+      : "_Nessun messaggio recente._";
+
+  await send(chatId, `*Dettaglio conversazione*\n${infoLines}\n\n${msgLines}`);
+}
+
 /** /wa <telefono|email|cognome> <messaggio...> → invia su WhatsApp e passa a tutor */
 async function cmdWA({ db, chatId, text }: CmdCtx) {
   const m = text.match(/^\/wa(?:@\w+)?\s+(\S+)(?:\s+([\s\S]+))?$/i);
@@ -2263,6 +2339,8 @@ export async function POST(req: Request) {
           "`/wastatus tel|email|nome bot|waiting|tutor` — cambia stato conversazione",
           "`/watype tel|email|nome black|prospect|genitore|insegnante|altro` — cambia tipo conversazione",
           "`/wabot tel|email|nome nome_bot` — assegna bot e attiva stato bot",
+          "`/waclist` — ultime 7 conversazioni WhatsApp",
+          "`/wainfo tel|email|nome` — dettaglio conversazione WhatsApp",
           "`/checked cognome|email [nota]` — segna ultimo contatto + log",
         ].join("\n")
       );
@@ -2278,6 +2356,10 @@ export async function POST(req: Request) {
       await cmdWATYPE(ctx);
     } else if (/^\/wabot(\s|@)/i.test(text)) {
       await cmdWABOT(ctx);
+    } else if (/^\/waclist(\s|@)?/i.test(text)) {
+      await cmdWALIST(ctx);
+    } else if (/^\/wainfo(\s|@)/i.test(text)) {
+      await cmdWAINFO(ctx);
     } else if (/^\/nomebreve(\s|@)/i.test(text)) {
       await cmdNOMEBREVE(ctx);
     } else if (/^\/votoiniziale(\s|@)/i.test(text)) {

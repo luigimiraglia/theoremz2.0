@@ -205,6 +205,39 @@ export async function POST(req: Request) {
 
     const { student, contextText } = studentResult;
     const historyResult = await fetchConversationHistory(student.id, phoneTail, HISTORY_LIMIT);
+
+    if (
+      conversationStatus === "bot" &&
+      conversationType === "black" &&
+      (await needsTutorEscalation(inboundText, historyResult.history))
+    ) {
+      await upsertConversation({
+        phoneTail,
+        phoneE164,
+        studentId: student.id,
+        status: "waiting_tutor",
+        type: conversationType,
+        lastMessage: inboundText,
+        followupDueAt: null,
+        followupSentAt: null,
+      });
+      await notifyOperators({
+        conversation: {
+          ...(conversation || { phone_tail: phoneTail || "unknown" }),
+          status: "waiting_tutor",
+          type: conversationType,
+        },
+        text: inboundText,
+        rawPhone,
+      });
+      await sendCloudReply({
+        phoneNumberId,
+        to: rawPhone,
+        body: "Ti metto in contatto con un tutor, ti risponde a breve.",
+      });
+      continue;
+    }
+
     const reply = await generateReply(inboundText, imageDataUrl, contextText, historyResult.history);
 
     await logConversationMessage(student.id, phoneTail, "assistant", reply);
@@ -378,15 +411,67 @@ function deriveFollowupDelayMs(text: string | null | undefined) {
   return 3 * 3600 * 1000;
 }
 
+async function needsTutorEscalation(text: string | null | undefined, history: ConversationMessage[]) {
+  if (!text) return false;
+
+  // Lightweight heuristic if OpenAI assente
+  const fallback = () => {
+    const lower = text.toLowerCase();
+    const frustrationPatterns = [/non capisco/, /non ho capito/, /ancora non/, /non riesco/, /spiegamelo/i];
+    const hitsCurrent = frustrationPatterns.some((re) => re.test(lower));
+    const recentFrustration =
+      history
+        .slice(-5)
+        .filter((m) => m.role === "user")
+        .some((m) => frustrationPatterns.some((re) => re.test((m.content || "").toLowerCase())));
+    return hitsCurrent && recentFrustration;
+  };
+
+  if (!openai) return fallback();
+
+  try {
+    const historyText = history
+      .slice(-6)
+      .map((m) => `${m.role === "user" ? "Utente" : "AI"}: ${m.content}`)
+      .join("\n");
+    const prompt = `
+Sei un assistente di instradamento conversazioni. Decidi se serve passare la chat a un tutor umano (rispondi solo yes/no).
+- Passa a tutor se l'utente chiede esplicitamente di parlare con un tutor/umano, se mostra frustrazione ripetuta o se il tema è complesso che richiede supervisione umana.
+- Altrimenti resta su bot.
+`;
+    const completion = await openai.chat.completions.create({
+      model: VISION_MODEL,
+      temperature: 0,
+      max_tokens: 3,
+      messages: [
+        { role: "system", content: prompt },
+        historyText ? { role: "system", content: `Storia recente:\n${historyText}` } : null,
+        { role: "user", content: text },
+      ].filter(Boolean) as any,
+    });
+    const answer = completion.choices[0]?.message?.content?.toLowerCase() || "";
+    if (/\byes\b|sì|si\b/.test(answer)) return true;
+  } catch (err) {
+    console.error("[whatsapp-cloud] escalate check failed, fallback", err);
+  }
+
+  return fallback();
+}
+
 async function generateSalesReply(text: string, history: ConversationMessage[] = []) {
   if (!openai) {
     return "Ciao! Sono Luigi di Theoremz. Ti aiuto a capire se Black (tutor dedicato, verifiche, preparazione a verifiche/esami) è adatto a te. Raccontami classe, materia e obiettivo.";
   }
   const prompt = `
 Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp a chi chiede info.
-- Tone: empatico, conciso, zero fluff. Massimo 5 frasi brevi.
-- Business: Theoremz Black = tutor personale per matematica/fisica, preparazione verifiche/esami, piani personalizzati, feedback continuo, contatto umano. Offri consigli sul piano migliore in base a classe/obiettivo/difficoltà.
-- Obiettivo: capire bisogno (classe, materia, prossime verifiche, obiettivo) e proporre il percorso giusto senza pressare. Offri follow-up (“se non rispondi, ti scrivo più tardi per aiutarti”).
+- Tone: empatico, conciso, zero fluff. Max 5 frasi brevi.
+- Contesto generale: Theoremz è il sistema di studio più avanzato in Italia per matematica e fisica (contenuti premium + AI + supporto umano) per ottenere risultati concreti con meno stress.
+- Livelli:
+  • Essential: studio autonomo potenziato. Tutte le risorse premium (esercizi svolti, appunti, video, formulari, percorsi guidati), risolutore avanzato, AI tutor 24/7, risorse personalizzate illimitate. Per chi vuole autonomia veloce e un tutor AI sempre disponibile. Link: theoremz.com/black (seleziona Essential).
+  • Black: tutto Essential + supporto umano in chat, onboarding 1:1, piano di studio personalizzato, 1 domanda/sett. garantita al tutor umano. Ideale per chi vuole alzare i voti con guida settimanale e piano chiaro. Link: theoremz.com/black.
+  • Mentor: Black + lezioni settimanali 1:1 con mentore dedicato, supervisione continua, preparazione mirata (verifiche, esami, test, olimpiadi), materiali e correzioni prioritarie. Per studenti ambiziosi (medie 8–10, obiettivi selettivi). Link: theoremz.com/mentor.
+- Obiettivo: capire classe, materia, prossime verifiche, difficoltà, obiettivo, livello di autonomia; proporre il livello giusto e il prossimo step concreto (es. “ti consiglio Black/Mentor, ecco il link”).
+- Follow-up: se l'utente non decide, proponi di risentirsi (“se non rispondi, ti scrivo più tardi per aiutarti”).
 - Evita markdown o emoji; niente latex.
 `;
   const historyText = history
@@ -404,10 +489,13 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
         { role: "user", content: text || "Raccontami cosa fate." },
       ].filter(Boolean) as any,
     });
-    return completion.choices[0]?.message?.content?.trim() || "Posso aiutarti con info su Theoremz Black, dimmi cosa cerchi.";
+    return (
+      completion.choices[0]?.message?.content?.trim() ||
+      "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia e obiettivo: ti propongo Essential (AI+risorse), Black (tutor umano in chat) o Mentor (lezioni 1:1)."
+    );
   } catch (err) {
     console.error("[whatsapp-cloud] sales reply failed", err);
-    return "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia e obiettivo e ti consiglio il piano giusto.";
+    return "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia e obiettivo: ti propongo il piano giusto (Essential, Black o Mentor).";
   }
 }
 
