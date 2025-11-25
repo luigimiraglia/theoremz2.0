@@ -114,6 +114,11 @@ export async function POST(req: Request) {
     });
 
     if (effectiveStatus !== "bot") {
+      const historyResult = await fetchConversationHistory(
+        studentResult?.student.id || null,
+        phoneTail,
+        HISTORY_LIMIT
+      );
       const safeTail = phoneTail || conversation?.phone_tail || "unknown";
       await notifyOperators({
         conversation: {
@@ -123,6 +128,7 @@ export async function POST(req: Request) {
         },
         text: text || "(nessun testo, solo media)",
         rawPhone,
+        history: historyResult.history,
       });
       continue;
     }
