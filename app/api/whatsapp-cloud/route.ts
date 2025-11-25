@@ -538,7 +538,9 @@ type ConversationRow = {
 };
 
 function deriveConversationType(existing: ConversationType | null | undefined) {
-  return existing || "prospect";
+  // Forziamo tutte le conversazioni WhatsApp a essere trattate come "black"
+  // per usare sempre il bot Black e non il sales bot.
+  return "black";
 }
 
 function deriveBotFromType(type: ConversationType | null | undefined) {
