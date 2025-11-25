@@ -542,7 +542,8 @@ function deriveConversationType(existing: ConversationType | null | undefined) {
 }
 
 function deriveBotFromType(type: ConversationType | null | undefined) {
-  return type === "black" ? "black" : "sales";
+  // Forziamo sempre il bot Black per tutte le conversazioni WhatsApp
+  return "black";
 }
 
 function deriveFollowupDelayMs(text: string | null | undefined) {
