@@ -1667,11 +1667,21 @@ async function cmdWAINFO({ db, chatId, text }: CmdCtx) {
     .order("created_at", { ascending: false })
     .limit(6);
 
+  const status = escapeMarkdown(convo.status || "—");
+  const type = escapeMarkdown(convo.type || "—");
+  const studentResolved = studentId
+    ? escapeMarkdown(String(studentId))
+    : null;
+
   const infoLines = [
     `📱 ${escapeMarkdown(convo.phone_e164 || phone || phoneTail)}`,
-    `Stato: ${convo.status || "—"} · Tipo: ${convo.type || "—"}`,
+    `Stato: ${status} · Tipo: ${type}`,
     convo.bot ? `Bot: ${escapeMarkdown(convo.bot)}` : null,
-    convo.student_id ? `Studente: ${convo.student_id}` : studentId ? `Studente (resolved): ${studentId}` : null,
+    convo.student_id
+      ? `Studente: ${escapeMarkdown(String(convo.student_id))}`
+      : studentResolved
+        ? `Studente (resolved): ${studentResolved}`
+        : null,
     convo.last_message_at ? `Ultimo: ${formatDateTime(convo.last_message_at)}` : null,
     convo.followup_due_at
       ? `Follow-up: ${formatDateTime(convo.followup_due_at)}${convo.followup_sent_at ? " (inviato)" : ""}`
