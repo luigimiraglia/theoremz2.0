@@ -18,6 +18,7 @@ export type ToggleOption = {
   buyHref: string;
   infoHref: string;
   plan?: string;
+  desktopNote?: string;
 };
 
 type PriceCardProps = {
