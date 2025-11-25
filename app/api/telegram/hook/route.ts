@@ -1022,23 +1022,7 @@ function planLabelFromPriceId(
   fallback?: string | null
 ) {
   if (!priceId) return fallback || "Black";
-  const mapped = PLAN_LABELS[priceId];
-  if (mapped) return mapped;
-  const lower = priceId.toLowerCase();
-  if (lower.includes("essential")) return "Black Essential";
-  if (lower.includes("mentor")) return "Mentor";
-  if (lower.includes("ann") || lower.includes("year")) return "Black Annuale";
-  if (lower.includes("std") || lower.includes("standard")) return "Black Standard";
-  return fallback || "Black";
-}
-
-function normalizePlanLabel(plan?: string | null) {
-  const base = (plan || "").trim();
-  if (!base) return { label: "Black", kind: "Black" as const };
-  const lower = base.toLowerCase();
-  if (lower.includes("mentor")) return { label: base, kind: "Mentor" as const };
-  if (lower.includes("essential")) return { label: base, kind: "Essential" as const };
-  return { label: base, kind: "Black" as const };
+  return PLAN_LABELS[priceId] || fallback || "Black";
 }
 
 function formatDate(date?: string | null) {
@@ -1107,34 +1091,10 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
   const { data: studentMeta } = await db
     .from("black_students")
     .select(
-      "user_id, last_contacted_at, last_active_at, readiness, year_class, track, next_assessment_subject, next_assessment_date, goal, difficulty_focus, student_phone, parent_phone, profiles:profiles!black_students_user_id_fkey(stripe_price_id, subscription_tier)"
+      "last_contacted_at, last_active_at, readiness, year_class, track, next_assessment_subject, next_assessment_date, goal, difficulty_focus, student_phone, parent_phone"
     )
     .eq("id", id)
     .maybeSingle();
-
-  type ProfileLite = { stripe_price_id?: string | null; subscription_tier?: string | null };
-  const rawProfile = studentMeta?.profiles;
-  const profile: ProfileLite | null = Array.isArray(rawProfile)
-    ? (rawProfile[0] as ProfileLite | undefined) || null
-    : (rawProfile as ProfileLite | null);
-
-  const { data: latestSignup } = await db
-    .from("black_stripe_signups")
-    .select("plan_label, plan_name, price_id, product_id, updated_at, event_created_at")
-    .eq("student_id", id)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const planFromSignup = latestSignup?.plan_label || latestSignup?.plan_name;
-  const planFromProfile = planLabelFromPriceId(
-    profile?.stripe_price_id,
-    profile?.subscription_tier
-  );
-  const { label: planLabel, kind: planKind } = normalizePlanLabel(
-    planFromSignup || planFromProfile || "Black"
-  );
-  const planKindBadge = planKind.toUpperCase();
 
   const lastContact = studentMeta?.last_contacted_at
     ? formatDateTime(studentMeta.last_contacted_at)
@@ -1151,9 +1111,6 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
   const infoCard = [
     "╭────────────────────────",
     `│ ${bold(name)}`,
-    planLabel
-      ? `│ ${italic("Piano")}: ${escapeMarkdown(planLabel)} (${escapeMarkdown(planKindBadge)})`
-      : null,
     studentMeta?.year_class
       ? `│ ${italic("Classe")}: ${escapeMarkdown(studentMeta.year_class)}${
           studentMeta?.track
