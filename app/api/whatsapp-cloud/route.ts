@@ -185,10 +185,10 @@ export async function POST(req: Request) {
           continue;
         }
       }
-      const reply =
-        conversationType === "prospect" || conversationType === "altro"
-          ? await generateSalesReply(text || "", historyResult.history)
-          : ASK_EMAIL_MESSAGE;
+      const isSales = conversationType !== "black";
+      const reply = isSales
+        ? await generateSalesReply(text || "", historyResult.history)
+        : ASK_EMAIL_MESSAGE;
       await logConversationMessage(null, phoneTail, "assistant", reply);
       await upsertConversation({
         phoneTail,
