@@ -14,8 +14,6 @@ type ConversationItem = {
   lastMessageAt?: string | null;
   lastMessagePreview?: string | null;
   updatedAt?: string | null;
-  followupDueAt?: string | null;
-  followupSentAt?: string | null;
   student?: {
     id: string;
     name?: string | null;
@@ -101,7 +99,9 @@ export default function WhatsAppAdmin() {
           cache: "no-store",
         });
         if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
+          const data = await res.json().catch(() => null);
+          const detail = data?.error || data?.detail;
+          throw new Error(`HTTP ${res.status}${detail ? ` — ${detail}` : ""}`);
         }
         const data = await res.json();
         setList(data.conversations || []);
@@ -133,7 +133,9 @@ export default function WhatsAppAdmin() {
           cache: "no-store",
         });
         if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
+          const data = await res.json().catch(() => null);
+          const detail = data?.error || data?.detail;
+          throw new Error(`HTTP ${res.status}${detail ? ` — ${detail}` : ""}`);
         }
         const data = (await res.json()) as DetailResponse;
         setDetail(data);
@@ -177,7 +179,8 @@ export default function WhatsAppAdmin() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || `HTTP ${res.status}`);
+        const detail = data?.error || data?.detail;
+        throw new Error(detail || `HTTP ${res.status}`);
       }
       setDraft("");
       await Promise.all([fetchDetail(selected), fetchList({ keepSelection: true })]);
@@ -203,7 +206,8 @@ export default function WhatsAppAdmin() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || `HTTP ${res.status}`);
+        const detail = data?.error || data?.detail;
+        throw new Error(detail || `HTTP ${res.status}`);
       }
       await Promise.all([fetchDetail(selected), fetchList({ keepSelection: true })]);
     } catch (err: any) {
@@ -377,11 +381,6 @@ export default function WhatsAppAdmin() {
                       {detail.conversation.bot && (
                         <span className="text-xs px-2 py-1 rounded-full border border-slate-700 text-slate-200 bg-slate-800/60">
                           Bot: {detail.conversation.bot}
-                        </span>
-                      )}
-                      {detail.conversation.followupDueAt && (
-                        <span className="text-xs px-2 py-1 rounded-full border border-amber-400/50 text-amber-100 bg-amber-500/10">
-                          FU: {formatAbsolute(detail.conversation.followupDueAt)}
                         </span>
                       )}
                     </div>

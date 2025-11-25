@@ -89,8 +89,6 @@ export async function GET(request: NextRequest) {
           "bot",
           "last_message_at",
           "last_message_preview",
-          "followup_due_at",
-          "followup_sent_at",
           "updated_at",
           "student_id",
           "black_students(id, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, start_date, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))",
