@@ -85,7 +85,7 @@ export async function GET(
     console.error("[admin/whatsapp] detail error", convoRes.error);
     return NextResponse.json({ error: convoRes.error.message }, { status: 500 });
   }
-  const conversation = convoRes.data;
+  const conversation = convoRes.data as any;
   if (!conversation) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
