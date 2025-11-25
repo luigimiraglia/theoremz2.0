@@ -78,6 +78,37 @@ export async function POST(req: Request) {
         ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
         : text || IMAGE_ONLY_PROMPT;
 
+    // Se già in waiting_tutor/tutor, non rispondere col bot: logga e inoltra a Telegram
+    if (baseConversation?.status && baseConversation.status !== "bot") {
+      const historyResult = await fetchConversationHistory(
+        studentResult?.student.id || null,
+        phoneTail,
+        HISTORY_LIMIT
+      );
+      await upsertConversation({
+        phoneTail,
+        phoneE164,
+        studentId: studentResult?.student.id || null,
+        status: baseConversation.status as ConversationStatus,
+        type: (baseConversation.type as ConversationType) || conversationType,
+        lastMessage: inboundText,
+        bot: baseConversation.bot || null,
+      });
+      await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
+      const safeTail = phoneTail || baseConversation.phone_tail || "unknown";
+      await notifyOperators({
+        conversation: {
+          ...(baseConversation || { phone_tail: safeTail }),
+          status: baseConversation.status as ConversationStatus,
+          type: (baseConversation.type as ConversationType) || conversationType,
+        },
+        text: text || "(nessun testo, solo media)",
+        rawPhone,
+        history: historyResult.history,
+      });
+      continue;
+    }
+
     const escalatedProspect = await handleProspectEscalation({
       conversationType,
       conversationStatus,
