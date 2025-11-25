@@ -529,7 +529,7 @@ Sei un assistente di instradamento conversazioni. Decidi se serve passare la cha
 
 async function generateSalesReply(text: string, history: ConversationMessage[] = []) {
   if (!openai) {
-    return "Ciao! Sono Luigi di Theoremz. Ti aiuto a capire se Black (tutor dedicato, verifiche, preparazione a verifiche/esami) è adatto a te. Raccontami classe, materia e obiettivo.";
+    return "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e difficoltà: poi ti propongo il piano giusto (Essential, Black o Mentor).";
   }
   const prompt = `
 Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp a chi chiede info.
@@ -539,14 +539,14 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
   • Essential: studio autonomo potenziato. Tutte le risorse premium (esercizi svolti, appunti, video, formulari, percorsi guidati), risolutore avanzato, AI tutor 24/7, risorse personalizzate illimitate. Per chi vuole autonomia veloce e un tutor AI sempre disponibile. Link: theoremz.com/black (seleziona Essential).
   • Black: tutto Essential + supporto umano in chat, onboarding 1:1, piano di studio personalizzato, 1 domanda/sett. garantita al tutor umano. Ideale per chi vuole alzare i voti con guida settimanale e piano chiaro. Link: theoremz.com/black.
   • Mentor: Black + lezioni settimanali 1:1 con mentore dedicato, supervisione continua, preparazione mirata (verifiche, esami, test, olimpiadi), materiali e correzioni prioritarie. Per studenti ambiziosi (medie 8–10, obiettivi selettivi). Link: theoremz.com/mentor.
-- Metodo: Straight Line. Prima fai 1–2 domande mirate (classe, materia, prossima verifica, obiettivo, autonomia). Se mancano info, chiedile e NON proporre piani.
+- Metodo: Straight Line. Prima raccogli dati (almeno: classe, materia, prossima verifica o obiettivo chiaro, difficoltà principali, livello di autonomia). Finché mancano info, fai 1–2 domande mirate e NON proporre piani.
 - Quando proponi: scegli UN solo piano (Essential OPPURE Black OPPURE Mentor) coerente con i bisogni. Non mischiare piani.
-- Formato proposta (max 5 righe, con righe vuote tra blocchi):
-  Riga 1: sintesi situazione + piano raccomandato.
-  Riga 2-3: perk chiave di quel piano (frasi brevi, separate da punto o a capo).
+- Formato proposta (max 5-6 righe, con righe vuote tra blocchi per leggibilità):
+  Riga 1: sintesi situazione + piano raccomandato (uno solo).
+  Riga 2-3: perk chiave di quel piano (frasi brevi: cosa ottiene).
   Riga 4: link pagamento del piano scelto (Essential/Black: theoremz.com/black; Mentor: theoremz.com/mentor).
-  Riga 5 (opzionale): follow-up soft (“se non rispondi, ti scrivo più tardi per aiutarti”).
-- Evita markdown o emoji; niente latex.
+  Riga 5-6 (opzionali): follow-up soft / invito a confermare.
+- Evita markdown o emoji; niente latex. Niente “malloppone”: frasi brevi, chiare, separate da righe vuote.
 `;
   const historyText = history
     .slice(-6)
@@ -565,11 +565,11 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
     });
     return (
       completion.choices[0]?.message?.content?.trim() ||
-      "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e obiettivo: ti propongo il piano giusto (Essential, Black o Mentor)."
+      "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e difficoltà: poi ti propongo il piano giusto (Essential, Black o Mentor)."
     );
   } catch (err) {
     console.error("[whatsapp-cloud] sales reply failed", err);
-    return "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia e prossima verifica: ti propongo il piano giusto (Essential, Black o Mentor).";
+    return "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e difficoltà: poi ti propongo il piano giusto (Essential, Black o Mentor).";
   }
 }
 
