@@ -100,6 +100,9 @@ export async function POST(req: Request) {
       bot: baseConversation?.bot ?? null,
     });
 
+    const effectiveStatus = (conversation?.status as ConversationStatus) || conversationStatus;
+    const effectiveType = (conversation?.type as ConversationType) || conversationType;
+
     // Log inbound message
     await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
 
@@ -110,13 +113,13 @@ export async function POST(req: Request) {
       rawPhone,
     });
 
-    if (conversationStatus !== "bot") {
+    if (effectiveStatus !== "bot") {
       const safeTail = phoneTail || conversation?.phone_tail || "unknown";
       await notifyOperators({
         conversation: {
           ...(conversation || { phone_tail: safeTail }),
-          status: conversationStatus,
-          type: conversationType,
+          status: effectiveStatus,
+          type: effectiveType,
         },
         text: text || "(nessun testo, solo media)",
         rawPhone,
@@ -125,7 +128,7 @@ export async function POST(req: Request) {
     }
 
     // BOT mode con tipo prospect/altro forzato, anche se esiste uno studente
-    if (conversationType === "prospect" || conversationType === "altro") {
+    if (effectiveType === "prospect" || effectiveType === "altro") {
       const historyResult = await fetchConversationHistory(
         studentResult?.student.id || null,
         phoneTail,
@@ -142,7 +145,7 @@ export async function POST(req: Request) {
         phoneE164,
         studentId: studentResult?.student.id || null,
         status: "bot",
-        type: conversationType,
+        type: effectiveType,
         lastMessage: reply,
         followupDueAt: new Date(Date.now() + deriveFollowupDelayMs(inboundText)).toISOString(),
         followupSentAt: null,
@@ -197,7 +200,7 @@ export async function POST(req: Request) {
           continue;
         }
       }
-      const isSales = conversationType !== "black";
+      const isSales = effectiveType !== "black";
       const reply = isSales
         ? await generateSalesReply(text || "", historyResult.history)
         : ASK_EMAIL_MESSAGE;
@@ -206,7 +209,7 @@ export async function POST(req: Request) {
         phoneTail,
         phoneE164,
         status: "bot",
-        type: conversationType,
+        type: effectiveType,
         lastMessage: reply,
         followupDueAt: new Date(Date.now() + deriveFollowupDelayMs(text)).toISOString(),
         followupSentAt: null,
@@ -219,16 +222,16 @@ export async function POST(req: Request) {
     const historyResult = await fetchConversationHistory(student.id, phoneTail, HISTORY_LIMIT);
 
     if (
-      conversationStatus === "bot" &&
-      conversationType === "black" &&
-      (await needsTutorEscalation(inboundText, historyResult.history, { type: conversationType }))
+      effectiveStatus === "bot" &&
+      effectiveType === "black" &&
+      (await needsTutorEscalation(inboundText, historyResult.history, { type: effectiveType }))
     ) {
       await upsertConversation({
         phoneTail,
         phoneE164,
         studentId: student.id,
         status: "waiting_tutor",
-        type: conversationType,
+        type: effectiveType,
         lastMessage: inboundText,
         followupDueAt: null,
         followupSentAt: null,
@@ -238,7 +241,7 @@ export async function POST(req: Request) {
           conversation: {
             ...(conversation || { phone_tail: phoneTail || "unknown" }),
             status: "waiting_tutor",
-            type: conversationType,
+            type: effectiveType,
           },
           text: inboundText,
           rawPhone,
@@ -582,6 +585,7 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
   Riga 5-6 (opzionali): follow-up soft / invito a confermare.
 - Evita markdown o emoji; niente latex. Niente “malloppone”: frasi brevi, chiare, separate da righe vuote.
 - Se hai contesto precedente, riprendi la vendita da lì (ricorda preferenze/obiettivi già espressi). Non ripartire da zero.
+- Scegli il piano con più probabilità di successo per il prospect (non proporre di default Essential se servono guida umana o obiettivi ambiziosi: in quei casi preferisci Black/Mentor).
 `;
   const historyText = history
     .slice(-6)
