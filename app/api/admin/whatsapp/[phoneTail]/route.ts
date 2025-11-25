@@ -33,12 +33,12 @@ async function requireAdmin(request: NextRequest) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { phoneTail: string } }
+  ctx: { params: Promise<{ phoneTail: string }> }
 ) {
   const authError = await requireAdmin(request);
   if (authError) return authError;
 
-  const phoneTail = params.phoneTail;
+  const { phoneTail } = await ctx.params;
   if (!phoneTail) {
     return NextResponse.json({ error: "missing_phone_tail" }, { status: 400 });
   }
@@ -137,12 +137,12 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { phoneTail: string } }
+  ctx: { params: Promise<{ phoneTail: string }> }
 ) {
   const authError = await requireAdmin(request);
   if (authError) return authError;
 
-  const phoneTail = params.phoneTail;
+  const { phoneTail } = await ctx.params;
   if (!phoneTail) {
     return NextResponse.json({ error: "missing_phone_tail" }, { status: 400 });
   }
