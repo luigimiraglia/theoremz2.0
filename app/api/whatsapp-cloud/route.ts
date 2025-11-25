@@ -533,10 +533,38 @@ Sei un assistente di instradamento conversazioni. Decidi se serve passare la cha
   return fallback();
 }
 
+async function summarizeProspectContext(history: ConversationMessage[]): Promise<string | null> {
+  if (!openai || !history.length) return null;
+  const transcript = history
+    .slice(-12)
+    .map((m) => `${m.role === "user" ? "Utente" : "AI"}: ${m.content}`)
+    .join("\n");
+  try {
+    const completion = await openai.chat.completions.create({
+      model: VISION_MODEL,
+      temperature: 0,
+      max_tokens: 120,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Ricapitola in 3-4 punti brevi cosa sappiamo del prospect: classe, materia, prossime verifiche/obiettivi, difficoltà, autonomia, preferenze espresse. Niente fronzoli.",
+        },
+        { role: "user", content: transcript },
+      ],
+    });
+    return completion.choices[0]?.message?.content?.trim() || null;
+  } catch (err) {
+    console.error("[whatsapp-cloud] prospect context summary failed", err);
+    return null;
+  }
+}
+
 async function generateSalesReply(text: string, history: ConversationMessage[] = []) {
   if (!openai) {
     return "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e difficoltà: poi ti propongo il piano giusto (Essential, Black o Mentor).";
   }
+  const contextSummary = await summarizeProspectContext(history);
   const prompt = `
 Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp a chi chiede info.
 - Tone: empatico, conciso, zero fluff. Max 5 frasi brevi.
@@ -553,6 +581,7 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
   Riga 4: link pagamento del piano scelto (Essential/Black: theoremz.com/black; Mentor: theoremz.com/mentor).
   Riga 5-6 (opzionali): follow-up soft / invito a confermare.
 - Evita markdown o emoji; niente latex. Niente “malloppone”: frasi brevi, chiare, separate da righe vuote.
+- Se hai contesto precedente, riprendi la vendita da lì (ricorda preferenze/obiettivi già espressi). Non ripartire da zero.
 `;
   const historyText = history
     .slice(-6)
@@ -565,6 +594,7 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
       max_tokens: 320,
       messages: [
         { role: "system", content: prompt },
+        contextSummary ? { role: "system", content: `Contesto breve da ricordare:\n${contextSummary}` } : null,
         historyText ? { role: "system", content: `Cronologia breve:\n${historyText}` } : null,
         { role: "user", content: text || "Raccontami cosa fate." },
       ].filter(Boolean) as any,
