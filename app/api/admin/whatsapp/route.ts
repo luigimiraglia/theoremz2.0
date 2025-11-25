@@ -95,44 +95,47 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const conversations = (data || []).map((row: ConversationRow) => {
-    const student = row.black_students;
-    const profile =
-      student?.profiles && Array.isArray(student.profiles)
-        ? student.profiles[0]
-        : student?.profiles;
-    return {
-      id: row.id,
-      phoneTail: row.phone_tail,
-      phone: row.phone_e164,
-      status: row.status,
-      type: row.type,
-      bot: row.bot,
-      lastMessageAt: row.last_message_at,
-      lastMessagePreview: row.last_message_preview,
-      updatedAt: row.updated_at,
-      followupDueAt: row.followup_due_at,
-      followupSentAt: row.followup_sent_at,
-      student: student
-        ? {
-            id: student.id,
-            status: student.status,
-            planLabel: student.plan_label,
-            readiness: student.readiness,
-            risk: student.risk_level,
-            yearClass: student.year_class,
-            track: student.track,
-            startDate: student.start_date,
-            studentEmail: student.student_email,
-            parentEmail: student.parent_email,
-            studentPhone: student.student_phone,
-            parentPhone: student.parent_phone,
-            name: profile?.full_name || null,
-            stripePrice: profile?.stripe_price_id || null,
-          }
-        : null,
-    };
-  });
+  const rows = Array.isArray(data) ? (data as any[]) : [];
+  const conversations = rows
+    .filter((row) => row && typeof row === "object" && !row.error)
+    .map((row: ConversationRow) => {
+      const student = (row as any).black_students;
+      const profile =
+        student?.profiles && Array.isArray(student.profiles)
+          ? student.profiles[0]
+          : student?.profiles;
+      return {
+        id: row.id,
+        phoneTail: row.phone_tail,
+        phone: row.phone_e164,
+        status: row.status,
+        type: row.type,
+        bot: row.bot,
+        lastMessageAt: row.last_message_at,
+        lastMessagePreview: row.last_message_preview,
+        updatedAt: row.updated_at,
+        followupDueAt: row.followup_due_at,
+        followupSentAt: row.followup_sent_at,
+        student: student
+          ? {
+              id: student.id,
+              status: student.status,
+              planLabel: student.plan_label,
+              readiness: student.readiness,
+              risk: student.risk_level,
+              yearClass: student.year_class,
+              track: student.track,
+              startDate: student.start_date,
+              studentEmail: student.student_email,
+              parentEmail: student.parent_email,
+              studentPhone: student.student_phone,
+              parentPhone: student.parent_phone,
+              name: profile?.full_name || null,
+              stripePrice: profile?.stripe_price_id || null,
+            }
+          : null,
+      };
+    });
 
   return NextResponse.json({ conversations });
 }
