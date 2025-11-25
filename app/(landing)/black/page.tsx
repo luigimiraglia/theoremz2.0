@@ -1,12 +1,8 @@
 // app/(landing)/black/page.tsx
 import type { Metadata } from "next";
-import Link from "next/link";
-import BuyLink from "@/components/BuyLink";
 import SenjaEmbed from "@/components/SenjaEmbed";
-import CountdownTimer from "@/components/CountdownTimer";
 import BlackPageGuard from "@/components/BlackPageGuard";
 import type { LucideIcon } from "lucide-react";
-import { Check, X } from "lucide-react";
 import {
   MessageCircle,
   ClipboardCheck,
@@ -19,12 +15,14 @@ import {
   Star,
   Users,
 } from "lucide-react";
+import PriceCard from "@/components/PriceCard";
+import PricingTile from "@/components/PricingTile";
 
 // ---------- METADATA SEO ----------
 const TITLE =
   "Theoremz Black — Mentoring didattico, esercizi illimitati e videolezioni";
 const DESC =
-  "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Piani da 5,90€/mese. Soddisfatti o rimborsati.";
+  "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Piani da 12€/mese. Soddisfatti o rimborsati.";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
 const CANONICAL = `${SITE}/black`;
 
@@ -84,22 +82,22 @@ export default function BlackPage() {
     offers: {
       "@type": "AggregateOffer",
       offerCount: 3,
-      lowPrice: "3.90",
-      highPrice: "199.00",
+      lowPrice: "12.00",
+      highPrice: "259.00",
       priceCurrency: "EUR",
       offers: [
         {
           "@type": "Offer",
           name: "Piano Essential",
-          price: "3.90",
+          price: "12.00",
           priceCurrency: "EUR",
           availability: "https://schema.org/InStock",
           url: "https://buy.stripe.com/7sIaIa5f5b21dOgcNo",
         },
         {
           "@type": "Offer",
-          name: "Piano Base",
-          price: "19.90",
+          name: "Piano Black",
+          price: "26.00",
           priceCurrency: "EUR",
           availability: "https://schema.org/InStock",
           url: "https://buy.stripe.com/cN29E66j97PPbG84gT",
@@ -107,7 +105,7 @@ export default function BlackPage() {
         {
           "@type": "Offer",
           name: "Annuale",
-          price: "199.00",
+          price: "259.00",
           priceCurrency: "EUR",
           availability: "https://schema.org/InStock",
           url: "https://buy.stripe.com/6oE3fIfTJ6LL11u9Be",
@@ -430,121 +428,163 @@ export default function BlackPage() {
       {/* ============ PRICING (3 card da lg) ============ */}
       <section
         id="pricing"
-        className="mx-auto mt-10 max-w-7xl px-5 pb-4 sm:px-8 lg:px-12"
+        className="mx-auto mt-16 max-w-7xl px-5 pb-4 sm:px-8 lg:px-12"
       >
-        <div className="mx-auto grid max-w-2xl gap-8 lg:max-w-none lg:grid-cols-2 xl:grid-cols-3">
+        <div className="mx-auto grid max-w-2xl gap-6 items-end justify-items-center lg:max-w-none lg:grid-cols-2 xl:grid-cols-3">
           {/* Colonna 1 – Essential */}
-          <div>
-            <div className="rounded-xl bg-gradient-to-r from-green-500 to-cyan-400 py-2 text-center font-bold text-white">
-              Il più economico 👇
-            </div>
-            <div className="mt-2 rounded-xl bg-white py-2 text-center font-bold text-slate-900">
-              Piano Essential
-            </div>
-
-            <PriceCard
-              price="5,90€"
-              unit=" /mese"
-              buyHref="https://buy.stripe.com/14A3cv1Wc0jZdrX0iWc7u0P"
-              infoHref="https://wa.link/mkxv41"
-              features={[
-                // Contenuti principali
-                ["ok", "Centinaia di esercizi risolti"],
-                ["ok", "Videolezione per ogni argomento"],
-                ["ok", "Formulari, quiz e appunti"],
-                // Strumenti avanzati
-                ["ok", "Theoremz AI"],
-                ["ok", "Simulazione verifiche"],
-                // Qualità di vita
-                ["ok", "Salva le lezioni nei preferiti"],
-                ["ok", "Dark Mode per lo studio"],
-                ["ok", "Tutte le funzionalità Theoremz"],
-                // Garanzia
-                ["ok", "100% soddisfatti o rimborsati"],
-                ["no", "Mentoring didattico illimitato"],
-                ["no", "Aiuto compiti giornaliero"],
-                ["no", "Sconto del 10% sulle ripetizioni"],
-              ]}
-            />
-          </div>
+          <PricingTile
+            outerClassName="group origin-bottom w-full max-w-[440px] rounded-[24px] bg-gradient-to-r from-green-500 to-cyan-400 p-[8px] shadow-[0_22px_55px_-28px_rgba(34,197,94,0.55)] transition-transform duration-300 hover:-translate-y-2 hover:shadow-[0_28px_70px_-32px_rgba(34,197,94,0.6)]"
+            headerLabel="Il più economico"
+            headerGradient="bg-gradient-to-r from-green-500 to-cyan-400"
+            title="Piano Essential"
+            toggleOptions={[
+              {
+                id: "essential-monthly",
+                label: "Mensile",
+                price: "12€",
+                unit: " /mese",
+                buyHref: "https://buy.stripe.com/bJe8wP6csgiXgE9aXAc7u13",
+                infoHref: "https://wa.link/mkxv41",
+                plan: "Essential Mensile",
+              },
+              {
+                id: "essential-annual",
+                label: "Annuale",
+                price: "99€",
+                unit: " /anno",
+                buyHref: "https://buy.stripe.com/bJe4gz44k6InafL7Loc7u14",
+                infoHref: "https://wa.link/mkxv41",
+                plan: "Essential Annuale",
+              },
+            ]}
+            defaultToggleId="essential-monthly"
+            priceCardClassName="pb-1"
+            features={[
+              [
+                "violet",
+                "Theoremz AI illimitata su WhatsApp",
+                [
+                  "Mandi la foto dell’esercizio: il bot lo risolve e spiega i passaggi.",
+                  "Ti aiuta a preparare verifiche e interrogazioni ogni giorno.",
+                  "Ti manda video, esercizi e schemi in base a classe, voti e obiettivi.",
+                ],
+              ],
+              ["ok", "Tutte le videolezioni"],
+              ["ok", "Esercizi svolti passo–passo"],
+              ["ok", "Formulari, quiz e appunti"],
+              ["ok", "Flashcard per le formule"],
+              ["ok", "Simulazioni verifiche"],
+              ["ok", "Correzione verifiche"],
+              ["ok", "Risorse aggiuntive illimitate"],
+              ["ok", "Tutti i vantaggi di Free"],
+              ["no", "Tutor umano"],
+              ["no", "Domanda settimanale"],
+              ["no", "Programma di studio"],
+            ]}
+          />
 
           {/* Colonna 2 – Base mensile */}
-          <div>
-            <div className="rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 py-2 text-center font-bold text-white">
-              Il più popolare 👇
-            </div>
-            <div className="mt-2 rounded-xl bg-white py-2 text-center font-bold text-slate-900">
-              Piano Base
-            </div>
-
-            {/* Timer countdown */}
-
-            <div className="relative">
-              {/* Halo fucsia dietro la card Base */}
-              <div className="relative z-10">
-                <PriceCard
-                  price="14,90€"
-                  regularPrice="19,90€"
-                  unit=" /mese"
-                  buyHref="https://buy.stripe.com/00w9AT44k7Mr4Vr3v8c7u0S"
-                  infoHref="https://wa.link/4ogl5q"
-                  features={[
-                    // Differenziatori principali
-                    ["pink", "Mentoring didattico illimitato"],
-                    ["pink", "Aiuto compiti giornaliero"],
-                    // Contenuti principali
-                    ["ok", "Centinaia di esercizi risolti"],
-                    ["ok", "Videolezione per ogni argomento"],
-                    ["ok", "Formulari, quiz e appunti"],
-                    // Strumenti avanzati
-                    ["ok", "Theoremz AI"],
-                    ["ok", "Simulazione verifiche"],
-                    ["ok", "Salva le lezioni nei preferiti"],
-                    ["ok", "Dark Mode per lo studio"],
-                    ["ok", "Tutte le funzionalità Theoremz"],
-                    ["ok", "Sconto del 10% sulle ripetizioni"],
-                    // Garanzia in chiusura
-                    ["ok", "100% soddisfatti o rimborsati"],
-                  ]}
-                />
-              </div>
-            </div>
-          </div>
+          <PricingTile
+            outerClassName="group origin-bottom w-full max-w-[440px] rounded-[24px] bg-gradient-to-r from-rose-500 to-pink-500 p-[8px] shadow-[0_22px_55px_-28px_rgba(244,63,94,0.6)] transition-transform duration-300 hover:-translate-y-2 hover:shadow-[0_28px_70px_-32px_rgba(244,63,94,0.65)]"
+            headerLabel="Il più popolare"
+            headerGradient="bg-gradient-to-r from-rose-500 to-pink-500"
+            title="Piano Black"
+            toggleOptions={[
+              {
+                id: "black-monthly",
+                label: "Mensile",
+                price: "26€",
+                unit: " /mese",
+                buyHref: "https://buy.stripe.com/00w9ATgR66InbjPaXAc7u17",
+                infoHref: "https://wa.link/4ogl5q",
+                plan: "Black Standard Mensile",
+              },
+              {
+                id: "black-annual",
+                label: "Annuale",
+                price: "259€",
+                unit: " /anno",
+                buyHref: "https://buy.stripe.com/7sY8wP44k0jZ1Jf1n0c7u16",
+                infoHref: "https://wa.link/rwbkqd",
+                plan: "Black Annuale",
+              },
+            ]}
+            defaultToggleId="black-monthly"
+            priceCardClassName="pb-3"
+            features={[
+              [
+                "violet",
+                "Mentoring didattico personalizzato",
+                [
+                  "Tutor dedicato che ti segue 1:1 su Whatsapp ogni giorno.",
+                  "Costruisce con te un piano di studio su misura.",
+                  "Ti aiuta a individurare, e superare le difficoltà.",
+                ],
+              ],
+              [
+                "violet",
+                "Domanda settimanale in videochiamata",
+                [
+                  "Ogni settimana puoi inviare una domanda al tutor.",
+                  "Prenoti un orario e affrontate l'argomento insieme.",
+                  "Ideale per preparare verifiche, interrogazioni o argomenti complessi.",
+                ],
+              ],
+              [
+                "violet",
+                "Theoremz AI illimitata su WhatsApp",
+                [
+                  "Mandi la foto dell’esercizio: il bot lo risolve e spiega i passaggi.",
+                  "Ti aiuta a preparare verifiche e interrogazioni ogni giorno.",
+                  "Ti manda video, esercizi e schemi in base a classe, voti e obiettivi.",
+                ],
+              ],
+              ["ok", "Primo incontro di 30 min"],
+              ["ok", "Tutte le videolezioni"],
+              ["ok", "Esercizi svolti passo–passo"],
+              ["ok", "Formulari, quiz e appunti"],
+              ["ok", "Simulazioni verifiche"],
+              ["ok", "Correzione verifiche"],
+              ["ok", "Risorse aggiuntive illimitate"],
+              ["ok", "Tutti i vantaggi di Essential"],
+              ["ok", "Tutti i vantaggi di Free"],
+            ]}
+          />
 
           {/* Colonna 3 – Annuale */}
-          <div>
-            <div className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-400 py-2 text-center font-bold text-white">
-              Il più conveniente 👇
+          <div className="group origin-bottom w-full max-w-[420px] rounded-[22px] bg-gradient-to-r from-blue-600 to-cyan-400 p-[7px] shadow-[0_22px_55px_-28px_rgba(59,130,246,0.55)] transition-transform duration-300 hover:-translate-y-2 hover:shadow-[0_28px_70px_-32px_rgba(59,130,246,0.6)]">
+            <div className="rounded-[18px] bg-gradient-to-r from-blue-600 to-cyan-400 px-4 py-2.5 text-center text-white shadow-md ring-1 ring-white/30">
+              <div className="text-[12px] font-extrabold uppercase tracking-wide">
+                Gratuito
+              </div>
             </div>
-            <div className="mt-2 rounded-xl bg-white py-2 text-center font-bold text-slate-900">
-              Annuale
-            </div>
+            <div className="mt-2 overflow-hidden rounded-[22px] bg-white shadow-sm">
+              <div className="border-b border-slate-100 bg-white px-5 py-3 text-center text-lg font-black text-slate-900">
+                Piano Free
+              </div>
 
-            <PriceCard
-              price="149€"
-              regularPrice="199€"
-              unit=" /anno"
-              buyHref="https://buy.stripe.com/bJe28r6csc2H3Rnd5Ic7u0R"
-              infoHref="https://wa.link/rwbkqd"
-              features={[
-                // Differenziatori principali
-                ["pink", "Mentoring didattico illimitato"],
-                ["pink", "Aiuto compiti giornaliero"],
-                // Contenuti principali
-                ["ok", "Centinaia di esercizi risolti"],
-                ["ok", "Videolezione per ogni argomento"],
-                ["ok", "Formulari, quiz e appunti"],
-                // Strumenti avanzati
-                ["ok", "Theoremz AI"],
-                ["ok", "Simulazione verifiche"],
-                ["ok", "Salva le lezioni nei preferiti"],
-                ["ok", "Dark Mode per lo studio"],
-                ["ok", "Tutte le funzionalità Theoremz"],
-                ["ok", "Sconto del 10% sulle ripetizioni"],
-                // Garanzia in chiusura
-                ["ok", "100% soddisfatti o rimborsati"],
-              ]}
-            />
+              <PriceCard
+                price="0€"
+                unit=" /sempre"
+                buyHref="/account"
+                infoHref="https://wa.link/rwbkqd"
+                className="mt-0 rounded-none border-none shadow-none ring-0 hover:translate-y-0 group-hover:translate-y-0 cta-quiet"
+                features={[
+                  ["ok", "Lezioni per tutti gli argomenti"],
+                  ["ok", "Dashboard dei voti"],
+                  ["ok", "Salvataggio lezioni nei preferiti"],
+                  ["ok", "Dark Mode"],
+                  ["no", "AI Theoremz"],
+                  ["no", "Esercizi svolti"],
+                  ["no", "Simulazioni verifiche"],
+                  ["no", "Videolezioni"],
+                  ["no", "Tutor dedicato"],
+                  ["no", "Aiuto compiti"],
+                  ["no", "Programma di studio"],
+                  ["no", "Priorità nelle risposte"],
+                ]}
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -639,133 +679,6 @@ function IncludeCard({
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-function PriceCard({
-  price,
-  regularPrice,
-  unit,
-  features,
-  buyHref,
-  infoHref,
-}: {
-  price: string;
-  regularPrice?: string;
-  unit: string;
-  features: [variant: "ok" | "no" | "pink", text: string][];
-  buyHref: string;
-  infoHref: string;
-}) {
-  return (
-    <div className="relative mt-3 overflow-hidden rounded-2xl border border-white/15 bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_-30px_rgba(15,23,42,0.45)]">
-      {regularPrice == "19,90€" || regularPrice == "199€" ? (
-        <CountdownTimer targetDate="2025-11-15T14:59:59" />
-      ) : (
-        ""
-      )}
-      <div className="relative px-6 pt-6 pb-3 lg:px-8 lg:pt-8 lg:pb-4">
-        <div className="relative inline-block">
-          <div className="flex flex-col items-center">
-            {regularPrice && (
-              <div className="mb-1 flex items-center gap-2">
-                <span className="text-lg text-slate-500 line-through">
-                  {regularPrice}
-                  {unit}
-                </span>
-                <span className="text-sm font-semibold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded">
-                  -25% per sempre
-                </span>
-              </div>
-            )}
-            <div className="relative text-[41px] lg:text-[46px] font-black bg-gradient-to-r text-transparent from-blue-600 to-cyan-400 bg-clip-text drop-shadow-[0_8px_24px_rgba(56,189,248,0.38)] lg:whitespace-nowrap">
-              {price}
-              {unit}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-
-        <ul className="mt-4 grid gap-2 text-[16px] font-semibold lg:text-[15.5px]">
-          {features.map(([variant, text], i) => {
-            const strike = variant === "no";
-            const pink = variant === "pink";
-            const colorClass =
-              variant === "no"
-                ? "text-rose-500"
-                : variant === "pink"
-                  ? "text-pink-500"
-                  : "text-slate-900";
-
-            return (
-              <li key={i} className="flex items-start  gap-2">
-                {variant === "no" ? (
-                  <X
-                    className={`${colorClass} mt-[5px] h-[22px] w-[22px]`}
-                    strokeWidth={3.2}
-                    aria-hidden
-                  />
-                ) : (
-                  <Check
-                    className={`${colorClass} mt-[3px] h-[22px] w-[22px]`}
-                    strokeWidth={3.2}
-                    aria-hidden
-                  />
-                )}
-                <span
-                  className={`${
-                    pink
-                      ? "bg-clip-text bg-gradient-to-r text-transparent from-purple-500 font-bold to-pink-500"
-                      : "text-black"
-                  } ${strike ? "line-through text-slate-400" : ""} mt-1`}
-                >
-                  {text}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-
-        <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-
-        <BuyLink
-          href={buyHref}
-          plan={
-            unit.includes("anno")
-              ? "Annuale"
-              : unit.includes("mese")
-                ? price.includes("14,90")
-                  ? "Black Standard Mensile"
-                  : price.includes("5,90")
-                    ? "Essential Mensile"
-                    : "Mensile"
-                : ""
-          }
-          price={price}
-          aria-label={`Acquista il piano ${
-            unit.includes("anno")
-              ? "Annuale"
-              : unit.includes("mese")
-                ? "Mensile"
-                : ""
-          }`}
-          className="relative overflow-hidden mt-8 w-full rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 px-8 py-5 text-center font-extrabold text-white transition-all duration-300 hover:from-sky-500 hover:via-cyan-400 hover:to-sky-500 text-xl shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 flex items-center justify-center min-h-[60px] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:translate-x-[-100%] before:animate-[shimmer_2s_infinite] before:skew-x-12"
-        >
-          <span className="relative z-10">Acquista ora 👉</span>
-        </BuyLink>
-
-        {/* Link discreto per richiedi informazioni */}
-        <div className="mt-1 text-center">
-          <Link
-            href={infoHref}
-            className="text-xs text-slate-500 hover:text-slate-700 transition-colors duration-200 underline decoration-dotted underline-offset-2"
-          >
-            Oppure richiedi più informazioni
-          </Link>
-        </div>
-      </div>
     </div>
   );
 }
