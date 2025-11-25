@@ -78,11 +78,23 @@ export async function POST(req: Request) {
         ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
         : text || IMAGE_ONLY_PROMPT;
 
-  const conversation = await upsertConversation({
-    phoneTail,
-    phoneE164,
-    studentId: studentResult?.student.id,
-    status: conversationStatus,
+    const escalatedProspect = await handleProspectEscalation({
+      conversationType,
+      conversationStatus,
+      inboundText,
+      phoneTail,
+      phoneE164,
+      rawPhone,
+      phoneNumberId,
+      baseConversation,
+    });
+    if (escalatedProspect) continue;
+
+    const conversation = await upsertConversation({
+      phoneTail,
+      phoneE164,
+      studentId: studentResult?.student.id,
+      status: conversationStatus,
       type: conversationType,
       lastMessage: inboundText,
       bot: baseConversation?.bot ?? null,
@@ -91,22 +103,22 @@ export async function POST(req: Request) {
     // Log inbound message
     await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
 
-  // follow-up sales se scaduto
-  await maybeSendSalesFollowup({
-    conversation: baseConversation,
-    phoneNumberId,
-    rawPhone,
-  });
+    // follow-up sales se scaduto
+    await maybeSendSalesFollowup({
+      conversation: baseConversation,
+      phoneNumberId,
+      rawPhone,
+    });
 
-  if (conversationStatus !== "bot") {
-    const safeTail = phoneTail || conversation?.phone_tail || "unknown";
-    await notifyOperators({
-      conversation: {
-        ...(conversation || { phone_tail: safeTail }),
-        status: conversationStatus,
-        type: conversationType,
-      },
-      text: text || "(nessun testo, solo media)",
+    if (conversationStatus !== "bot") {
+      const safeTail = phoneTail || conversation?.phone_tail || "unknown";
+      await notifyOperators({
+        conversation: {
+          ...(conversation || { phone_tail: safeTail }),
+          status: conversationStatus,
+          type: conversationType,
+        },
+        text: text || "(nessun testo, solo media)",
         rawPhone,
       });
       continue;
@@ -209,7 +221,7 @@ export async function POST(req: Request) {
     if (
       conversationStatus === "bot" &&
       conversationType === "black" &&
-      (await needsTutorEscalation(inboundText, historyResult.history))
+      (await needsTutorEscalation(inboundText, historyResult.history, { type: conversationType }))
     ) {
       await upsertConversation({
         phoneTail,
@@ -260,6 +272,58 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+async function handleProspectEscalation({
+  conversationType,
+  conversationStatus,
+  inboundText,
+  phoneTail,
+  phoneE164,
+  rawPhone,
+  phoneNumberId,
+  baseConversation,
+}: {
+  conversationType: ConversationType;
+  conversationStatus: ConversationStatus;
+  inboundText: string;
+  phoneTail: string | null;
+  phoneE164: string | null;
+  rawPhone: string | null;
+  phoneNumberId: string;
+  baseConversation: ConversationRow | null;
+}) {
+  if (conversationStatus !== "bot" || conversationType === "black") return;
+
+  const historyResult = await fetchConversationHistory(null, phoneTail, HISTORY_LIMIT);
+  if (await needsTutorEscalation(inboundText, historyResult.history, { type: conversationType })) {
+    await upsertConversation({
+      phoneTail,
+      phoneE164,
+      studentId: null,
+      status: "waiting_tutor",
+      type: conversationType,
+      lastMessage: inboundText,
+      followupDueAt: null,
+      followupSentAt: null,
+    });
+    await notifyOperators({
+      conversation: {
+        ...(baseConversation || { phone_tail: phoneTail || "unknown" }),
+        status: "waiting_tutor",
+        type: conversationType,
+      },
+      text: inboundText,
+      rawPhone,
+    });
+    await sendCloudReply({
+      phoneNumberId,
+      to: rawPhone!,
+      body: "Ti metto in contatto con un tutor, ti risponde a breve.",
+    });
+    return true;
+  }
+  return false;
 }
 
 function extractCloudText(message: any): string | null {
@@ -411,7 +475,11 @@ function deriveFollowupDelayMs(text: string | null | undefined) {
   return 3 * 3600 * 1000;
 }
 
-async function needsTutorEscalation(text: string | null | undefined, history: ConversationMessage[]) {
+async function needsTutorEscalation(
+  text: string | null | undefined,
+  history: ConversationMessage[],
+  context: { type: ConversationType }
+) {
   if (!text) return false;
 
   // Lightweight heuristic if OpenAI assente
@@ -436,7 +504,8 @@ async function needsTutorEscalation(text: string | null | undefined, history: Co
       .join("\n");
     const prompt = `
 Sei un assistente di instradamento conversazioni. Decidi se serve passare la chat a un tutor umano (rispondi solo yes/no).
-- Passa a tutor se l'utente chiede esplicitamente di parlare con un tutor/umano, se mostra frustrazione ripetuta o se il tema è complesso che richiede supervisione umana.
+- Passa a tutor se l'utente chiede esplicitamente un tutor/umano, mostra frustrazione ripetuta, oppure il bot è confuso o non ha abbastanza contesto per rispondere.
+- Passa a tutor se la richiesta è delicata o richiede supervisione umana.
 - Altrimenti resta su bot.
 `;
     const completion = await openai.chat.completions.create({
@@ -470,8 +539,13 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
   • Essential: studio autonomo potenziato. Tutte le risorse premium (esercizi svolti, appunti, video, formulari, percorsi guidati), risolutore avanzato, AI tutor 24/7, risorse personalizzate illimitate. Per chi vuole autonomia veloce e un tutor AI sempre disponibile. Link: theoremz.com/black (seleziona Essential).
   • Black: tutto Essential + supporto umano in chat, onboarding 1:1, piano di studio personalizzato, 1 domanda/sett. garantita al tutor umano. Ideale per chi vuole alzare i voti con guida settimanale e piano chiaro. Link: theoremz.com/black.
   • Mentor: Black + lezioni settimanali 1:1 con mentore dedicato, supervisione continua, preparazione mirata (verifiche, esami, test, olimpiadi), materiali e correzioni prioritarie. Per studenti ambiziosi (medie 8–10, obiettivi selettivi). Link: theoremz.com/mentor.
-- Obiettivo: capire classe, materia, prossime verifiche, difficoltà, obiettivo, livello di autonomia; proporre il livello giusto e il prossimo step concreto (es. “ti consiglio Black/Mentor, ecco il link”).
-- Follow-up: se l'utente non decide, proponi di risentirsi (“se non rispondi, ti scrivo più tardi per aiutarti”).
+- Metodo: Straight Line. Prima fai 1–2 domande mirate (classe, materia, prossima verifica, obiettivo, autonomia). Se mancano info, chiedile e NON proporre piani.
+- Quando proponi: scegli UN solo piano (Essential OPPURE Black OPPURE Mentor) coerente con i bisogni. Non mischiare piani.
+- Formato proposta (max 5 righe, con righe vuote tra blocchi):
+  Riga 1: sintesi situazione + piano raccomandato.
+  Riga 2-3: perk chiave di quel piano (frasi brevi, separate da punto o a capo).
+  Riga 4: link pagamento del piano scelto (Essential/Black: theoremz.com/black; Mentor: theoremz.com/mentor).
+  Riga 5 (opzionale): follow-up soft (“se non rispondi, ti scrivo più tardi per aiutarti”).
 - Evita markdown o emoji; niente latex.
 `;
   const historyText = history
@@ -491,11 +565,11 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
     });
     return (
       completion.choices[0]?.message?.content?.trim() ||
-      "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia e obiettivo: ti propongo Essential (AI+risorse), Black (tutor umano in chat) o Mentor (lezioni 1:1)."
+      "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e obiettivo: ti propongo il piano giusto (Essential, Black o Mentor)."
     );
   } catch (err) {
     console.error("[whatsapp-cloud] sales reply failed", err);
-    return "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia e obiettivo: ti propongo il piano giusto (Essential, Black o Mentor).";
+    return "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia e prossima verifica: ti propongo il piano giusto (Essential, Black o Mentor).";
   }
 }
 
