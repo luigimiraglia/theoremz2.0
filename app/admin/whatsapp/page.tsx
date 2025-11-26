@@ -28,6 +28,7 @@ type ConversationItem = {
     parentEmail?: string | null;
     studentPhone?: string | null;
     parentPhone?: string | null;
+    stripePrice?: string | null;
   } | null;
 };
 
