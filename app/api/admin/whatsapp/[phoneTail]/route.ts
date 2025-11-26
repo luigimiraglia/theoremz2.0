@@ -177,6 +177,7 @@ export async function POST(
     const message = typeof body.message === "string" ? body.message.trim() : "";
     const nextStatus = body.status as ConversationStatus | undefined;
     const nextType = body.type as ConversationType | undefined;
+    const nextBot = typeof body.bot === "string" ? body.bot.trim() : undefined;
     const update = (body.update || null) as Record<string, any> | null;
 
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -265,6 +266,7 @@ export async function POST(
     const updates: Record<string, any> = { updated_at: new Date().toISOString() };
     if (nextStatus) updates.status = nextStatus;
     if (nextType) updates.type = nextType;
+    if (nextBot !== undefined) updates.bot = nextBot || null;
 
     if (message) {
       if (!convo.phone_e164) {

@@ -66,6 +66,7 @@ const riskStyles: Record<string, string> = {
 };
 
 const allowedEmail = "luigi.miraglia006@gmail.com";
+const botOptions = ["black", "sales", "prospect", "mentor", "altro"];
 
 export default function WhatsAppAdmin() {
   const { user, loading: authLoading } = useAuth();
@@ -253,6 +254,32 @@ export default function WhatsAppAdmin() {
     }
   };
 
+  const handleBotChange = async (bot: string) => {
+    if (!selected) return;
+    setSending(true);
+    setError(null);
+    try {
+      const headers = await buildHeaders();
+      headers["Content-Type"] = "application/json";
+      const res = await fetch(`/api/admin/whatsapp/${selected}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ bot }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const detail = data?.error || data?.detail;
+        throw new Error(detail || `HTTP ${res.status}`);
+      }
+      await Promise.all([fetchDetail(selected), fetchList({ keepSelection: true })]);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Errore aggiornamento bot");
+    } finally {
+      setSending(false);
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100">
@@ -429,6 +456,19 @@ export default function WhatsAppAdmin() {
                         Scheda
                       </button>
                     )}
+                    <select
+                      value={detail.conversation.bot || ""}
+                      onChange={(e) => handleBotChange(e.target.value)}
+                      className="text-xs px-3 py-2 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400/70"
+                      disabled={sending}
+                    >
+                      <option value="">Bot?</option>
+                      {botOptions.map((b) => (
+                        <option key={b} value={b}>
+                          {b}
+                        </option>
+                      ))}
+                    </select>
                     {["bot", "waiting_tutor", "tutor"].map((st) => (
                       <button
                         key={st}
