@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import clsx from "clsx";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -80,6 +80,8 @@ export default function WhatsAppAdmin() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [polling, setPolling] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasAccess = useMemo(
     () => Boolean(user?.email && user.email.toLowerCase() === allowedEmail),
@@ -130,13 +132,15 @@ export default function WhatsAppAdmin() {
   );
 
   const fetchDetail = useCallback(
-    async (phoneTail: string | null) => {
+    async (phoneTail: string | null, opts?: { silent?: boolean }) => {
       if (!phoneTail) {
         setDetail(null);
         return;
       }
-      setLoadingDetail(true);
-      setError(null);
+      if (!opts?.silent) {
+        setLoadingDetail(true);
+        setError(null);
+      }
       try {
         const headers = await buildHeaders();
         const res = await fetch(`/api/admin/whatsapp/${phoneTail}`, {
@@ -152,9 +156,9 @@ export default function WhatsAppAdmin() {
         setDetail(data);
       } catch (err: any) {
         console.error(err);
-        setError(err?.message || "Errore caricamento dettaglio");
+        if (!opts?.silent) setError(err?.message || "Errore caricamento dettaglio");
       } finally {
-        setLoadingDetail(false);
+        if (!opts?.silent) setLoadingDetail(false);
       }
     },
     [buildHeaders]
@@ -196,6 +200,24 @@ export default function WhatsAppAdmin() {
     } else {
       setDetail(null);
     }
+  }, [selected, fetchDetail]);
+
+  useEffect(() => {
+    if (!selected) {
+      if (pollRef.current) clearInterval(pollRef.current);
+      setPolling(false);
+      return;
+    }
+    setPolling(true);
+    const id = setInterval(() => {
+      fetchDetail(selected, { silent: true });
+    }, 5000);
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = id;
+    return () => {
+      clearInterval(id);
+      setPolling(false);
+    };
   }, [selected, fetchDetail]);
 
   const handleSend = async (statusOverride?: string) => {
