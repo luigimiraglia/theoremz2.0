@@ -69,6 +69,7 @@ export default function WhatsAppAdmin() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   const hasAccess = useMemo(
     () => Boolean(user?.email && user.email.toLowerCase() === allowedEmail),
@@ -386,6 +387,14 @@ export default function WhatsAppAdmin() {
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    {detail.conversation.student && (
+                      <button
+                        onClick={() => setShowProfile(true)}
+                        className="text-xs px-3 py-2 rounded-lg border border-indigo-300/60 text-indigo-100 bg-indigo-500/10 hover:border-indigo-200"
+                      >
+                        Scheda
+                      </button>
+                    )}
                     {["bot", "waiting_tutor", "tutor"].map((st) => (
                       <button
                         key={st}
@@ -523,6 +532,13 @@ export default function WhatsAppAdmin() {
           </section>
         </div>
       </div>
+
+      {showProfile && detail?.conversation.student && (
+        <ProfileModal
+          student={detail.conversation.student}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
     </div>
   );
 }
@@ -548,4 +564,70 @@ function formatAbsolute(input?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function ProfileModal({
+  student,
+  onClose,
+}: {
+  student: NonNullable<ConversationItem["student"]>;
+  onClose: () => void;
+}) {
+  const rows = [
+    { label: "Nome", value: student.name },
+    { label: "Stato", value: student.status },
+    { label: "Piano", value: student.planLabel },
+    { label: "Readiness", value: student.readiness != null ? `${student.readiness}` : null },
+    { label: "Rischio", value: student.risk },
+    { label: "Classe", value: student.yearClass },
+    { label: "Track", value: student.track },
+    { label: "Inizio", value: student.startDate },
+    { label: "Email studente", value: student.studentEmail },
+    { label: "Email genitore", value: student.parentEmail },
+    { label: "Telefono studente", value: student.studentPhone },
+    { label: "Telefono genitore", value: student.parentPhone },
+    { label: "Stripe price", value: student.stripePrice },
+    { label: "ID studente", value: student.id },
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Scheda Black</p>
+            <h3 className="text-lg font-semibold text-slate-50">
+              {student.name || "Studente"}
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-300 hover:text-white rounded-lg px-3 py-1 border border-slate-700 bg-slate-800/70"
+          >
+            Chiudi
+          </button>
+        </div>
+        <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto bg-gradient-to-b from-slate-900 to-slate-950">
+          {rows
+            .filter((r) => r.value)
+            .map((row) => (
+              <div
+                key={row.label}
+                className="flex items-start justify-between gap-3 rounded-lg bg-slate-800/60 border border-slate-700 px-3 py-2"
+              >
+                <span className="text-xs uppercase tracking-wide text-slate-400">
+                  {row.label}
+                </span>
+                <span className="text-sm text-slate-100 text-right break-all">
+                  {row.value}
+                </span>
+              </div>
+            ))}
+          {rows.filter((r) => r.value).length === 0 && (
+            <p className="text-sm text-slate-500">Nessun dettaglio disponibile.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
