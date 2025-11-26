@@ -84,16 +84,16 @@ export async function GET(request: NextRequest) {
           "id",
           "phone_tail",
           "phone_e164",
-          "status",
-          "type",
-          "bot",
-          "last_message_at",
-          "last_message_preview",
-          "updated_at",
-          "student_id",
-          "black_students(id, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, start_date, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))",
-        ].join(",")
-      )
+        "status",
+        "type",
+        "bot",
+        "last_message_at",
+        "last_message_preview",
+        "updated_at",
+        "student_id",
+        "black_students(id, user_id, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, parent_name, goal, difficulty_focus, next_assessment_subject, next_assessment_date, ai_description, last_contacted_at, start_date, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))",
+      ].join(",")
+    )
       .order("updated_at", { ascending: false })
       .limit(limit);
 
@@ -128,13 +128,11 @@ export async function GET(request: NextRequest) {
           lastMessageAt: row.last_message_at,
           lastMessagePreview: row.last_message_preview,
           updatedAt: row.updated_at,
-          followupDueAt: row.followup_due_at,
-          followupSentAt: row.followup_sent_at,
           student: student
             ? {
                 id: student.id,
+                userId: student.user_id,
                 status: student.status,
-                planLabel: student.plan_label,
                 readiness: student.readiness,
                 risk: student.risk_level,
                 yearClass: student.year_class,
@@ -144,6 +142,13 @@ export async function GET(request: NextRequest) {
                 parentEmail: student.parent_email,
                 studentPhone: student.student_phone,
                 parentPhone: student.parent_phone,
+                parentName: student.parent_name,
+                goal: student.goal,
+                difficultyFocus: student.difficulty_focus,
+                nextAssessmentSubject: student.next_assessment_subject,
+                nextAssessmentDate: student.next_assessment_date,
+                aiDescription: student.ai_description,
+                lastContactedAt: student.last_contacted_at,
                 name: profile?.full_name || null,
                 stripePrice: profile?.stripe_price_id || null,
               }

@@ -79,7 +79,7 @@ export async function GET(
           "last_message_preview",
           "updated_at",
           "student_id",
-          "black_students(id, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, start_date, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))",
+          "black_students(id, user_id, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, parent_name, goal, difficulty_focus, next_assessment_subject, next_assessment_date, ai_description, last_contacted_at, start_date, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))",
         ].join(",")
       )
       .eq("phone_tail", phoneTail)
@@ -119,15 +119,13 @@ export async function GET(
         bot: conversation.bot,
         lastMessageAt: conversation.last_message_at,
         lastMessagePreview: conversation.last_message_preview,
-        followupDueAt: conversation.followup_due_at,
-        followupSentAt: conversation.followup_sent_at,
         updatedAt: conversation.updated_at,
         studentId: conversation.student_id,
         student: student
           ? {
               id: student.id,
+              userId: student.user_id,
               status: student.status,
-              planLabel: student.plan_label,
               readiness: student.readiness,
               risk: student.risk_level,
               yearClass: student.year_class,
@@ -137,6 +135,13 @@ export async function GET(
               parentEmail: student.parent_email,
               studentPhone: student.student_phone,
               parentPhone: student.parent_phone,
+              parentName: student.parent_name,
+              goal: student.goal,
+              difficultyFocus: student.difficulty_focus,
+              nextAssessmentSubject: student.next_assessment_subject,
+              nextAssessmentDate: student.next_assessment_date,
+              aiDescription: student.ai_description,
+              lastContactedAt: student.last_contacted_at,
               name: profile?.full_name || null,
               stripePrice: profile?.stripe_price_id || null,
             }
@@ -172,6 +177,7 @@ export async function POST(
     const message = typeof body.message === "string" ? body.message.trim() : "";
     const nextStatus = body.status as ConversationStatus | undefined;
     const nextType = body.type as ConversationType | undefined;
+    const update = (body.update || null) as Record<string, any> | null;
 
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json(
@@ -192,6 +198,68 @@ export async function POST(
     }
     if (!convo) {
       return NextResponse.json({ error: "conversation_not_found" }, { status: 404 });
+    }
+
+    if (update) {
+      if (!convo.student_id) {
+        return NextResponse.json({ error: "student_not_linked" }, { status: 400 });
+      }
+      const { data: studentRow, error: studentErr } = await db
+        .from("black_students")
+        .select("id, user_id")
+        .eq("id", convo.student_id)
+        .maybeSingle();
+      if (studentErr) {
+        console.error("[admin/whatsapp] student fetch error", studentErr);
+        return NextResponse.json({ error: studentErr.message }, { status: 500 });
+      }
+      const normalize = (val: any) => {
+        if (typeof val === "string") {
+          const trimmed = val.trim();
+          return trimmed.length ? trimmed : null;
+        }
+        return val ?? null;
+      };
+      const studentUpdate: Record<string, any> = {};
+      if ("studentPhone" in update) studentUpdate.student_phone = normalize(update.studentPhone);
+      if ("parentPhone" in update) studentUpdate.parent_phone = normalize(update.parentPhone);
+      if ("studentEmail" in update) studentUpdate.student_email = normalize(update.studentEmail);
+      if ("parentEmail" in update) studentUpdate.parent_email = normalize(update.parentEmail);
+      if ("yearClass" in update) studentUpdate.year_class = normalize(update.yearClass);
+      if ("track" in update) studentUpdate.track = normalize(update.track);
+      if ("goal" in update) studentUpdate.goal = normalize(update.goal);
+      if ("difficultyFocus" in update)
+        studentUpdate.difficulty_focus = normalize(update.difficultyFocus);
+      if ("nextAssessmentSubject" in update)
+        studentUpdate.next_assessment_subject = normalize(update.nextAssessmentSubject);
+      if ("nextAssessmentDate" in update)
+        studentUpdate.next_assessment_date = normalize(update.nextAssessmentDate);
+
+      if (Object.keys(studentUpdate).length) {
+        const { error: updateStudentErr } = await db
+          .from("black_students")
+          .update(studentUpdate)
+          .eq("id", convo.student_id);
+        if (updateStudentErr) {
+          console.error("[admin/whatsapp] student update error", updateStudentErr);
+          return NextResponse.json({ error: updateStudentErr.message }, { status: 500 });
+        }
+      }
+
+      if (update.name && studentRow?.user_id) {
+        const fullName = normalize(update.name);
+        if (fullName) {
+          const { error: profileErr } = await db
+            .from("profiles")
+            .update({ full_name: fullName })
+            .eq("id", studentRow.user_id);
+          if (profileErr) {
+            console.error("[admin/whatsapp] profile update error", profileErr);
+          }
+        }
+      }
+
+      return NextResponse.json({ ok: true, updated: true });
     }
 
     const updates: Record<string, any> = { updated_at: new Date().toISOString() };

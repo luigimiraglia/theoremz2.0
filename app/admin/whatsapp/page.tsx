@@ -16,6 +16,7 @@ type ConversationItem = {
   updatedAt?: string | null;
   student?: {
     id: string;
+    userId?: string | null;
     name?: string | null;
     status?: string | null;
     planLabel?: string | null;
@@ -24,10 +25,17 @@ type ConversationItem = {
     yearClass?: string | null;
     track?: string | null;
     startDate?: string | null;
+    parentName?: string | null;
     studentEmail?: string | null;
     parentEmail?: string | null;
     studentPhone?: string | null;
     parentPhone?: string | null;
+    goal?: string | null;
+    difficultyFocus?: string | null;
+    nextAssessmentSubject?: string | null;
+    nextAssessmentDate?: string | null;
+    aiDescription?: string | null;
+    lastContactedAt?: string | null;
     stripePrice?: string | null;
   } | null;
 };
@@ -149,6 +157,31 @@ export default function WhatsAppAdmin() {
       }
     },
     [buildHeaders]
+  );
+
+  const handleProfileUpdate = useCallback(
+    async (phoneTail: string, updates: Record<string, any>) => {
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch(`/api/admin/whatsapp/${phoneTail}`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ update: updates }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const detail = data?.error || data?.detail;
+          throw new Error(detail || `HTTP ${res.status}`);
+        }
+        await Promise.all([fetchDetail(phoneTail), fetchList({ keepSelection: true })]);
+        return null;
+      } catch (err: any) {
+        console.error(err);
+        return err?.message || "Errore salvataggio";
+      }
+    },
+    [buildHeaders, fetchDetail, fetchList]
   );
 
   useEffect(() => {
@@ -537,6 +570,8 @@ export default function WhatsAppAdmin() {
       {showProfile && detail?.conversation.student && (
         <ProfileModal
           student={detail.conversation.student}
+          phoneTail={detail.conversation.phoneTail || ""}
+          onSave={handleProfileUpdate}
           onClose={() => setShowProfile(false)}
         />
       )}
@@ -569,66 +604,256 @@ function formatAbsolute(input?: string | null) {
 
 function ProfileModal({
   student,
+  phoneTail,
+  onSave,
   onClose,
 }: {
   student: NonNullable<ConversationItem["student"]>;
+  phoneTail: string;
+  onSave: (phoneTail: string, updates: Record<string, any>) => Promise<string | null>;
   onClose: () => void;
 }) {
-  const rows = [
-    { label: "Nome", value: student.name },
+  const [form, setForm] = useState({
+    name: student.name || "",
+    studentPhone: student.studentPhone || "",
+    parentPhone: student.parentPhone || "",
+    studentEmail: student.studentEmail || "",
+    parentEmail: student.parentEmail || "",
+    yearClass: student.yearClass || "",
+    track: student.track || "",
+    goal: student.goal || "",
+    difficultyFocus: student.difficultyFocus || "",
+    nextAssessmentSubject: student.nextAssessmentSubject || "",
+    nextAssessmentDate: student.nextAssessmentDate || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const onChange = (key: keyof typeof form, value: string) => {
+    setSaved(false);
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    setSaved(false);
+    const updates: Record<string, any> = {
+      name: form.name,
+      studentPhone: form.studentPhone,
+      parentPhone: form.parentPhone,
+      studentEmail: form.studentEmail,
+      parentEmail: form.parentEmail,
+      yearClass: form.yearClass,
+      track: form.track,
+      goal: form.goal,
+      difficultyFocus: form.difficultyFocus,
+      nextAssessmentSubject: form.nextAssessmentSubject,
+      nextAssessmentDate: form.nextAssessmentDate,
+    };
+    const err = await onSave(phoneTail, updates);
+    if (err) {
+      setSaveError(err);
+    } else {
+      setSaved(true);
+    }
+    setSaving(false);
+  };
+
+  const infoRows = [
     { label: "Stato", value: student.status },
-    { label: "Piano", value: student.planLabel },
     { label: "Readiness", value: student.readiness != null ? `${student.readiness}` : null },
     { label: "Rischio", value: student.risk },
-    { label: "Classe", value: student.yearClass },
-    { label: "Track", value: student.track },
-    { label: "Inizio", value: student.startDate },
-    { label: "Email studente", value: student.studentEmail },
-    { label: "Email genitore", value: student.parentEmail },
-    { label: "Telefono studente", value: student.studentPhone },
-    { label: "Telefono genitore", value: student.parentPhone },
-    { label: "Stripe price", value: student.stripePrice },
+    { label: "Ultimo contatto", value: student.lastContactedAt },
     { label: "ID studente", value: student.id },
+    { label: "Stripe price", value: student.stripePrice },
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Scheda Black</p>
-            <h3 className="text-lg font-semibold text-slate-50">
-              {student.name || "Studente"}
-            </h3>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+          <div className="space-y-1">
+            <p className="text-xs uppercase tracking-[0.25em] text-emerald-300">Scheda Black</p>
+            <h3 className="text-xl font-semibold text-slate-50">{student.name || "Studente"}</h3>
+            <div className="flex gap-2 flex-wrap">
+              {student.status && (
+                <span className="text-xs px-2 py-1 rounded-full border border-slate-700 bg-slate-800 text-slate-200">
+                  {student.status}
+                </span>
+              )}
+              {student.track && (
+                <span className="text-xs px-2 py-1 rounded-full border border-indigo-500/60 text-indigo-100 bg-indigo-500/10">
+                  {student.track}
+                </span>
+              )}
+              {student.yearClass && (
+                <span className="text-xs px-2 py-1 rounded-full border border-emerald-400/60 text-emerald-100 bg-emerald-500/10">
+                  {student.yearClass}
+                </span>
+              )}
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-300 hover:text-white rounded-lg px-3 py-1 border border-slate-700 bg-slate-800/70"
+            className="text-slate-300 hover:text-white rounded-lg px-4 py-2 border border-slate-700 bg-slate-800/70"
           >
             Chiudi
           </button>
         </div>
-        <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto bg-gradient-to-b from-slate-900 to-slate-950">
-          {rows
-            .filter((r) => r.value)
-            .map((row) => (
-              <div
-                key={row.label}
-                className="flex items-start justify-between gap-3 rounded-lg bg-slate-800/60 border border-slate-700 px-3 py-2"
-              >
-                <span className="text-xs uppercase tracking-wide text-slate-400">
-                  {row.label}
-                </span>
-                <span className="text-sm text-slate-100 text-right break-all">
-                  {row.value}
-                </span>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 max-h-[75vh] overflow-y-auto bg-gradient-to-b from-slate-900 to-slate-950">
+          <div className="space-y-4">
+            <h4 className="text-sm text-slate-300 font-semibold">Contatti & Meta</h4>
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+              <LabeledField label="Nome" value={form.name} onChange={(v) => onChange("name", v)} />
+              <LabeledField
+                label="Telefono studente"
+                value={form.studentPhone}
+                onChange={(v) => onChange("studentPhone", v)}
+              />
+              <LabeledField
+                label="Telefono genitore"
+                value={form.parentPhone}
+                onChange={(v) => onChange("parentPhone", v)}
+              />
+              <LabeledField
+                label="Email studente"
+                value={form.studentEmail}
+                onChange={(v) => onChange("studentEmail", v)}
+              />
+              <LabeledField
+                label="Email genitore"
+                value={form.parentEmail}
+                onChange={(v) => onChange("parentEmail", v)}
+              />
+              <LabeledField
+                label="Classe"
+                value={form.yearClass}
+                onChange={(v) => onChange("yearClass", v)}
+              />
+              <LabeledField label="Track" value={form.track} onChange={(v) => onChange("track", v)} />
+              <StaticField label="Inizio" value={student.startDate} />
+              <StaticField label="Ultimo contatto" value={student.lastContactedAt} />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-sm text-slate-300 font-semibold">Piano & Note</h4>
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+              <StaticField label="Piano" value={student.planLabel} />
+              <LabeledField
+                label="Goal"
+                value={form.goal}
+                onChange={(v) => onChange("goal", v)}
+                textarea
+              />
+              <LabeledField
+                label="Focus/Difficoltà"
+                value={form.difficultyFocus}
+                onChange={(v) => onChange("difficultyFocus", v)}
+                textarea
+              />
+              <LabeledField
+                label="Prossima verifica"
+                value={form.nextAssessmentSubject}
+                onChange={(v) => onChange("nextAssessmentSubject", v)}
+              />
+              <LabeledField
+                label="Data prossima verifica"
+                value={form.nextAssessmentDate}
+                onChange={(v) => onChange("nextAssessmentDate", v)}
+                type="date"
+              />
+              <StaticField
+                label="AI note"
+                value={student.aiDescription ? student.aiDescription.slice(0, 500) : null}
+              />
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                {infoRows
+                  .filter((r) => r.value)
+                  .map((row) => (
+                    <div
+                      key={row.label}
+                      className="rounded-lg bg-slate-800/70 border border-slate-700 px-3 py-2"
+                    >
+                      <p className="text-[11px] uppercase text-slate-500">{row.label}</p>
+                      <p className="text-sm text-slate-100 break-all">{row.value}</p>
+                    </div>
+                  ))}
               </div>
-            ))}
-          {rows.filter((r) => r.value).length === 0 && (
-            <p className="text-sm text-slate-500">Nessun dettaglio disponibile.</p>
-          )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/80">
+          <div className="text-sm text-slate-400">
+            {saveError && <span className="text-amber-300">{saveError}</span>}
+            {saved && !saveError && <span className="text-emerald-300">Salvato ✔︎</span>}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-slate-700 text-slate-200 bg-slate-800/70 hover:border-slate-500"
+            >
+              Chiudi
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 rounded-lg bg-emerald-500 text-slate-900 font-semibold shadow-lg shadow-emerald-500/30 disabled:bg-slate-700 disabled:text-slate-400"
+            >
+              {saving ? "Salvo..." : "Salva"}
+            </button>
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LabeledField({
+  label,
+  value,
+  onChange,
+  textarea,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  textarea?: boolean;
+  type?: string;
+}) {
+  return (
+    <label className="block text-sm">
+      <span className="text-xs uppercase tracking-wide text-slate-400">{label}</span>
+      {textarea ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={2}
+          className="mt-1 w-full rounded-lg bg-slate-800/70 border border-slate-700 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/70"
+        />
+      ) : (
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="mt-1 w-full rounded-lg bg-slate-800/70 border border-slate-700 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/70"
+        />
+      )}
+    </label>
+  );
+}
+
+function StaticField({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div className="text-sm">
+      <p className="text-[11px] uppercase text-slate-500">{label}</p>
+      <p className="text-slate-100">{value}</p>
     </div>
   );
 }
