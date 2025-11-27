@@ -61,8 +61,8 @@ export async function POST(req: Request) {
       role: "system",
       content:
         "Sei un docente di matematica/fisica realistico ma incoraggiante. Valuti con flessibilità: premi chiarezza e ragionamento, non solo formalismo. Rispondi solo con JSON valido: { nextQuestion?: string, feedback?: { lastAnswer?: string, scoreComment?: string }, final?: { grade: number, summary: string, strengths: string[], weaknesses: string[] } }. nextQuestion solo se richiesto; grade 0-10. Tono costruttivo.",
-    },
-    { role: "user", content: userTextParts },
+    } as const,
+    { role: "user", content: userTextParts } as const,
   ];
 
   try {
