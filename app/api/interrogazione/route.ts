@@ -78,13 +78,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "empty_completion" }, { status: 502 });
     }
 
-    let parsed: {
-      nextQuestion?: string;
-      feedback?: { lastAnswer?: string; scoreComment?: string };
-      final?: { grade?: number; summary?: string; strengths?: string[]; weaknesses?: string[] };
-    } | null = null;
+    let parsed: any = null;
     try {
-      parsed = JSON.parse(raw) as typeof parsed;
+      parsed = JSON.parse(raw);
     } catch {
       return NextResponse.json({ error: "invalid_response", raw }, { status: 502 });
     }
