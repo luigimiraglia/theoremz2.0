@@ -390,6 +390,12 @@ export default function AccountPage() {
                   Simula verifica
                 </button>
                 <button
+                  onClick={() => router.push("/risolutore")}
+                  className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
+                >
+                  Risolutore AI
+                </button>
+                <button
                   onClick={async () => {
                     try {
                       await doLogout();

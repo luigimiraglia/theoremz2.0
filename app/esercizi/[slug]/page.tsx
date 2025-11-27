@@ -169,6 +169,14 @@ export default async function EserciziPerLezione({
         </Link>
         .
       </p>
+      <div className="mt-3 flex flex-wrap gap-3">
+        <Link
+          href="/risolutore"
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:opacity-95"
+        >
+          Risolvi un esercizio con AI →
+        </Link>
+      </div>
 
       {!items?.length ? (
         <p className="mt-6 text-slate-500">

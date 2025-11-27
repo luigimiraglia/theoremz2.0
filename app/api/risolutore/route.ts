@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
     userContent.push({
       type: "text",
-      text: `Esercizio inviato dallo studente:\n${safePrompt}\n\nRispondi SOLO con JSON valido. Schema: {\n  "steps": [\n    { "title": "Dati da estrarre", "body": "Elenco puntato dei dati e delle incognite" },\n    { "title": "Strategia", "body": "Spiega in modo semplice il piano di risoluzione" },\n    { "title": "Passaggio k", "body": "Descrivi ogni passaggio con frasi brevi, latex per le formule e commenti per studenti non esperti" },\n    { "title": "Risultato", "body": "Riassumi il risultato e verifica tutte le richieste" }\n  ]\n}.\nScrivi con tono didattico, evita salti logici, usa esempi quando utili e Latex tra $$ $$ o $ $.`,
+      text: `Esercizio inviato dallo studente:\n${safePrompt}\n\nRispondi SOLO con JSON valido e minimale. Schema obbligatorio:\n{\n  "summary": "1-2 frasi che anticipano l'idea chiave",\n  "final_answer": "risultato finale in latex o testo",\n  "steps": [\n    { "title": "Titolo libero", "body": "Spiega il passaggio con molti dettagli, latex tra $$ $$ o $ $, commenti chiari per uno studente" },\n    { "title": "Titolo libero", "body": "Aggiungi tutti i passaggi necessari, nessun limite di lunghezza o numero" }\n  ],\n  "checks": ["controllo unità o coerenza 1", "controllo 2"]\n}\nRegole: tono didattico e molto dettagliato, nessun limite al numero di passaggi, includi ogni micro-passaggio utile. Niente testo fuori dallo schema JSON, nessuna prosa extra.`,
     });
 
     if (image && typeof image === "string") {
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
         {
           role: "system",
           content:
-            "Sei Theoremz AI Tutor. Rispondi solo con JSON valido: { steps: [{ title: string, body: markdown }] }. Usa Latex racchiuso tra $$ $$ o $ $.",
+            "Sei Theoremz AI Tutor. Rispondi solo con JSON valido: { summary?: string, final_answer?: string, steps: [{ title: string, body: markdown }], checks?: string[] }. Usa Latex racchiuso tra $$ $$ o $ $. Scrivi passaggi lunghi e molto dettagliati, senza limite di numero. Non inserire altro testo.",
         },
         {
           role: "user",
@@ -64,7 +64,12 @@ export async function POST(req: Request) {
       );
     }
 
-    let payload: { steps?: Array<{ title: string; body: string }> } | null = null;
+    let payload: {
+      summary?: string;
+      final_answer?: string;
+      steps?: Array<{ title: string; body: string }>;
+      checks?: string[];
+    } | null = null;
     try {
       payload = JSON.parse(raw);
     } catch (err) {
@@ -82,7 +87,19 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ steps: payload.steps });
+    const sanitizeLatex = (text?: string | null) => normalizeLatexDelimiters(text || "");
+    const normalizedSteps =
+      payload.steps?.map((step) => ({
+        title: step.title,
+        body: sanitizeLatex(step.body),
+      })) || [];
+
+    return NextResponse.json({
+      summary: payload.summary ?? null,
+      finalAnswer: sanitizeLatex(payload.final_answer ?? null),
+      checks: Array.isArray(payload.checks) ? payload.checks.filter(Boolean) : null,
+      steps: normalizedSteps,
+    });
   } catch (error) {
     console.error("[risolutore] unexpected", error);
     return NextResponse.json(
@@ -90,4 +107,17 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+}
+
+function normalizeLatexDelimiters(text: string) {
+  if (!text) return text;
+  return text
+    .replace(/\\\\\[/g, "$$")
+    .replace(/\\\\\]/g, "$$")
+    .replace(/\\\[/g, "$$")
+    .replace(/\\\]/g, "$$")
+    .replace(/\\\\\(/g, "$")
+    .replace(/\\\\\)/g, "$")
+    .replace(/\\\(/g, "$")
+    .replace(/\\\)/g, "$");
 }
