@@ -8,10 +8,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/interrogazione" },
 };
 
-type PageSearchParams = { [key: string]: string | string[] | undefined };
-
-export default function InterrogazionePage({ searchParams }: { searchParams?: PageSearchParams }) {
-  const rawTopic = searchParams?.topic;
+export default function InterrogazionePage(props: any) {
+  const rawTopic = props?.searchParams?.topic;
   const topic = typeof rawTopic === "string" ? rawTopic : Array.isArray(rawTopic) ? rawTopic[0] : undefined;
   return (
     <main className="min-h-screen px-4 py-8 text-slate-900 [.dark_&]:text-slate-50">
