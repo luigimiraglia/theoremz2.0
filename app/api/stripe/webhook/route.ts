@@ -10,6 +10,7 @@ import {
   mapPlan,
 } from "@/lib/black/subscriptionSync";
 import { adminDb } from "@/lib/firebaseAdmin";
+import { supabaseServer } from "@/lib/supabase";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
@@ -200,6 +201,15 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   if (isBlackFullPlan) {
     await triggerStartBlackTemplate({ phone });
+  }
+
+  if (whatsappMessage && phone) {
+    await logWelcomeConversation({
+      phone,
+      message: whatsappMessage,
+      studentId: syncResult.studentId || null,
+      planLabel,
+    });
   }
 }
 
@@ -1330,6 +1340,60 @@ function buildPlanTemplateMessage({
   if (name.includes("mentor")) return buildMentorTemplate(isParent);
   if (name.includes("black")) return buildBlackTemplate(isParent);
   return null;
+}
+
+async function logWelcomeConversation({
+  phone,
+  message,
+  studentId,
+  planLabel,
+}: {
+  phone: string;
+  message: string;
+  studentId: string | null;
+  planLabel: string | null;
+}) {
+  const supabase = supabaseServer();
+  if (!supabase) return;
+  const phoneTail = extractPhoneTail(phone);
+  if (!phoneTail) return;
+  const now = new Date().toISOString();
+  try {
+    await supabase
+      .from("black_whatsapp_conversations")
+      .upsert(
+        {
+          phone_tail: phoneTail,
+          phone_e164: phone.replace(/\s+/g, ""),
+          student_id: studentId,
+          status: "bot",
+          type: "black",
+          bot: "sales",
+          last_message_at: now,
+          last_message_preview: message.slice(0, 200),
+          updated_at: now,
+          plan_label: planLabel,
+        },
+        { onConflict: "phone_tail" }
+      );
+
+    await supabase.from("black_whatsapp_messages").insert({
+      student_id: studentId,
+      phone_tail: phoneTail,
+      role: "assistant",
+      content: message,
+      meta: { source: "stripe_welcome" },
+    });
+  } catch (err) {
+    console.error("[stripe webhook] conversation log failed", err);
+  }
+}
+
+function extractPhoneTail(rawPhone: string | null) {
+  if (!rawPhone) return null;
+  const digits = rawPhone.replace(/\D+/g, "");
+  if (digits.length < 6) return null;
+  return digits.slice(-10);
 }
 
 function buildBlackTemplate(isParent: boolean) {
