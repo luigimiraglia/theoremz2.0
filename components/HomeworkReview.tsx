@@ -169,7 +169,7 @@ export default function HomeworkReview() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              placeholder="Es: esercizi 1-3 algebra, indicami dove sbaglio i segni; dimmi se la forma della soluzione è ok."
+              placeholder="Es: esercizi 1-3 algebra, indicami dove sbaglio i segni; dimmi se la forma della soluzione è ok. Mostrami la soluzione passo passo."
               className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 shadow-inner outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-900/60 [.dark_&]:text-slate-100"
               disabled={state === "processing"}
             />

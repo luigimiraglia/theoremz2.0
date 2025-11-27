@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 type ReviewExercise = {
   title: string;
-  score: number;
+  score: number | null;
   correct: string[];
   issues: string[];
   improvements: string[];

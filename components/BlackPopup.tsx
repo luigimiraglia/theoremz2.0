@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function BlackPopup() {
   return (
-    <div className="flex z-100 flex-col gap-3 bg-[#f8fafc] [.dark_&]:text-black border-10 border-white fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-2xl pt-4 pb-4 text-center drop-shadow-xl shadow drop-shadow-blue-100 w-80 ">
+    <div className="flex z-100 flex-col gap-3 bg-[#f8fafc] [.dark_&]:text-black border-10 border-white fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-2xl pt-4 pb-4 text-center drop-shadow-xl shadow drop-shadow-blue-100 w-80 [.dark_&]:shadow-[0_16px_50px_rgba(0,0,0,0.7)] [.dark_&]:drop-shadow-none">
       <h1 className="text-xl font-bold mx-8">
         Hai scoperto un vantaggio Black
       </h1>
