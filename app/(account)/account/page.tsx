@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { getAuth } from "firebase/auth";
+import { PlayCircle, Timer as TimerIcon, FileText, ListChecks, BookOpen } from "lucide-react";
 import NewsletterSettings from "@/components/NewsletterSettings";
 import TempAccessInfo from "@/components/TempAccessInfo";
 import dynamic from "next/dynamic";
@@ -339,7 +340,9 @@ export default function AccountPage() {
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 text-xs bg-black/20 px-2.5 py-1 rounded-full">
-          <Lock className="h-3.5 w-3.5" />
+          <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
+            <path d="M6 10V8a6 6 0 1112 0v2h1a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V11a1 1 0 011-1h1zm2 0h8V8a4 4 0 00-8 0v2z" />
+          </svg>
           Free
         </span>
       )}
@@ -411,6 +414,44 @@ export default function AccountPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Azioni rapide */}
+      <section className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/60">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 [.dark_&]:text-slate-300">
+              Azioni rapide
+            </p>
+            <p className="text-sm text-slate-600 [.dark_&]:text-slate-200">Vai diretto alle funzioni principali.</p>
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <Link
+            href="/interrogazione"
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-sky-500 px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
+          >
+            <PlayCircle className="h-4 w-4" /> Interrogazione
+          </Link>
+          <Link
+            href="/risolutore"
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
+          >
+            <ListChecks className="h-4 w-4" /> Risolutore
+          </Link>
+          <Link
+            href="/compiti"
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
+          >
+            <FileText className="h-4 w-4" /> Correggi compiti
+          </Link>
+          <Link
+            href="/simula-verifica"
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
+          >
+            <TimerIcon className="h-4 w-4" /> Simula verifica
+          </Link>
         </div>
       </section>
 
@@ -697,13 +738,6 @@ function Sparkles(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
       <path d="M5 12l2-4 2 4 4 2-4 2-2 4-2-4-4-2 4-2zM17 3l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2zM19 13l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z" />
-    </svg>
-  );
-}
-function Lock(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M6 10V8a6 6 0 1112 0v2h1a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V11a1 1 0 011-1h1zm2 0h8V8a4 4 0 00-8 0v2z" />
     </svg>
   );
 }

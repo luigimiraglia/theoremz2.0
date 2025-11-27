@@ -125,6 +125,7 @@ export default function SimulaVerificaPage() {
   const [error, setError] = useState<string | null>(null);
 
   const canGenerate = selected.length > 0 && !generating;
+  const lockedPlan = false;
 
   async function handleGenerate() {
     if (!selected.length) return;
@@ -266,14 +267,6 @@ export default function SimulaVerificaPage() {
             >
               Vai al login
             </button>
-          </div>
-        </div>
-      )}
-      
-      {!loading && user && isSubscribed === false && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
-          <div className="w-full max-w-2xl">
-            <BlackPopup />
           </div>
         </div>
       )}
@@ -577,7 +570,17 @@ export default function SimulaVerificaPage() {
           <div className="mt-4 flex items-center justify-between">
             <div className="text-sm text-slate-600 [.dark_&]:text-white/80">Durata selezionata: <strong>{duration} min</strong></div>
             {!durationLocked ? (
-              <button onClick={() => { setDurationLocked(true); setStep("generazione"); handleGenerate(); }} className="rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] hover:opacity-95 text-white px-4 py-2 text-sm font-semibold inline-flex items-center gap-2 w-full sm:w-auto"><FileText className="h-4 w-4" /> Conferma e genera</button>
+              <button
+                onClick={() => {
+                  setDurationLocked(true);
+                  setStep("generazione");
+                  void handleGenerate();
+                }}
+                disabled={!canGenerate}
+                className="rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] hover:opacity-95 text-white px-4 py-2 text-sm font-semibold inline-flex items-center gap-2 w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <FileText className="h-4 w-4" /> Conferma e genera
+              </button>
             ) : (
               <button disabled className="rounded-lg bg-slate-300 text-white px-4 py-2 text-sm font-semibold">Confermata</button>
             )}
@@ -704,6 +707,7 @@ export default function SimulaVerificaPage() {
       )}
       </main>
       )}
+
     </>
   );
 }
