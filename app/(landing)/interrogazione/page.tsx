@@ -8,11 +8,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/interrogazione" },
 };
 
-export default function InterrogazionePage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
-  const topic =
-    typeof window === "undefined"
-      ? (searchParams?.topic as string | undefined)
-      : new URLSearchParams(window.location.search).get("topic") || undefined;
+type PageSearchParams = { [key: string]: string | string[] | undefined };
+
+export default function InterrogazionePage({ searchParams }: { searchParams?: PageSearchParams }) {
+  const rawTopic = searchParams?.topic;
+  const topic = typeof rawTopic === "string" ? rawTopic : Array.isArray(rawTopic) ? rawTopic[0] : undefined;
   return (
     <main className="min-h-screen px-4 py-8 text-slate-900 [.dark_&]:text-slate-50">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
