@@ -298,6 +298,7 @@ type FinalScreenProps = {
 
 function FinalScreen({ answers, phone, onPhoneChange, phoneStatus, onSubmitPhone, onRestart, plan }: FinalScreenProps) {
   const isSending = phoneStatus === "sending";
+  const isSubmitted = phoneStatus === "submitted";
 
   return (
     <div className="space-y-5">
@@ -323,43 +324,49 @@ function FinalScreen({ answers, phone, onPhoneChange, phoneStatus, onSubmitPhone
         <label htmlFor="phone" className="text-[13.5px] font-semibold text-slate-700">
           📱 Vuoi ricevere il tuo report completo con consigli personalizzati su WhatsApp?
         </label>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <input
-            id="phone"
-            type="tel"
-            inputMode="tel"
-            placeholder="Es. +39 345 1234567"
-            value={phone}
-            onChange={(event) => onPhoneChange(event.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-700 shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200"
-          />
-          <button
-            type="button"
-            onClick={onSubmitPhone}
-            disabled={isSending}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-400 bg-sky-500 px-4 py-3 text-[13.5px] font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Send className="h-4 w-4" aria-hidden />
-            Invia report
-          </button>
-        </div>
-        {phoneStatus === "sending" && (
-          <p className="text-[12px] font-semibold text-sky-600">⌛ Stiamo inviando il tuo report, resta connesso.</p>
+        {isSubmitted ? (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 flex items-center gap-2">
+            <Check className="h-4 w-4" aria-hidden /> Report richiesto. Controlla WhatsApp fra pochi minuti.
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                id="phone"
+                type="tel"
+                inputMode="tel"
+                placeholder="Es. +39 345 1234567"
+                value={phone}
+                onChange={(event) => onPhoneChange(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-700 shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 disabled:bg-slate-100"
+                disabled={isSending || isSubmitted}
+              />
+              <button
+                type="button"
+                onClick={onSubmitPhone}
+                disabled={isSending || isSubmitted}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-400 bg-sky-500 px-4 py-3 text-[13.5px] font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Send className="h-4 w-4" aria-hidden />
+                Invia report
+              </button>
+            </div>
+            {phoneStatus === "sending" && (
+              <p className="text-[12px] font-semibold text-sky-600">⌛ Stiamo inviando il tuo report, resta connesso.</p>
+            )}
+            {phoneStatus === "missing" && (
+              <p className="text-[12px] font-semibold text-rose-500">Inserisci un numero per richiedere il report su WhatsApp.</p>
+            )}
+            {phoneStatus === "error" && (
+              <p className="text-[12px] font-semibold text-rose-500">
+                ⚠️ Non siamo riusciti a registrare la richiesta. Riprova tra qualche secondo o scrivici su <Link href="/contatto-rapido?source=start-quiz" className="underline underline-offset-4">contatto rapido</Link>.
+              </p>
+            )}
+            <p className="text-[12px] font-semibold text-slate-500">
+              💬 Niente spam — ti scriviamo solo per inviarti il tuo piano e suggerimenti utili.
+            </p>
+          </>
         )}
-        {phoneStatus === "submitted" && (
-          <p className="text-[12px] font-semibold text-emerald-600">📨 Report in arrivo! Controlla WhatsApp entro pochi minuti.</p>
-        )}
-        {phoneStatus === "missing" && (
-          <p className="text-[12px] font-semibold text-rose-500">Inserisci un numero per richiedere il report su WhatsApp.</p>
-        )}
-        {phoneStatus === "error" && (
-          <p className="text-[12px] font-semibold text-rose-500">
-            ⚠️ Non siamo riusciti a registrare la richiesta. Riprova tra qualche secondo o scrivici su <Link href="/contatto-rapido?source=start-quiz" className="underline underline-offset-4">contatto rapido</Link>.
-          </p>
-        )}
-        <p className="text-[12px] font-semibold text-slate-500">
-          💬 Niente spam — ti scriviamo solo per inviarti il tuo piano e suggerimenti utili.
-        </p>
       </div>
       <Link
         href={plan.href}
