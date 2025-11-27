@@ -309,8 +309,8 @@ export default function LessonClient({
           </h2>
         )}
 
-        <div className="mt-4 flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto overflow-y-hidden px-2 pb-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-          <div className="flex items-center gap-1 sm:gap-2 min-w-max">
+        <div className="mt-4 flex flex-col items-center gap-2 px-2 pb-1">
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto overflow-y-hidden min-w-max scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
             <FlashcardsSmallButton />
             <EserciziSmallButton />
             <LessonNotesClient
@@ -319,6 +319,31 @@ export default function LessonClient({
             />
             <FormularioSection url={lesson.resources?.formulario ?? ""} />
           </div>
+          <details className="w-full max-w-3xl rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800/80">
+            <summary className="cursor-pointer select-none text-center font-semibold text-slate-700 [.dark_&]:text-slate-100">
+              Altre opzioni
+            </summary>
+            <div className="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+              <Link
+                href={`/interrogazione?topic=${encodeURIComponent(lesson.title)}`}
+                className="min-w-0 flex-shrink px-3 py-2 text-xs sm:text-sm font-semibold sm:font-bold shadow-md bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:brightness-110 hover:scale-105 transition-all duration-500 whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
+              >
+                Simula interrogazione
+              </Link>
+              <Link
+                href="/risolutore"
+                className="min-w-0 flex-shrink px-3 py-2 text-xs sm:text-sm font-semibold sm:font-bold shadow-md bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] text-white rounded-lg hover:brightness-110 hover:scale-105 transition-all duration-500 whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
+              >
+                Risolutore esercizi
+              </Link>
+              <Link
+                href="/compiti"
+                className="min-w-0 flex-shrink px-3 py-2 text-xs sm:text-sm font-semibold sm:font-bold shadow-md bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:brightness-110 hover:scale-105 transition-all duration-500 whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
+              >
+                Correggi compiti
+              </Link>
+            </div>
+          </details>
         </div>
       </header>
 

@@ -11,7 +11,12 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-Frame-Options', 'SAMEORIGIN')
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  // Sblocca microfono solo dove serve (es. simulazione interrogazione), altrimenti nega.
+  const allowMic =
+    request.nextUrl.pathname.startsWith('/interrogazione') ||
+    request.nextUrl.pathname.startsWith('/api/interrogazione') ||
+    request.nextUrl.pathname.startsWith('/compiti');
+  response.headers.set('Permissions-Policy', `camera=(), microphone=(${allowMic ? 'self' : ''}), geolocation=()`)
 
   // Add caching headers for static assets
   if (
