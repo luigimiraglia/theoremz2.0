@@ -101,10 +101,10 @@ export async function POST(req: Request) {
                 : null,
             summary: parsed.final.summary?.slice(0, 600) || null,
             strengths: Array.isArray(parsed.final.strengths)
-              ? parsed.final.strengths.map((s) => String(s).slice(0, 240)).filter(Boolean)
+              ? parsed.final.strengths.map((s: unknown) => String(s).slice(0, 240)).filter(Boolean)
               : [],
             weaknesses: Array.isArray(parsed.final.weaknesses)
-              ? parsed.final.weaknesses.map((s) => String(s).slice(0, 240)).filter(Boolean)
+              ? parsed.final.weaknesses.map((s: unknown) => String(s).slice(0, 240)).filter(Boolean)
               : [],
           }
         : null,
