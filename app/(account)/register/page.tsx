@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { Check } from "lucide-react";
 import { auth } from "@/lib/firebase";
@@ -22,6 +23,7 @@ export default function Register() {
   const [isLogin, setIsLogin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) router.replace("/account");
@@ -30,6 +32,7 @@ export default function Register() {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setInfo(null);
 
     if (!isLogin && !acceptTerms) {
       setError("Devi accettare i Termini e Condizioni per creare l’account.");
@@ -87,6 +90,24 @@ export default function Register() {
       router.replace("/account");
     } catch (err: any) {
       setError(err.message ?? "Qualcosa è andato storto.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    setError(null);
+    setInfo(null);
+    if (!email) {
+      setError("Inserisci l'email per reimpostare la password.");
+      return;
+    }
+    try {
+      setLoading(true);
+      await sendPasswordResetEmail(auth, email.trim());
+      setInfo("Email inviata: controlla la posta per reimpostare la password.");
+    } catch (err: any) {
+      setError(err?.message || "Non riesco a inviare l'email di reset.");
     } finally {
       setLoading(false);
     }
@@ -188,6 +209,11 @@ export default function Register() {
               {error}
             </p>
           )}
+          {info && (
+            <p className="rounded bg-emerald-100 px-3 py-2 text-sm text-emerald-700">
+              {info}
+            </p>
+          )}
 
           <button
             type="submit"
@@ -196,6 +222,18 @@ export default function Register() {
           >
             {loading ? "Attendere…" : isLogin ? "Accedi" : "Crea account"}
           </button>
+          {isLogin && (
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={loading}
+                className="text-sm font-semibold text-blue-600 hover:underline disabled:opacity-60"
+              >
+                Password dimenticata?
+              </button>
+            </div>
+          )}
         </form>
 
         <p className="text-center text-sm text-slate-800">
