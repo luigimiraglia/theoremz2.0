@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { adminDb } from "@/lib/firebaseAdmin";
+import { supabaseServer } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -277,6 +278,7 @@ async function sendWhatsAppTemplate({
   if (!res.ok || (data && (data as any).error)) {
     throw new Error((data as any)?.error?.message || `status_${res.status}`);
   }
+  logTemplateConversation({ to, templateName }).catch(() => {});
   return true;
 }
 
@@ -527,6 +529,54 @@ function buildBlackTemplate(isParent: boolean) {
     "Se vuoi iniziare oggi, puoi attivarlo qui: theoremz.com/black",
     "Ti arriva subito l'accesso completo e il piano personalizzato.",
   ].join("\n");
+}
+
+function extractPhoneTail(raw: string | null) {
+  if (!raw) return null;
+  const digits = raw.replace(/\D+/g, "");
+  if (digits.length < 6) return null;
+  return digits.slice(-10);
+}
+
+async function logTemplateConversation({
+  to,
+  templateName,
+}: {
+  to: string;
+  templateName: string;
+}) {
+  const supabase = supabaseServer();
+  const phoneTail = extractPhoneTail(to);
+  if (!supabase || !phoneTail) return;
+  const now = new Date().toISOString();
+  const preview = `[template:${templateName}]`;
+  try {
+    await supabase
+      .from("black_whatsapp_conversations")
+      .upsert(
+        {
+          phone_tail: phoneTail,
+          phone_e164: to,
+          status: "bot",
+          type: "prospect",
+          bot: "sales",
+          last_message_at: now,
+          last_message_preview: preview,
+          updated_at: now,
+        },
+        { onConflict: "phone_tail" }
+      );
+
+    await supabase.from("black_whatsapp_messages").insert({
+      student_id: null,
+      phone_tail: phoneTail,
+      role: "assistant",
+      content: preview,
+      meta: { source: "quiz_template", template: templateName },
+    });
+  } catch (error) {
+    console.error("[quiz-report] log template convo failed", error);
+  }
 }
 
 function buildMentorTemplate(isParent: boolean) {
