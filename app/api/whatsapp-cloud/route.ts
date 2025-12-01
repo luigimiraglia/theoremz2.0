@@ -907,7 +907,11 @@ function buildImageSourceFromCloud(message: any): CloudImage | null {
 }
 
 async function downloadImageAsDataUrl(image: CloudImage) {
-  if (!image?.id || !metaAccessToken) return null;
+  if (!image?.id) return null;
+  if (!metaAccessToken) {
+    console.error("[whatsapp-cloud] missing META_ACCESS_TOKEN for image download");
+    return null;
+  }
   const url = `https://graph.facebook.com/${graphApiVersion}/${image.id}`;
   const headers: Record<string, string> = { Authorization: `Bearer ${metaAccessToken}` };
 
@@ -985,21 +989,40 @@ Obiettivi:
         ],
       }
     : { role: "user", content: text };
+  const baseMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: systemPrompt },
+    ...formattedHistory,
+  ];
 
   try {
     const completion = await openai.chat.completions.create({
       model: VISION_MODEL,
       temperature: 0.4,
       max_tokens: 320,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...formattedHistory,
-        userMessage,
-      ],
+      messages: [...baseMessages, userMessage],
     });
     return completion.choices[0]?.message?.content?.trim() || "Ciao!";
   } catch (error) {
     console.error("[whatsapp-cloud] openai error", error);
+    if (imageDataUrl) {
+      try {
+        const fallbackCompletion = await openai.chat.completions.create({
+          model: VISION_MODEL,
+          temperature: 0.4,
+          max_tokens: 320,
+          messages: [
+            ...baseMessages,
+            {
+              role: "user",
+              content: `${text}\n\n(NB: non sono riuscito a caricare l'immagine, prova a reinviarla se la risposta non è corretta.)`,
+            },
+          ],
+        });
+        return fallbackCompletion.choices[0]?.message?.content?.trim() || "Ciao!";
+      } catch (fallbackError) {
+        console.error("[whatsapp-cloud] openai fallback error", fallbackError);
+      }
+    }
     return "Non riesco a rispondere ora per un errore tecnico.";
   }
 }

@@ -4,13 +4,21 @@ const WHATSAPP_GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v2
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID?.trim() || "";
 const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN?.trim() || "";
 
+function extractToken(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.slice("Bearer ".length);
+  }
+  const { searchParams } = new URL(request.url);
+  return searchParams.get("token");
+}
+
 async function requireAdmin(request: NextRequest) {
   if (process.env.NODE_ENV === "development") return null;
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
+  const token = extractToken(request);
+  if (!token) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const token = authHeader.slice("Bearer ".length);
   try {
     const { adminAuth } = await import("@/lib/firebaseAdmin");
     const decoded = await adminAuth.verifyIdToken(token);

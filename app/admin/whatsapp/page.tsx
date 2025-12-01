@@ -82,6 +82,7 @@ export default function WhatsAppAdmin() {
   const [error, setError] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [polling, setPolling] = useState(false);
+  const [mediaToken, setMediaToken] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasAccess = useMemo(
@@ -194,6 +195,28 @@ export default function WhatsAppAdmin() {
     if (!hasAccess || authLoading) return;
     fetchList();
   }, [hasAccess, authLoading, fetchList]);
+
+  useEffect(() => {
+    let active = true;
+    async function refreshMediaToken() {
+      try {
+        const { auth } = await import("@/lib/firebase");
+        const token = await auth.currentUser?.getIdToken();
+        if (active) setMediaToken(token || null);
+      } catch (err) {
+        console.warn("[admin/whatsapp] media token unavailable", err);
+        if (active) setMediaToken(null);
+      }
+    }
+    if (hasAccess && !authLoading) {
+      refreshMediaToken();
+    } else {
+      setMediaToken(null);
+    }
+    return () => {
+      active = false;
+    };
+  }, [hasAccess, authLoading, user?.uid]);
 
   useEffect(() => {
     if (selected) {
@@ -565,7 +588,10 @@ export default function WhatsAppAdmin() {
                     .map((m) => {
                       const images: string[] = [];
                       if (typeof m.meta?.image?.id === "string") {
-                        images.push(`/api/admin/whatsapp/media?id=${m.meta.image.id}`);
+                        const tokenParam = mediaToken
+                          ? `&token=${encodeURIComponent(mediaToken)}`
+                          : "";
+                        images.push(`/api/admin/whatsapp/media?id=${m.meta.image.id}${tokenParam}`);
                       }
                       if (typeof m.content === "string") {
                         images.push(...(m.content.match(/data:image[^ \n]+/g) || []));

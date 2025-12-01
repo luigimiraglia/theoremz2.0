@@ -87,7 +87,7 @@ export async function GET(
 
     const messagesQuery = db
       .from("black_whatsapp_messages")
-      .select("id, role, content, created_at")
+      .select("id, role, content, created_at, meta")
       .eq("phone_tail", phoneTail)
       .order("created_at", { ascending: true })
       .limit(80);
