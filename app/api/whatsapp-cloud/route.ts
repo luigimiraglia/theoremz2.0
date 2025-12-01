@@ -78,6 +78,9 @@ export async function POST(req: Request) {
       text && imageDataUrl
         ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
         : text || IMAGE_ONLY_PROMPT;
+    const inboundContentForLog = imageDataUrl
+      ? `${inboundText}\n${imageDataUrl}`
+      : inboundText;
 
     // Collega student_id se noto, senza forzare il tipo
     if (
@@ -117,7 +120,12 @@ export async function POST(req: Request) {
         lastMessage: inboundText,
         bot: conversationBot,
       });
-      await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
+      await logConversationMessage(
+        studentResult?.student.id || null,
+        phoneTail,
+        "user",
+        inboundContentForLog
+      );
       const safeTail = phoneTail || baseConversation.phone_tail || "unknown";
       await notifyOperators({
         conversation: {
@@ -159,7 +167,12 @@ export async function POST(req: Request) {
     conversationBot = deriveBotFromType(effectiveType);
 
     // Log inbound message
-    await logConversationMessage(studentResult?.student.id || null, phoneTail, "user", inboundText);
+      await logConversationMessage(
+        studentResult?.student.id || null,
+        phoneTail,
+        "user",
+        inboundContentForLog
+      );
 
     // follow-up sales se scaduto
     await maybeSendSalesFollowup({

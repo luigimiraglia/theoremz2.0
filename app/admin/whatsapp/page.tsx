@@ -561,29 +561,53 @@ export default function WhatsAppAdmin() {
                   {detail.messages
                     .slice()
                     .reverse()
-                    .map((m) => (
-                      <div
-                        key={m.id || m.created_at}
-                        className={clsx(
-                          "flex",
-                          m.role === "assistant" ? "justify-end" : "justify-start"
-                        )}
-                      >
+                    .map((m) => {
+                      const images =
+                        typeof m.content === "string"
+                          ? (m.content.match(/data:image[^ \n]+/g) || [])
+                          : [];
+                      const text =
+                        typeof m.content === "string"
+                          ? m.content.replace(/data:image[^ \n]+/g, "").trim()
+                          : "";
+                      return (
                         <div
+                          key={m.id || m.created_at}
                           className={clsx(
-                            "max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-md",
-                            m.role === "assistant"
-                              ? "bg-emerald-500/20 border border-emerald-400/40 text-emerald-50"
-                              : "bg-slate-800/80 border border-slate-700 text-slate-100"
+                            "flex",
+                            m.role === "assistant" ? "justify-end" : "justify-start"
                           )}
                         >
-                          <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
-                          <p className="text-[10px] text-slate-400 mt-1 text-right">
-                            {formatAbsolute(m.created_at)}
-                          </p>
+                          <div
+                            className={clsx(
+                              "max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-md space-y-2",
+                              m.role === "assistant"
+                                ? "bg-emerald-500/20 border border-emerald-400/40 text-emerald-50"
+                                : "bg-slate-800/80 border border-slate-700 text-slate-100"
+                            )}
+                          >
+                            {text && (
+                              <p className="whitespace-pre-wrap leading-relaxed">{text}</p>
+                            )}
+                            {images.length > 0 && (
+                              <div className="grid grid-cols-1 gap-2">
+                                {images.map((src, idx) => (
+                                  <img
+                                    key={`${m.created_at}-${idx}`}
+                                    src={src}
+                                    alt="media"
+                                    className="max-h-60 w-full rounded-xl object-contain border border-slate-700/50"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                            <p className="text-[10px] text-slate-400 mt-1 text-right">
+                              {formatAbsolute(m.created_at)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
 
                 <div className="p-4 border-t border-slate-800 bg-slate-900/80">
