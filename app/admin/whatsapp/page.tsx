@@ -45,6 +45,7 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   created_at: string;
+  meta?: { image?: { id?: string; mime_type?: string | null } };
 };
 
 type DetailResponse = {
