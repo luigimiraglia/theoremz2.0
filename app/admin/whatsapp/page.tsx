@@ -562,10 +562,13 @@ export default function WhatsAppAdmin() {
                     .slice()
                     .reverse()
                     .map((m) => {
-                      const images =
-                        typeof m.content === "string"
-                          ? (m.content.match(/data:image[^ \n]+/g) || [])
-                          : [];
+                      const images: string[] = [];
+                      if (typeof m.content === "string") {
+                        images.push(...(m.content.match(/data:image[^ \n]+/g) || []));
+                        if (m.meta?.image?.id) {
+                          images.push(`/api/admin/whatsapp/media?id=${m.meta.image.id}`);
+                        }
+                      }
                       const text =
                         typeof m.content === "string"
                           ? m.content.replace(/data:image[^ \n]+/g, "").trim()

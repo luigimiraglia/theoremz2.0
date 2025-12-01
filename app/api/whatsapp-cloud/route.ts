@@ -124,7 +124,8 @@ export async function POST(req: Request) {
         studentResult?.student.id || null,
         phoneTail,
         "user",
-        inboundContentForLog
+        inboundContentForLog,
+        imageSource ? { image: imageSource } : undefined
       );
       const safeTail = phoneTail || baseConversation.phone_tail || "unknown";
       await notifyOperators({
@@ -171,7 +172,8 @@ export async function POST(req: Request) {
         studentResult?.student.id || null,
         phoneTail,
         "user",
-        inboundContentForLog
+        inboundContentForLog,
+        imageSource ? { image: imageSource } : undefined
       );
 
     // follow-up sales se scaduto
@@ -1069,7 +1071,8 @@ async function logConversationMessage(
   studentId: string | null,
   phoneTail: string | null,
   role: "user" | "assistant",
-  content: string
+  content: string,
+  meta?: Record<string, any>
 ) {
   if (!supabase) return;
   try {
@@ -1078,6 +1081,7 @@ async function logConversationMessage(
       phone_tail: phoneTail,
       role,
       content,
+      meta: meta || null,
     });
   } catch (err) {
     console.error("[whatsapp-cloud] log insert failed", err);
