@@ -78,9 +78,7 @@ export async function POST(req: Request) {
       text && imageDataUrl
         ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
         : text || IMAGE_ONLY_PROMPT;
-    const inboundContentForLog = imageDataUrl
-      ? `${inboundText}\n${imageDataUrl}`
-      : inboundText;
+    const inboundContentForLog = inboundText;
 
     // Collega student_id se noto, senza forzare il tipo
     if (

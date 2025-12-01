@@ -564,11 +564,11 @@ export default function WhatsAppAdmin() {
                     .reverse()
                     .map((m) => {
                       const images: string[] = [];
+                      if (typeof m.meta?.image?.id === "string") {
+                        images.push(`/api/admin/whatsapp/media?id=${m.meta.image.id}`);
+                      }
                       if (typeof m.content === "string") {
                         images.push(...(m.content.match(/data:image[^ \n]+/g) || []));
-                        if (m.meta?.image?.id) {
-                          images.push(`/api/admin/whatsapp/media?id=${m.meta.image.id}`);
-                        }
                       }
                       const text =
                         typeof m.content === "string"
