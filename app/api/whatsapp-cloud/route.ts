@@ -278,7 +278,7 @@ export async function POST(req: Request) {
           const fallbackMessage =
             "Ho collegato la mail, scrivimi di nuovo il messaggio così ti rispondo.";
           await logConversationMessage(
-            studentResult?.student?.id || null,
+            null,
             phoneTail,
             "assistant",
             fallbackMessage,
