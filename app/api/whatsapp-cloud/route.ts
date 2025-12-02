@@ -1047,7 +1047,12 @@ async function downloadImageAsDataUrl(image: CloudImage) {
     return `data:${contentType};base64,${base64}`;
   } catch (error) {
     console.error("[whatsapp-cloud] image download failed", { id: image?.id, error });
-    return null;
+    // Fallback: prova a restituire l'URL firmato con access_token per permettere all'AI di leggerla comunque
+    try {
+      return `${url}?access_token=${encodeURIComponent(metaAccessToken)}`;
+    } catch {
+      return null;
+    }
   }
 }
 
