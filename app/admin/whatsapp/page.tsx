@@ -79,6 +79,7 @@ export default function WhatsAppAdmin() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [polling, setPolling] = useState(false);
@@ -272,6 +273,34 @@ export default function WhatsAppAdmin() {
       setError(err?.message || "Errore invio");
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleGenerateDraft = async (message: Message) => {
+    if (!selected || !message.content) return;
+    setGeneratingId(message.id || message.created_at);
+    setError(null);
+    try {
+      const headers = await buildHeaders();
+      headers["Content-Type"] = "application/json";
+      const res = await fetch("/api/admin/whatsapp/ai", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ phoneTail: selected, message: message.content }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      if (typeof data?.reply === "string") {
+        setDraft(data.reply);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Errore generazione AI");
+    } finally {
+      setGeneratingId(null);
     }
   };
 
@@ -619,6 +648,16 @@ export default function WhatsAppAdmin() {
                           >
                             {text && (
                               <p className="whitespace-pre-wrap leading-relaxed">{text}</p>
+                            )}
+                            {m.role === "user" && (
+                              <button
+                                type="button"
+                                onClick={() => handleGenerateDraft(m)}
+                                className="text-[11px] px-2 py-1 rounded-full border border-slate-600 text-emerald-200 bg-slate-800/60 hover:border-emerald-300 transition"
+                                disabled={Boolean(generatingId)}
+                              >
+                                {generatingId === (m.id || m.created_at) ? "..." : "Suggerisci AI"}
+                              </button>
                             )}
                             {images.length > 0 && (
                               <div className="grid grid-cols-1 gap-2">
