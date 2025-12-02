@@ -773,9 +773,9 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
         { role: "user", content: text || "Raccontami cosa fate." },
       ].filter(Boolean) as any,
     });
-    return (
+    return sanitizeBotReply(
       completion.choices[0]?.message?.content?.trim() ||
-      "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e difficoltà: poi ti propongo il piano giusto (Essential, Black o Mentor)."
+        "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e difficoltà: poi ti propongo il piano giusto (Essential, Black o Mentor)."
     );
   } catch (err) {
     console.error("[whatsapp-cloud] sales reply failed", err);
@@ -791,9 +791,9 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
           { role: "user", content: text || "Raccontami cosa fate." },
         ].filter(Boolean) as any,
       });
-      return (
+      return sanitizeBotReply(
         fallback.choices[0]?.message?.content?.trim() ||
-        "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e difficoltà: poi ti propongo il piano giusto (Essential, Black o Mentor)."
+          "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e difficoltà: poi ti propongo il piano giusto (Essential, Black o Mentor)."
       );
     } catch (miniErr) {
       console.error("[whatsapp-cloud] sales mini fallback failed", miniErr);
@@ -1120,7 +1120,8 @@ Obiettivi:
       max_tokens: 320,
       messages: [...baseMessages, userMessage],
     });
-    return completion.choices[0]?.message?.content?.trim() || "Ciao!";
+    const reply = completion.choices[0]?.message?.content?.trim() || "Ciao!";
+    return sanitizeBotReply(reply);
   } catch (error) {
     console.error("[whatsapp-cloud] openai error", error);
     if (imageDataUrl) {
@@ -1137,7 +1138,8 @@ Obiettivi:
             },
           ],
         });
-        return fallbackCompletion.choices[0]?.message?.content?.trim() || "Ciao!";
+        const reply = fallbackCompletion.choices[0]?.message?.content?.trim() || "Ciao!";
+        return sanitizeBotReply(reply);
       } catch (fallbackError) {
         console.error("[whatsapp-cloud] openai image fallback error", fallbackError);
       }
@@ -1150,7 +1152,8 @@ Obiettivi:
         max_tokens: 320,
         messages: [...baseMessages, { role: "user", content: text }],
       });
-      return miniCompletion.choices[0]?.message?.content?.trim() || "Ciao!";
+      const reply = miniCompletion.choices[0]?.message?.content?.trim() || "Ciao!";
+      return sanitizeBotReply(reply);
     } catch (miniError) {
       console.error("[whatsapp-cloud] openai mini fallback error", miniError);
     }
@@ -1184,6 +1187,12 @@ function scrubContent(raw: any) {
   const trimmed = withoutData.trim();
   if (trimmed.length > 2000) return `${trimmed.slice(0, 2000)} …`;
   return trimmed;
+}
+
+function sanitizeBotReply(raw: string) {
+  if (!raw) return "Ciao!";
+  const noAsterisks = raw.replace(/\*/g, "");
+  return noAsterisks.trim();
 }
 
 async function sendCloudReply({
