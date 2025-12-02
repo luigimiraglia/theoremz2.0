@@ -85,14 +85,7 @@ export async function GET(
       .eq("phone_tail", phoneTail)
       .maybeSingle();
 
-    const messagesQuery = db
-      .from("black_whatsapp_messages")
-      .select("id, role, content, created_at, meta")
-      .eq("phone_tail", phoneTail)
-      .order("created_at", { ascending: true })
-      .limit(80);
-
-    const [convoRes, messagesRes] = await Promise.all([convoQuery, messagesQuery]);
+    const [convoRes] = await Promise.all([convoQuery]);
 
     if (convoRes.error) {
       console.error("[admin/whatsapp] detail error", convoRes.error);
@@ -102,6 +95,18 @@ export async function GET(
     if (!conversation) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
+
+    // Recupera tutti i messaggi legati alla conversazione, sia per phone_tail sia per student_id (se presente).
+    const messagesQuery = db
+      .from("black_whatsapp_messages")
+      .select("id, role, content, created_at, meta, phone_tail, student_id")
+      .order("created_at", { ascending: true });
+    if (conversation.student_id) {
+      messagesQuery.or(`phone_tail.eq.${phoneTail},student_id.eq.${conversation.student_id}`);
+    } else {
+      messagesQuery.eq("phone_tail", phoneTail);
+    }
+    const messagesRes = await messagesQuery;
 
     const student = conversation.black_students;
     const profile =
