@@ -314,9 +314,11 @@ export async function POST(req: Request) {
     const { student, contextText } = studentResult;
     const historyResult = await fetchConversationHistory(student.id, phoneTail, HISTORY_LIMIT);
 
+    const skipEscalationForImage = Boolean(imageDataUrl);
     if (
       effectiveStatus === "bot" &&
       effectiveType === "black" &&
+      !skipEscalationForImage &&
       (await needsTutorEscalation(inboundText, historyResult.history, { type: effectiveType }))
     ) {
       await upsertConversation({
