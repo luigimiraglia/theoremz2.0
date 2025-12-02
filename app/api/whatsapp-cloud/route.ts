@@ -754,10 +754,10 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
 - Evita markdown o emoji; niente latex. Niente “malloppone”: frasi brevi, chiare, separate da righe vuote.
 - Se hai contesto precedente, riprendi la vendita da lì (ricorda preferenze/obiettivi già espressi). Non ripartire da zero.
 - Scegli il piano con più probabilità di successo per il prospect (non proporre di default Essential se servono guida umana o obiettivi ambiziosi: in quei casi preferisci Black/Mentor).
-`;
+  `;
   const historyText = history
     .slice(-6)
-    .map((h) => `${h.role === "user" ? "Utente" : "Theoremz"}: ${h.content}`)
+    .map((h) => `${h.role === "user" ? "Utente" : "Theoremz"}: ${scrubContent(h.content)}`)
     .join("\n");
   try {
     const completion = await openai.chat.completions.create({
@@ -777,6 +777,25 @@ Sei un venditore senior di Theoremz (voce: Luigi Miraglia). Rispondi su WhatsApp
     );
   } catch (err) {
     console.error("[whatsapp-cloud] sales reply failed", err);
+    try {
+      const fallback = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.6,
+        max_tokens: 320,
+        messages: [
+          { role: "system", content: prompt },
+          contextSummary ? { role: "system", content: `Contesto breve da ricordare:\n${contextSummary}` } : null,
+          historyText ? { role: "system", content: `Cronologia breve:\n${historyText}` } : null,
+          { role: "user", content: text || "Raccontami cosa fate." },
+        ].filter(Boolean) as any,
+      });
+      return (
+        fallback.choices[0]?.message?.content?.trim() ||
+        "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e difficoltà: poi ti propongo il piano giusto (Essential, Black o Mentor)."
+      );
+    } catch (miniErr) {
+      console.error("[whatsapp-cloud] sales mini fallback failed", miniErr);
+    }
     return "Ciao! Sono Luigi di Theoremz. Dimmi classe, materia, prossima verifica e difficoltà: poi ti propongo il piano giusto (Essential, Black o Mentor).";
   }
 }
@@ -1055,9 +1074,9 @@ Obiettivi:
     .map((item) => {
       const content =
         typeof item.content === "string"
-          ? item.content
+          ? scrubContent(item.content)
           : item?.content != null
-          ? tryStringifyContent(item.content)
+          ? scrubContent(tryStringifyContent(item.content))
           : "";
       return {
         role: item.role,
@@ -1093,21 +1112,33 @@ Obiettivi:
     if (imageDataUrl) {
       try {
         const fallbackCompletion = await openai.chat.completions.create({
-          model: VISION_MODEL,
+          model: "gpt-4o-mini",
           temperature: 0.4,
           max_tokens: 320,
           messages: [
             ...baseMessages,
             {
               role: "user",
-              content: `${text}\n\n(NB: non sono riuscito a caricare l'immagine, prova a reinviarla se la risposta non è corretta.)`,
+              content: `${text}\n\n(NB: immagine non processata per errore tecnico.)`,
             },
           ],
         });
         return fallbackCompletion.choices[0]?.message?.content?.trim() || "Ciao!";
       } catch (fallbackError) {
-        console.error("[whatsapp-cloud] openai fallback error", fallbackError);
+        console.error("[whatsapp-cloud] openai image fallback error", fallbackError);
       }
+    }
+
+    try {
+      const miniCompletion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.4,
+        max_tokens: 320,
+        messages: [...baseMessages, { role: "user", content: text }],
+      });
+      return miniCompletion.choices[0]?.message?.content?.trim() || "Ciao!";
+    } catch (miniError) {
+      console.error("[whatsapp-cloud] openai mini fallback error", miniError);
     }
     return buildFallbackTutorReply(text, studentContext);
   }
@@ -1131,6 +1162,14 @@ function buildFallbackTutorReply(text: string, studentContext?: string | null) {
   const trimmed = text.trim();
   if (trimmed.length < 10) return base;
   return `${base}\n\nHo letto: "${trimmed.slice(0, 240)}"`;
+}
+
+function scrubContent(raw: any) {
+  if (typeof raw !== "string") return "";
+  const withoutData = raw.replace(/data:image[^ \n]+/gi, "[image]");
+  const trimmed = withoutData.trim();
+  if (trimmed.length > 2000) return `${trimmed.slice(0, 2000)} …`;
+  return trimmed;
 }
 
 async function sendCloudReply({
