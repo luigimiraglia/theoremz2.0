@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { supabaseServer } from "@/lib/supabase";
 
+export const runtime = "nodejs";
+
 const ALLOWED_EMAIL = "luigi.miraglia006@gmail.com";
 const VISION_MODEL = "gpt-4o";
 const graphApiVersion = process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v20.0";
@@ -121,7 +123,7 @@ Sei un tutor Theoremz che assiste via WhatsApp. Genera una risposta breve e chia
     const userContent = targetImageUrl
       ? [
           { type: "text", text: `Ultimo messaggio da cui ripartire:\n${targetMessage}` },
-          { type: "image_url", image_url: { url: targetImageUrl } },
+          { type: "image_url", image_url: { url: targetImageUrl, detail: "auto" } },
         ]
       : `Ultimo messaggio da cui ripartire:\n${targetMessage}`;
 
