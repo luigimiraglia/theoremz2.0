@@ -106,7 +106,8 @@ export async function POST(request: NextRequest) {
   const student = (convo as any)?.black_students;
   const studentContext = buildStudentContext(student);
 
-  const targetImageUrl = buildImageUrlFromMeta(targetMeta) || extractDataImage(targetMessage);
+  const targetImageUrl =
+    (await resolveImageDataUrl(targetMeta)) || extractDataImage(targetMessage);
 
   const prompt = `
 Sei un tutor Theoremz che assiste via WhatsApp. Genera una risposta breve e chiara per l'ultimo messaggio indicato, in italiano, testo semplice (niente markdown, niente latex). 
@@ -218,4 +219,49 @@ function extractDataImage(content: string | null) {
 function sanitizeBotReply(raw: string) {
   if (!raw) return "";
   return raw.replace(/\*/g, "").trim();
+}
+
+async function resolveImageDataUrl(meta: any) {
+  const id = meta?.image?.id;
+  if (!id || !metaAccessToken) return null;
+  const base = `https://graph.facebook.com/${graphApiVersion}/${id}`;
+  const headers: Record<string, string> = { Authorization: `Bearer ${metaAccessToken}` };
+
+  try {
+    let targetUrl = base;
+    let mimeType: string | null = meta?.image?.mime_type || null;
+
+    const metaRes = await fetch(targetUrl, { headers });
+    if (!metaRes.ok) throw new Error(`graph_meta_${metaRes.status}`);
+
+    const metaContentType = metaRes.headers.get("content-type") || "";
+    if (metaContentType.includes("application/json")) {
+      const metaJson = await metaRes.json();
+      if (metaJson?.url) {
+        targetUrl = metaJson.url;
+        mimeType = metaJson?.mime_type || mimeType;
+      } else {
+        throw new Error("graph_meta_missing_url");
+      }
+    } else {
+      const arrayBuffer = await metaRes.arrayBuffer();
+      const contentType = metaRes.headers.get("content-type") || mimeType || "image/jpeg";
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      return `data:${contentType};base64,${base64}`;
+    }
+
+    const mediaRes = await fetch(targetUrl, { headers });
+    if (!mediaRes.ok) throw new Error(`graph_media_${mediaRes.status}`);
+    const arrayBuffer = await mediaRes.arrayBuffer();
+    const contentType = mediaRes.headers.get("content-type") || mimeType || "image/jpeg";
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    return `data:${contentType};base64,${base64}`;
+  } catch (err) {
+    console.error("[admin/whatsapp/ai] image fetch failed", err);
+    try {
+      return buildImageUrlFromMeta(meta);
+    } catch {
+      return null;
+    }
+  }
 }
