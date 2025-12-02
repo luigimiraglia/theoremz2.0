@@ -67,6 +67,12 @@ export async function POST(req: Request) {
     const text = extractCloudText(message);
     const imageSource = buildImageSourceFromCloud(message);
     const imageDataUrl = imageSource ? await downloadImageAsDataUrl(imageSource) : null;
+    const templateMeta =
+      message?.type === "template" && message.template ? { template: message.template } : null;
+    const inboundMeta =
+      imageSource || templateMeta
+        ? { ...(imageSource ? { image: imageSource } : {}), ...(templateMeta || {}) }
+        : undefined;
     const phoneTail = extractPhoneTail(rawPhone);
     const studentResult = await fetchBlackStudentWithContext(phoneTail);
     let baseConversation = await fetchConversation(phoneTail);
@@ -123,7 +129,7 @@ export async function POST(req: Request) {
         phoneTail,
         "user",
         inboundContentForLog,
-        imageSource ? { image: imageSource } : undefined
+        inboundMeta
       );
       const safeTail = phoneTail || baseConversation.phone_tail || "unknown";
       await notifyOperators({
@@ -148,6 +154,7 @@ export async function POST(req: Request) {
       rawPhone,
       phoneNumberId,
       baseConversation,
+      messageMeta: inboundMeta,
     });
     if (escalatedProspect) continue;
 
@@ -171,7 +178,7 @@ export async function POST(req: Request) {
         phoneTail,
         "user",
         inboundContentForLog,
-        imageSource ? { image: imageSource } : undefined
+        inboundMeta
       );
 
     // follow-up sales se scaduto
@@ -268,10 +275,19 @@ export async function POST(req: Request) {
             await sendCloudReply({ phoneNumberId, to: rawPhone, body: reply || "Ciao" });
             continue;
           }
+          const fallbackMessage =
+            "Ho collegato la mail, scrivimi di nuovo il messaggio così ti rispondo.";
+          await logConversationMessage(
+            studentResult?.student?.id || null,
+            phoneTail,
+            "assistant",
+            fallbackMessage,
+            { source: "email_linked_retry" }
+          );
           await sendCloudReply({
             phoneNumberId,
             to: rawPhone,
-            body: "Ho collegato la mail, scrivimi di nuovo il messaggio così ti rispondo.",
+            body: fallbackMessage,
           });
           continue;
         }
@@ -326,6 +342,13 @@ export async function POST(req: Request) {
           history: historyResult.history,
         }
       );
+      await logConversationMessage(
+        student.id,
+        phoneTail,
+        "assistant",
+        "Ti metto in contatto con un tutor, ti risponde a breve.",
+        { source: "tutor_escalation" }
+      );
       await sendCloudReply({
         phoneNumberId,
         to: rawPhone,
@@ -368,6 +391,7 @@ async function handleProspectEscalation({
   rawPhone,
   phoneNumberId,
   baseConversation,
+  messageMeta,
 }: {
   conversationType: ConversationType;
   conversationStatus: ConversationStatus;
@@ -377,11 +401,13 @@ async function handleProspectEscalation({
   rawPhone: string | null;
   phoneNumberId: string;
   baseConversation: ConversationRow | null;
+  messageMeta?: Record<string, any>;
 }) {
   if (conversationStatus !== "bot" || conversationType === "black") return;
 
   const conversationBot = deriveBotFromType(conversationType);
   const historyResult = await fetchConversationHistory(null, phoneTail, HISTORY_LIMIT);
+  await logConversationMessage(null, phoneTail, "user", inboundText, messageMeta);
   if (await needsTutorEscalation(inboundText, historyResult.history, { type: conversationType })) {
     await upsertConversation({
       phoneTail,
@@ -405,6 +431,13 @@ async function handleProspectEscalation({
         rawPhone,
         history: historyResult.history,
       }
+    );
+    await logConversationMessage(
+      null,
+      phoneTail,
+      "assistant",
+      "Ti metto in contatto con un tutor, ti risponde a breve.",
+      { source: "prospect_escalation" }
     );
     await sendCloudReply({
       phoneNumberId,
@@ -432,8 +465,53 @@ function extractCloudText(message: any): string | null {
     }
     return interactive?.body?.text || null;
   }
+  if (type === "template") return buildTemplateText(message);
   if (type === "sticker") return "Lo sticker non contiene testo.";
   return message[type]?.caption || null;
+}
+
+function buildTemplateText(message: any) {
+  const tpl = message?.template;
+  if (!tpl) return "Messaggio template";
+  const parts: string[] = [];
+  if (tpl.name) parts.push(`Template: ${tpl.name}`);
+  if (tpl.language?.code) parts.push(`Lingua: ${tpl.language.code}`);
+  const componentTexts =
+    Array.isArray(tpl.components) && tpl.components.length
+      ? tpl.components
+          .map((comp: any) => {
+            const label = typeof comp?.type === "string" ? comp.type.toLowerCase() : "component";
+            const bits: string[] = [];
+            if (typeof comp?.text === "string" && comp.text.trim()) bits.push(comp.text.trim());
+            if (Array.isArray(comp?.parameters)) {
+              const params = comp.parameters
+                .map((param: any) => renderTemplateParameter(param))
+                .filter(Boolean);
+              if (params.length) bits.push(params.join(" "));
+            }
+            if (!bits.length) return null;
+            return `${label}: ${bits.join(" ")}`;
+          })
+          .filter(Boolean)
+      : [];
+  if (componentTexts.length) parts.push(...componentTexts);
+  return parts.length ? parts.join("\n") : "Messaggio template";
+}
+
+function renderTemplateParameter(param: any): string | null {
+  if (!param) return null;
+  if (typeof param === "string") return param;
+  if (typeof param.text === "string" && param.text.trim()) return param.text.trim();
+  if (param.currency?.fallback_value) return String(param.currency.fallback_value);
+  if (param.date_time?.fallback_value) return String(param.date_time.fallback_value);
+  if (param.payload) return String(param.payload);
+  if (param.type && param[param.type]) {
+    const inner = param[param.type];
+    if (typeof inner === "string") return inner;
+    if (inner?.caption) return inner.caption;
+    if (inner?.link) return inner.link;
+  }
+  return null;
 }
 
 type CloudImage = {
