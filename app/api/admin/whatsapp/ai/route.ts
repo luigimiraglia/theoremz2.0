@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { supabaseServer } from "@/lib/supabase";
 
 const ALLOWED_EMAIL = "luigi.miraglia006@gmail.com";
-const VISION_MODEL = "gpt-4o-mini";
+const VISION_MODEL = "gpt-4o";
 const graphApiVersion = process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v20.0";
 const metaAccessToken = process.env.META_ACCESS_TOKEN?.trim() || "";
 
@@ -124,24 +124,45 @@ Sei un tutor Theoremz che assiste via WhatsApp. Genera una risposta breve e chia
         ]
       : `Ultimo messaggio da cui ripartire:\n${targetMessage}`;
 
-    const completion = await openai.chat.completions.create({
-      model: VISION_MODEL,
-      temperature: 0.5,
-      max_tokens: 260,
-      messages: [
-        { role: "system", content: prompt },
-        studentContext ? { role: "system", content: `Scheda studente:\n${studentContext}` } : null,
-        history.length
-          ? { role: "system", content: `Cronologia sintetica:\n${history.map(formatMsg).join("\n")}` }
-          : null,
-        { role: "user", content: userContent as any },
-      ].filter(Boolean) as any,
-    });
-    const reply = completion.choices[0]?.message?.content?.trim();
-    if (!reply) {
-      return NextResponse.json({ error: "empty_reply" }, { status: 500 });
+    const baseMessages = [
+      { role: "system", content: prompt },
+      studentContext ? { role: "system", content: `Scheda studente:\n${studentContext}` } : null,
+      history.length
+        ? { role: "system", content: `Cronologia sintetica:\n${history.map(formatMsg).join("\n")}` }
+        : null,
+    ].filter(Boolean) as any;
+
+    try {
+      const firstTry = await openai.chat.completions.create({
+        model: VISION_MODEL,
+        temperature: 0.5,
+        max_tokens: 260,
+        messages: [...baseMessages, { role: "user", content: userContent as any }],
+      });
+      const firstReply = sanitizeBotReply(firstTry.choices[0]?.message?.content?.trim() || "");
+      if (firstReply) return NextResponse.json({ reply: firstReply });
+    } catch (err) {
+      console.error("[admin/whatsapp/ai] vision attempt failed", err);
     }
-    return NextResponse.json({ reply });
+
+    // Fallback: testo-only con modello mini
+    try {
+      const fallback = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.4,
+        max_tokens: 240,
+        messages: [
+          ...baseMessages,
+          { role: "user", content: `Ultimo messaggio da cui ripartire (solo testo):\n${targetMessage}` },
+        ],
+      });
+      const fallbackReply = sanitizeBotReply(fallback.choices[0]?.message?.content?.trim() || "");
+      if (fallbackReply) return NextResponse.json({ reply: fallbackReply });
+    } catch (miniErr) {
+      console.error("[admin/whatsapp/ai] mini fallback failed", miniErr);
+    }
+
+    return NextResponse.json({ error: "empty_reply" }, { status: 500 });
   } catch (err) {
     console.error("[admin/whatsapp/ai] openai error", err);
     return NextResponse.json({ error: "openai_error" }, { status: 500 });
@@ -192,4 +213,9 @@ function extractDataImage(content: string | null) {
   if (!content) return null;
   const m = content.match(/data:image[^ \n]+/i);
   return m ? m[0] : null;
+}
+
+function sanitizeBotReply(raw: string) {
+  if (!raw) return "";
+  return raw.replace(/\*/g, "").trim();
 }
