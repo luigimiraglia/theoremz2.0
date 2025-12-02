@@ -184,6 +184,7 @@ export async function POST(
     const nextType = body.type as ConversationType | undefined;
     const nextBot = typeof body.bot === "string" ? body.bot.trim() : undefined;
     const update = (body.update || null) as Record<string, any> | null;
+    const linkEmail = typeof body.linkEmail === "string" ? body.linkEmail.trim() : "";
 
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json(
@@ -204,6 +205,54 @@ export async function POST(
     }
     if (!convo) {
       return NextResponse.json({ error: "conversation_not_found" }, { status: 404 });
+    }
+
+    if (linkEmail) {
+      const normalizedPhone = normalizePhone(convo.phone_e164 || convo.phone_tail);
+      if (!normalizedPhone) {
+        return NextResponse.json({ error: "invalid_phone" }, { status: 400 });
+      }
+      const { data: studentRow, error: studentErr } = await db
+        .from("black_students")
+        .select("id, student_phone, parent_phone")
+        .or(`student_email.ilike.${linkEmail},parent_email.ilike.${linkEmail}`)
+        .limit(1)
+        .maybeSingle();
+      if (studentErr) {
+        console.error("[admin/whatsapp] student fetch error", studentErr);
+        return NextResponse.json({ error: studentErr.message }, { status: 500 });
+      }
+      if (!studentRow?.id) {
+        return NextResponse.json({ error: "student_not_found" }, { status: 404 });
+      }
+      const targetColumn = studentRow.student_phone ? "parent_phone" : "student_phone";
+      const currentValue =
+        studentRow[targetColumn as "student_phone" | "parent_phone"] || null;
+      if (currentValue !== normalizedPhone) {
+        const { error: updateStudentErr } = await db
+          .from("black_students")
+          .update({ [targetColumn]: normalizedPhone, updated_at: new Date().toISOString() })
+          .eq("id", studentRow.id);
+        if (updateStudentErr) {
+          console.error("[admin/whatsapp] student phone link error", updateStudentErr);
+          return NextResponse.json({ error: updateStudentErr.message }, { status: 500 });
+        }
+      }
+      const convoUpdate: Record<string, any> = {
+        student_id: studentRow.id,
+        type: "black",
+        bot: "black",
+        updated_at: new Date().toISOString(),
+      };
+      const { error: convoUpdateErr } = await db
+        .from("black_whatsapp_conversations")
+        .update(convoUpdate)
+        .eq("phone_tail", phoneTail);
+      if (convoUpdateErr) {
+        console.error("[admin/whatsapp] link convo update error", convoUpdateErr);
+        return NextResponse.json({ error: convoUpdateErr.message }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, linked: true, studentId: studentRow.id });
     }
 
     if (update) {
@@ -323,6 +372,7 @@ const WHATSAPP_GRAPH_VERSION =
 const WHATSAPP_PHONE_NUMBER_ID =
   process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID?.trim() || "";
 const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN?.trim() || "";
+const IT_PREFIX = "39";
 
 async function sendWhatsAppText(to: string, body: string) {
   if (!META_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
@@ -358,4 +408,17 @@ async function sendWhatsAppText(to: string, body: string) {
     console.error("[admin/whatsapp] send error", error);
     return { ok: false, error: error?.message || "unknown_error" };
   }
+}
+
+function normalizePhone(raw: string | null | undefined) {
+  if (!raw) return null;
+  const digits = raw.replace(/\D+/g, "");
+  if (!digits) return null;
+  let normalized = digits;
+  if (normalized.startsWith("00")) normalized = normalized.slice(2);
+  if (normalized.startsWith("0") && normalized.length > 9) normalized = normalized.replace(/^0+/, "");
+  if (!normalized.startsWith(IT_PREFIX) && normalized.length === 10) {
+    normalized = `${IT_PREFIX}${normalized}`;
+  }
+  return `+${normalized}`;
 }

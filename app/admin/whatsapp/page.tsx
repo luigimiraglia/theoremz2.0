@@ -85,6 +85,8 @@ export default function WhatsAppAdmin() {
   const [polling, setPolling] = useState(false);
   const [mediaToken, setMediaToken] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [linkEmail, setLinkEmail] = useState("");
+  const [linking, setLinking] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasAccess = useMemo(
@@ -301,6 +303,32 @@ export default function WhatsAppAdmin() {
       setError(err?.message || "Errore generazione AI");
     } finally {
       setGeneratingId(null);
+    }
+  };
+
+  const handleLinkEmail = async () => {
+    if (!selected || !linkEmail.trim()) return;
+    setLinking(true);
+    setError(null);
+    try {
+      const headers = await buildHeaders();
+      headers["Content-Type"] = "application/json";
+      const res = await fetch(`/api/admin/whatsapp/${selected}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ linkEmail: linkEmail.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      setLinkEmail("");
+      await Promise.all([fetchDetail(selected), fetchList({ keepSelection: true })]);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Errore link email");
+    } finally {
+      setLinking(false);
     }
   };
 
@@ -561,6 +589,25 @@ export default function WhatsAppAdmin() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div className="px-4 pb-2 flex flex-wrap items-center gap-2 text-sm text-slate-200">
+                  <input
+                    value={linkEmail}
+                    onChange={(e) => setLinkEmail(e.target.value)}
+                    placeholder="Email studente/genitore per link"
+                    className="rounded-lg bg-slate-800/70 border border-slate-700 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70"
+                  />
+                  <button
+                    onClick={handleLinkEmail}
+                    disabled={linking || !linkEmail.trim()}
+                    className="px-3 py-2 rounded-lg border border-emerald-400 text-emerald-200 bg-emerald-500/10 hover:border-emerald-200 disabled:opacity-60"
+                  >
+                    {linking ? "Link..." : "Link email a numero"}
+                  </button>
+                  <span className="text-xs text-slate-500">
+                    Collega il numero a uno studente Black tramite email.
+                  </span>
                 </div>
 
                 {detail.conversation.student && (
