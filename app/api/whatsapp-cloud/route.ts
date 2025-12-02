@@ -1028,8 +1028,6 @@ async function downloadImageAsDataUrl(image: CloudImage) {
       if (metaJson?.url) {
         targetUrl = metaJson.url;
         mimeType = metaJson?.mime_type || mimeType;
-        // Usa l'URL firmato per evitare errori di fetch binario e lasciare che l'AI lo legga direttamente
-        return appendAccessToken(targetUrl, metaAccessToken);
       } else {
         throw new Error("graph_meta_missing_url");
       }
