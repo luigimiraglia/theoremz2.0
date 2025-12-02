@@ -44,6 +44,10 @@ Altri comandi legacy: `/chat` (ultimi messaggi WA per studente), `/logs`, `/chec
 ## Bot Black (studenti)
 - Risponde con AI usando contesto studente + history.
 - Escalation automatica a tutor se l’AI rileva richiesta esplicita di umano, frustrazione ripetuta, tema delicato/complesso o mancanza di contesto: cambia `status` a `waiting_tutor`, notifica Telegram (con history), invia all’utente “ti risponde un tutor a breve”.
+- Immagini (WA Cloud):
+  - Recupero media: tentativo primario con download binario e `data:` base64 (Graph -> signed URL -> fetch -> base64).
+  - Se download fallisce, fallback sull’URL Graph firmato con `access_token` per permettere all’AI di leggerla comunque.
+  - Il testo passato all’AI include una nota “è presente un’immagine allegata” solo se il webhook conteneva l’immagine; i messaggi precedenti con immagine non vengono ricaricati in cronologia, solo la foto corrente viene inviata al modello.
 
 ## Notifiche Telegram (operatori)
 - Inoltri da WA includono: stato/type, numero, eventuale ID conversazione e ultimi 10 messaggi (👤 utente / 🤖 bot). Nessun ack automatico all’utente in `waiting_tutor`.

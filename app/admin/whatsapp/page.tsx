@@ -288,7 +288,7 @@ export default function WhatsAppAdmin() {
       const res = await fetch("/api/admin/whatsapp/ai", {
         method: "POST",
         headers,
-        body: JSON.stringify({ phoneTail: selected, message: message.content }),
+        body: JSON.stringify({ phoneTail: selected, message: message.content, meta: message.meta }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

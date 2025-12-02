@@ -4,6 +4,8 @@ import { supabaseServer } from "@/lib/supabase";
 
 const ALLOWED_EMAIL = "luigi.miraglia006@gmail.com";
 const VISION_MODEL = "gpt-4o-mini";
+const graphApiVersion = process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v20.0";
+const metaAccessToken = process.env.META_ACCESS_TOKEN?.trim() || "";
 
 function isAdminEmail(email?: string | null) {
   return Boolean(email && email.toLowerCase() === ALLOWED_EMAIL);
@@ -50,6 +52,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const phoneTail = typeof body.phoneTail === "string" ? body.phoneTail.trim() : "";
   const targetMessage = typeof body.message === "string" ? body.message.trim() : "";
+  const targetMeta = body.meta || null;
 
   if (!phoneTail || !targetMessage) {
     return NextResponse.json({ error: "missing_params" }, { status: 400 });
@@ -83,7 +86,7 @@ export async function POST(request: NextRequest) {
 
   const messagesPromise = db
     .from("black_whatsapp_messages")
-    .select("role, content, created_at")
+    .select("role, content, created_at, meta")
     .or(`phone_tail.eq.${phoneTail}`)
     .order("created_at", { ascending: true })
     .limit(40);
@@ -103,6 +106,8 @@ export async function POST(request: NextRequest) {
   const student = (convo as any)?.black_students;
   const studentContext = buildStudentContext(student);
 
+  const targetImageUrl = buildImageUrlFromMeta(targetMeta) || extractDataImage(targetMessage);
+
   const prompt = `
 Sei un tutor Theoremz che assiste via WhatsApp. Genera una risposta breve e chiara per l'ultimo messaggio indicato, in italiano, testo semplice (niente markdown, niente latex). 
 - Tono: umano, empatico, operativo.
@@ -112,6 +117,13 @@ Sei un tutor Theoremz che assiste via WhatsApp. Genera una risposta breve e chia
 `;
 
   try {
+    const userContent = targetImageUrl
+      ? [
+          { type: "text", text: `Ultimo messaggio da cui ripartire:\n${targetMessage}` },
+          { type: "image_url", image_url: { url: targetImageUrl } },
+        ]
+      : `Ultimo messaggio da cui ripartire:\n${targetMessage}`;
+
     const completion = await openai.chat.completions.create({
       model: VISION_MODEL,
       temperature: 0.5,
@@ -122,7 +134,7 @@ Sei un tutor Theoremz che assiste via WhatsApp. Genera una risposta breve e chia
         history.length
           ? { role: "system", content: `Cronologia sintetica:\n${history.map(formatMsg).join("\n")}` }
           : null,
-        { role: "user", content: `Ultimo messaggio da cui ripartire:\n${targetMessage}` },
+        { role: "user", content: userContent as any },
       ].filter(Boolean) as any,
     });
     const reply = completion.choices[0]?.message?.content?.trim();
@@ -166,4 +178,18 @@ function buildStudentContext(student: any) {
   }
   if (student.ai_description) parts.push(`Nota tutor: ${student.ai_description}`);
   return parts.length ? parts.join("\n") : null;
+}
+
+function buildImageUrlFromMeta(meta: any) {
+  const id = meta?.image?.id;
+  if (typeof id !== "string" || !id || !metaAccessToken) return null;
+  const base = `https://graph.facebook.com/${graphApiVersion}/${id}`;
+  const sep = base.includes("?") ? "&" : "?";
+  return `${base}${sep}access_token=${encodeURIComponent(metaAccessToken)}`;
+}
+
+function extractDataImage(content: string | null) {
+  if (!content) return null;
+  const m = content.match(/data:image[^ \n]+/i);
+  return m ? m[0] : null;
 }
