@@ -1028,6 +1028,8 @@ async function downloadImageAsDataUrl(image: CloudImage) {
       if (metaJson?.url) {
         targetUrl = metaJson.url;
         mimeType = metaJson?.mime_type || mimeType;
+        // Usa l'URL firmato per evitare errori di fetch binario e lasciare che l'AI lo legga direttamente
+        return appendAccessToken(targetUrl, metaAccessToken);
       } else {
         throw new Error("graph_meta_missing_url");
       }
@@ -1049,12 +1051,18 @@ async function downloadImageAsDataUrl(image: CloudImage) {
     console.error("[whatsapp-cloud] image download failed", { id: image?.id, error });
     // Fallback: prova a restituire l'URL firmato con access_token per permettere all'AI di leggerla comunque
     try {
-      const signed = `${targetUrl}?access_token=${encodeURIComponent(metaAccessToken)}`;
-      return signed;
+      return appendAccessToken(targetUrl, metaAccessToken);
     } catch {
       return null;
     }
   }
+}
+
+function appendAccessToken(url: string, token: string) {
+  if (!url) return null;
+  if (url.includes("access_token=")) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}access_token=${encodeURIComponent(token)}`;
 }
 
 async function generateReply(
