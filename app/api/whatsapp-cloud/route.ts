@@ -1036,7 +1036,7 @@ async function generateReply(
   studentContext?: string | null,
   history?: ConversationMessage[]
 ) {
-  if (!openai) return "Ciao! Non riesco a rispondere ora perché manca la configurazione dell'AI.";
+  if (!openai) return buildFallbackTutorReply(text, studentContext);
   const systemPromptBase = `Sei Luigi Miraglia, tutor di matematica di Theoremz Black. Rispondi ai messaggi WhatsApp in italiano, con tono umano e poche frasi.
 Obiettivi:
 - Capisci cosa chiede lo studente (anche dalle immagini) e fornisci spiegazioni chiare.
@@ -1051,12 +1051,20 @@ Obiettivi:
       : "";
   const systemPrompt = `${systemPromptBase}${contextBlock}`;
 
-  const formattedHistory: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = (history || []).map(
-    (item) => ({
-      role: item.role,
-      content: item.content,
+  const formattedHistory: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = (history || [])
+    .map((item) => {
+      const content =
+        typeof item.content === "string"
+          ? item.content
+          : item?.content != null
+          ? tryStringifyContent(item.content)
+          : "";
+      return {
+        role: item.role,
+        content,
+      };
     })
-  );
+    .filter((msg) => typeof msg.content === "string" && msg.content.trim().length > 0);
 
   const userMessage: OpenAI.Chat.Completions.ChatCompletionMessageParam = imageDataUrl
     ? {
@@ -1101,8 +1109,28 @@ Obiettivi:
         console.error("[whatsapp-cloud] openai fallback error", fallbackError);
       }
     }
-    return "Non riesco a rispondere ora per un errore tecnico.";
+    return buildFallbackTutorReply(text, studentContext);
   }
+}
+
+function tryStringifyContent(content: any) {
+  try {
+    if (typeof content === "string") return content;
+    if (content == null) return "";
+    if (typeof content === "object") return JSON.stringify(content);
+    return String(content);
+  } catch {
+    return "";
+  }
+}
+
+function buildFallbackTutorReply(text: string, studentContext?: string | null) {
+  const base =
+    "Sto avendo un problema tecnico con il bot, ma ti rispondo subito: indicami classe, materia e descrivi l'esercizio o allega la foto e ti seguiamo manualmente.";
+  if (!text) return base;
+  const trimmed = text.trim();
+  if (trimmed.length < 10) return base;
+  return `${base}\n\nHo letto: "${trimmed.slice(0, 240)}"`;
 }
 
 async function sendCloudReply({
