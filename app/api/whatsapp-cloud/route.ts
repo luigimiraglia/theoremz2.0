@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     let conversationBot = deriveBotFromType(conversationType);
 
     const inboundText =
-      text && imageDataUrl
+      text && imageSource
         ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
         : text || IMAGE_ONLY_PROMPT;
     const inboundContentForLog = inboundText;
@@ -314,7 +314,7 @@ export async function POST(req: Request) {
     const { student, contextText } = studentResult;
     const historyResult = await fetchConversationHistory(student.id, phoneTail, HISTORY_LIMIT);
 
-    const skipEscalationForImage = Boolean(imageDataUrl);
+    const skipEscalationForImage = Boolean(imageSource);
     if (
       effectiveStatus === "bot" &&
       effectiveType === "black" &&
@@ -1013,9 +1013,9 @@ async function downloadImageAsDataUrl(image: CloudImage) {
   }
   const url = `https://graph.facebook.com/${graphApiVersion}/${image.id}`;
   const headers: Record<string, string> = { Authorization: `Bearer ${metaAccessToken}` };
+  let targetUrl = url;
 
   try {
-    let targetUrl = url;
     let mimeType: string | null = image.mime_type || null;
 
     // First call may return JSON with signed URL
@@ -1049,7 +1049,8 @@ async function downloadImageAsDataUrl(image: CloudImage) {
     console.error("[whatsapp-cloud] image download failed", { id: image?.id, error });
     // Fallback: prova a restituire l'URL firmato con access_token per permettere all'AI di leggerla comunque
     try {
-      return `${url}?access_token=${encodeURIComponent(metaAccessToken)}`;
+      const signed = `${targetUrl}?access_token=${encodeURIComponent(metaAccessToken)}`;
+      return signed;
     } catch {
       return null;
     }
