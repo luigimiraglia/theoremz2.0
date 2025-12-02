@@ -73,6 +73,7 @@ export async function POST(req: Request) {
       imageSource || templateMeta
         ? { ...(imageSource ? { image: imageSource } : {}), ...(templateMeta || {}) }
         : undefined;
+    const isTemplate = message?.type === "template";
     const phoneTail = extractPhoneTail(rawPhone);
     const studentResult = await fetchBlackStudentWithContext(phoneTail);
     let baseConversation = await fetchConversation(phoneTail);
@@ -85,6 +86,42 @@ export async function POST(req: Request) {
         ? `${text}\n\n(Nota: è presente anche un'immagine allegata.)`
         : text || IMAGE_ONLY_PROMPT;
     const inboundContentForLog = inboundText;
+
+    // Se arriva un template, forziamo lo stato a waiting_tutor e non rispondiamo col bot
+    if (isTemplate) {
+      const historyResult = await fetchConversationHistory(
+        studentResult?.student.id || null,
+        phoneTail,
+        HISTORY_LIMIT
+      );
+      await upsertConversation({
+        phoneTail,
+        phoneE164,
+        studentId: studentResult?.student.id || null,
+        status: "waiting_tutor",
+        type: conversationType,
+        lastMessage: inboundText,
+        bot: conversationBot,
+      });
+      await logConversationMessage(
+        studentResult?.student.id || null,
+        phoneTail,
+        "user",
+        inboundContentForLog,
+        inboundMeta
+      );
+      await notifyOperators({
+        conversation: {
+          ...(baseConversation || { phone_tail: phoneTail || "unknown" }),
+          status: "waiting_tutor",
+          type: conversationType,
+        },
+        text: text || "Template WhatsApp",
+        rawPhone,
+        history: historyResult.history,
+      });
+      continue;
+    }
 
     // Collega student_id se noto, senza forzare il tipo
     if (
