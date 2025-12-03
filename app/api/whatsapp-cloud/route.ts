@@ -670,13 +670,14 @@ type ConversationRow = {
 function deriveConversationType(
   existing: ConversationType | null | undefined
 ): ConversationType {
-  // Forziamo tutte le conversazioni WhatsApp a essere trattate come "black"
-  // per usare sempre il bot Black e non il sales bot.
-  return "black";
+  // Rispetta il tipo già salvato (es. prospect da quiz/template); default black
+  return existing || "black";
 }
 
 function deriveBotFromType(type: ConversationType | null | undefined) {
-  // Forziamo sempre il bot Black per tutte le conversazioni WhatsApp
+  if (type === "prospect" || type === "altro" || type === "genitore" || type === "insegnante") {
+    return "sales";
+  }
   return "black";
 }
 
