@@ -694,7 +694,7 @@ function deriveFollowupDelayMs(text: string | null | undefined) {
 async function needsTutorEscalation(
   text: string | null | undefined,
   history: ConversationMessage[],
-  context: { type: ConversationType }
+  _context: { type: ConversationType }
 ) {
   if (!text) return false;
 
@@ -1210,7 +1210,7 @@ function tryStringifyContent(content: any) {
   }
 }
 
-function buildFallbackTutorReply(text: string, studentContext?: string | null) {
+function buildFallbackTutorReply(text: string, _studentContext?: string | null) {
   const base =
     "Sto avendo un problema tecnico con il bot, ma ti rispondo subito: indicami classe, materia e descrivi l'esercizio o allega la foto e ti seguiamo manualmente.";
   if (!text) return base;

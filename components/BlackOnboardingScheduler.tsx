@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import Link from "next/link";
 import {
   ArrowRight,
   CalendarClock,
@@ -106,7 +107,7 @@ function buildCalendarMonth(
 
 function createTimeSlots(): TimeSlot[] {
   return ALLOWED_SLOTS.map((time) => {
-    const [h, m] = time.split(":").map((v) => parseInt(v, 10));
+    const [h] = time.split(":").map((v) => parseInt(v, 10));
     const period: TimeSlot["period"] =
       h < 13 ? "Mattina" : h < 17 ? "Pomeriggio" : "Sera";
     return { time, period };
@@ -255,13 +256,13 @@ export default function BlackOnboardingScheduler() {
               Ti scriveremo con il link della call. Se devi modificare qualcosa, apri la chat Black.
             </p>
             <div className="mt-6 flex justify-center">
-              <a
+              <Link
                 href="/account"
                 className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
               >
                 Torna al tuo account
                 <ArrowRight className="h-4 w-4" aria-hidden />
-              </a>
+              </Link>
             </div>
           </div>
         </div>
