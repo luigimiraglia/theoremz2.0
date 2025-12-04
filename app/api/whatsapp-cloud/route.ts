@@ -87,7 +87,7 @@ export async function POST(req: Request) {
         : text || IMAGE_ONLY_PROMPT;
     const inboundContentForLog = inboundText;
 
-    // Se arriva un template, forziamo lo stato a waiting_tutor e non rispondiamo col bot
+    // Se arriva un template, forziamo lo stato a waiting_tutor e disattiviamo il bot
     if (isTemplate) {
       const historyResult = await fetchConversationHistory(
         studentResult?.student.id || null,
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
         status: "waiting_tutor",
         type: conversationType,
         lastMessage: inboundText,
-        bot: conversationBot,
+        bot: "off",
       });
       await logConversationMessage(
         studentResult?.student.id || null,
