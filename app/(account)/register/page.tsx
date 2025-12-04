@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -14,7 +14,9 @@ import { useAuth } from "@/lib/AuthContext";
 
 export default function Register() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
+  const redirectTo = searchParams?.get("redirect") || "/account";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,8 +28,8 @@ export default function Register() {
   const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) router.replace("/account");
-  }, [user, router]);
+    if (user) router.replace(redirectTo);
+  }, [user, router, redirectTo]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -87,7 +89,7 @@ export default function Register() {
           }
         }
       }
-      router.replace("/account");
+      router.replace(redirectTo);
     } catch (err: any) {
       setError(err.message ?? "Qualcosa è andato storto.");
     } finally {
