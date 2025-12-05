@@ -33,6 +33,7 @@ const VARIANT_COPY: Record<
     slotPill: string;
     statusIntro: string;
     slotPrompt: string;
+    askContactFields: boolean;
   }
 > = {
   onboarding: {
@@ -46,6 +47,7 @@ const VARIANT_COPY: Record<
     slotPill: "30 min",
     statusIntro: "Step 1: scegli una data disponibile a partire da sabato.",
     slotPrompt: `Step 1: scegli uno slot tra ${SLOT_RANGE_LABEL}.`,
+    askContactFields: true,
   },
   check: {
     badge: "Check percorso",
@@ -58,6 +60,7 @@ const VARIANT_COPY: Record<
     slotPill: "20 min",
     statusIntro: "Step 1: scegli una data per il check percorso.",
     slotPrompt: `Step 1: scegli uno slot (20 min) tra ${SLOT_RANGE_LABEL}.`,
+    askContactFields: false,
   },
 };
 
@@ -194,8 +197,16 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const defaultEmail =
+    (user as { email?: string | null })?.email ||
+    (user as { displayName?: string | null })?.displayName ||
+    "";
+  const defaultName =
+    (user as { displayName?: string | null })?.displayName ||
+    (user as { email?: string | null })?.email ||
+    "Utente Black";
+  const [fullName, setFullName] = useState(defaultName);
+  const [email, setEmail] = useState(defaultEmail);
   const [note, setNote] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -206,6 +217,11 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
       (user as { displayName?: string | null })?.displayName ||
       "";
     if (mail) setEmail(mail);
+    const name =
+      (user as { displayName?: string | null })?.displayName ||
+      (user as { email?: string | null })?.email ||
+      "";
+    if (name) setFullName(name);
   }, [user]);
 
   useEffect(() => {
@@ -246,11 +262,8 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
       setStatusDetail("Completa data e orario.");
       return;
     }
-    if (!fullName.trim() || !email.trim()) {
-      setStatus("error");
-      setStatusDetail("Inserisci nome e email.");
-      return;
-    }
+    const safeName = fullName.trim() || defaultName || "Utente Black";
+    const safeEmail = email.trim() || defaultEmail || "noreply@theoremz.com";
 
     try {
       setSubmitting(true);
@@ -262,8 +275,8 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
         body: JSON.stringify({
           date: selectedDay.id,
           time: selectedSlot,
-          name: fullName.trim(),
-          email: email.trim(),
+          name: safeName,
+          email: safeEmail,
           note: note.trim(),
           callType: copy.callTypeSlug,
           callDurationMinutes: copy.durationMinutes,
@@ -591,44 +604,61 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
               </div>
 
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
-                <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-                  <div className="sm:col-span-1">
-                    <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                      Nome e cognome
-                    </label>
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none ring-0 focus:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-                      placeholder="Es. Mario Rossi"
-                    />
+                {copy.askContactFields ? (
+                  <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                    <div className="sm:col-span-1">
+                      <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        Nome e cognome
+                      </label>
+                      <input
+                        type="text"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none ring-0 focus:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                        placeholder="Es. Mario Rossi"
+                      />
+                    </div>
+                    <div className="sm:col-span-1">
+                      <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none ring-0 focus:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                        placeholder="nome@email.it"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        Nota (opzionale)
+                      </label>
+                      <input
+                        type="text"
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none ring-0 focus:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                        placeholder="Difficoltà principali (es. integrali, trigonometria, fisica)"
+                      />
+                    </div>
                   </div>
-                  <div className="sm:col-span-1">
-                    <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none ring-0 focus:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-                      placeholder="nome@email.it"
-                    />
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        Note per il tutor (opzionale)
+                      </label>
+                      <textarea
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        rows={3}
+                        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none ring-0 focus:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                        placeholder="Aggiornamenti rapidi (es. compiti, difficoltà, priorità)"
+                      />
+                    </div>
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                      Nota (opzionale)
-                    </label>
-                    <input
-                      type="text"
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none ring-0 focus:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-                      placeholder="Difficoltà principali (es. integrali, trigonometria, fisica)"
-                    />
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -650,7 +680,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
                   className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-extrabold text-white transition ${
                     submitting || loadingSlots
                       ? "cursor-not-allowed bg-slate-300"
-                      : "bg-slate-900 hover:bg-slate-800"
+                      : "bg-gradient-to-r from-indigo-600 to-sky-500 hover:brightness-105"
                   }`}
                 >
                   {submitting ? "Invio..." : "Conferma"}

@@ -201,8 +201,10 @@ export async function POST(req: Request) {
     if (!normalizedDate || !isAllowedSlot(timeSlot)) {
       return NextResponse.json({ error: "Data o orario non validi" }, { status: 400 });
     }
-    if (!fullName || !replyEmail) {
-      return NextResponse.json({ error: "Inserisci nome ed email" }, { status: 400 });
+    const safeEmail = replyEmail || accEmail || toEmail || "";
+    const safeName = fullName || accDisplay || accEmail || "Utente Black";
+    if (!safeEmail) {
+      return NextResponse.json({ error: "Email mancante" }, { status: 400 });
     }
 
     const db = supabaseServer();
@@ -277,8 +279,8 @@ export async function POST(req: Request) {
       call_type_id: callType.id,
       tutor_id: tutor.id,
       user_id: userId,
-      full_name: fullName,
-      email: replyEmail,
+      full_name: safeName,
+      email: safeEmail,
       note: extraNote || null,
       status: "confirmed",
     });
@@ -294,8 +296,8 @@ export async function POST(req: Request) {
     const html = `
       <div style="font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;line-height:1.5;color:#0f172a">
         <h2 style="margin:0 0 8px;font-size:18px">Nuova prenotazione ${escapeHtml(callTypeLabel)}</h2>
-        <p style="margin:4px 0"><strong>Nome:</strong> ${escapeHtml(fullName)}</p>
-        <p style="margin:4px 0"><strong>Email:</strong> ${escapeHtml(replyEmail)}</p>
+        <p style="margin:4px 0"><strong>Nome:</strong> ${escapeHtml(safeName)}</p>
+        <p style="margin:4px 0"><strong>Email:</strong> ${escapeHtml(safeEmail)}</p>
         <p style="margin:4px 0"><strong>Tipo di chiamata:</strong> ${escapeHtml(callTypeLabel)}</p>
         <p style="margin:4px 0"><strong>Durata:</strong> ${escapeHtml(
           `${durationMinutes} minuti`,
@@ -317,8 +319,8 @@ export async function POST(req: Request) {
 
     const text = `
 Nuova prenotazione ${callTypeLabel}
-Nome: ${fullName}
-Email: ${replyEmail}
+Nome: ${safeName}
+Email: ${safeEmail}
 Tipo di chiamata: ${callTypeLabel}
 Durata: ${durationMinutes} minuti
 Data: ${normalizedDate}
