@@ -35,6 +35,8 @@ export async function GET() {
     return NextResponse.json({ ok: true });
   }
 
+  const now = new Date();
+
   const weekAssessments = await fetchAssessmentsNext7Days(db);
   const assessmentsText = weekAssessments.length
     ? formatAssessments(weekAssessments)
