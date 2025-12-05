@@ -102,6 +102,7 @@ export async function GET(request: NextRequest) {
         name: s.student_name || s?.profiles?.full_name || "—",
         email: s.student_email || s.parent_email || "",
         phone: s.student_phone || s.parent_phone || "",
+        phoneTail: (s.student_phone || s.parent_phone || "").replace(/\D/g, "").slice(-10) || null,
         startDate: s.start_date,
         lastContactedAt: s.last_contacted_at,
       });

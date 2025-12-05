@@ -95,6 +95,7 @@ export default function WhatsAppAdmin() {
     stale: [],
     recentNoContact: [],
   });
+  const [openProfileAfterPanel, setOpenProfileAfterPanel] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasAccess = useMemo(
@@ -207,36 +208,27 @@ export default function WhatsAppAdmin() {
   );
 
   const handleOpenContactFromPanel = useCallback(
-    async (tail: string | null) => {
+    async (rawTail: string | null, opts?: { openProfile?: boolean }) => {
+      const digits = (rawTail || "").replace(/\D/g, "");
+      const tail = digits.slice(-10) || digits || rawTail;
       if (!tail) return;
+      setError(null);
       setLoadingDetail(true);
       try {
-        const conversations =
-          ((await fetchList({ keepSelection: true, searchOverride: tail })) as ConversationItem[]) ||
-          [];
-        const match =
-          conversations.find(
-            (c: ConversationItem) =>
-              c.phoneTail === tail ||
-              c.phone === tail ||
-              (c.phoneTail && c.phoneTail.replace(/\D/g, "").endsWith(tail)) ||
-              (c.phone && c.phone.replace(/\D/g, "").endsWith(tail)),
-          ) || null;
-        if (!match?.phoneTail) {
-          setError("Nessuna conversazione trovata per questo numero.");
-          setSelected(null);
-          return;
-        }
-        setSelected(match.phoneTail);
+        await fetchDetail(tail, { silent: true });
+        setSelected(tail);
+        await fetchList({ keepSelection: true });
+        if (opts?.openProfile) setOpenProfileAfterPanel(true);
         setShowToContact(false);
       } catch (err: any) {
         console.error(err);
+        setOpenProfileAfterPanel(false);
         setError(err?.message || "Errore apertura scheda");
       } finally {
         setLoadingDetail(false);
       }
     },
-    [fetchList]
+    [fetchDetail, fetchList]
   );
 
   useEffect(() => {
@@ -273,6 +265,15 @@ export default function WhatsAppAdmin() {
       setDetail(null);
     }
   }, [selected, fetchDetail]);
+
+  useEffect(() => {
+    if (!openProfileAfterPanel) return;
+    if (!detail || detail.conversation.phoneTail !== selected) return;
+    if (detail.conversation.student) {
+      setShowProfile(true);
+    }
+    setOpenProfileAfterPanel(false);
+  }, [openProfileAfterPanel, detail, detail?.conversation?.phoneTail, selected]);
 
   useEffect(() => {
     if (!selected) {
@@ -843,7 +844,7 @@ export default function WhatsAppAdmin() {
       </div>
 
       {showToContact && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="mx-auto max-w-5xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
@@ -949,10 +950,11 @@ function ContactCard({
   closePanel,
 }: {
   item: any;
-  onOpen: (phoneTail: string | null) => void;
+  onOpen: (phoneTail: string | null, opts?: { openProfile?: boolean }) => void;
   closePanel: () => void;
 }) {
-  const phoneTail = (item.phone || "").replace(/\D/g, "").slice(-10) || null;
+  const phoneTail =
+    item.phoneTail || (item.phone || "").replace(/\D/g, "").slice(-10) || null;
   const last =
     item.lastContactedAt &&
     new Date(item.lastContactedAt).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
@@ -975,7 +977,7 @@ function ContactCard({
         onClick={() => {
           if (!phoneTail) return;
           closePanel();
-          onOpen(phoneTail);
+          onOpen(phoneTail, { openProfile: true });
         }}
         className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold transition ${
           phoneTail

@@ -54,7 +54,9 @@ export async function GET(
     if (authError) return authError;
 
     const { phoneTail } = await ctx.params;
-    if (!phoneTail) {
+    const normalizedRaw = (phoneTail || "").replace(/\D/g, "");
+    const tail = normalizedRaw.slice(-10) || normalizedRaw || phoneTail;
+    if (!tail) {
       return NextResponse.json({ error: "missing_phone_tail" }, { status: 400 });
     }
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -65,35 +67,64 @@ export async function GET(
     }
 
     const db = supabaseServer();
-    const convoQuery = db
-      .from("black_whatsapp_conversations")
-      .select(
-        [
-          "id",
-          "phone_tail",
-          "phone_e164",
-          "status",
-          "type",
-          "bot",
-          "last_message_at",
-          "last_message_preview",
-          "updated_at",
-          "student_id",
-          "black_students(id, user_id, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, parent_name, goal, difficulty_focus, next_assessment_subject, next_assessment_date, ai_description, last_contacted_at, start_date, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))",
-        ].join(",")
-      )
-      .eq("phone_tail", phoneTail)
-      .maybeSingle();
+    const selectConvo = () =>
+      db
+        .from("black_whatsapp_conversations")
+        .select(
+          [
+            "id",
+            "phone_tail",
+            "phone_e164",
+            "status",
+            "type",
+            "bot",
+            "last_message_at",
+            "last_message_preview",
+            "updated_at",
+            "student_id",
+            "black_students(id, user_id, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, parent_name, goal, difficulty_focus, next_assessment_subject, next_assessment_date, ai_description, last_contacted_at, start_date, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))",
+          ].join(",")
+        )
+        .eq("phone_tail", tail)
+        .maybeSingle();
 
-    const [convoRes] = await Promise.all([convoQuery]);
+    const convoRes = await selectConvo();
 
     if (convoRes.error) {
       console.error("[admin/whatsapp] detail error", convoRes.error);
       return NextResponse.json({ error: convoRes.error.message }, { status: 500 });
     }
-    const conversation = convoRes.data as any;
+    let conversation = convoRes.data as any;
+
     if (!conversation) {
-      return NextResponse.json({ error: "not_found" }, { status: 404 });
+      // Prova a trovare lo studente per phone tail e crea una conversazione placeholder
+      const { data: studentMatch } = await db
+        .from("black_students")
+        .select("id")
+        .or(`student_phone.ilike.%${tail},parent_phone.ilike.%${tail}`)
+        .limit(1)
+        .maybeSingle();
+
+      const { data: inserted, error: insertErr } = await db
+        .from("black_whatsapp_conversations")
+        .insert({
+          phone_tail: tail,
+          status: "waiting_tutor",
+          type: "black",
+          bot: "off",
+          student_id: studentMatch?.id || null,
+          updated_at: new Date().toISOString(),
+        })
+        .select(
+          "id, phone_tail, phone_e164, status, type, bot, last_message_at, last_message_preview, updated_at, student_id, black_students(id, user_id, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, parent_name, goal, difficulty_focus, next_assessment_subject, next_assessment_date, ai_description, last_contacted_at, start_date, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))"
+        )
+        .maybeSingle();
+
+      if (insertErr) {
+        console.error("[admin/whatsapp] create placeholder error", insertErr);
+        return NextResponse.json({ error: insertErr.message }, { status: 500 });
+      }
+      conversation = inserted as any;
     }
 
     // Recupera tutti i messaggi legati alla conversazione, sia per phone_tail sia per student_id (se presente).
@@ -102,9 +133,9 @@ export async function GET(
       .select("id, role, content, created_at, meta, phone_tail, student_id")
       .order("created_at", { ascending: true });
     if (conversation.student_id) {
-      messagesQuery.or(`phone_tail.eq.${phoneTail},student_id.eq.${conversation.student_id}`);
+      messagesQuery.or(`phone_tail.eq.${tail},student_id.eq.${conversation.student_id}`);
     } else {
-      messagesQuery.eq("phone_tail", phoneTail);
+      messagesQuery.eq("phone_tail", tail);
     }
     const messagesRes = await messagesQuery;
 
@@ -174,7 +205,9 @@ export async function POST(
     if (authError) return authError;
 
     const { phoneTail } = await ctx.params;
-    if (!phoneTail) {
+    const normalizedRaw = (phoneTail || "").replace(/\D/g, "");
+    const tail = normalizedRaw.slice(-10) || normalizedRaw || phoneTail;
+    if (!tail) {
       return NextResponse.json({ error: "missing_phone_tail" }, { status: 400 });
     }
 
@@ -197,7 +230,7 @@ export async function POST(
     const { data: convo, error: convoError } = await db
       .from("black_whatsapp_conversations")
       .select("id, phone_tail, phone_e164, status, type, student_id")
-      .eq("phone_tail", phoneTail)
+      .eq("phone_tail", tail)
       .maybeSingle();
     if (convoError) {
       console.error("[admin/whatsapp] fetch conversation error", convoError);
@@ -247,7 +280,7 @@ export async function POST(
       const { error: convoUpdateErr } = await db
         .from("black_whatsapp_conversations")
         .update(convoUpdate)
-        .eq("phone_tail", phoneTail);
+        .eq("phone_tail", tail);
       if (convoUpdateErr) {
         console.error("[admin/whatsapp] link convo update error", convoUpdateErr);
         return NextResponse.json({ error: convoUpdateErr.message }, { status: 500 });
@@ -339,7 +372,7 @@ export async function POST(
 
       await db.from("black_whatsapp_messages").insert({
         student_id: convo.student_id || null,
-        phone_tail: phoneTail,
+        phone_tail: tail,
         role: "assistant",
         content: message,
         meta: { source: "admin_console" },
@@ -350,7 +383,7 @@ export async function POST(
       const { error: updateError } = await db
         .from("black_whatsapp_conversations")
         .update(updates)
-        .eq("phone_tail", phoneTail);
+        .eq("phone_tail", tail);
       if (updateError) {
         console.error("[admin/whatsapp] update error", updateError);
         return NextResponse.json({ error: updateError.message }, { status: 500 });
