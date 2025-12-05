@@ -211,10 +211,12 @@ export default function WhatsAppAdmin() {
       if (!tail) return;
       setLoadingDetail(true);
       try {
-        const conversations = (await fetchList({ keepSelection: true, searchOverride: tail })) || [];
+        const conversations =
+          ((await fetchList({ keepSelection: true, searchOverride: tail })) as ConversationItem[]) ||
+          [];
         const match =
           conversations.find(
-            (c) =>
+            (c: ConversationItem) =>
               c.phoneTail === tail ||
               c.phone === tail ||
               (c.phoneTail && c.phoneTail.replace(/\D/g, "").endsWith(tail)) ||
