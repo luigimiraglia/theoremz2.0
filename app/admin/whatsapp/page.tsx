@@ -115,12 +115,13 @@ export default function WhatsAppAdmin() {
   }, []);
 
   const fetchList = useCallback(
-    async (opts?: { keepSelection?: boolean }) => {
+    async (opts?: { keepSelection?: boolean; searchOverride?: string }) => {
       setLoadingList(true);
       setError(null);
       try {
         const headers = await buildHeaders();
-        const query = search ? `?q=${encodeURIComponent(search)}` : "";
+        const qParam = opts?.searchOverride ?? search;
+        const query = qParam ? `?q=${encodeURIComponent(qParam)}` : "";
         const res = await fetch(`/api/admin/whatsapp${query}`, {
           headers,
           cache: "no-store",
@@ -131,10 +132,12 @@ export default function WhatsAppAdmin() {
           throw new Error(`HTTP ${res.status}${detail ? ` — ${detail}` : ""}`);
         }
         const data = await res.json();
-        setList(data.conversations || []);
-        if (!opts?.keepSelection && data.conversations?.length) {
-          setSelected(data.conversations[0]?.phoneTail || null);
+        const conversations = data.conversations || [];
+        setList(conversations);
+        if (!opts?.keepSelection && conversations.length) {
+          setSelected(conversations[0]?.phoneTail || null);
         }
+        return conversations;
       } catch (err: any) {
         console.error(err);
         setError(err?.message || "Errore caricamento conversazioni");
@@ -201,6 +204,33 @@ export default function WhatsAppAdmin() {
       }
     },
     [buildHeaders, fetchDetail, fetchList]
+  );
+
+  const handleOpenContactFromPanel = useCallback(
+    async (tail: string | null) => {
+      if (!tail) return;
+      setLoadingDetail(true);
+      try {
+        const conversations = (await fetchList({ keepSelection: true, searchOverride: tail })) || [];
+        const match =
+          conversations.find(
+            (c) =>
+              c.phoneTail === tail ||
+              c.phone === tail ||
+              (c.phoneTail && c.phoneTail.replace(/\D/g, "").endsWith(tail)) ||
+              (c.phone && c.phone.replace(/\D/g, "").endsWith(tail)),
+          ) || null;
+        const nextSelected = match?.phoneTail || tail;
+        setSelected(nextSelected);
+        setShowToContact(false);
+      } catch (err: any) {
+        console.error(err);
+        setError(err?.message || "Errore apertura scheda");
+      } finally {
+        setLoadingDetail(false);
+      }
+    },
+    [fetchList]
   );
 
   useEffect(() => {
@@ -839,7 +869,7 @@ export default function WhatsAppAdmin() {
                     <ContactCard
                       key={`${item.id}-stale`}
                       item={item}
-                      onOpen={setSelected}
+                      onOpen={handleOpenContactFromPanel}
                       closePanel={() => setShowToContact(false)}
                     />
                   ))}
@@ -857,7 +887,7 @@ export default function WhatsAppAdmin() {
                     <ContactCard
                       key={`${item.id}-recent`}
                       item={item}
-                      onOpen={setSelected}
+                      onOpen={handleOpenContactFromPanel}
                       closePanel={() => setShowToContact(false)}
                     />
                   ))}
