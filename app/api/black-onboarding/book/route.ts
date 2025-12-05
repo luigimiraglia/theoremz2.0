@@ -1,12 +1,23 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { supabaseServer } from "@/lib/supabase";
+import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ALLOWED_SLOTS = ["17:00", "17:20", "17:40", "18:00", "18:20", "18:40", "19:00"] as const;
-const DEFAULT_CALL_TYPE_SLUG = "check-percorso";
+const ALLOWED_SLOTS = [
+  "17:00",
+  "17:20",
+  "17:30",
+  "17:40",
+  "18:00",
+  "18:20",
+  "18:30",
+  "18:40",
+  "19:00",
+] as const;
+const DEFAULT_CALL_TYPE_SLUG = "onboarding";
 const DEFAULT_TUTOR_EMAIL = "luigi.miraglia006@gmail.com";
 
 const fromUser = process.env.GMAIL_USER;
@@ -58,16 +69,17 @@ function timeFromIsoUtc(iso: string) {
   return `${hh}:${mm}`;
 }
 
-async function getCallType(db: ReturnType<typeof supabaseServer>, slug: string) {
+async function getCallTypes(
+  db: ReturnType<typeof supabaseServer>,
+  slugs: string[],
+): Promise<CallTypeRow[]> {
   const { data, error } = await db
     .from("call_types")
     .select("id, slug, name, duration_min, active")
-    .eq("slug", slug)
-    .eq("active", true)
-    .maybeSingle();
+    .in("slug", slugs)
+    .eq("active", true);
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Tipo di chiamata non trovato o disabilitato");
-  return data as CallTypeRow;
+  return (data || []) as CallTypeRow[];
 }
 
 async function getDefaultTutor(db: ReturnType<typeof supabaseServer>) {
@@ -158,15 +170,45 @@ export async function GET(req: Request) {
   }
 
   try {
-    const callType = await getCallType(db, callTypeSlug);
     const tutor = await getDefaultTutor(db);
-    let slots = await fetchSlotsForDate(db, callType.id, date);
-    if (slots.length === 0) {
-      await ensureSlotsForDate(db, callType, tutor, date);
-      slots = await fetchSlotsForDate(db, callType.id, date);
+    const slugList =
+      callTypeSlug === "all"
+        ? [DEFAULT_CALL_TYPE_SLUG, "check-percorso"]
+        : [callTypeSlug || DEFAULT_CALL_TYPE_SLUG];
+
+    const callTypes = await getCallTypes(db, slugList);
+    if (!callTypes.length) throw new Error("Tipi di chiamata non trovati");
+
+    const allSlots: { slot: SlotRow; callType: CallTypeRow }[] = [];
+
+    for (const callType of callTypes) {
+      let slots = await fetchSlotsForDate(db, callType.id, date);
+      if (slots.length === 0) {
+        await ensureSlotsForDate(db, callType, tutor, date);
+        slots = await fetchSlotsForDate(db, callType.id, date);
+      }
+      slots.forEach((slot) => allSlots.push({ slot, callType }));
     }
-    const { available, booked } = extractAvailability(slots);
-    return NextResponse.json({ date, available, booked, callType: callType.slug });
+
+    const bookedDetailed = allSlots
+      .filter(({ slot }) => slot.status === "booked")
+      .map(({ slot, callType }) => ({
+        time: timeFromIsoUtc(slot.starts_at),
+        durationMinutes: callType.duration_min,
+        callType: callType.slug,
+      }));
+
+    const availableSet = new Set<string>();
+    allSlots.forEach(({ slot }) => {
+      if (slot.status !== "booked") availableSet.add(timeFromIsoUtc(slot.starts_at));
+    });
+
+    return NextResponse.json({
+      date,
+      available: Array.from(availableSet).sort(),
+      booked: bookedDetailed,
+      callTypes: callTypes.map((c) => c.slug),
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Errore disponibilità" }, { status: 500 });
   }
@@ -201,18 +243,16 @@ export async function POST(req: Request) {
     if (!normalizedDate || !isAllowedSlot(timeSlot)) {
       return NextResponse.json({ error: "Data o orario non validi" }, { status: 400 });
     }
-    const safeEmail = replyEmail || accEmail || toEmail || "";
+    const safeEmail = replyEmail || accEmail || "noreply@theoremz.com";
     const safeName = fullName || accDisplay || accEmail || "Utente Black";
-    if (!safeEmail) {
-      return NextResponse.json({ error: "Email mancante" }, { status: 400 });
-    }
 
     const db = supabaseServer();
     if (!db) {
       return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
     }
 
-    const callType = await getCallType(db, callTypeSlug);
+    const [callType] = await getCallTypes(db, [callTypeSlug]);
+    if (!callType) throw new Error("Tipo di chiamata non trovato");
     const tutor = await getDefaultTutor(db);
     const durationMinutes =
       Number.isFinite(Number(callDurationMinutes)) && Number(callDurationMinutes) > 0
@@ -231,16 +271,19 @@ export async function POST(req: Request) {
     let slot = fetchedSlot as SlotRow | null;
 
     if (!slot) {
-      // crea lo slot al volo
+      // crea lo slot al volo, gestendo eventuale race con onConflict
       const { data: created, error: createErr } = await db
         .from("call_slots")
-        .insert({
-          call_type_id: callType.id,
-        tutor_id: tutor.id,
-        starts_at: slotStartIso,
-          duration_min: durationMinutes,
-          status: "available",
-        })
+        .upsert(
+          {
+            call_type_id: callType.id,
+            tutor_id: tutor.id,
+            starts_at: slotStartIso,
+            duration_min: durationMinutes,
+            status: "available",
+          },
+          { onConflict: "tutor_id,starts_at" },
+        )
         .select("id, starts_at, status")
         .maybeSingle();
       if (createErr) throw new Error(createErr.message);
@@ -285,6 +328,14 @@ export async function POST(req: Request) {
       status: "confirmed",
     });
     if (bookingErr) throw new Error(bookingErr.message);
+
+    if (userId) {
+      try {
+        await syncLiteProfilePatch(userId, { full_name: safeName });
+      } catch (err) {
+        console.error("[black-onboarding/book] syncLiteProfilePatch failed", err);
+      }
+    }
 
     const callTypeLabel = callType.name;
 
