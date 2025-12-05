@@ -807,7 +807,7 @@ export default function WhatsAppAdmin() {
       </div>
 
       {showToContact && (
-        <div className="fixed inset-0 z-20 bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="mx-auto max-w-5xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
@@ -836,7 +836,12 @@ export default function WhatsAppAdmin() {
                     </div>
                   )}
                   {toContact.stale.map((item) => (
-                    <ContactCard key={`${item.id}-stale`} item={item} onOpen={setSelected} />
+                    <ContactCard
+                      key={`${item.id}-stale`}
+                      item={item}
+                      onOpen={setSelected}
+                      closePanel={() => setShowToContact(false)}
+                    />
                   ))}
                 </div>
                 <div className="space-y-3">
@@ -849,7 +854,12 @@ export default function WhatsAppAdmin() {
                     </div>
                   )}
                   {toContact.recentNoContact.map((item) => (
-                    <ContactCard key={`${item.id}-recent`} item={item} onOpen={setSelected} />
+                    <ContactCard
+                      key={`${item.id}-recent`}
+                      item={item}
+                      onOpen={setSelected}
+                      closePanel={() => setShowToContact(false)}
+                    />
                   ))}
                 </div>
               </div>
@@ -900,9 +910,11 @@ export default function WhatsAppAdmin() {
 function ContactCard({
   item,
   onOpen,
+  closePanel,
 }: {
   item: any;
   onOpen: (phoneTail: string | null) => void;
+  closePanel: () => void;
 }) {
   const phoneTail = (item.phone || "").replace(/\D/g, "").slice(-10) || null;
   const last =
@@ -924,7 +936,11 @@ function ContactCard({
       <button
         type="button"
         disabled={!phoneTail}
-        onClick={() => onOpen(phoneTail)}
+        onClick={() => {
+          if (!phoneTail) return;
+          closePanel();
+          onOpen(phoneTail);
+        }}
         className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold transition ${
           phoneTail
             ? "bg-emerald-500 text-slate-900 hover:bg-emerald-400"
