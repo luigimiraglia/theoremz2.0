@@ -12,9 +12,54 @@ import {
   Video,
 } from "lucide-react";
 
-const ALLOWED_SLOTS = ["17:00", "17:30", "18:00", "18:30"] as const;
+const ALLOWED_SLOTS = ["17:00", "17:20", "17:40", "18:00", "18:20", "18:40", "19:00"] as const;
 const WEEKDAYS_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 const SATURDAY_WEEKDAY = 6; // JS: Saturday
+
+export type BlackSchedulerVariant = "onboarding" | "check";
+
+const SLOT_RANGE_LABEL = `${ALLOWED_SLOTS[0]} e ${ALLOWED_SLOTS[ALLOWED_SLOTS.length - 1]}`;
+
+const VARIANT_COPY: Record<
+  BlackSchedulerVariant,
+  {
+    badge: string;
+    title: string;
+    duration: string;
+    durationMinutes: number;
+    callTypeLabel: string;
+    callTypeSlug: string;
+    slotLabel: string;
+    slotPill: string;
+    statusIntro: string;
+    slotPrompt: string;
+  }
+> = {
+  onboarding: {
+    badge: "Onboarding Black",
+    title: "Call di benvenuto",
+    duration: "30 min",
+    durationMinutes: 30,
+    callTypeLabel: "Onboarding Black",
+    callTypeSlug: "onboarding",
+    slotLabel: "Seleziona orario (30 minuti)",
+    slotPill: "30 min",
+    statusIntro: "Step 1: scegli una data disponibile a partire da sabato.",
+    slotPrompt: `Step 1: scegli uno slot tra ${SLOT_RANGE_LABEL}.`,
+  },
+  check: {
+    badge: "Check percorso",
+    title: "Check percorso Black",
+    duration: "20 min",
+    durationMinutes: 20,
+    callTypeLabel: "Check percorso Black",
+    callTypeSlug: "check-percorso",
+    slotLabel: "Seleziona orario (20 minuti)",
+    slotPill: "20 min",
+    statusIntro: "Step 1: scegli una data per il check percorso.",
+    slotPrompt: `Step 1: scegli uno slot (20 min) tra ${SLOT_RANGE_LABEL}.`,
+  },
+};
 
 type DayOption = {
   id: string;
@@ -114,7 +159,12 @@ function createTimeSlots(): TimeSlot[] {
   });
 }
 
-export default function BlackOnboardingScheduler() {
+type Props = {
+  variant?: BlackSchedulerVariant;
+};
+
+export default function BlackOnboardingScheduler({ variant = "onboarding" }: Props) {
+  const copy = VARIANT_COPY[variant] ?? VARIANT_COPY.onboarding;
   const { user } = useAuth();
   const timeSlots = useMemo(() => createTimeSlots(), []);
   const todayStart = useMemo(() => {
@@ -139,7 +189,7 @@ export default function BlackOnboardingScheduler() {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "error" | "success">("idle");
   const [statusDetail, setStatusDetail] = useState<string>(
-    "Step 1: scegli una data disponibile a partire da sabato.",
+    copy.statusIntro,
   );
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -163,14 +213,17 @@ export default function BlackOnboardingScheduler() {
       if (!selectedDay) return;
       setLoadingSlots(true);
       try {
-        const res = await fetch(`/api/black-onboarding/book?date=${selectedDay.id}`, {
-          cache: "no-store",
-        });
+        const res = await fetch(
+          `/api/black-onboarding/book?date=${selectedDay.id}&type=${copy.callTypeSlug}`,
+          {
+            cache: "no-store",
+          },
+        );
         const data = await res.json();
         if (res.ok) {
           setBookedSlots(Array.isArray(data?.booked) ? data.booked : []);
           setStatus("idle");
-          setStatusDetail("Step 1: scegli uno slot tra 17:00 e 18:30.");
+          setStatusDetail(copy.slotPrompt);
         } else {
           setBookedSlots([]);
           setStatus("error");
@@ -185,7 +238,7 @@ export default function BlackOnboardingScheduler() {
       }
     };
     fetchAvailability();
-  }, [selectedDay]);
+  }, [copy.callTypeSlug, copy.slotPrompt, selectedDay]);
 
   const handleConfirm = async () => {
     if (!selectedDay || !selectedSlot) {
@@ -212,6 +265,8 @@ export default function BlackOnboardingScheduler() {
           name: fullName.trim(),
           email: email.trim(),
           note: note.trim(),
+          callType: copy.callTypeSlug,
+          callDurationMinutes: copy.durationMinutes,
           account: {
             uid: (user as any)?.uid || null,
             email: (user as any)?.email || null,
@@ -276,14 +331,14 @@ export default function BlackOnboardingScheduler() {
         <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 lg:w-[280px]">
           <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
             <CalendarClock className="h-4 w-4" aria-hidden />
-            Onboarding Black
+            {copy.badge}
           </div>
           <div className="space-y-2">
-            <p className="text-2xl font-black text-slate-900 dark:text-white">Call di benvenuto</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{copy.title}</p>
             <div className="flex flex-wrap gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
                 <Clock3 className="h-4 w-4" aria-hidden />
-                30 min
+                {copy.duration}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
                 <Video className="h-4 w-4" aria-hidden />
@@ -304,7 +359,7 @@ export default function BlackOnboardingScheduler() {
                 onClick={() => {
                   setStep(1);
                   setStatus("idle");
-                  setStatusDetail("Step 1: scegli una data disponibile a partire da sabato.");
+                  setStatusDetail(copy.statusIntro);
                 }}
                 className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
               >
@@ -377,17 +432,17 @@ export default function BlackOnboardingScheduler() {
                           disabled={disabled}
                           onClick={() => {
                             if (disabled) return;
-                            setSelectedDay({
-                              id: day.id,
-                              weekday: day.weekdayLabel,
-                              day: String(day.dayNumber).padStart(2, "0"),
-                              month: currentMonth.toLocaleString("it-IT", { month: "short" }),
-                              fullLabel: day.fullLabel,
-                            });
-                            setSelectedSlot(null);
-                            setStatus("idle");
-                            setStatusDetail("Scegli uno slot tra 17:00 e 18:30.");
-                          }}
+                        setSelectedDay({
+                          id: day.id,
+                          weekday: day.weekdayLabel,
+                          day: String(day.dayNumber).padStart(2, "0"),
+                          month: currentMonth.toLocaleString("it-IT", { month: "short" }),
+                          fullLabel: day.fullLabel,
+                        });
+                        setSelectedSlot(null);
+                        setStatus("idle");
+                        setStatusDetail(copy.slotPrompt);
+                      }}
                           className={`relative flex h-12 flex-col items-center justify-center rounded-xl border text-[13px] font-semibold transition ${
                             disabled
                               ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-600"
@@ -418,7 +473,7 @@ export default function BlackOnboardingScheduler() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                        Seleziona orario (30 minuti)
+                        {copy.slotLabel}
                       </p>
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">
                         {selectedDay ? selectedDay.fullLabel : "Scegli prima una data."}
@@ -468,7 +523,7 @@ export default function BlackOnboardingScheduler() {
                                     isSelected ? "text-slate-200" : "text-slate-500"
                                   }`}
                                 >
-                                  30 min
+                                  {copy.slotPill}
                                 </span>
                               )}
                             </div>

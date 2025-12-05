@@ -5,22 +5,31 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldOff, ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
-import BlackOnboardingScheduler from "./BlackOnboardingScheduler";
+import BlackOnboardingScheduler, { BlackSchedulerVariant } from "./BlackOnboardingScheduler";
 
-const REDIRECT_PATH = "/black-onboarding-call";
+const DEFAULT_REDIRECT_PATH = "/black-onboarding-call";
 
-export default function BlackOnboardingGate() {
+type Props = {
+  variant?: BlackSchedulerVariant;
+  redirectPath?: string;
+};
+
+export default function BlackOnboardingGate({
+  variant = "onboarding",
+  redirectPath = DEFAULT_REDIRECT_PATH,
+}: Props) {
   const { user, isSubscribed, loading } = useAuth();
   const router = useRouter();
   const [redirecting, setRedirecting] = useState(false);
+  const callLabel = variant === "check" ? "call di check percorso" : "call di onboarding";
 
   useEffect(() => {
     if (loading) return;
     if (!user) {
       setRedirecting(true);
-      router.replace(`/register?redirect=${encodeURIComponent(REDIRECT_PATH)}`);
+      router.replace(`/register?redirect=${encodeURIComponent(redirectPath)}`);
     }
-  }, [loading, user, router]);
+  }, [loading, redirectPath, router, user]);
 
   if (loading || isSubscribed === null) {
     return (
@@ -36,7 +45,7 @@ export default function BlackOnboardingGate() {
     return (
       <div className="flex min-h-dvh items-center justify-center px-4">
         <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white/80 p-6 text-center text-sm font-semibold text-slate-600 backdrop-blur dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
-          {redirecting ? "Reindirizzamento al login..." : "Accedi per prenotare la call di onboarding."}
+          {redirecting ? "Reindirizzamento al login..." : `Accedi per prenotare la ${callLabel}.`}
         </div>
       </div>
     );
@@ -53,7 +62,7 @@ export default function BlackOnboardingGate() {
             <div className="space-y-2">
               <p className="text-lg font-bold">Non hai accesso a questa pagina</p>
               <p className="text-sm font-semibold text-amber-800 dark:text-amber-100">
-                La prenotazione onboarding è riservata agli abbonati Black.
+                La prenotazione della {callLabel} è riservata agli abbonati Black.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Link
@@ -77,5 +86,5 @@ export default function BlackOnboardingGate() {
     );
   }
 
-  return <BlackOnboardingScheduler />;
+  return <BlackOnboardingScheduler variant={variant} />;
 }

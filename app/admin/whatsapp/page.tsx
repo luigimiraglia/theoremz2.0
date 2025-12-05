@@ -4,7 +4,18 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import clsx from "clsx";
 import { useAuth } from "@/lib/AuthContext";
 import { ArrowRight, ListFilter } from "lucide-react";
-import Link from "next/link";
+
+type Booking = {
+  id: string;
+  startsAt: string;
+  durationMin: number | null;
+  callType: string | null;
+  callTypeName: string | null;
+  tutorName: string | null;
+  fullName: string;
+  email: string;
+  note: string | null;
+};
 
 type ConversationItem = {
   id?: string;
@@ -96,6 +107,13 @@ export default function WhatsAppAdmin() {
     recentNoContact: [],
   });
   const [openProfileAfterPanel, setOpenProfileAfterPanel] = useState(false);
+  const [showBookings, setShowBookings] = useState(false);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [bookingMonth, setBookingMonth] = useState<Date>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasAccess = useMemo(
@@ -114,6 +132,24 @@ export default function WhatsAppAdmin() {
     }
     return headers;
   }, []);
+
+  const fetchBookings = useCallback(async () => {
+    setLoadingBookings(true);
+    try {
+      const headers = await buildHeaders();
+      const res = await fetch("/api/admin/bookings", { headers, cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      setBookings(Array.isArray(data.bookings) ? data.bookings : []);
+    } catch (err: any) {
+      console.error("[admin/whatsapp] bookings error", err);
+      setError(err?.message || "Errore prenotazioni");
+    } finally {
+      setLoadingBookings(false);
+    }
+  }, [buildHeaders]);
 
   const fetchList = useCallback(
     async (opts?: { keepSelection?: boolean; searchOverride?: string }) => {
@@ -181,6 +217,37 @@ export default function WhatsAppAdmin() {
     },
     [buildHeaders]
   );
+
+  const calendarDays = useMemo(() => {
+    const days: { date: string; dayNum: number; inMonth: boolean }[] = [];
+    const first = new Date(bookingMonth);
+    first.setDate(1);
+    const startWeekday = (first.getDay() + 6) % 7; // convert Sun=6, Mon=0
+    const gridStart = new Date(first);
+    gridStart.setDate(1 - startWeekday);
+    for (let i = 0; i < 6 * 7; i++) {
+      const d = new Date(gridStart);
+      d.setDate(gridStart.getDate() + i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const dayNum = d.getDate();
+      const date = `${y}-${m}-${String(dayNum).padStart(2, "0")}`;
+      days.push({ date, dayNum, inMonth: d.getMonth() === bookingMonth.getMonth() });
+    }
+    return days;
+  }, [bookingMonth]);
+
+  const bookingMap = useMemo(() => {
+    const m = new Map<string, Booking[]>();
+    bookings.forEach((b) => {
+      const day = b.startsAt?.split("T")[0];
+      if (!day) return;
+      const list = m.get(day) || [];
+      list.push(b);
+      m.set(day, list);
+    });
+    return m;
+  }, [bookings]);
 
   const handleProfileUpdate = useCallback(
     async (phoneTail: string, updates: Record<string, any>) => {
@@ -293,6 +360,12 @@ export default function WhatsAppAdmin() {
     };
   }, [selected, fetchDetail]);
 
+  useEffect(() => {
+    if (showBookings && bookings.length === 0 && !loadingBookings) {
+      fetchBookings();
+    }
+  }, [bookings.length, fetchBookings, loadingBookings, showBookings]);
+
   const handleSend = async (statusOverride?: string) => {
     if (!selected || !draft.trim()) return;
     setSending(true);
@@ -321,6 +394,20 @@ export default function WhatsAppAdmin() {
     } finally {
       setSending(false);
     }
+  };
+
+  const formatDateLabel = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString("it-IT", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+    });
+  };
+
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
   };
 
   const handleGenerateDraft = async (message: Message) => {
@@ -464,6 +551,15 @@ export default function WhatsAppAdmin() {
           </div>
           <div className="flex gap-2">
             <button
+              onClick={() => {
+                setShowBookings(true);
+              }}
+              className="px-3 py-2 rounded-lg bg-indigo-500 text-slate-900 text-sm font-semibold border border-indigo-400 hover:border-indigo-200 transition inline-flex items-center gap-2"
+            >
+              Calendario prenotazioni
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
+            <button
               onClick={async () => {
                 setShowToContact(true);
                 setLoadingToContact(true);
@@ -489,6 +585,17 @@ export default function WhatsAppAdmin() {
             >
               <ListFilter className="h-4 w-4" aria-hidden />
               Da contattare
+            </button>
+            <button
+              onClick={() => setPolling((prev) => !prev)}
+              className={clsx(
+                "px-3 py-2 rounded-lg border text-sm font-semibold transition",
+                polling
+                  ? "bg-emerald-500 text-slate-900 border-emerald-400 hover:border-emerald-200"
+                  : "bg-slate-800 text-slate-100 border-slate-700 hover:border-emerald-400"
+              )}
+            >
+              {polling ? "Live ON" : "Live OFF"}
             </button>
             <button
               onClick={() => fetchList({ keepSelection: true })}
@@ -842,6 +949,163 @@ export default function WhatsAppAdmin() {
           </section>
         </div>
       </div>
+
+      {showBookings && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-slate-900/80 backdrop-blur">
+          <div className="relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-indigo-300">Calendario</p>
+                <h2 className="text-lg font-semibold text-slate-50">Prenotazioni call</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() =>
+                    setBookingMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+                  }
+                  className="rounded-lg border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-200 hover:border-indigo-400"
+                >
+                  -1 mese
+                </button>
+                <button
+                  onClick={() =>
+                    setBookingMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+                  }
+                  className="rounded-lg border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-200 hover:border-indigo-400"
+                >
+                  +1 mese
+                </button>
+                <button
+                  onClick={() => setShowBookings(false)}
+                  className="rounded-lg border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-200 hover:border-red-400"
+                >
+                  Chiudi
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] divide-y lg:divide-y-0 lg:divide-x divide-slate-800">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-semibold text-slate-200">
+                    {bookingMonth.toLocaleString("it-IT", { month: "long", year: "numeric" })}
+                  </div>
+                  {loadingBookings && (
+                    <div className="text-xs text-slate-400">Carico prenotazioni...</div>
+                  )}
+                </div>
+                <div className="grid grid-cols-7 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500 mb-2">
+                  {["L", "M", "M", "G", "V", "S", "D"].map((d) => (
+                    <div key={d} className="py-1">
+                      {d}
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-2 text-sm">
+                  {calendarDays.map((day) => {
+                    const dayBookings = bookingMap.get(day.date) || [];
+                    const hasBookings = dayBookings.length > 0;
+                    const badgeColor =
+                      dayBookings[0]?.callType === "check-percorso"
+                        ? "bg-amber-400 text-amber-950"
+                        : "bg-emerald-400 text-emerald-950";
+                    return (
+                      <div
+                        key={day.date}
+                        className={clsx(
+                          "rounded-xl border p-2 min-h-[90px] flex flex-col gap-2",
+                          day.inMonth
+                            ? "border-slate-800 bg-slate-900/60"
+                            : "border-slate-900/50 bg-slate-900/30 text-slate-600"
+                        )}
+                      >
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-200">
+                          <span>{day.dayNum}</span>
+                          {hasBookings && (
+                            <span
+                              className={clsx(
+                                "inline-flex items-center rounded-full px-2 py-[2px] text-[10px] font-bold",
+                                badgeColor
+                              )}
+                            >
+                              {dayBookings.length}
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          {dayBookings.slice(0, 3).map((b) => (
+                            <div
+                              key={b.id}
+                              className="rounded-lg bg-slate-800/70 border border-slate-700 px-2 py-1 text-[11px] text-slate-100"
+                            >
+                              <div className="font-semibold">
+                                {formatTime(b.startsAt)} · {b.callTypeName || b.callType}
+                              </div>
+                              <div className="text-[10px] text-slate-400 truncate">
+                                {b.fullName} — {b.email}
+                              </div>
+                            </div>
+                          ))}
+                          {dayBookings.length > 3 && (
+                            <div className="text-[10px] text-slate-500">
+                              +{dayBookings.length - 3} altri
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-slate-200">Prossime prenotazioni</p>
+                  <button
+                    onClick={() => fetchBookings()}
+                    className="text-xs text-indigo-300 hover:text-indigo-200"
+                    disabled={loadingBookings}
+                  >
+                    {loadingBookings ? "Aggiorno..." : "Refresh"}
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
+                  {bookings
+                    .slice()
+                    .sort((a, b) => (a.startsAt > b.startsAt ? 1 : -1))
+                    .map((b) => (
+                      <div
+                        key={b.id}
+                        className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold">{b.callTypeName || b.callType}</span>
+                          <span className="text-[11px] text-slate-400">
+                            {formatDateLabel(b.startsAt)} · {formatTime(b.startsAt)}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          {b.fullName} — {b.email}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          Tutor: {b.tutorName || "n.d."} · {b.durationMin || "—"} min
+                        </div>
+                        {b.note && (
+                          <div className="mt-1 rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1 text-[11px] text-slate-200">
+                            {b.note}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  {!bookings.length && !loadingBookings && (
+                    <div className="text-sm text-slate-500">Nessuna prenotazione trovata.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showToContact && (
         <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">

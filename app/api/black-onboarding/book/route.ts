@@ -1,23 +1,13 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { supabaseServer } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ALLOWED_SLOTS = ["17:00", "17:30", "18:00", "18:30"] as const;
-const SATURDAY_WEEKDAY = 6; // Saturday
-
-type BookingStore = Map<string, Set<string>>;
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __blackOnboardingBookings: BookingStore | undefined;
-}
-
-const bookingStore: BookingStore =
-  globalThis.__blackOnboardingBookings ||
-  ((globalThis.__blackOnboardingBookings = new Map<string, Set<string>>()),
-  globalThis.__blackOnboardingBookings);
+const ALLOWED_SLOTS = ["17:00", "17:20", "17:40", "18:00", "18:20", "18:40", "19:00"] as const;
+const DEFAULT_CALL_TYPE_SLUG = "check-percorso";
+const DEFAULT_TUTOR_EMAIL = "luigi.miraglia006@gmail.com";
 
 const fromUser = process.env.GMAIL_USER;
 const appPass = process.env.GMAIL_APP_PASS;
@@ -25,6 +15,10 @@ const toEmail =
   process.env.BLACK_ONBOARDING_TO || process.env.CONTACT_TO || process.env.GMAIL_USER;
 
 let transporter: nodemailer.Transporter | null = null;
+
+type CallTypeRow = { id: string; slug: string; name: string; duration_min: number };
+type SlotRow = { id: string; starts_at: string; status: string };
+type TutorRow = { id: string; display_name?: string | null; email?: string | null };
 
 function ensureTransporter() {
   if (transporter) return transporter;
@@ -51,49 +45,146 @@ function isAllowedSlot(time: string): time is (typeof ALLOWED_SLOTS)[number] {
   return ALLOWED_SLOTS.includes(time as (typeof ALLOWED_SLOTS)[number]);
 }
 
-function formatIsoDate(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+function toUtcIso(date: string, time: string) {
+  const [y, m, d] = date.split("-").map((v) => parseInt(v, 10));
+  const [hh, mm] = time.split(":").map((v) => parseInt(v, 10));
+  return new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0)).toISOString();
 }
 
-function getFirstBookableDate(): Date {
-  const base = new Date();
-  base.setHours(0, 0, 0, 0);
-  const diff = (SATURDAY_WEEKDAY - base.getDay() + 7) % 7;
-  if (diff === 0) return base;
-  const nextSat = new Date(base);
-  nextSat.setDate(base.getDate() + diff);
-  return nextSat;
+function timeFromIsoUtc(iso: string) {
+  const d = new Date(iso);
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
 }
 
-const FIRST_BOOKABLE_STR = formatIsoDate(getFirstBookableDate());
+async function getCallType(db: ReturnType<typeof supabaseServer>, slug: string) {
+  const { data, error } = await db
+    .from("call_types")
+    .select("id, slug, name, duration_min, active")
+    .eq("slug", slug)
+    .eq("active", true)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Tipo di chiamata non trovato o disabilitato");
+  return data as CallTypeRow;
+}
 
-function isAfterFirstBookable(date: string) {
-  return date >= FIRST_BOOKABLE_STR;
+async function getDefaultTutor(db: ReturnType<typeof supabaseServer>) {
+  const { data, error } = await db
+    .from("tutors")
+    .select("id, display_name, email")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (data) return data as TutorRow;
+
+  // Fallback: try via email lookup
+  const { data: byEmail, error: byEmailErr } = await db
+    .from("tutors")
+    .select("id, display_name, email")
+    .eq("email", DEFAULT_TUTOR_EMAIL)
+    .maybeSingle();
+  if (byEmailErr) throw new Error(byEmailErr.message);
+  if (!byEmail) throw new Error("Nessun tutor configurato");
+  return byEmail as TutorRow;
+}
+
+async function fetchSlotsForDate(
+  db: ReturnType<typeof supabaseServer>,
+  callTypeId: string,
+  date: string,
+) {
+  const startDay = `${date}T00:00:00Z`;
+  const endDay = `${date}T23:59:59Z`;
+  const { data, error } = await db
+    .from("call_slots")
+    .select("id, starts_at, status")
+    .eq("call_type_id", callTypeId)
+    .gte("starts_at", startDay)
+    .lte("starts_at", endDay)
+    .order("starts_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SlotRow[];
+}
+
+async function ensureSlotsForDate(
+  db: ReturnType<typeof supabaseServer>,
+  callType: CallTypeRow,
+  tutor: TutorRow,
+  date: string,
+) {
+  const rows = ALLOWED_SLOTS.map((time) => ({
+    call_type_id: callType.id,
+    tutor_id: tutor.id,
+    starts_at: toUtcIso(date, time),
+    duration_min: callType.duration_min,
+    status: "available" as const,
+  }));
+  const { error } = await db
+    .from("call_slots")
+    .upsert(rows, { onConflict: "tutor_id,starts_at" })
+    .select("id");
+  if (error) throw new Error(error.message);
+}
+
+function extractAvailability(slots: SlotRow[]) {
+  const booked = new Set<string>();
+  const available = new Set<string>();
+  slots.forEach((slot) => {
+    const label = timeFromIsoUtc(slot.starts_at);
+    if (slot.status === "booked") booked.add(label);
+    else available.add(label);
+  });
+  return {
+    available: Array.from(available).sort(),
+    booked: Array.from(booked).sort(),
+  };
 }
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const date = normalizeDate(searchParams.get("date") || "");
+  const callTypeSlug = (searchParams.get("type") || DEFAULT_CALL_TYPE_SLUG).trim();
+
   if (!date) {
     return NextResponse.json({ error: "Data non valida" }, { status: 400 });
   }
-  if (!isAfterFirstBookable(date)) {
-    return NextResponse.json(
-      { error: `Disponibile da ${FIRST_BOOKABLE_STR} in poi`, available: [], booked: [] },
-      { status: 400 },
-    );
+
+  const db = supabaseServer();
+  if (!db) {
+    return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
   }
-  const booked = bookingStore.get(date) || new Set<string>();
-  const available = ALLOWED_SLOTS.filter((slot) => !booked.has(slot));
-  return NextResponse.json({ date, available, booked: Array.from(booked) });
+
+  try {
+    const callType = await getCallType(db, callTypeSlug);
+    const tutor = await getDefaultTutor(db);
+    let slots = await fetchSlotsForDate(db, callType.id, date);
+    if (slots.length === 0) {
+      await ensureSlotsForDate(db, callType, tutor, date);
+      slots = await fetchSlotsForDate(db, callType.id, date);
+    }
+    const { available, booked } = extractAvailability(slots);
+    return NextResponse.json({ date, available, booked, callType: callType.slug });
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || "Errore disponibilità" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
   try {
-    const { date, time, name, email, note, timezone, account } = await req.json();
+    const {
+      date,
+      time,
+      name,
+      email,
+      note,
+      timezone,
+      account,
+      callType: callTypeSlugRaw,
+      callDurationMinutes,
+    } = await req.json();
     const normalizedDate = normalizeDate(String(date || "").trim());
     const timeSlot = String(time || "").trim();
     const fullName = String(name || "").trim();
@@ -105,6 +196,7 @@ export async function POST(req: Request) {
     const accUid = String(accountInfo.uid || "").trim();
     const accDisplay = String(accountInfo.displayName || "").trim();
     const accUsername = String(accountInfo.username || "").trim();
+    const callTypeSlug = String(callTypeSlugRaw || "").trim() || DEFAULT_CALL_TYPE_SLUG;
 
     if (!normalizedDate || !isAllowedSlot(timeSlot)) {
       return NextResponse.json({ error: "Data o orario non validi" }, { status: 400 });
@@ -113,34 +205,104 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Inserisci nome ed email" }, { status: 400 });
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const chosen = new Date(`${normalizedDate}T00:00:00`);
-    if (chosen < today) {
-      return NextResponse.json({ error: "Data nel passato" }, { status: 400 });
-    }
-    if (!isAfterFirstBookable(normalizedDate)) {
-      return NextResponse.json(
-        { error: `Disponibile da ${FIRST_BOOKABLE_STR} in poi` },
-        { status: 400 },
-      );
+    const db = supabaseServer();
+    if (!db) {
+      return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
     }
 
-    const dayBookings = bookingStore.get(normalizedDate) || new Set<string>();
-    if (dayBookings.has(timeSlot)) {
+    const callType = await getCallType(db, callTypeSlug);
+    const tutor = await getDefaultTutor(db);
+    const durationMinutes =
+      Number.isFinite(Number(callDurationMinutes)) && Number(callDurationMinutes) > 0
+        ? Number(callDurationMinutes)
+        : callType.duration_min;
+
+    const slotStartIso = toUtcIso(normalizedDate, timeSlot);
+    let { data: slot, error: slotErr } = await db
+      .from("call_slots")
+      .select("id, starts_at, status")
+      .eq("call_type_id", callType.id)
+      .eq("starts_at", slotStartIso)
+      .maybeSingle();
+    if (slotErr) throw new Error(slotErr.message);
+
+    if (!slot) {
+      // crea lo slot al volo
+      const { data: created, error: createErr } = await db
+        .from("call_slots")
+        .insert({
+          call_type_id: callType.id,
+          tutor_id: tutor.id,
+          starts_at: slotStartIso,
+          duration_min: durationMinutes,
+          status: "available",
+        })
+        .select("id, starts_at, status")
+        .maybeSingle();
+      if (createErr) throw new Error(createErr.message);
+      slot = created as SlotRow;
+    }
+
+    if (slot.status !== "available") {
+      const slots = await fetchSlotsForDate(db, callType.id, normalizedDate);
+      const { booked } = extractAvailability(slots);
       return NextResponse.json(
-        { error: "Slot già prenotato", booked: Array.from(dayBookings) },
+        { error: "Slot già prenotato", booked },
         { status: 409 },
       );
     }
 
+    const { data: locked, error: lockErr } = await db
+      .from("call_slots")
+      .update({ status: "booked", updated_at: new Date().toISOString() })
+      .eq("id", slot.id)
+      .eq("status", "available")
+      .select("id")
+      .maybeSingle();
+    if (lockErr) throw new Error(lockErr.message);
+    if (!locked) {
+      const slots = await fetchSlotsForDate(db, callType.id, normalizedDate);
+      const { booked } = extractAvailability(slots);
+      return NextResponse.json(
+        { error: "Slot già prenotato", booked },
+        { status: 409 },
+      );
+    }
+
+    const userId = accUid || null;
+    const { error: bookingErr } = await db.from("call_bookings").insert({
+      slot_id: slot.id,
+      call_type_id: callType.id,
+      tutor_id: tutor.id,
+      user_id: userId,
+      full_name: fullName,
+      email: replyEmail,
+      note: extraNote || null,
+      status: "confirmed",
+    });
+    if (bookingErr) throw new Error(bookingErr.message);
+
+    const callTypeLabel = callType.name;
+
+    if (!toEmail) {
+      throw new Error("Email destinatario mancante (BLACK_ONBOARDING_TO o GMAIL_USER).");
+    }
+
+    const mailer = ensureTransporter();
     const html = `
       <div style="font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;line-height:1.5;color:#0f172a">
-        <h2 style="margin:0 0 8px;font-size:18px">Nuova prenotazione onboarding Black</h2>
+        <h2 style="margin:0 0 8px;font-size:18px">Nuova prenotazione ${escapeHtml(callTypeLabel)}</h2>
         <p style="margin:4px 0"><strong>Nome:</strong> ${escapeHtml(fullName)}</p>
         <p style="margin:4px 0"><strong>Email:</strong> ${escapeHtml(replyEmail)}</p>
+        <p style="margin:4px 0"><strong>Tipo di chiamata:</strong> ${escapeHtml(callTypeLabel)}</p>
+        <p style="margin:4px 0"><strong>Durata:</strong> ${escapeHtml(
+          `${durationMinutes} minuti`,
+        )}</p>
         <p style="margin:4px 0"><strong>Data:</strong> ${normalizedDate}</p>
         <p style="margin:4px 0"><strong>Ora:</strong> ${timeSlot}</p>
+        <p style="margin:4px 0"><strong>Tutor:</strong> ${escapeHtml(
+          tutor.display_name || "Tutor",
+        )}</p>
         <p style="margin:4px 0"><strong>Timezone:</strong> ${escapeHtml(tz)}</p>
         ${extraNote ? `<p style="margin:8px 0"><strong>Nota:</strong><br>${escapeHtml(extraNote)}</p>` : ""}
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0" />
@@ -152,11 +314,14 @@ export async function POST(req: Request) {
     `.trim();
 
     const text = `
-Nuova prenotazione onboarding Black
+Nuova prenotazione ${callTypeLabel}
 Nome: ${fullName}
 Email: ${replyEmail}
+Tipo di chiamata: ${callTypeLabel}
+Durata: ${durationMinutes} minuti
 Data: ${normalizedDate}
 Ora: ${timeSlot}
+Tutor: ${tutor.display_name || "Tutor"}
 Timezone: ${tz}
 ${extraNote ? `Nota: ${extraNote}` : ""}
 Account email: ${accEmail || replyEmail}
@@ -165,24 +330,24 @@ Display name: ${accDisplay || "—"}
 Username: ${accUsername || "—"}
 `.trim();
 
-    if (!toEmail) {
-      throw new Error("Email destinatario mancante (BLACK_ONBOARDING_TO o GMAIL_USER).");
-    }
-
-    const mailer = ensureTransporter();
     await mailer.sendMail({
       from: `"Theoremz Black" <${fromUser}>`,
       to: toEmail,
-      subject: `[Black] Onboarding ${normalizedDate} ${timeSlot}`,
+      subject: `[Black] ${callTypeLabel} ${normalizedDate} ${timeSlot}`,
       text,
       html,
       replyTo: replyEmail,
     });
 
-    dayBookings.add(timeSlot);
-    bookingStore.set(normalizedDate, dayBookings);
+    const slots = await fetchSlotsForDate(db, callType.id, normalizedDate);
+    const { booked } = extractAvailability(slots);
 
-    return NextResponse.json({ ok: true, booked: Array.from(dayBookings) });
+    return NextResponse.json({
+      ok: true,
+      booked,
+      callType: callType.slug,
+      slot: slot.id,
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message || "Errore prenotazione" },
