@@ -491,7 +491,8 @@ function composeEmail({
     tipPayload.motivation || "Siamo qui, scrivici se serve un check veloce.",
     briefMd
   );
-  const intro = `Ciao, ti scrivo per la verifica di ${subjectLabel} di domani (${dateLabel}). ${prepLine}`;
+  const recipient = parentName?.trim() || "genitori";
+  const intro = `Ciao ${recipient}, ti scrivo per la verifica di ${subjectLabel} di domani (${dateLabel}). ${prepLine}`;
   const closing = "In bocca al lupo,\nTeam Theoremz";
 
   const sections = [

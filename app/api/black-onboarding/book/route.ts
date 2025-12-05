@@ -218,7 +218,7 @@ export async function POST(req: Request) {
         : callType.duration_min;
 
     const slotStartIso = toUtcIso(normalizedDate, timeSlot);
-    let { data: slot, error: slotErr } = await db
+    const { data: slot, error: slotErr } = await db
       .from("call_slots")
       .select("id, starts_at, status")
       .eq("call_type_id", callType.id)

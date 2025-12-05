@@ -885,14 +885,15 @@ export default function WhatsAppAdmin() {
                                 {generatingId === (m.id || m.created_at) ? "..." : "Suggerisci AI"}
                               </button>
                             )}
-                            {images.length > 0 && (
-                              <div className="grid grid-cols-1 gap-2">
-                                {images.map((src, idx) => (
-                                  <img
-                                    key={`${m.created_at}-${idx}`}
-                                    src={src}
-                                    alt="media"
-                                    className="max-h-60 w-full rounded-xl object-contain border border-slate-700/50 cursor-zoom-in"
+                          {images.length > 0 && (
+                            <div className="grid grid-cols-1 gap-2">
+                              {images.map((src, idx) => (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  key={`${m.created_at}-${idx}`}
+                                  src={src}
+                                  alt="media"
+                                  className="max-h-60 w-full rounded-xl object-contain border border-slate-700/50 cursor-zoom-in"
                                     onClick={() => setPreviewImage(src)}
                                   />
                                 ))}
@@ -1195,6 +1196,7 @@ export default function WhatsAppAdmin() {
               ×
             </button>
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewImage}
                 alt="preview"
