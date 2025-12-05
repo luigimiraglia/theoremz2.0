@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { adminDb } from "@/lib/firebaseAdmin";
-import { supabaseServer } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,11 +8,6 @@ export const dynamic = "force-dynamic";
 const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_APP_PASS = process.env.GMAIL_APP_PASS;
 const CONTACT_TO = process.env.CONTACT_TO || GMAIL_USER;
-const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN?.trim() || "";
-const WHATSAPP_PHONE_NUMBER_ID =
-  process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID?.trim() || "";
-const WHATSAPP_GRAPH_VERSION =
-  process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v20.0";
 
 type QuizKind = "start-studente" | "start-genitore" | string;
 
@@ -189,24 +183,7 @@ export async function POST(req: Request) {
       html,
     });
 
-    if (quiz === "start-studente") {
-      const normalizedPhone = normalizePhoneForWhatsapp(phone);
-      const planName = plan.name?.toLowerCase() || "";
-      const templateName = planName.includes("mentor")
-        ? "info_mentor2"
-        : planName.includes("black") || planName.includes("essential")
-          ? "info_black"
-          : null;
-      if (normalizedPhone && templateName) {
-        sendWhatsAppTemplate({
-          to: normalizedPhone,
-          templateName,
-          language: "it",
-        }).catch((err) => {
-          console.warn("[quiz-report] template send failed", err);
-        });
-      }
-    }
+    // L'invio automatico del template info su WhatsApp dopo il quiz è disattivato.
 
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -228,58 +205,6 @@ function escapeHtml(input: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
-}
-
-function normalizePhoneForWhatsapp(raw: string) {
-  if (!raw) return null;
-  let digits = raw.replace(/\D+/g, "");
-  if (!digits || digits.length < 6) return null;
-  if (digits.startsWith("00")) digits = digits.slice(2);
-  if (!digits.startsWith("39")) {
-    if (digits.startsWith("0")) {
-      digits = digits.replace(/^0+/, "");
-    }
-    digits = `39${digits}`;
-  }
-  return `+${digits}`;
-}
-
-async function sendWhatsAppTemplate({
-  to,
-  templateName,
-  language = "it",
-}: {
-  to: string;
-  templateName: string;
-  language?: string;
-}) {
-  if (!META_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
-    throw new Error("missing_whatsapp_config");
-  }
-  const endpoint = `https://graph.facebook.com/${WHATSAPP_GRAPH_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-  const payload = {
-    messaging_product: "whatsapp",
-    to,
-    type: "template",
-    template: {
-      name: templateName,
-      language: { code: language },
-    },
-  };
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${META_ACCESS_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => null);
-  if (!res.ok || (data && (data as any).error)) {
-    throw new Error((data as any)?.error?.message || `status_${res.status}`);
-  }
-  logTemplateConversation({ to, templateName }).catch(() => {});
-  return true;
 }
 
 function buildPlanPitch({
@@ -529,54 +454,6 @@ function buildBlackTemplate(isParent: boolean) {
     "Se vuoi iniziare oggi, puoi attivarlo qui: theoremz.com/black",
     "Ti arriva subito l'accesso completo e il piano personalizzato.",
   ].join("\n");
-}
-
-function extractPhoneTail(raw: string | null) {
-  if (!raw) return null;
-  const digits = raw.replace(/\D+/g, "");
-  if (digits.length < 6) return null;
-  return digits.slice(-10);
-}
-
-async function logTemplateConversation({
-  to,
-  templateName,
-}: {
-  to: string;
-  templateName: string;
-}) {
-  const supabase = supabaseServer();
-  const phoneTail = extractPhoneTail(to);
-  if (!supabase || !phoneTail) return;
-  const now = new Date().toISOString();
-  const preview = `[template:${templateName}]`;
-  try {
-    await supabase
-      .from("black_whatsapp_conversations")
-      .upsert(
-        {
-          phone_tail: phoneTail,
-          phone_e164: to,
-          status: "bot",
-          type: "prospect",
-          bot: "sales",
-          last_message_at: now,
-          last_message_preview: preview,
-          updated_at: now,
-        },
-        { onConflict: "phone_tail" }
-      );
-
-    await supabase.from("black_whatsapp_messages").insert({
-      student_id: null,
-      phone_tail: phoneTail,
-      role: "assistant",
-      content: preview,
-      meta: { source: "quiz_template", template: templateName },
-    });
-  } catch (error) {
-    console.error("[quiz-report] log template convo failed", error);
-  }
 }
 
 function buildMentorTemplate(isParent: boolean) {
