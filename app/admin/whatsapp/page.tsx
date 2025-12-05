@@ -806,6 +806,58 @@ export default function WhatsAppAdmin() {
         </div>
       </div>
 
+      {showToContact && (
+        <div className="fixed inset-0 z-20 bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="mx-auto max-w-5xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">
+                  Follow-up Black
+                </p>
+                <h2 className="text-xl font-bold text-white">Da contattare</h2>
+              </div>
+              <button
+                onClick={() => setShowToContact(false)}
+                className="text-sm text-slate-300 hover:text-white"
+              >
+                Chiudi
+              </button>
+            </div>
+
+            {loadingToContact ? (
+              <div className="mt-6 text-sm text-slate-300">Carico lista...</div>
+            ) : (
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-white">Ultimo contatto &gt; 3 giorni</p>
+                  {toContact.stale.length === 0 && (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
+                      Nessuno
+                    </div>
+                  )}
+                  {toContact.stale.map((item) => (
+                    <ContactCard key={`${item.id}-stale`} item={item} onOpen={setSelected} />
+                  ))}
+                </div>
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-white">
+                    Iscritti &lt; 3 settimane senza contatto
+                  </p>
+                  {toContact.recentNoContact.length === 0 && (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
+                      Nessuno
+                    </div>
+                  )}
+                  {toContact.recentNoContact.map((item) => (
+                    <ContactCard key={`${item.id}-recent`} item={item} onOpen={setSelected} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {showProfile && detail?.conversation.student && (
         <ProfileModal
           student={detail.conversation.student}
@@ -1116,58 +1168,6 @@ function ProfileModal({
           </div>
         </div>
       </div>
-
-      {showToContact && (
-        <div className="fixed inset-0 z-20 bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="mx-auto max-w-5xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">
-                  Follow-up Black
-                </p>
-                <h2 className="text-xl font-bold text-white">Da contattare</h2>
-              </div>
-              <button
-                onClick={() => setShowToContact(false)}
-                className="text-sm text-slate-300 hover:text-white"
-              >
-                Chiudi
-              </button>
-            </div>
-
-            {loadingToContact ? (
-              <div className="mt-6 text-sm text-slate-300">Carico lista...</div>
-            ) : (
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-white">Ultimo contatto &gt; 3 giorni</p>
-                  {toContact.stale.length === 0 && (
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
-                      Nessuno
-                    </div>
-                  )}
-                  {toContact.stale.map((item) => (
-                    <ContactCard key={`${item.id}-stale`} item={item} onOpen={setSelected} />
-                  ))}
-                </div>
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-white">
-                    Iscritti &lt; 3 settimane senza contatto
-                  </p>
-                  {toContact.recentNoContact.length === 0 && (
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
-                      Nessuno
-                    </div>
-                  )}
-                  {toContact.recentNoContact.map((item) => (
-                    <ContactCard key={`${item.id}-recent`} item={item} onOpen={setSelected} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
