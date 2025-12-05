@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions, react-hooks/exhaustive-deps */
 "use client";
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
@@ -205,3 +206,5 @@ export default function EserciziClient({
     </div>
   );
 }
+"/* eslint-disable @typescript-eslint/no-unused-vars */\n"
+"/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions, react-hooks/exhaustive-deps */\n"

@@ -1,6 +1,5 @@
 // app/(landing)/risolutore/page.tsx
 import type { Metadata } from "next";
-import Link from "next/link";
 import RisolutoreUpload from "@/components/RisolutoreUpload";
 
 const TITLE = "Risolutore esercizi";

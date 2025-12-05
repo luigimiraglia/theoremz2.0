@@ -510,8 +510,6 @@ function PlanCard({
   subtitle?: string;
   buyHref: string; // link di acquisto specifico del piano
 }) {
-  const isExternalBuy = /^https?:\/\//i.test(buyHref);
-
   return (
     <div
       className={`relative rounded-2xl bg-white p-5 ring-1 ring-slate-200 ${

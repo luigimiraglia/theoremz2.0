@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import MentorPricing from "@/components/MentorPricing";
-import { CheckCircle2, Sparkles, Star } from "lucide-react";
+import { CheckCircle2, Star } from "lucide-react";
 export const metadata = {
   title: "Theoremz Mentor — Tutor personale per verifiche ed esami",
   description:

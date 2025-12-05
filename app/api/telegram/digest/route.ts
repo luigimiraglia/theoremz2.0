@@ -35,23 +35,6 @@ export async function GET() {
     return NextResponse.json({ ok: true });
   }
 
-  const now = new Date();
-  const in7 = new Date(now.getTime() + 7 * 24 * 3600 * 1000)
-    .toISOString()
-    .slice(0, 10);
-  const upcoming = cards.filter(
-    (c: any) =>
-      c.next_assessment_date &&
-      c.next_assessment_date <= in7 &&
-      c.next_assessment_date >= now.toISOString().slice(0, 10)
-  );
-
-  const line = (c: any) =>
-    `• ${resolveContactLabel(c)} ${c.readiness ?? "—"}/100` +
-    (c.next_assessment_date
-      ? ` (${c.next_assessment_subject ?? "verifica"} ${c.next_assessment_date})`
-      : "");
-
   const weekAssessments = await fetchAssessmentsNext7Days(db);
   const assessmentsText = weekAssessments.length
     ? formatAssessments(weekAssessments)

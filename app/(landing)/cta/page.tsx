@@ -1,9 +1,7 @@
 // app/(landing)/link-in-bio/page.tsx
 import Image from "next/image";
-import Link from "next/link";
 import OpenInBrowserButton from "@/components/OpenInBrowserButton";
 import BottomStopCTA from "@/components/BottomStopCTA";
-import TrackedLink from "@/components/TrackedLink";
 import TrackedA from "@/components/TrackedA";
 
 export const metadata = {

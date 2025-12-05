@@ -89,6 +89,7 @@ export default function PortableRenderer({
                 className="relative w-full max-w-9/10 sm:max-w-3/5 lg:max-w-2/5 rounded-xl overflow-hidden"
                 style={arStyle}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={url}
                   alt={alt}
@@ -107,7 +108,7 @@ export default function PortableRenderer({
         },
       },
     } as typeof ptComponents;
-  }, [value]);
+  }, []);
 
   return <PortableText value={value} components={components} />;
 }

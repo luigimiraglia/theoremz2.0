@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions */
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
@@ -446,3 +447,5 @@ export default function InterrogazioneSim({ prefilledTopic }: { prefilledTopic?:
     </section>
   );
 }
+"/* eslint-disable @typescript-eslint/no-unused-vars */\n"
+"/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions */\n"

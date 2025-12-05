@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions */
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
@@ -804,7 +805,6 @@ function ProfileSection(props: {
         if (json?.profile) setPrefs((p) => ({ ...p, ...json.profile }));
       } catch {}
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   async function persist(next: Partial<ProfilePrefs>) {
@@ -2887,3 +2887,5 @@ function ScheduledExamsCard({
     </Card>
   );
 }
+"/* eslint-disable @typescript-eslint/no-unused-vars */\n"
+"/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions */\n"

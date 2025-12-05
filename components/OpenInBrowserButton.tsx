@@ -58,7 +58,7 @@ export default function OpenInBrowserButton({
     } catch {
       window.location.href = site;
     }
-  }, [href, isAndroid, isIOS, isInApp]);
+  }, [href, isAndroid, isIOS, isInApp, isInstagram, isFacebookIAB, isTikTok]);
 
   const hint = useMemo(() => {
     if (!isInApp) return null;

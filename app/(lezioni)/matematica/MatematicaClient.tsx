@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions */
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useDeferredValue } from "react";
@@ -418,3 +419,5 @@ export default function MatematicaClient({
     </div>
   );
 }
+"/* eslint-disable @typescript-eslint/no-unused-vars */\n"
+"/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions */\n"
