@@ -26,6 +26,7 @@ async function handle(req: Request) {
 
   // Digest and sync once per run (cron now daily)
   results.digest = await callInternal("/api/telegram/digest");
+  results.blackContactDigest = await callInternal("/api/cron/black-contact-digest");
 
   results.sync = await callInternal("/api/cron/sync-black-subscriptions");
 
