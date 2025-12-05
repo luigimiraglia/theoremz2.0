@@ -222,8 +222,12 @@ export default function WhatsAppAdmin() {
               (c.phoneTail && c.phoneTail.replace(/\D/g, "").endsWith(tail)) ||
               (c.phone && c.phone.replace(/\D/g, "").endsWith(tail)),
           ) || null;
-        const nextSelected = match?.phoneTail || tail;
-        setSelected(nextSelected);
+        if (!match?.phoneTail) {
+          setError("Nessuna conversazione trovata per questo numero.");
+          setSelected(null);
+          return;
+        }
+        setSelected(match.phoneTail);
         setShowToContact(false);
       } catch (err: any) {
         console.error(err);
