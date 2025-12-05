@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import clsx from "clsx";
 import { useAuth } from "@/lib/AuthContext";
+import { ArrowRight, ListFilter } from "lucide-react";
+import Link from "next/link";
 
 type ConversationItem = {
   id?: string;
@@ -87,6 +89,12 @@ export default function WhatsAppAdmin() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [linkEmail, setLinkEmail] = useState("");
   const [linking, setLinking] = useState(false);
+  const [loadingToContact, setLoadingToContact] = useState(false);
+  const [showToContact, setShowToContact] = useState(false);
+  const [toContact, setToContact] = useState<{ stale: any[]; recentNoContact: any[] }>({
+    stale: [],
+    recentNoContact: [],
+  });
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasAccess = useMemo(
@@ -418,6 +426,33 @@ export default function WhatsAppAdmin() {
             </p>
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                setShowToContact(true);
+                setLoadingToContact(true);
+                try {
+                  const headers = await buildHeaders();
+                  const res = await fetch("/api/admin/whatsapp?toContact=1", {
+                    headers,
+                    cache: "no-store",
+                  });
+                  const data = await res.json();
+                  setToContact({
+                    stale: Array.isArray(data?.stale) ? data.stale : [],
+                    recentNoContact: Array.isArray(data?.recentNoContact) ? data.recentNoContact : [],
+                  });
+                } catch (err) {
+                  console.error(err);
+                  setError("Errore caricamento da contattare");
+                } finally {
+                  setLoadingToContact(false);
+                }
+              }}
+              className="px-3 py-2 rounded-lg bg-emerald-500 text-slate-900 text-sm font-semibold border border-emerald-400 hover:border-emerald-200 transition inline-flex items-center gap-2"
+            >
+              <ListFilter className="h-4 w-4" aria-hidden />
+              Da contattare
+            </button>
             <button
               onClick={() => fetchList({ keepSelection: true })}
               className="px-3 py-2 rounded-lg bg-slate-800 text-slate-100 text-sm border border-slate-700 hover:border-emerald-400 transition"
@@ -810,6 +845,47 @@ export default function WhatsAppAdmin() {
   );
 }
 
+function ContactCard({
+  item,
+  onOpen,
+}: {
+  item: any;
+  onOpen: (phoneTail: string | null) => void;
+}) {
+  const phoneTail = (item.phone || "").replace(/\D/g, "").slice(-10) || null;
+  const last =
+    item.lastContactedAt &&
+    new Date(item.lastContactedAt).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+      <p className="text-sm font-semibold text-white">{item.name || "—"}</p>
+      <p className="text-xs text-slate-300 mt-1">{item.email || "—"}</p>
+      <p className="text-xs text-slate-400 mt-1">{item.phone || "—"}</p>
+      {item.startDate && (
+        <p className="text-[11px] text-slate-500 mt-1">
+          Start: {new Date(item.startDate).toLocaleDateString("it-IT")}
+        </p>
+      )}
+      {last && (
+        <p className="text-[11px] text-amber-300 mt-1">Ultimo contatto: {last}</p>
+      )}
+      <button
+        type="button"
+        disabled={!phoneTail}
+        onClick={() => onOpen(phoneTail)}
+        className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold transition ${
+          phoneTail
+            ? "bg-emerald-500 text-slate-900 hover:bg-emerald-400"
+            : "bg-slate-700 text-slate-400 cursor-not-allowed"
+        }`}
+      >
+        Apri scheda
+        <ArrowRight className="h-4 w-4" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
 function formatRelative(input?: string | null) {
   if (!input) return "—";
   const ts = new Date(input).getTime();
@@ -1040,6 +1116,58 @@ function ProfileModal({
           </div>
         </div>
       </div>
+
+      {showToContact && (
+        <div className="fixed inset-0 z-20 bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="mx-auto max-w-5xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">
+                  Follow-up Black
+                </p>
+                <h2 className="text-xl font-bold text-white">Da contattare</h2>
+              </div>
+              <button
+                onClick={() => setShowToContact(false)}
+                className="text-sm text-slate-300 hover:text-white"
+              >
+                Chiudi
+              </button>
+            </div>
+
+            {loadingToContact ? (
+              <div className="mt-6 text-sm text-slate-300">Carico lista...</div>
+            ) : (
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-white">Ultimo contatto &gt; 3 giorni</p>
+                  {toContact.stale.length === 0 && (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
+                      Nessuno
+                    </div>
+                  )}
+                  {toContact.stale.map((item) => (
+                    <ContactCard key={`${item.id}-stale`} item={item} onOpen={setSelected} />
+                  ))}
+                </div>
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-white">
+                    Iscritti &lt; 3 settimane senza contatto
+                  </p>
+                  {toContact.recentNoContact.length === 0 && (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
+                      Nessuno
+                    </div>
+                  )}
+                  {toContact.recentNoContact.map((item) => (
+                    <ContactCard key={`${item.id}-recent`} item={item} onOpen={setSelected} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

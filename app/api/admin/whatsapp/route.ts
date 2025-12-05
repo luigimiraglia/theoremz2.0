@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
     if (authError) return authError;
 
     const { searchParams } = new URL(request.url);
+    const toContact = searchParams.get("toContact") === "1";
     const q = (searchParams.get("q") || "").trim();
     const limitRaw = Number(searchParams.get("limit") || 30);
     const limit = Math.min(Math.max(limitRaw || 30, 1), 100);
@@ -77,6 +78,44 @@ export async function GET(request: NextRequest) {
     }
 
     const db = supabaseServer();
+
+    if (toContact) {
+      const now = new Date();
+      const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 3600 * 1000).toISOString();
+      const threeWeeksAgo = new Date(now.getTime() - 21 * 24 * 3600 * 1000).toISOString();
+
+      const { data, error } = await db
+        .from("black_students")
+        .select(
+          "id, student_name, student_email, parent_email, student_phone, parent_phone, start_date, last_contacted_at, profiles:profiles!black_students_user_id_fkey(full_name)",
+        )
+        .order("last_contacted_at", { ascending: true });
+
+      if (error) {
+        console.error("[admin/whatsapp] toContact error", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      const students = Array.isArray(data) ? data : [];
+      const mapItem = (s: any) => ({
+        id: s.id,
+        name: s.student_name || s?.profiles?.full_name || "—",
+        email: s.student_email || s.parent_email || "",
+        phone: s.student_phone || s.parent_phone || "",
+        startDate: s.start_date,
+        lastContactedAt: s.last_contacted_at,
+      });
+
+      const stale = students
+        .filter((s) => s.last_contacted_at && s.last_contacted_at < threeDaysAgo)
+        .map(mapItem);
+      const recentNoContact = students
+        .filter((s) => s.start_date && s.start_date >= threeWeeksAgo && !s.last_contacted_at)
+        .map(mapItem);
+
+      return NextResponse.json({ stale, recentNoContact });
+    }
+
     let query = db
       .from("black_whatsapp_conversations")
       .select(
