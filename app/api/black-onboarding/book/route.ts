@@ -218,7 +218,7 @@ export async function POST(req: Request) {
         : callType.duration_min;
 
     const slotStartIso = toUtcIso(normalizedDate, timeSlot);
-    const { data: slot, error: slotErr } = await db
+    const { data: fetchedSlot, error: slotErr } = await db
       .from("call_slots")
       .select("id, starts_at, status")
       .eq("call_type_id", callType.id)
@@ -226,14 +226,16 @@ export async function POST(req: Request) {
       .maybeSingle();
     if (slotErr) throw new Error(slotErr.message);
 
+    let slot = fetchedSlot as SlotRow | null;
+
     if (!slot) {
       // crea lo slot al volo
       const { data: created, error: createErr } = await db
         .from("call_slots")
         .insert({
           call_type_id: callType.id,
-          tutor_id: tutor.id,
-          starts_at: slotStartIso,
+        tutor_id: tutor.id,
+        starts_at: slotStartIso,
           duration_min: durationMinutes,
           status: "available",
         })

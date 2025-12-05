@@ -7,9 +7,6 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { useAuth } from "@/lib/AuthContext";
-import dynamic from "next/dynamic";
-import { useEffect as useReactEffect } from "react";
-const BlackPopup = dynamic(() => import("@/components/BlackPopup"), { ssr: false });
 
 type UploadState = "idle" | "uploading" | "processing" | "ready";
 
@@ -254,6 +251,7 @@ export default function RisolutoreUpload() {
                 <ImageIcon size={16} />
                 Anteprima
               </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imagePreview} alt="Anteprima esercizio" className="max-h-64 w-full rounded-xl object-contain" />
             </div>
           )}
