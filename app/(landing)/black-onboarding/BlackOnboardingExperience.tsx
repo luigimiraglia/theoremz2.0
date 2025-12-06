@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -39,6 +39,7 @@ export default function BlackOnboardingExperience() {
   });
   const { user } = useAuth();
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const today = useMemo(() => {
     const d = new Date();
@@ -278,7 +279,23 @@ export default function BlackOnboardingExperience() {
             Video introduttivo
           </h1>
 
-          <div className="aspect-video w-full rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/60" />
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black dark:border-slate-800">
+            <video
+              ref={videoRef}
+              src="/videos/intro-black.mp4"
+              className="h-full w-full"
+              playsInline
+              muted
+              autoPlay
+              controls
+              preload="metadata"
+              onPlay={() => setVideoEnded(false)}
+              onEnded={() => setVideoEnded(true)}
+            />
+            {!videoEnded ? (
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 to-black/10" />
+            ) : null}
+          </div>
 
           <button
             type="button"
