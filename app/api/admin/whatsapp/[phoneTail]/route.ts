@@ -217,6 +217,7 @@ export async function POST(
     const nextType = body.type as ConversationType | undefined;
     const nextBot = typeof body.bot === "string" ? body.bot.trim() : undefined;
     const update = (body.update || null) as Record<string, any> | null;
+    const markChecked = body.checked === true;
     const linkEmail = typeof body.linkEmail === "string" ? body.linkEmail.trim() : "";
 
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -238,6 +239,22 @@ export async function POST(
     }
     if (!convo) {
       return NextResponse.json({ error: "conversation_not_found" }, { status: 404 });
+    }
+
+    if (markChecked) {
+      if (!convo.student_id) {
+        return NextResponse.json({ error: "student_not_linked" }, { status: 400 });
+      }
+      const now = new Date().toISOString();
+      const { error: updateStudentErr } = await db
+        .from("black_students")
+        .update({ last_contacted_at: now, updated_at: now })
+        .eq("id", convo.student_id);
+      if (updateStudentErr) {
+        console.error("[admin/whatsapp] mark checked error", updateStudentErr);
+        return NextResponse.json({ error: updateStudentErr.message }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, last_contacted_at: now });
     }
 
     if (linkEmail) {

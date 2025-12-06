@@ -274,6 +274,31 @@ export default function WhatsAppAdmin() {
     [buildHeaders, fetchDetail, fetchList]
   );
 
+  const handleMarkContact = useCallback(
+    async (phoneTail: string) => {
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch(`/api/admin/whatsapp/${phoneTail}`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ checked: true }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const detail = data?.error || data?.detail;
+          throw new Error(detail || `HTTP ${res.status}`);
+        }
+        await Promise.all([fetchDetail(phoneTail), fetchList({ keepSelection: true })]);
+        return null;
+      } catch (err: any) {
+        console.error(err);
+        return err?.message || "Errore aggiornamento contatto";
+      }
+    },
+    [buildHeaders, fetchDetail, fetchList]
+  );
+
   const handleOpenContactFromPanel = useCallback(
     async (rawTail: string | null, opts?: { openProfile?: boolean }) => {
       const digits = (rawTail || "").replace(/\D/g, "");
@@ -1175,6 +1200,7 @@ export default function WhatsAppAdmin() {
           student={detail.conversation.student}
           phoneTail={detail.conversation.phoneTail || ""}
           onSave={handleProfileUpdate}
+          onMarkContact={handleMarkContact}
           onClose={() => setShowProfile(false)}
         />
       )}
@@ -1285,11 +1311,13 @@ function ProfileModal({
   student,
   phoneTail,
   onSave,
+  onMarkContact,
   onClose,
 }: {
   student: NonNullable<ConversationItem["student"]>;
   phoneTail: string;
   onSave: (phoneTail: string, updates: Record<string, any>) => Promise<string | null>;
+  onMarkContact: (phoneTail: string) => Promise<string | null>;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({
@@ -1306,18 +1334,19 @@ function ProfileModal({
     nextAssessmentDate: student.nextAssessmentDate || "",
   });
   const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const onChange = (key: keyof typeof form, value: string) => {
-    setSaved(false);
+    setSuccessMessage(null);
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = async () => {
     setSaving(true);
     setSaveError(null);
-    setSaved(false);
+    setSuccessMessage(null);
     const updates: Record<string, any> = {
       name: form.name,
       studentPhone: form.studentPhone,
@@ -1335,9 +1364,22 @@ function ProfileModal({
     if (err) {
       setSaveError(err);
     } else {
-      setSaved(true);
+      setSuccessMessage("Salvato");
     }
     setSaving(false);
+  };
+
+  const handleChecked = async () => {
+    setChecking(true);
+    setSaveError(null);
+    setSuccessMessage(null);
+    const err = await onMarkContact(phoneTail);
+    if (err) {
+      setSaveError(err);
+    } else {
+      setSuccessMessage("Ultimo contatto aggiornato");
+    }
+    setChecking(false);
   };
 
   const infoRows = [
@@ -1469,9 +1511,18 @@ function ProfileModal({
         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/80">
           <div className="text-sm text-slate-400">
             {saveError && <span className="text-amber-300">{saveError}</span>}
-            {saved && !saveError && <span className="text-emerald-300">Salvato ✔︎</span>}
+            {!saveError && successMessage && (
+              <span className="text-emerald-300">{successMessage}</span>
+            )}
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={handleChecked}
+              disabled={checking}
+              className="px-4 py-2 rounded-lg border border-emerald-500/60 text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-60"
+            >
+              {checking ? "Segno..." : "Checked"}
+            </button>
             <button
               onClick={onClose}
               className="px-4 py-2 rounded-lg border border-slate-700 text-slate-200 bg-slate-800/70 hover:border-slate-500"
