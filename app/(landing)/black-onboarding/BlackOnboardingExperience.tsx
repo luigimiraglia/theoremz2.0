@@ -280,18 +280,15 @@ export default function BlackOnboardingExperience() {
           </h1>
 
           <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black dark:border-slate-800">
-            <video
-              ref={videoRef}
-              src="/videos/intro-black.mp4"
-              className="h-full w-full"
-              playsInline
-              muted
-              autoPlay
-              controls
-              preload="metadata"
-              onPlay={() => setVideoEnded(false)}
-              onEnded={() => setVideoEnded(true)}
-            />
+            <div className="aspect-video w-full">
+              <iframe
+                className="h-full w-full"
+                src="https://www.youtube.com/embed/l-Bz45nw3Ns?rel=0&modestbranding=1&playsinline=1&autoplay=1"
+                title="Onboarding Black"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
             {!videoEnded ? (
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 to-black/10" />
             ) : null}
@@ -307,7 +304,7 @@ export default function BlackOnboardingExperience() {
                 : "border-slate-100 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-600"
             }`}
           >
-            Continua
+            Prenota la chiamata
             <ArrowRight className="h-4 w-4" aria-hidden />
           </button>
         </div>
