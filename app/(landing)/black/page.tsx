@@ -17,14 +17,19 @@ import {
 } from "lucide-react";
 import PriceCard from "@/components/PriceCard";
 import PricingTile from "@/components/PricingTile";
+import CountdownTimer from "@/components/CountdownTimer";
 
 // ---------- METADATA SEO ----------
 const TITLE =
   "Theoremz Black — Mentoring didattico, esercizi illimitati e videolezioni";
 const DESC =
-  "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Piani da 12€/mese. Soddisfatti o rimborsati.";
+  "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Offerta di Natale: 7 giorni di prova gratuita + 2 mesi al 50% fino al 25 dicembre. Piani da 12€/mese. Soddisfatti o rimborsati.";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
 const CANONICAL = `${SITE}/black`;
+const HOLIDAY_OFFER = "7 giorni di prova gratuita + 2 mesi al 50%";
+const HOLIDAY_DEADLINE = "25 dicembre";
+const CURRENT_YEAR = new Date().getFullYear();
+const HOLIDAY_DEADLINE_ISO = `${CURRENT_YEAR}-12-25T23:59:59`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -209,9 +214,32 @@ export default function BlackPage() {
               transform: translateX(200%) skewX(12deg);
             }
           }
+          @keyframes snowFall {
+            0% { transform: translateY(-120px); }
+            100% { transform: translateY(calc(100vh + 120px)); }
+          }
         `,
         }}
       />
+
+      {/* Snow overlay */}
+      <div
+        className="pointer-events-none fixed inset-0 z-[1] overflow-hidden"
+        aria-hidden="true"
+      >
+        <div
+          className="absolute inset-0 animate-[snowFall_12s_linear_infinite] bg-[radial-gradient(7px_7px_at_10%_12%,rgba(255,255,255,0.95),transparent_60%),radial-gradient(7px_7px_at_28%_18%,rgba(255,255,255,0.92),transparent_60%),radial-gradient(8px_8px_at_46%_10%,rgba(255,255,255,0.94),transparent_60%),radial-gradient(7px_7px_at_64%_16%,rgba(255,255,255,0.93),transparent_60%),radial-gradient(7px_7px_at_82%_14%,rgba(255,255,255,0.95),transparent_60%),radial-gradient(6.5px_6.5px_at_16%_40%,rgba(255,255,255,0.92),transparent_60%),radial-gradient(7px_7px_at_34%_44%,rgba(255,255,255,0.9),transparent_60%),radial-gradient(7px_7px_at_58%_38%,rgba(255,255,255,0.92),transparent_60%),radial-gradient(7px_7px_at_78%_42%,rgba(255,255,255,0.93),transparent_60%),radial-gradient(6.5px_6.5px_at_92%_38%,rgba(255,255,255,0.92),transparent_60%),radial-gradient(7px_7px_at_22%_68%,rgba(255,255,255,0.95),transparent_60%),radial-gradient(7px_7px_at_44%_72%,rgba(255,255,255,0.92),transparent_60%),radial-gradient(7px_7px_at_68%_66%,rgba(255,255,255,0.95),transparent_60%),radial-gradient(7px_7px_at_84%_74%,rgba(255,255,255,0.92),transparent_60%),radial-gradient(7px_7px_at_12%_82%,rgba(255,255,255,0.94),transparent_60%),radial-gradient(7px_7px_at_50%_90%,rgba(255,255,255,0.95),transparent_60%),radial-gradient(6.5px_6.5px_at_86%_92%,rgba(255,255,255,0.94),transparent_60%)] opacity-95"
+          style={{ transform: "translateY(-140px)" }}
+        />
+        <div
+          className="absolute inset-0 animate-[snowFall_18s_linear_infinite] bg-[radial-gradient(5px_5px_at_14%_6%,rgba(255,255,255,0.8),transparent_60%),radial-gradient(5px_5px_at_32%_14%,rgba(255,255,255,0.82),transparent_60%),radial-gradient(5.2px_5.2px_at_52%_8%,rgba(255,255,255,0.82),transparent_60%),radial-gradient(5px_5px_at_70%_12%,rgba(255,255,255,0.8),transparent_60%),radial-gradient(5px_5px_at_88%_10%,rgba(255,255,255,0.8),transparent_60%),radial-gradient(5px_5px_at_18%_48%,rgba(255,255,255,0.78),transparent_60%),radial-gradient(5px_5px_at_36%_54%,rgba(255,255,255,0.8),transparent_60%),radial-gradient(5px_5px_at_58%_48%,rgba(255,255,255,0.82),transparent_60%),radial-gradient(5px_5px_at_74%_54%,rgba(255,255,255,0.8),transparent_60%),radial-gradient(5px_5px_at_90%_52%,rgba(255,255,255,0.78),transparent_60%),radial-gradient(5px_5px_at_24%_76%,rgba(255,255,255,0.8),transparent_60%),radial-gradient(5px_5px_at_46%_80%,rgba(255,255,255,0.82),transparent_60%),radial-gradient(5px_5px_at_66%_74%,rgba(255,255,255,0.8),transparent_60%),radial-gradient(5px_5px_at_82%_82%,rgba(255,255,255,0.8),transparent_60%),radial-gradient(5px_5px_at_10%_88%,rgba(255,255,255,0.82),transparent_60%),radial-gradient(5px_5px_at_54%_94%,rgba(255,255,255,0.82),transparent_60%),radial-gradient(5px_5px_at_88%_96%,rgba(255,255,255,0.8),transparent_60%)] opacity-85"
+          style={{ animationDelay: "-6s", transform: "translateY(-160px)" }}
+        />
+        <div
+          className="absolute inset-0 animate-[snowFall_26s_linear_infinite] bg-[radial-gradient(3.8px_3.8px_at_8%_16%,rgba(255,255,255,0.7),transparent_60%),radial-gradient(3.8px_3.8px_at_30%_9%,rgba(255,255,255,0.7),transparent_60%),radial-gradient(3.8px_3.8px_at_52%_14%,rgba(255,255,255,0.72),transparent_60%),radial-gradient(3.8px_3.8px_at_72%_8%,rgba(255,255,255,0.7),transparent_60%),radial-gradient(3.8px_3.8px_at_92%_12%,rgba(255,255,255,0.68),transparent_60%),radial-gradient(3.8px_3.8px_at_14%_60%,rgba(255,255,255,0.7),transparent_60%),radial-gradient(3.8px_3.8px_at_32%_66%,rgba(255,255,255,0.7),transparent_60%),radial-gradient(3.8px_3.8px_at_54%_60%,rgba(255,255,255,0.72),transparent_60%),radial-gradient(3.8px_3.8px_at_70%_66%,rgba(255,255,255,0.7),transparent_60%),radial-gradient(3.8px_3.8px_at_90%_62%,rgba(255,255,255,0.68),transparent_60%),radial-gradient(3.8px_3.8px_at_18%_84%,rgba(255,255,255,0.7),transparent_60%),radial-gradient(3.8px_3.8px_at_40%_88%,rgba(255,255,255,0.7),transparent_60%),radial-gradient(3.8px_3.8px_at_62%_82%,rgba(255,255,255,0.7),transparent_60%),radial-gradient(3.8px_3.8px_at_80%_90%,rgba(255,255,255,0.7),transparent_60%),radial-gradient(3.8px_3.8px_at_6%_94%,rgba(255,255,255,0.68),transparent_60%),radial-gradient(3.8px_3.8px_at_46%_98%,rgba(255,255,255,0.7),transparent_60%),radial-gradient(3.8px_3.8px_at_86%_98%,rgba(255,255,255,0.7),transparent_60%)] opacity-78"
+          style={{ animationDelay: "-14s", transform: "translateY(-180px)" }}
+        />
+      </div>
 
       {/* ============ HERO (2 colonne da md+) ============ */}
       <section className="relative mx-auto max-w-6xl px-5 pt-12 pb-12 sm:px-8 lg:px-12">
@@ -240,9 +268,9 @@ export default function BlackPage() {
               <div className="mt-8 flex items-center gap-4">
                 <a
                   href="#pricing"
-                  className="group relative inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[16px] font-extrabold text-white transition-all duration-300 btn-gradient-animate btn-halo"
+                  className="group relative inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[16px] font-extrabold text-white transition-all duration-300 bg-gradient-to-r from-[#b91c1c] via-[#dc2626] to-[#7f1d1d] shadow-[0_18px_44px_-18px_rgba(185,28,28,0.9)] hover:shadow-[0_20px_52px_-18px_rgba(185,28,28,1)]"
                 >
-                  Scopri le offerte
+                  Scopri l'offerta di Natale
                   <svg
                     className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
                     viewBox="0 0 24 24"
@@ -430,6 +458,35 @@ export default function BlackPage() {
         id="pricing"
         className="mx-auto mt-16 max-w-7xl px-5 pb-4 sm:px-8 lg:px-12"
       >
+        <div
+          className="relative mb-8 overflow-hidden rounded-3xl border border-red-200/40 px-6 py-8 text-center shadow-[0_32px_90px_-38px_rgba(185,28,28,0.85)]"
+          style={{
+            backgroundImage:
+              "linear-gradient(115deg, #7f1d1d, #b91c1c 35%, #ef4444 65%, #7f1d1d)",
+          }}
+        >
+          <div className="flex flex-col items-center gap-4 text-white drop-shadow-[0_10px_26px_rgba(0,0,0,0.28)]">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-1.5 text-[12px] font-black uppercase tracking-[0.32em] text-red-700 shadow-sm">
+              🎄 Offerta di Natale
+            </div>
+            <div className="text-[18px] font-extrabold uppercase tracking-[0.18em] text-amber-100">
+              Solo fino al {HOLIDAY_DEADLINE}
+            </div>
+            <div className="text-[24px] sm:text-[28px] font-black leading-tight tracking-tight text-white [text-shadow:0_7px_18px_rgba(0,0,0,0.32)]">
+              7 giorni GRATIS + 2 mesi al{" "}
+              <span className="text-amber-200">-50%</span>
+            </div>
+            <div className="w-full max-w-md rounded-2xl border border-white/25 bg-white/5 px-4 py-3 shadow-[0_12px_28px_-18px_rgba(0,0,0,0.4)]">
+              <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.3em] text-white/80">
+                Scade tra
+              </div>
+              <CountdownTimer deadline={HOLIDAY_DEADLINE_ISO} />
+            </div>
+            <div className="text-[14px] sm:text-[15px] font-extrabold text-amber-100 drop-shadow-[0_6px_16px_rgba(0,0,0,0.35)]">
+              Solo 50 posti disponibili
+            </div>
+          </div>
+        </div>
         <div className="mx-auto grid max-w-2xl gap-6 items-end justify-items-center lg:max-w-none lg:grid-cols-2 xl:grid-cols-3">
           {/* Colonna 1 – Essential */}
           <PricingTile
@@ -437,13 +494,39 @@ export default function BlackPage() {
             headerLabel="Il più economico"
             headerGradient="bg-gradient-to-r from-green-500 to-cyan-400"
             title="Piano Essential"
+            priceContentByToggleId={{
+              "essential-monthly": (
+                <div className=" flex flex-col items-center leading-tight text-center gap-2">
+                  <span className=" inline-flex items-center justify-center rounded-full border border-emerald-200 bg-gradient-to-r from-green-500 to-cyan-400 px-3 py-1.5 text-[20px] sm:text-[22px] font-black text-white">
+                    7 giorni di prova
+                  </span>
+                  <span className="mt-1 -mb-2 text-[14px] sm:text-[15px] font-bold text-slate-600">
+                    poi{" "}
+                    <span className="line-through text-slate-500">
+                      12€/mese
+                    </span>
+                  </span>
+                  <span className="text-[46px] sm:text-[46px] font-black bg-gradient-to-r from-emerald-700 via-emerald-500 to-cyan-500 bg-clip-text text-transparent drop-shadow-[0_14px_34px_-12px_rgba(16,185,129,0.65)]">
+                    6€/mese{" "}
+                    <span className="align-baseline text-[15px] sm:text-[16px] font-extrabold text-emerald-800">
+                      x2 mesi
+                    </span>
+                  </span>
+                </div>
+              ),
+            }}
+            priceGradientByToggleId={{
+              "essential-monthly":
+                "from-emerald-700 via-emerald-500 to-cyan-500",
+            }}
             toggleOptions={[
               {
                 id: "essential-monthly",
                 label: "Mensile",
                 price: "12€",
                 unit: " /mese",
-                buyHref: "https://buy.stripe.com/bJe8wP6csgiXgE9aXAc7u13",
+                buyHref:
+                  "https://buy.stripe.com/9B68wP7gw8Qv0Fb3v8c7u1a?prefilled_promo_code=NATALE2025",
                 infoHref: "https://wa.link/mkxv41",
                 plan: "Essential Mensile",
               },
@@ -479,7 +562,7 @@ export default function BlackPage() {
               ["ok", "Tutti i vantaggi di Free"],
               ["ok", "100% Soddisfatti o Rimborsati"],
               ["no", "Tutor umano"],
-              ["no", "Domanda settimanale"],
+              ["no", "Check-in settimanale"],
               ["no", "Programma di studio"],
             ]}
           />
@@ -490,13 +573,38 @@ export default function BlackPage() {
             headerLabel="Il più popolare"
             headerGradient="bg-gradient-to-r from-rose-500 to-pink-500"
             title="Piano Black"
+            priceContentByToggleId={{
+              "black-monthly": (
+                <div className=" flex flex-col items-center leading-tight text-center gap-2">
+                  <span className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-gradient-to-r from-rose-500 to-pink-500 px-3 py-1.5 text-[20px] sm:text-[22px] font-black text-white">
+                    7 giorni di prova
+                  </span>
+                  <span className="text-[14px] sm:text-[15px] font-bold text-slate-600 mt-1 -mb-2">
+                    poi{" "}
+                    <span className="line-through text-slate-500">
+                      26€/mese
+                    </span>
+                  </span>
+                  <span className="text-[46px] sm:text-[46px] font-black bg-gradient-to-r from-emerald-700 via-emerald-500 to-green-600 bg-clip-text text-transparent drop-shadow-[0_14px_34px_-12px_rgba(5,150,105,0.7)]">
+                    13€/mese{" "}
+                    <span className="align-baseline text-[15px] sm:text-[16px] font-extrabold text-emerald-800">
+                      x2 mesi
+                    </span>
+                  </span>
+                </div>
+              ),
+            }}
+            priceGradientByToggleId={{
+              "black-monthly": "from-emerald-700 via-emerald-500 to-green-600",
+            }}
             toggleOptions={[
               {
                 id: "black-monthly",
                 label: "Mensile",
                 price: "26€",
                 unit: " /mese",
-                buyHref: "https://buy.stripe.com/00w9ATgR66InbjPaXAc7u17",
+                buyHref:
+                  "https://buy.stripe.com/6oU6oHcAQgiXafL7Loc7u19?prefilled_promo_code=NATALE2025",
                 infoHref: "https://wa.link/4ogl5q",
                 plan: "Black Standard Mensile",
               },
@@ -524,11 +632,11 @@ export default function BlackPage() {
               ],
               [
                 "violet",
-                "Domanda settimanale in videochiamata",
+                "Check-in settimanale in videochiamata",
                 [
-                  "Ogni settimana puoi inviare una domanda al tutor.",
-                  "Prenoti un orario e affrontate l'argomento insieme.",
-                  "Ideale per preparare verifiche, interrogazioni o argomenti complessi.",
+                  "Ogni settimana ci vediamo per capire dove sei e cosa serve per migliorare.",
+                  "Prepariamo insieme verifiche, interrogazioni e argomenti difficili.",
+                  "Uscirai dalla call sapendo esattamente cosa fare nei giorni successivi.",
                 ],
               ],
               [

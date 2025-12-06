@@ -1,7 +1,7 @@
 // components/PricingTile.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import PriceCard, {
   type PriceFeature,
   type ToggleOption,
@@ -16,6 +16,12 @@ type Props = {
   toggleOptions: ToggleOption[];
   defaultToggleId: string;
   priceCardClassName?: string;
+  promo?: ReactNode;
+  promoByToggleId?: Record<string, ReactNode>;
+  priceContent?: ReactNode;
+  priceContentByToggleId?: Record<string, ReactNode>;
+  priceGradient?: string;
+  priceGradientByToggleId?: Record<string, string>;
 };
 
 export default function PricingTile({
@@ -27,11 +33,22 @@ export default function PricingTile({
   toggleOptions,
   defaultToggleId,
   priceCardClassName,
+  promo,
+  promoByToggleId,
+  priceContent,
+  priceContentByToggleId,
+  priceGradient,
+  priceGradientByToggleId,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string>(defaultToggleId);
 
   const active =
     toggleOptions.find((opt) => opt.id === selectedId) || toggleOptions[0];
+  const promoContent = promoByToggleId?.[selectedId] ?? promo;
+  const priceContentResolved =
+    priceContentByToggleId?.[selectedId] ?? priceContent;
+  const priceGradientResolved =
+    priceGradientByToggleId?.[selectedId] ?? priceGradient;
 
   return (
     <div className={outerClassName}>
@@ -78,6 +95,9 @@ export default function PricingTile({
           infoHref={active.infoHref}
           plan={active.plan}
           className={`mt-0 rounded-none border-none shadow-none ring-0 hover:translate-y-0 group-hover:translate-y-0 ${priceCardClassName || ""}`}
+          promo={promoContent}
+          priceContent={priceContentResolved}
+          priceGradient={priceGradientResolved}
           features={features}
         />
       </div>

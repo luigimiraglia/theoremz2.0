@@ -282,15 +282,15 @@ export default function BlackOnboardingExperience() {
           <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black dark:border-slate-800">
             <div className="aspect-video w-full">
               <iframe
-                className="h-full w-full"
-                src="https://www.youtube.com/embed/l-Bz45nw3Ns?rel=0&modestbranding=1&playsinline=1&autoplay=1"
+                className="h-full w-full brightness-[1.15] saturate-110"
+                src="https://www.youtube.com/embed/l-Bz45nw3Ns?rel=0&modestbranding=1&playsinline=1&autoplay=1&controls=0&disablekb=1&fs=0"
                 title="Onboarding Black"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
               />
             </div>
             {!videoEnded ? (
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 to-black/10" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 to-white/0" />
             ) : null}
           </div>
 

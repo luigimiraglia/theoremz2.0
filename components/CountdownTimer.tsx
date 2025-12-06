@@ -1,64 +1,69 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-interface TimeLeft {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
+type Props = {
+  deadline: string;
+};
+
+type Parts = {
+  days: string;
+  hours: string;
+  minutes: string;
+  seconds: string;
+};
+
+function formatParts(ms: number): Parts {
+  const clamped = Math.max(0, ms);
+  const totalSeconds = Math.floor(clamped / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return {
+    days: pad(days),
+    hours: pad(hours),
+    minutes: pad(minutes),
+    seconds: pad(seconds),
+  };
 }
 
-export default function CountdownTimer({ targetDate }: { targetDate: string }) {
-  const calculateTimeLeft = useCallback((): TimeLeft => {
-    const difference = +new Date(targetDate) - +new Date();
-    let timeLeft: TimeLeft = {
-      days: 0,
-      hours: 0,
-      minutes: 0,
-      seconds: 0,
-    };
-
-    if (difference > 0) {
-      timeLeft = {
-        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((difference / 1000 / 60) % 60),
-        seconds: Math.floor((difference / 1000) % 60),
-      };
-    }
-
-    return timeLeft;
-  }, [targetDate]);
-
-  const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft());
+export default function CountdownTimer({ deadline }: Props) {
+  const target = useMemo(() => new Date(deadline).getTime() || Date.now(), [deadline]);
+  const [parts, setParts] = useState<Parts>(() => formatParts(target - Date.now()));
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
+    const id = window.setInterval(() => {
+      setParts(formatParts(target - Date.now()));
     }, 1000);
+    return () => window.clearInterval(id);
+  }, [target]);
 
-    return () => clearInterval(timer);
-  }, [calculateTimeLeft]);
-
-  if (
-    timeLeft.days === 0 &&
-    timeLeft.hours === 0 &&
-    timeLeft.minutes === 0 &&
-    timeLeft.seconds === 0
-  ) {
-    return null;
-  }
+  const items: [string, string][] = [
+    ["GG", parts.days],
+    ["ORE", parts.hours],
+    ["MIN", parts.minutes],
+    ["SEC", parts.seconds],
+  ];
 
   return (
-    <div className="flex -mb-5 items-center justify-center gap-2 text-base font-medium bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white px-4 py-2 rounded-xl">
-      <div className="flex items-center font-extrabold gap-2">
-        <span>Offerta limitata</span>
-        <span>{timeLeft.days}g</span>
-        <span>{timeLeft.hours}h</span>
-        <span>{timeLeft.minutes}m</span>
-        <span>{timeLeft.seconds}s</span>
-      </div>
+    <div className="grid grid-cols-4 gap-2 text-white" aria-live="polite" role="timer">
+      {items.map(([label, value]) => (
+        <div
+          key={label}
+          className="rounded-xl border border-white/25 bg-white/5 px-2 py-2 text-center shadow-[0_8px_20px_-12px_rgba(0,0,0,0.35)]"
+        >
+          <div className="text-[20px] sm:text-[22px] font-black leading-none tracking-tight">
+            {value}
+          </div>
+          <div className="mt-1 text-[11px] font-bold tracking-[0.3em] text-white/80">
+            {label}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

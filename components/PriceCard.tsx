@@ -33,6 +33,9 @@ type PriceCardProps = {
   defaultToggleId?: string;
   toggleOptions?: ToggleOption[];
   tag?: ReactNode;
+  promo?: ReactNode;
+  priceContent?: ReactNode;
+  priceGradient?: string;
 };
 
 function defaultPlanFrom(price?: string, unit?: string) {
@@ -57,6 +60,9 @@ export default function PriceCard({
   defaultToggleId,
   toggleOptions,
   tag,
+  promo,
+  priceContent,
+  priceGradient,
 }: PriceCardProps) {
   const hasToggle = Array.isArray(toggleOptions) && toggleOptions.length > 1;
   const [selectedId, setSelectedId] = useState<string>(
@@ -76,6 +82,7 @@ export default function PriceCard({
     : infoHref || "#";
   const resolvedPlan =
     activeOption?.plan || plan || defaultPlanFrom(resolvedPrice, resolvedUnit);
+  const resolvedPriceGradient = priceGradient || "from-blue-600 to-cyan-400";
 
   return (
     <div
@@ -84,12 +91,24 @@ export default function PriceCard({
       <div className="relative px-6 pt-2 pb-2 lg:px-8 lg:pt-3 lg:pb-3">
         <div className="relative inline-block w-full">
           <div className="flex flex-col items-center">
-            <div className="relative text-[41px] lg:text-[46px] font-black bg-gradient-to-r text-transparent from-blue-600 to-cyan-400 bg-clip-text drop-shadow-[0_8px_24px_rgba(56,189,248,0.38)] lg:whitespace-nowrap">
-              {resolvedPrice}
-              {resolvedUnit}
+            <div
+              className={`relative text-[41px] lg:text-[46px] font-black bg-gradient-to-r text-transparent ${resolvedPriceGradient} bg-clip-text drop-shadow-[0_8px_24px_rgba(56,189,248,0.38)] lg:whitespace-nowrap text-center`}
+            >
+              {priceContent ?? (
+                <>
+                  {resolvedPrice}
+                  {resolvedUnit}
+                </>
+              )}
             </div>
           </div>
         </div>
+
+        {promo ? (
+          <div className="mt-3 rounded-xl border border-rose-100/70 bg-gradient-to-r from-rose-500/85 via-red-500/85 to-amber-400/80 px-3 py-2 text-center text-white shadow-[0_12px_26px_-16px_rgba(248,113,113,0.7)]">
+            {promo}
+          </div>
+        ) : null}
 
         {hasToggle ? (
           <div className="mt-1 mb-0 flex justify-center">

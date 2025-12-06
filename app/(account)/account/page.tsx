@@ -379,6 +379,15 @@ export default function AccountPage() {
                 {user.email}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
+                {planDisplayLabel !== "Black" && (
+                  <Link
+                    href="/black#pricing"
+                    className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-red-500 via-rose-500 to-red-600 px-3 py-1.5 text-sm font-bold text-white shadow-[0_10px_32px_-18px_rgba(239,68,68,0.9)] hover:brightness-110 hover:shadow-[0_12px_36px_-16px_rgba(239,68,68,1)] transition"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Scopri l&apos;offerta di Natale
+                  </Link>
+                )}
                 {!isSubscribed && (
                   <button
                     onClick={handleUpgrade}
