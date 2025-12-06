@@ -26,7 +26,6 @@ const DESC =
   "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Offerta di Natale: 7 giorni di prova gratuita + 2 mesi al 50% fino al 25 dicembre. Piani da 12€/mese. Soddisfatti o rimborsati.";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
 const CANONICAL = `${SITE}/black`;
-const HOLIDAY_OFFER = "7 giorni di prova gratuita + 2 mesi al 50%";
 const HOLIDAY_DEADLINE = "25 dicembre";
 const CURRENT_YEAR = new Date().getFullYear();
 const HOLIDAY_DEADLINE_ISO = `${CURRENT_YEAR}-12-25T23:59:59`;
@@ -270,7 +269,7 @@ export default function BlackPage() {
                   href="#pricing"
                   className="group relative inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[16px] font-extrabold text-white transition-all duration-300 bg-gradient-to-r from-[#b91c1c] via-[#dc2626] to-[#7f1d1d] shadow-[0_18px_44px_-18px_rgba(185,28,28,0.9)] hover:shadow-[0_20px_52px_-18px_rgba(185,28,28,1)]"
                 >
-                  Scopri l'offerta di Natale
+                  Scopri l&apos;offerta di Natale
                   <svg
                     className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
                     viewBox="0 0 24 24"

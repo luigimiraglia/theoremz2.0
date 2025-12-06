@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
 type BurstPiece = {
   dxStart: string;
   dyStart: string;
@@ -39,7 +39,6 @@ export default function BlackOnboardingExperience() {
   });
   const { user } = useAuth();
   const [bookingError, setBookingError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const today = useMemo(() => {
     const d = new Date();
@@ -122,7 +121,7 @@ export default function BlackOnboardingExperience() {
   useEffect(() => {
     if (step !== 2) return;
     setVideoEnded(false);
-    const timer = setTimeout(() => setVideoEnded(true), 12000);
+    const timer = setTimeout(() => setVideoEnded(true), 25000);
     return () => clearTimeout(timer);
   }, [step]);
 
@@ -185,7 +184,7 @@ export default function BlackOnboardingExperience() {
       }
     };
     fetchAvailability();
-  }, [selectedDay]);
+  }, [selectedDay, extractIntervals]);
 
   const canGoPrev = useMemo(() => {
     const prev = new Date(currentMonth);
@@ -559,10 +558,51 @@ export default function BlackOnboardingExperience() {
             👉 Mandarmi un dubbio su WhatsApp
             <ArrowRight className="h-4 w-4" aria-hidden />
           </a>
+          <button
+            type="button"
+            onClick={() => setStep(5)}
+            className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-[14px] font-extrabold text-slate-900 transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          >
+            👉 Sono un genitore
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </button>
         </div>
       </div>
     );
   };
+
+  if (step === 5) {
+    return (
+      <main className="relative min-h-dvh overflow-hidden bg-background text-foreground">
+        <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-3xl items-start justify-center px-4 py-8 sm:px-8 sm:py-10">
+          <div className="relative w-full space-y-6 overflow-hidden rounded-3xl border border-slate-200 bg-white px-5 py-7 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:px-8">
+            <h1 className="text-[24px] font-black leading-tight text-slate-900 dark:text-white">
+              Info per i genitori
+            </h1>
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black dark:border-slate-800">
+              <div className="aspect-video w-full">
+                <iframe
+                  className="h-full w-full brightness-[1.1] saturate-110"
+                  src="https://www.youtube.com/embed/0u9pXl8jQuE?rel=0&modestbranding=1&playsinline=1&autoplay=1&controls=0&disablekb=1&fs=0"
+                  title="Genitori Onboarding"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStep(4)}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-transparent bg-[linear-gradient(90deg,#1d4ed8,#0ea5e9,#38bdf8)] px-5 py-3 text-[15px] font-extrabold text-white transition"
+            >
+              Torna alle indicazioni
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-background text-foreground">
