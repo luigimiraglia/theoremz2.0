@@ -60,8 +60,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const booking = Array.isArray(data)
-    ? data
+  const normalized =
+    Array.isArray(data) && data.length
+      ? data.map((b: any) => ({
+          ...b,
+          slot: Array.isArray(b?.slot) ? b.slot[0] : b?.slot,
+        }))
+      : [];
+
+  const booking = normalized.length
+    ? normalized
         .filter((b) => b?.slot?.starts_at)
         .sort((a, b) => (a.slot.starts_at || "").localeCompare(b.slot.starts_at || ""))[0]
     : null;

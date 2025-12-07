@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -143,28 +143,31 @@ export default function BlackOnboardingExperience() {
     return () => clearTimeout(t);
   }, []);
 
-  const toMinutes = (time: string) => {
+  const toMinutes = useCallback((time: string) => {
     const [h, m] = time.split(":").map((v) => parseInt(v, 10));
     if (Number.isNaN(h) || Number.isNaN(m)) return null;
     return h * 60 + m;
-  };
+  }, []);
 
-  const extractIntervals = (raw: any[]): { start: number; end: number }[] => {
-    const intervals: { start: number; end: number }[] = [];
-    for (const item of raw) {
-      const time = typeof item === "string" ? item : item?.time || item?.start || item?.slot;
-      const duration =
-        typeof item === "object" && item
-          ? Number(item.durationMinutes || item.duration || item.length || 0)
-          : 0;
-      const callType =
-        typeof item === "object" && item ? String(item.callType || item.type || "") : "";
-      const guessedDuration = duration > 0 ? duration : callType.includes("check") ? 20 : 30;
-      const start = typeof time === "string" ? toMinutes(time) : null;
-      if (start !== null) intervals.push({ start, end: start + guessedDuration });
-    }
-    return intervals;
-  };
+  const extractIntervals = useCallback(
+    (raw: any[]): { start: number; end: number }[] => {
+      const intervals: { start: number; end: number }[] = [];
+      for (const item of raw) {
+        const time = typeof item === "string" ? item : item?.time || item?.start || item?.slot;
+        const duration =
+          typeof item === "object" && item
+            ? Number(item.durationMinutes || item.duration || item.length || 0)
+            : 0;
+        const callType =
+          typeof item === "object" && item ? String(item.callType || item.type || "") : "";
+        const guessedDuration = duration > 0 ? duration : callType.includes("check") ? 20 : 30;
+        const start = typeof time === "string" ? toMinutes(time) : null;
+        if (start !== null) intervals.push({ start, end: start + guessedDuration });
+      }
+      return intervals;
+    },
+    [toMinutes],
+  );
 
   useEffect(() => {
     const fetchAvailability = async () => {
