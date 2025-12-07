@@ -7,7 +7,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { getAuth } from "firebase/auth";
-import { PlayCircle, Timer as TimerIcon, FileText, ListChecks, BookOpen } from "lucide-react";
+import {
+  PlayCircle,
+  Timer as TimerIcon,
+  FileText,
+  ListChecks,
+  BookOpen,
+  CalendarClock,
+  ArrowRight,
+} from "lucide-react";
 import NewsletterSettings from "@/components/NewsletterSettings";
 import TempAccessInfo from "@/components/TempAccessInfo";
 import dynamic from "next/dynamic";
@@ -196,6 +204,58 @@ export default function AccountPage() {
     return labels[0] || "Black";
   }, [isSubscribed, planLabel, planTier]);
 
+  const [weeklyCheck, setWeeklyCheck] = useState<{
+    hasBooking: boolean;
+    startsAt: string | null;
+  } | null>(null);
+  const [weeklyCheckLoading, setWeeklyCheckLoading] = useState(false);
+  const [weeklyCheckError, setWeeklyCheckError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchWeeklyCheck = async () => {
+      if (!isSubscribed || planTier !== "Black" || !user?.uid) {
+        setWeeklyCheck(null);
+        setWeeklyCheckError(null);
+        setWeeklyCheckLoading(false);
+        return;
+      }
+      setWeeklyCheckLoading(true);
+      setWeeklyCheckError(null);
+      try {
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) throw new Error("Token non disponibile");
+        const res = await fetch("/api/me/weekly-check-call", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!active) return;
+        if (res.ok) {
+          setWeeklyCheck({
+            hasBooking: Boolean(data?.hasBooking),
+            startsAt: data?.booking?.startsAt || null,
+          });
+        } else {
+          setWeeklyCheckError(data?.error || "Errore verifica call");
+          setWeeklyCheck(null);
+        }
+      } catch (err: any) {
+        if (active) {
+          const detail = err?.message || "Errore rete";
+          setWeeklyCheckError(detail);
+          setWeeklyCheck(null);
+        }
+      } finally {
+        if (active) setWeeklyCheckLoading(false);
+      }
+    };
+    fetchWeeklyCheck();
+    return () => {
+      active = false;
+    };
+  }, [isSubscribed, planTier, user?.uid]);
+
   // UI state: none (pagina unica, sezioni verticali)
   const [gradesVersion, setGradesVersion] = useState(0);
 
@@ -311,6 +371,8 @@ export default function AccountPage() {
     "U"
   ).toUpperCase();
 
+  const isCheckingWeeklyCall = weeklyCheckLoading || (!weeklyCheck && !weeklyCheckError);
+
   // Badges component per riutilizzo
   const BadgesRow = () => (
     <div className="flex items-center gap-1.5 flex-wrap">
@@ -379,7 +441,7 @@ export default function AccountPage() {
                 {user.email}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {planDisplayLabel !== "Black" && (
+                {!isSubscribed && (
                   <Link
                     href="/black#pricing"
                     className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-red-500 via-rose-500 to-red-600 px-3 py-1.5 text-sm font-bold text-white shadow-[0_10px_32px_-18px_rgba(239,68,68,0.9)] hover:brightness-110 hover:shadow-[0_12px_36px_-16px_rgba(239,68,68,1)] transition"
@@ -464,6 +526,47 @@ export default function AccountPage() {
           </Link>
         </div>
       </section>
+
+      {isSubscribed && planTier === "Black" && (
+        <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-4 text-white shadow-sm [.dark_&]:border-slate-700">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                Check settimanale Black
+              </p>
+              <p className="text-sm text-white/80">
+                20 minuti con il tuo tutor per allineare obiettivi e dubbi.
+              </p>
+            </div>
+            {isCheckingWeeklyCall ? (
+              <div className="text-sm font-semibold text-white/80">Controllo slot...</div>
+            ) : weeklyCheck?.hasBooking ? (
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white">
+                <CalendarClock className="h-4 w-4" aria-hidden />
+                Prossima call: {formatDateTimeLabel(weeklyCheck.startsAt)}
+              </div>
+            ) : weeklyCheck ? (
+              <Link
+                href="/black-check-percorso-call"
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-400 px-4 py-2 text-sm font-extrabold text-slate-900 shadow-lg shadow-blue-500/30 transition hover:bg-blue-300"
+              >
+                Prenota la call settimanale
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            ) : (
+              <div className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-semibold text-white/80">
+                Impossibile verificare le prenotazioni, riprova più tardi.
+              </div>
+            )}
+          </div>
+          {weeklyCheckError && (
+            <p className="mt-2 text-xs text-amber-200">
+              Non riesco a verificare le prenotazioni di questa settimana ({weeklyCheckError}). Se
+              non hai già fissato la call, puoi aprire la pagina di prenotazione.
+            </p>
+          )}
+        </section>
+      )}
 
       {/* Temp Access Info */}
       <TempAccessInfo />
@@ -740,6 +843,19 @@ function formatDate(d: Date) {
   } catch {
     return "—";
   }
+}
+
+function formatDateTimeLabel(input?: string | null) {
+  if (!input) return "—";
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("it-IT", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 /* ────────────────────── icons ────────────────────── */

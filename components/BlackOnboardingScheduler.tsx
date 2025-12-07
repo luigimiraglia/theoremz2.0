@@ -29,6 +29,7 @@ const VARIANT_COPY: Record<
     durationMinutes: number;
     callTypeLabel: string;
     callTypeSlug: string;
+    dateLabel: string;
     slotLabel: string;
     slotPill: string;
     statusIntro: string;
@@ -43,6 +44,7 @@ const VARIANT_COPY: Record<
     durationMinutes: 30,
     callTypeLabel: "Onboarding Black",
     callTypeSlug: "onboarding",
+    dateLabel: "Seleziona data (da sabato in poi)",
     slotLabel: "Seleziona orario (30 minuti)",
     slotPill: "30 min",
     statusIntro: "Step 1: scegli una data disponibile a partire da sabato.",
@@ -56,6 +58,7 @@ const VARIANT_COPY: Record<
     durationMinutes: 20,
     callTypeLabel: "Check percorso Black",
     callTypeSlug: "check-percorso",
+    dateLabel: "Seleziona data (min 1g anticipo, max 2 settimane)",
     slotLabel: "Seleziona orario (20 minuti)",
     slotPill: "20 min",
     statusIntro: "Step 1: scegli una data per il check percorso.",
@@ -114,7 +117,7 @@ function capitalize(value: string) {
 function buildCalendarMonth(
   monthStart: Date,
   todayStart: Date,
-  opts: { weeks?: number } = {},
+  opts: { weeks?: number; minDateId?: string; maxDateId?: string } = {},
 ): CalendarDay[] {
   const weeks = opts.weeks ?? 6;
   const firstDay = new Date(monthStart);
@@ -124,7 +127,7 @@ function buildCalendarMonth(
   gridStart.setDate(1 - startWeekday);
 
   const weekdayFmt = new Intl.DateTimeFormat("it-IT", { weekday: "long" });
-  const monthFmt = new Intl.DateTimeFormat("it-IT", { month: "long" });
+    const monthFmt = new Intl.DateTimeFormat("it-IT", { month: "long" });
 
   const days: CalendarDay[] = [];
   for (let i = 0; i < weeks * 7; i++) {
@@ -132,20 +135,21 @@ function buildCalendarMonth(
     d.setDate(gridStart.getDate() + i);
     const weekday = d.getDay();
     const weekdayLabel = WEEKDAYS_SHORT[(weekday + 6) % 7];
-    const id = d.toISOString().split("T")[0];
     const fullLabel = `${capitalize(weekdayFmt.format(d))} ${d.getDate()} ${capitalize(
       monthFmt.format(d),
     )}`;
     const inCurrentMonth = d.getMonth() === monthStart.getMonth();
     const isPast = d < todayStart;
-    const isAllowed = true;
+    const id = d.toISOString().split("T")[0];
+    const isAllowed =
+      (!opts.minDateId || id >= opts.minDateId) && (!opts.maxDateId || id <= opts.maxDateId);
     days.push({
-      id,
       dayNumber: d.getDate(),
       weekday,
       weekdayLabel,
       fullLabel,
       inCurrentMonth,
+      id,
       isAllowed,
       isPast,
     });
@@ -175,18 +179,38 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
     d.setHours(0, 0, 0, 0);
     return d;
   }, []);
-  const firstBookable = useMemo(() => getFirstBookableDate(), []);
+  const allowedRange = useMemo(() => {
+    if (variant !== "check") return null;
+    const nowRome = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Rome" }));
+    nowRome.setHours(0, 0, 0, 0);
+    const min = new Date(nowRome);
+    min.setDate(min.getDate() + 2); // oggi -> dopodomani
+    const max = new Date(nowRome);
+    max.setDate(max.getDate() + 14); // entro 2 settimane
+    return { start: toIsoDateLocal(min), end: toIsoDateLocal(max) };
+  }, [variant]);
+  const firstBookable = useMemo(() => {
+    if (allowedRange?.start) {
+      const [y, m, d] = allowedRange.start.split("-").map((v) => parseInt(v, 10));
+      return new Date(y, (m || 1) - 1, d || 1);
+    }
+    return getFirstBookableDate();
+  }, [allowedRange]);
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const calendarDays = useMemo(
-    () => buildCalendarMonth(currentMonth, todayStart),
-    [currentMonth, todayStart],
+    () =>
+      buildCalendarMonth(currentMonth, todayStart, {
+        minDateId: allowedRange?.start ?? toIsoDateLocal(firstBookable),
+        maxDateId: allowedRange?.end,
+      }),
+    [allowedRange, currentMonth, firstBookable, todayStart],
   );
   const hasSelectableDays = useMemo(
-    () => calendarDays.some((day) => day.id >= toIsoDateLocal(firstBookable) && !day.isPast),
-    [calendarDays, firstBookable],
+    () => calendarDays.some((day) => day.isAllowed && !day.isPast),
+    [calendarDays],
   );
   const [selectedDay, setSelectedDay] = useState<DayOption | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
@@ -388,7 +412,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-300">
-                        Seleziona data (da sabato in poi)
+                        {copy.dateLabel}
                       </p>
                       <p className="text-lg font-semibold text-slate-900 dark:text-white">
                         {currentMonth.toLocaleString("it-IT", {
@@ -436,8 +460,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
                   <div className="grid grid-cols-7 gap-2 text-sm">
                     {calendarDays.map((day) => {
                       const isSelected = selectedDay?.id === day.id;
-                      const minAllowed = day.id >= toIsoDateLocal(firstBookable);
-                      const disabled = !minAllowed || day.isPast;
+                      const disabled = !day.isAllowed || day.isPast;
                       return (
                         <button
                           key={day.id}

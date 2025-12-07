@@ -19,6 +19,9 @@ const ALLOWED_SLOTS = [
 ] as const;
 const DEFAULT_CALL_TYPE_SLUG = "onboarding";
 const DEFAULT_TUTOR_EMAIL = "luigi.miraglia006@gmail.com";
+const ROME_TZ = "Europe/Rome";
+const CHECK_MIN_DAYS = 2; // oggi -> dopodomani
+const CHECK_MAX_DAYS = 14; // entro due settimane
 
 const fromUser = process.env.GMAIL_USER;
 const appPass = process.env.GMAIL_APP_PASS;
@@ -54,6 +57,23 @@ function normalizeDate(date: string) {
 
 function isAllowedSlot(time: string): time is (typeof ALLOWED_SLOTS)[number] {
   return ALLOWED_SLOTS.includes(time as (typeof ALLOWED_SLOTS)[number]);
+}
+
+function todayInRome() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: ROME_TZ }));
+}
+
+function addDays(date: Date, days: number) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function formatDateOnly(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function toUtcIso(date: string, time: string) {
@@ -164,6 +184,23 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Data non valida" }, { status: 400 });
   }
 
+  let range: { minDate?: string; maxDate?: string } | null = null;
+  if (callTypeSlug === "check-percorso") {
+    const today = todayInRome();
+    const minDate = formatDateOnly(addDays(today, CHECK_MIN_DAYS));
+    const maxDate = formatDateOnly(addDays(today, CHECK_MAX_DAYS));
+    range = { minDate, maxDate };
+    if (date < minDate || date > maxDate) {
+      return NextResponse.json({
+        date,
+        available: [],
+        booked: [],
+        callTypes: [callTypeSlug],
+        range,
+      });
+    }
+  }
+
   const db = supabaseServer();
   if (!db) {
     return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
@@ -208,6 +245,7 @@ export async function GET(req: Request) {
       available: Array.from(availableSet).sort(),
       booked: bookedDetailed,
       callTypes: callTypes.map((c) => c.slug),
+      range,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Errore disponibilità" }, { status: 500 });
@@ -243,6 +281,21 @@ export async function POST(req: Request) {
     if (!normalizedDate || !isAllowedSlot(timeSlot)) {
       return NextResponse.json({ error: "Data o orario non validi" }, { status: 400 });
     }
+
+    if (callTypeSlug === "check-percorso") {
+      const today = todayInRome();
+      const minDate = formatDateOnly(addDays(today, CHECK_MIN_DAYS));
+      const maxDate = formatDateOnly(addDays(today, CHECK_MAX_DAYS));
+      if (normalizedDate < minDate || normalizedDate > maxDate) {
+        return NextResponse.json(
+          {
+            error: `Per i check puoi prenotare da ${minDate} a ${maxDate} (almeno 1 giorno di anticipo, max 2 settimane).`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const safeEmail = replyEmail || accEmail || "noreply@theoremz.com";
     const safeName = fullName || accDisplay || accEmail || "Utente Black";
 
