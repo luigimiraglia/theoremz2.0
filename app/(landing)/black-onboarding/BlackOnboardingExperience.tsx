@@ -71,14 +71,14 @@ export default function BlackOnboardingExperience() {
       const d = new Date(gridStart);
       d.setDate(gridStart.getDate() + i);
       const id = d.toISOString().split("T")[0];
-      const inPast = d < today;
+      const inPastOrToday = d <= today;
       const beyondMax = d > maxDate;
       const isCurrentMonth = d.getMonth() === currentMonth.getMonth();
       days.push({
         id,
         dayNumber: d.getDate(),
         monthLabel: formatterMonth.format(d).replace(".", ""),
-        isDisabled: inPast || beyondMax,
+        isDisabled: inPastOrToday || beyondMax,
         isCurrentMonth,
       });
     }
