@@ -7,6 +7,9 @@ import { ArrowRight, ListFilter } from "lucide-react";
 
 type Booking = {
   id: string;
+  slotId?: string;
+  callTypeId?: string | null;
+  tutorId?: string | null;
   startsAt: string;
   durationMin: number | null;
   callType: string | null;
@@ -15,6 +18,22 @@ type Booking = {
   fullName: string;
   email: string;
   note: string | null;
+  status?: string | null;
+};
+
+type CallTypeMeta = { id: string; slug: string; name: string; duration_min: number };
+type TutorMeta = { id: string; display_name?: string | null; email?: string | null };
+type BookingDraft = {
+  id: string | null;
+  fullName: string;
+  email: string;
+  note: string;
+  date: string;
+  time: string;
+  callTypeSlug: string;
+  tutorId: string;
+  durationMin: string;
+  status: "confirmed" | "cancelled";
 };
 
 type ConversationItem = {
@@ -110,6 +129,26 @@ export default function WhatsAppAdmin() {
   const [showBookings, setShowBookings] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [bookingMeta, setBookingMeta] = useState<{ callTypes: CallTypeMeta[]; tutors: TutorMeta[] }>(
+    { callTypes: [], tutors: [] },
+  );
+  const [bookingDraft, setBookingDraft] = useState<BookingDraft>(() => ({
+    id: null,
+    fullName: "",
+    email: "",
+    note: "",
+    date: new Date().toISOString().slice(0, 10),
+    time: "10:00",
+    callTypeSlug: "onboarding",
+    tutorId: "",
+    durationMin: "",
+    status: "confirmed",
+  }));
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [bookingSaving, setBookingSaving] = useState(false);
+  const [bookingActionError, setBookingActionError] = useState<string | null>(null);
+  const [remindingId, setRemindingId] = useState<string | null>(null);
+  const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null);
   const [bookingMonth, setBookingMonth] = useState<Date>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -137,11 +176,20 @@ export default function WhatsAppAdmin() {
     setLoadingBookings(true);
     try {
       const headers = await buildHeaders();
-      const res = await fetch("/api/admin/bookings", { headers, cache: "no-store" });
+      const res = await fetch("/api/admin/bookings?meta=1", { headers, cache: "no-store" });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data?.error || `HTTP ${res.status}`);
       }
+      setBookingMeta({
+        callTypes: Array.isArray(data.callTypes) ? data.callTypes : [],
+        tutors: Array.isArray(data.tutors) ? data.tutors : [],
+      });
+      setBookingDraft((prev) => ({
+        ...prev,
+        callTypeSlug: prev.callTypeSlug || data.callTypes?.[0]?.slug || "onboarding",
+        tutorId: prev.tutorId || data.tutors?.[0]?.id || "",
+      }));
       setBookings(Array.isArray(data.bookings) ? data.bookings : []);
     } catch (err: any) {
       console.error("[admin/whatsapp] bookings error", err);
@@ -435,6 +483,113 @@ export default function WhatsAppAdmin() {
     return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
   };
 
+  const openBookingEditor = (booking?: Booking | null) => {
+    const { date, time } = isoToLocalParts(booking?.startsAt);
+    const fallbackDate =
+      date || new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const fallbackTime = time || "10:00";
+    const callTypeSlug =
+      booking?.callType ||
+      bookingDraft.callTypeSlug ||
+      bookingMeta.callTypes[0]?.slug ||
+      "onboarding";
+    const tutorId =
+      booking?.tutorId || bookingDraft.tutorId || bookingMeta.tutors[0]?.id || "";
+    setBookingDraft({
+      id: booking?.id || null,
+      fullName: booking?.fullName || "",
+      email: booking?.email || "",
+      note: booking?.note || "",
+      date: fallbackDate,
+      time: fallbackTime,
+      callTypeSlug,
+      tutorId,
+      durationMin: booking?.durationMin ? String(booking.durationMin) : "",
+      status: booking?.status === "cancelled" ? "cancelled" : "confirmed",
+    });
+    setBookingActionError(null);
+    setShowBookingForm(true);
+  };
+
+  const handleBookingSave = async () => {
+    const startsAtIso = localPartsToIso(bookingDraft.date, bookingDraft.time);
+    if (!startsAtIso) {
+      setBookingActionError("Data/ora non valida");
+      return;
+    }
+    setBookingSaving(true);
+    setBookingActionError(null);
+    try {
+      const headers = await buildHeaders();
+      headers["Content-Type"] = "application/json";
+      const payload: Record<string, any> = {
+        startsAt: startsAtIso,
+        callTypeSlug: bookingDraft.callTypeSlug,
+        tutorId: bookingDraft.tutorId || undefined,
+        fullName: bookingDraft.fullName,
+        email: bookingDraft.email,
+        note: bookingDraft.note,
+        durationMin: bookingDraft.durationMin ? Number(bookingDraft.durationMin) : undefined,
+        status: bookingDraft.status,
+      };
+      const method = bookingDraft.id ? "PATCH" : "POST";
+      if (bookingDraft.id) payload.id = bookingDraft.id;
+      const res = await fetch("/api/admin/bookings", {
+        method,
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      if (data.booking) {
+        setBookings((prev) => {
+          const list = prev.filter((b) => b.id !== data.booking.id);
+          list.push(data.booking);
+          return list;
+        });
+      }
+      await fetchBookings();
+      setShowBookingForm(false);
+    } catch (err: any) {
+      console.error("[admin/whatsapp] booking save", err);
+      setBookingActionError(err?.message || "Errore salvataggio booking");
+    } finally {
+      setBookingSaving(false);
+    }
+  };
+
+  const handleBookingDelete = async (id: string) => {
+    if (!id) return;
+    const confirmed = typeof window !== "undefined" ? window.confirm("Eliminare la prenotazione?") : true;
+    if (!confirmed) return;
+    setDeletingBookingId(id);
+    setBookingActionError(null);
+    try {
+      const headers = await buildHeaders();
+      headers["Content-Type"] = "application/json";
+      const res = await fetch("/api/admin/bookings", {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      setBookings((prev) => prev.filter((b) => b.id !== id));
+      if (bookingDraft.id === id) {
+        setShowBookingForm(false);
+      }
+    } catch (err: any) {
+      console.error("[admin/whatsapp] booking delete", err);
+      setBookingActionError(err?.message || "Errore eliminazione booking");
+    } finally {
+      setDeletingBookingId(null);
+    }
+  };
+
   const handleGenerateDraft = async (message: Message) => {
     if (!selected || !message.content) return;
     setGeneratingId(message.id || message.created_at);
@@ -578,6 +733,7 @@ export default function WhatsAppAdmin() {
             <button
               onClick={() => {
                 setShowBookings(true);
+                fetchBookings();
               }}
               className="px-3 py-2 rounded-lg bg-indigo-500 text-slate-900 text-sm font-semibold border border-indigo-400 hover:border-indigo-200 transition inline-flex items-center gap-2"
             >
@@ -978,7 +1134,7 @@ export default function WhatsAppAdmin() {
 
       {showBookings && (
         <div className="fixed inset-0 z-[65] flex items-center justify-center bg-slate-900/80 backdrop-blur">
-          <div className="relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
+          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-indigo-300">Calendario</p>
@@ -1010,7 +1166,7 @@ export default function WhatsAppAdmin() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] divide-y lg:divide-y-0 lg:divide-x divide-slate-800">
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] divide-y lg:divide-y-0 lg:divide-x divide-slate-800">
               <div className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-sm font-semibold text-slate-200">
@@ -1039,7 +1195,7 @@ export default function WhatsAppAdmin() {
                       <div
                         key={day.date}
                         className={clsx(
-                          "rounded-xl border p-2 min-h-[90px] flex flex-col gap-2",
+                          "rounded-xl border p-2 min-h-[140px] flex flex-col gap-2",
                           day.inMonth
                             ? "border-slate-800 bg-slate-900/60"
                             : "border-slate-900/50 bg-slate-900/30 text-slate-600"
@@ -1059,7 +1215,7 @@ export default function WhatsAppAdmin() {
                           )}
                         </div>
                         <div className="space-y-1">
-                          {dayBookings.slice(0, 3).map((b) => (
+                          {dayBookings.slice(0, 5).map((b) => (
                             <div
                               key={b.id}
                               className="rounded-lg bg-slate-800/70 border border-slate-700 px-2 py-1 text-[11px] text-slate-100"
@@ -1068,13 +1224,13 @@ export default function WhatsAppAdmin() {
                                 {formatTime(b.startsAt)} · {b.callTypeName || b.callType}
                               </div>
                               <div className="text-[10px] text-slate-400 truncate">
-                                {b.fullName} — {b.email}
+                                {b.fullName}
                               </div>
                             </div>
                           ))}
-                          {dayBookings.length > 3 && (
+                          {dayBookings.length > 5 && (
                             <div className="text-[10px] text-slate-500">
-                              +{dayBookings.length - 3} altri
+                              +{dayBookings.length - 5} altri
                             </div>
                           )}
                         </div>
@@ -1085,16 +1241,210 @@ export default function WhatsAppAdmin() {
               </div>
 
               <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-slate-200">Prossime prenotazioni</p>
-                  <button
-                    onClick={() => fetchBookings()}
-                    className="text-xs text-indigo-300 hover:text-indigo-200"
-                    disabled={loadingBookings}
-                  >
-                    {loadingBookings ? "Aggiorno..." : "Refresh"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openBookingEditor(null)}
+                      className="text-xs rounded-lg border border-emerald-400/70 px-3 py-1.5 font-semibold text-emerald-300 hover:border-emerald-200 hover:text-emerald-100"
+                    >
+                      Nuova prenotazione
+                    </button>
+                    <button
+                      onClick={() => fetchBookings()}
+                      className="text-xs text-indigo-300 hover:text-indigo-200"
+                      disabled={loadingBookings}
+                    >
+                      {loadingBookings ? "Aggiorno..." : "Refresh"}
+                    </button>
+                  </div>
                 </div>
+                {bookingActionError && (
+                  <div className="rounded-lg border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                    {bookingActionError}
+                  </div>
+                )}
+                {showBookingForm && (
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-slate-200">
+                        {bookingDraft.id ? "Modifica prenotazione" : "Nuova prenotazione"}
+                      </p>
+                      <button
+                        onClick={() => {
+                          setShowBookingForm(false);
+                          setBookingDraft((prev) => ({ ...prev, id: null }));
+                        }}
+                        className="text-[11px] text-slate-400 hover:text-slate-200"
+                      >
+                        Chiudi
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className="text-[11px] uppercase tracking-[0.1em] text-slate-500">
+                          Nome
+                        </label>
+                        <input
+                          value={bookingDraft.fullName}
+                          onChange={(e) =>
+                            setBookingDraft((prev) => ({ ...prev, fullName: e.target.value }))
+                          }
+                          className="w-full rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400"
+                          placeholder="Nome studente"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] uppercase tracking-[0.1em] text-slate-500">
+                          Email
+                        </label>
+                        <input
+                          value={bookingDraft.email}
+                          onChange={(e) =>
+                            setBookingDraft((prev) => ({ ...prev, email: e.target.value }))
+                          }
+                          className="w-full rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400"
+                          placeholder="Email studente"
+                          type="email"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className="text-[11px] uppercase tracking-[0.1em] text-slate-500">
+                          Data
+                        </label>
+                        <input
+                          type="date"
+                          value={bookingDraft.date}
+                          onChange={(e) =>
+                            setBookingDraft((prev) => ({ ...prev, date: e.target.value }))
+                          }
+                          className="w-full rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] uppercase tracking-[0.1em] text-slate-500">
+                          Ora
+                        </label>
+                        <input
+                          type="time"
+                          value={bookingDraft.time}
+                          onChange={(e) =>
+                            setBookingDraft((prev) => ({ ...prev, time: e.target.value }))
+                          }
+                          className="w-full rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="space-y-2">
+                        <label className="text-[11px] uppercase tracking-[0.1em] text-slate-500">
+                          Tipo
+                        </label>
+                        <select
+                          value={bookingDraft.callTypeSlug}
+                          onChange={(e) =>
+                            setBookingDraft((prev) => ({ ...prev, callTypeSlug: e.target.value }))
+                          }
+                          className="w-full rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400"
+                        >
+                          {bookingMeta.callTypes.map((ct) => (
+                            <option key={ct.id} value={ct.slug}>
+                              {ct.name} ({ct.duration_min}m)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] uppercase tracking-[0.1em] text-slate-500">
+                          Tutor
+                        </label>
+                        <select
+                          value={bookingDraft.tutorId}
+                          onChange={(e) =>
+                            setBookingDraft((prev) => ({ ...prev, tutorId: e.target.value }))
+                          }
+                          className="w-full rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400"
+                        >
+                          {bookingMeta.tutors.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.display_name || "Tutor"}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] uppercase tracking-[0.1em] text-slate-500">
+                          Durata (min)
+                        </label>
+                        <input
+                          type="number"
+                          value={bookingDraft.durationMin}
+                          onChange={(e) =>
+                            setBookingDraft((prev) => ({ ...prev, durationMin: e.target.value }))
+                          }
+                          className="w-full rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400"
+                          placeholder="Es. 30"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] uppercase tracking-[0.1em] text-slate-500">
+                        Note
+                      </label>
+                      <textarea
+                        value={bookingDraft.note}
+                        onChange={(e) =>
+                          setBookingDraft((prev) => ({ ...prev, note: e.target.value }))
+                        }
+                        rows={2}
+                        className="w-full rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400"
+                        placeholder="Note interne"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 items-center">
+                      <div className="space-y-2">
+                        <label className="text-[11px] uppercase tracking-[0.1em] text-slate-500">
+                          Stato
+                        </label>
+                        <select
+                          value={bookingDraft.status}
+                          onChange={(e) =>
+                            setBookingDraft((prev) => ({
+                              ...prev,
+                              status: e.target.value as "confirmed" | "cancelled",
+                            }))
+                          }
+                          className="w-full rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400"
+                        >
+                          <option value="confirmed">Confermato</option>
+                          <option value="cancelled">Cancellato</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        {bookingDraft.id && (
+                          <button
+                            onClick={() => handleBookingDelete(bookingDraft.id || "")}
+                            disabled={bookingSaving || deletingBookingId === bookingDraft.id}
+                            className="text-[11px] rounded-lg border border-red-500/70 px-3 py-2 font-semibold text-red-200 hover:border-red-300 disabled:opacity-60"
+                            type="button"
+                          >
+                            {deletingBookingId === bookingDraft.id ? "Elimino..." : "Elimina"}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleBookingSave()}
+                          disabled={bookingSaving}
+                          className="text-[11px] rounded-lg border border-emerald-400/80 bg-emerald-500/20 px-3 py-2 font-semibold text-emerald-100 hover:border-emerald-200 disabled:opacity-60"
+                          type="button"
+                        >
+                          {bookingSaving ? "Salvo..." : "Salva"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
                   {bookings
                     .slice()
@@ -1104,11 +1454,23 @@ export default function WhatsAppAdmin() {
                         key={b.id}
                         className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <span className="font-bold">{b.callTypeName || b.callType}</span>
-                          <span className="text-[11px] text-slate-400">
-                            {formatDateLabel(b.startsAt)} · {formatTime(b.startsAt)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={clsx(
+                                "rounded-full px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wide",
+                                b.status === "cancelled"
+                                  ? "bg-red-500/20 text-red-200"
+                                  : "bg-emerald-500/20 text-emerald-100",
+                              )}
+                            >
+                              {b.status === "cancelled" ? "cancellata" : "confermata"}
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              {formatDateLabel(b.startsAt)} · {formatTime(b.startsAt)}
+                            </span>
+                          </div>
                         </div>
                         <div className="text-[11px] text-slate-400">
                           {b.fullName} — {b.email}
@@ -1121,6 +1483,50 @@ export default function WhatsAppAdmin() {
                             {b.note}
                           </div>
                         )}
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            onClick={() => openBookingEditor(b)}
+                            className="text-[11px] rounded-lg border border-slate-700 px-2 py-1 text-slate-200 hover:border-emerald-300"
+                            type="button"
+                          >
+                            Modifica
+                          </button>
+                          <button
+                            onClick={async () => {
+                              setRemindingId(b.id);
+                              setBookingActionError(null);
+                              try {
+                                const headers = await buildHeaders();
+                                headers["Content-Type"] = "application/json";
+                                const res = await fetch("/api/admin/bookings/remind", {
+                                  method: "POST",
+                                  headers,
+                                  body: JSON.stringify({ id: b.id }),
+                                });
+                                const data = await res.json();
+                                if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+                              } catch (err: any) {
+                                console.error("[admin/whatsapp] reminder", err);
+                                setBookingActionError(err?.message || "Errore invio reminder");
+                              } finally {
+                                setRemindingId(null);
+                              }
+                            }}
+                            disabled={remindingId === b.id}
+                            className="text-[11px] rounded-lg border border-indigo-500/70 px-2 py-1 text-indigo-200 hover:border-indigo-300 disabled:opacity-60"
+                            type="button"
+                          >
+                            {remindingId === b.id ? "Invio..." : "Reminder mail"}
+                          </button>
+                          <button
+                            onClick={() => handleBookingDelete(b.id)}
+                            disabled={deletingBookingId === b.id}
+                            className="text-[11px] rounded-lg border border-red-500/70 px-2 py-1 text-red-200 hover:border-red-300 disabled:opacity-60"
+                            type="button"
+                          >
+                            {deletingBookingId === b.id ? "Elimino..." : "Elimina"}
+                          </button>
+                        </div>
                       </div>
                     ))}
                   {!bookings.length && !loadingBookings && (
@@ -1305,6 +1711,27 @@ function formatAbsolute(input?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function isoToLocalParts(iso?: string | null) {
+  if (!iso) return { date: "", time: "" };
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return { date: "", time: "" };
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+  const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(
+    2,
+    "0",
+  )}`;
+  return { date, time };
+}
+
+function localPartsToIso(date: string, time: string) {
+  if (!date || !time) return null;
+  const d = new Date(`${date}T${time}:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
 }
 
 function ProfileModal({
