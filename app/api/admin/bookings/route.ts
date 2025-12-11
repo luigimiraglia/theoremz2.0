@@ -120,7 +120,7 @@ async function ensureBookableSlot(
   const duration = Number(opts.durationMin) > 0 ? Number(opts.durationMin) : opts.callType.duration_min;
   const { data: existing, error } = await db
     .from("call_slots")
-    .select("id, status, call_type_id, tutor_id")
+    .select("id, status, call_type_id, tutor_id, starts_at, duration_min")
     .eq("tutor_id", opts.tutor.id)
     .eq("starts_at", opts.startsAtIso)
     .maybeSingle();
