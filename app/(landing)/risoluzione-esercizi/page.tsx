@@ -1,5 +1,6 @@
 // app/esercizi/page.tsx
 import BuyLink from "@/components/BuyLink";
+import Image from "next/image";
 export default function RisoluzioneEserciziPage() {
   const SITE = "https://theoremz.com";
   const CANONICAL = `${SITE}/risoluzione-esercizi`;
@@ -215,7 +216,14 @@ export default function RisoluzioneEserciziPage() {
         className="mx-auto max-w-6xl px-5 py-8 sm:px-8 lg:px-12"
       >
         <h2 className="text-center text-[24px] sm:text-[28px] font-extrabold">
-          Scegli il tuo pacchetto 👇
+          Scegli il tuo pacchetto{" "}
+          <Image
+            alt="Freccia verso il basso"
+            src="/images/finger.webp"
+            width={28}
+            height={28}
+            className="inline-block h-[1.25em] w-[1.25em] translate-y-[1px]"
+          />
         </h2>
 
         <div className="mt-5 grid gap-5 md:grid-cols-3">

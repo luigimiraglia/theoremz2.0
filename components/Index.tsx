@@ -6,7 +6,14 @@ export default function Index() {
     <>
       <div className="mt-6 bg-gray-100/60 [.dark_&]:bg-slate-800 rounded-2xl mx-6 py-3 px-3 justify-center text-center font-bold xl:mx-auto max-w-screen-xl">
         <h2 className="text-slate-800 [.dark_&]:text-white text-xl md:text-2xl">
-          Inizia subito a imparare 👇
+          Inizia subito a imparare{" "}
+          <Image
+            alt="Freccia verso il basso"
+            src="/images/finger.webp"
+            width={28}
+            height={28}
+            className="inline-block h-[1.25em] w-[1.25em] translate-y-[1px]"
+          />
         </h2>
         <p className="text-slate-800 [.dark_&]:text-white text-md md:text-lg font-medium">
           Scopri tutti i nostri contenuti
