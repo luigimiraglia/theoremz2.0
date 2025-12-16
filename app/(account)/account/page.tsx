@@ -884,38 +884,46 @@ export default function AccountPage() {
   // Badges component per riutilizzo
   const BadgesRow = () => (
     <div className="flex items-center gap-1.5 flex-wrap">
-      {/* Year badge if set */}
-      {profile?.year && (
-        <span className="inline-flex items-center gap-1 text-xs bg-white/20 px-2.5 py-1 rounded-full">
-          🎓 {formatClass(profile)}
-        </span>
-      )}
-      {isSubscribed ? (
-        <span
-          className="inline-flex items-center gap-1.5 text-xs bg-gradient-to-r from-slate-800 to-black px-2.5 py-1 rounded-full border border-white/20 shadow-lg"
-          title={
-            subscriptionStartDate
-              ? `Abbonato dal ${subscriptionStartDate}`
-              : undefined
-          }
-        >
-          <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
-          <span className="font-bold text-white">
-            {planDisplayLabel}
-          </span>
-          {subscriptionDuration && (
-            <span className="text-white/80 font-medium ml-0.5">
-              · {subscriptionDuration}
-            </span>
-          )}
+      {isTutor ? (
+        <span className="inline-flex items-center gap-1.5 text-xs bg-gradient-to-r from-slate-900 via-indigo-900 to-black px-2.5 py-1 rounded-full border border-white/25 shadow-lg shadow-black/30">
+          <Sparkles className="h-3.5 w-3.5 text-fuchsia-300" />
+          <span className="font-semibold text-white">Tutor</span>
         </span>
       ) : (
-        <span className="inline-flex items-center gap-1 text-xs bg-black/20 px-2.5 py-1 rounded-full">
-          <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
-            <path d="M6 10V8a6 6 0 1112 0v2h1a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V11a1 1 0 011-1h1zm2 0h8V8a4 4 0 00-8 0v2z" />
-          </svg>
-          Free
-        </span>
+        <>
+          {profile?.year && (
+            <span className="inline-flex items-center gap-1 text-xs bg-white/20 px-2.5 py-1 rounded-full">
+              🎓 {formatClass(profile)}
+            </span>
+          )}
+          {isSubscribed ? (
+            <span
+              className="inline-flex items-center gap-1.5 text-xs bg-gradient-to-r from-slate-800 to-black px-2.5 py-1 rounded-full border border-white/20 shadow-lg"
+              title={
+                subscriptionStartDate
+                  ? `Abbonato dal ${subscriptionStartDate}`
+                  : undefined
+              }
+            >
+              <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
+              <span className="font-bold text-white">
+                {planDisplayLabel}
+              </span>
+              {subscriptionDuration && (
+                <span className="text-white/80 font-medium ml-0.5">
+                  · {subscriptionDuration}
+                </span>
+              )}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs bg-black/20 px-2.5 py-1 rounded-full">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M6 10V8a6 6 0 1112 0v2h1a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V11a1 1 0 011-1h1zm2 0h8V8a4 4 0 00-8 0v2z" />
+              </svg>
+              Free
+            </span>
+          )}
+        </>
       )}
     </div>
   );
@@ -955,35 +963,49 @@ export default function AccountPage() {
                     Prossima call: {nextBookingLabel}
                   </span>
                 )}
-                {!isSubscribed && (
-                  <Link
-                    href="/black#pricing"
-                    className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-red-500 via-rose-500 to-red-600 px-3 py-1.5 text-sm font-bold text-white shadow-[0_10px_32px_-18px_rgba(239,68,68,0.9)] hover:brightness-110 hover:shadow-[0_12px_36px_-16px_rgba(239,68,68,1)] transition"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Scopri l&apos;offerta di Natale
-                  </Link>
+                {!isTutor && (
+                  <>
+                    {!isSubscribed && (
+                      <Link
+                        href="/black#pricing"
+                        className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-red-500 via-rose-500 to-red-600 px-3 py-1.5 text-sm font-bold text-white shadow-[0_10px_32px_-18px_rgba(239,68,68,0.9)] hover:brightness-110 hover:shadow-[0_12px_36px_-16px_rgba(239,68,68,1)] transition"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Scopri l&apos;offerta di Natale
+                      </Link>
+                    )}
+                    {!isSubscribed && (
+                      <button
+                        onClick={handleUpgrade}
+                        className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
+                      >
+                        Passa a Black
+                      </button>
+                    )}
+                    <button
+                      onClick={() => router.push("/simula-verifica")}
+                      className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
+                    >
+                      Simula verifica
+                    </button>
+                    <button
+                      onClick={() => router.push("/risolutore")}
+                      className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
+                    >
+                      Risolutore AI
+                    </button>
+                  </>
                 )}
-                {!isSubscribed && (
-                  <button
-                    onClick={handleUpgrade}
-                    className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
+                {isTutor && (
+                  <a
+                    href="https://wa.me/3519523641?text=Ciao%20team%20Theoremz,%20sono%20un%20tutor%20ho%20bisogno%20di%20supporto."
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg bg-white/20 hover:bg-white/30 px-3 py-1.5 text-sm font-semibold text-white shadow-sm"
                   >
-                    Passa a Black
-                  </button>
+                    Contatta il team
+                  </a>
                 )}
-                <button
-                  onClick={() => router.push("/simula-verifica")}
-                  className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
-                >
-                  Simula verifica
-                </button>
-                <button
-                  onClick={() => router.push("/risolutore")}
-                  className="rounded-lg bg-white/15 hover:bg-white/25 px-3 py-1.5 text-sm"
-                >
-                  Risolutore AI
-                </button>
                 <button
                   onClick={async () => {
                     try {
@@ -1121,43 +1143,39 @@ export default function AccountPage() {
                             {formatHoursLabel(s.remainingPaid)} rimaste
                           </span>
                         ) : null}
-                        {s.isBlack ? (
-                          <span className="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-[11px] font-bold text-indigo-800 [.dark_&]:bg-indigo-500/15 [.dark_&]:text-indigo-200">
-                            Black
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <p className="mt-1 text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
-                      Ore erogate: {formatHoursLabel(s.hoursConsumed)} · Disponibili: {formatHoursLabel(s.remainingPaid)}
-                    </p>
-                    <p className="text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
-                      Tariffa: {s.hourlyRate != null ? `${s.hourlyRate} €/h` : "n/d"}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openScheduleModal({ studentId: s.id })}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
-                      >
-                        Programma
-                      </button>
-                      {s.isBlack && s.phone ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const tail = (s.phone || "").replace(/\D/g, "").slice(-10);
-                            if (!tail) return;
-                            window.open(`/admin/whatsapp?tail=${tail}`, "_blank");
-                          }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 px-3 py-1 text-[11px] font-semibold text-indigo-800 hover:bg-indigo-50 [.dark_&]:border-indigo-500 [.dark_&]:text-indigo-200 [.dark_&]:hover:bg-indigo-500/10"
-                        >
-                          Apri scheda
-                        </button>
+                      {s.isBlack ? (
+                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-[11px] font-bold text-indigo-800 [.dark_&]:bg-indigo-500/15 [.dark_&]:text-indigo-200">
+                          Black
+                        </span>
                       ) : null}
                     </div>
                   </div>
-                ))}
+                  <p className="mt-1 text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                    Ore erogate: {formatHoursLabel(s.hoursConsumed)} · Disponibili: {formatHoursLabel(s.remainingPaid)}
+                  </p>
+                  <p className="text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                    Tariffa: {s.hourlyRate != null ? `${s.hourlyRate} €/h` : "n/d"}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openScheduleModal({ studentId: s.id })}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
+                    >
+                      Programma
+                    </button>
+                    {s.isBlack ? (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/tutor/scheda-black?studentId=${s.id}`)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 px-3 py-1 text-[11px] font-semibold text-indigo-800 hover:bg-indigo-50 [.dark_&]:border-indigo-500 [.dark_&]:text-indigo-200 [.dark_&]:hover:bg-indigo-500/10"
+                      >
+                        Scheda Black
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
               </div>
             </div>
           </div>
