@@ -1,4 +1,5 @@
 // app/(landing)/link-in-bio/page.tsx
+import type { ReactNode } from "react";
 import Image from "next/image";
 import OpenInBrowserButton from "@/components/OpenInBrowserButton";
 import BottomStopCTA from "@/components/BottomStopCTA";
@@ -26,11 +27,28 @@ export const metadata = {
   },
 };
 
-const freebies = [
+const inlineMemo = (
+  <Image
+    alt="Icona appunti"
+    src="/images/memo.webp"
+    width={20}
+    height={20}
+    className="inline-block h-[1.1em] w-[1.1em] translate-y-[1px]"
+  />
+);
+
+type Freebie = {
+  title: string;
+  href: string;
+  emoji: ReactNode;
+  isWhatsApp?: boolean;
+};
+
+const freebies: Freebie[] = [
   {
     title: "Guida per le verifiche",
     href: "https://wa.link/6d4vpu",
-    emoji: "📝",
+    emoji: inlineMemo,
     isWhatsApp: true,
   },
   {
@@ -81,7 +99,7 @@ export default function LinkInBioPage() {
           <ul className="grid gap-2">
             {freebies.map((f) => {
               const isWA =
-                (f as any).isWhatsApp ||
+                f.isWhatsApp ||
                 (typeof f.href === "string" && f.href.includes("wa.link"));
               const base =
                 "flex items-center justify-between rounded-xl px-4 py-3 text-[14px] font-semibold ring-1 transition hover:shadow-md hover:ring-slate-300";
@@ -103,7 +121,7 @@ export default function LinkInBioPage() {
                   >
                     <span className="flex items-center gap-2">
                       <span className="text-[18px]" aria-hidden>
-                        {(f as any).emoji}
+                        {f.emoji}
                       </span>
                       <span>{f.title}</span>
                     </span>

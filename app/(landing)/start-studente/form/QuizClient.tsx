@@ -86,6 +86,26 @@ const PLANS = {
 
 const QUIZ_ID = "start-studente" as const;
 
+const inlineRocket = (
+  <Image
+    alt="Icona razzo"
+    src="/images/rocket.webp"
+    width={26}
+    height={26}
+    className="inline-block h-[1.15em] w-[1.15em] translate-y-[1px]"
+  />
+);
+
+const inlineChat = (
+  <Image
+    alt="Icona chat"
+    src="/images/mess.webp"
+    width={24}
+    height={24}
+    className="inline-block h-[1.05em] w-[1.05em] translate-y-[1px]"
+  />
+);
+
 type Plan = (typeof PLANS)[keyof typeof PLANS];
 
 type PhoneStatus = "idle" | "missing" | "sending" | "submitted" | "error";
@@ -209,7 +229,8 @@ export default function QuizClient() {
             />
           </div>
           <h1 className="text-[26px] font-black leading-snug">
-            Scopri il tuo modo di imparare matematica 🚀
+            Scopri il tuo modo di imparare matematica{" "}
+            {inlineRocket}
           </h1>
           <p className="mt-3 max-w-sm text-[14px] font-medium text-slate-600">
             ⏱️ Ci vogliono meno di 2 minuti. Alla fine riceverai un report gratuito con consigli personalizzati e il percorso più adatto a te.
@@ -363,7 +384,7 @@ function FinalScreen({ answers, phone, onPhoneChange, phoneStatus, onSubmitPhone
               </p>
             )}
             <p className="text-[12px] font-semibold text-slate-500">
-              💬 Niente spam — ti scriviamo solo per inviarti il tuo piano e suggerimenti utili.
+              {inlineChat}{" "}Niente spam — ti scriviamo solo per inviarti il tuo piano e suggerimenti utili.
             </p>
           </>
         )}

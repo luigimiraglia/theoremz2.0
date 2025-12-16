@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState, useEffect, useRef } from "react";
@@ -139,18 +140,39 @@ function ImgIllo({ kind }: { kind: Exclude<BenefitKey, "ads"> }) {
 
 type IlloProps = { play?: boolean };
 
+const inlineMemo = (
+  <Image
+    alt="Icona appunti"
+    src="/images/memo.webp"
+    width={20}
+    height={20}
+    className="inline-block h-[1.1em] w-[1.1em] translate-y-[1px]"
+  />
+);
+
 const BENEFITS: Record<
   BenefitKey,
   {
-    title: string;
+    title: ReactNode;
     lead: string;
     desc: string;
-    icon: string;
+    icon: ReactNode;
     Illustration: React.FC<IlloProps>;
   }
 > = {
   ads: {
-    title: "Assistenza via chat illimitata 💬",
+    title: (
+      <span className="inline-flex items-center gap-2">
+        <Image
+          alt="Icona chat"
+          src="/images/mess.webp"
+          width={24}
+          height={24}
+          className="inline-block h-[1.05em] w-[1.05em] translate-y-[1px]"
+        />
+        <span>Assistenza via chat illimitata</span>
+      </span>
+    ),
     lead: "Un tutor personale sempre con te",
     desc: "Con Black hai assistenza costante via chat: un insegnante ti segue 1:1 ogni giorno per aiutarti con i compiti e rispondere a ogni dubbio.",
     icon: "👨‍🏫",
@@ -167,7 +189,7 @@ const BENEFITS: Record<
     title: "Aiuto compiti giornaliero 📚",
     lead: "Supporto costante per ogni materia",
     desc: "Ogni giorno un tutor ti segue passo passo nella risoluzione degli esercizi, con spiegazioni dettagliate e personalizzate per te.",
-    icon: "📝",
+    icon: inlineMemo,
     Illustration: () => <ImgIllo kind="tutor" />,
   },
   dark: {

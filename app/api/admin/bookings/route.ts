@@ -4,15 +4,15 @@ import { supabaseServer } from "@/lib/supabase";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ALLOWED_EMAIL = "luigi.miraglia006@gmail.com";
+const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
+const DEFAULT_TUTOR_EMAIL = "luigi.miraglia006@gmail.com";
 
 type CallTypeRow = { id: string; slug: string; name: string; duration_min: number };
 type TutorRow = { id: string; display_name?: string | null; email?: string | null };
 type SlotRow = { id: string; status?: string | null; starts_at: string; duration_min?: number | null };
 
-function isAdminEmail(email?: string | null) {
-  return Boolean(email && email.toLowerCase() === ALLOWED_EMAIL);
-}
+const isAdminEmail = (email?: string | null) =>
+  Boolean(email && email.toLowerCase() === ADMIN_EMAIL);
 
 async function getAdminAuth() {
   try {
@@ -24,27 +24,89 @@ async function getAdminAuth() {
   }
 }
 
-async function requireAdmin(request: NextRequest) {
-  if (process.env.NODE_ENV === "development") return null;
+type Viewer = { isAdmin: boolean; tutorId: string | null; email: string | null };
+
+async function resolveViewer(
+  request: NextRequest,
+  db: ReturnType<typeof supabaseServer>,
+): Promise<{ error?: NextResponse; viewer?: Viewer }> {
+  if (process.env.NODE_ENV === "development") {
+    // In dev prova comunque a leggere il token per derivare tutorId/email reali.
+    let email: string | null = null;
+    let tutorId: string | null = null;
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : null;
+    if (token) {
+      const adminAuth = await getAdminAuth();
+      if (adminAuth) {
+        try {
+          const decoded = await adminAuth.verifyIdToken(token);
+          email = decoded.email?.toLowerCase() || null;
+          if (email) {
+            const { data: tutor } = await db
+              .from("tutors")
+              .select("id")
+              .ilike("email", email)
+              .maybeSingle();
+            tutorId = tutor?.id || null;
+          }
+        } catch (err) {
+          console.warn("[admin/bookings] dev token decode failed", err);
+        }
+      }
+    }
+    return { viewer: { isAdmin: true, tutorId, email } };
+  }
 
   const authHeader = request.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return { error: NextResponse.json({ error: "unauthorized" }, { status: 401 }) };
   }
+
   const token = authHeader.slice("Bearer ".length);
   const adminAuth = await getAdminAuth();
   if (!adminAuth) {
-    return NextResponse.json({ error: "admin_auth_unavailable" }, { status: 503 });
+    return { error: NextResponse.json({ error: "admin_auth_unavailable" }, { status: 503 }) };
   }
+
   try {
     const decoded = await adminAuth.verifyIdToken(token);
-    if (!isAdminEmail(decoded.email)) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    const email = decoded.email?.toLowerCase() || null;
+    if (!email) {
+      return { error: NextResponse.json({ error: "unauthorized" }, { status: 401 }) };
     }
-    return null;
+
+    const { data: tutor, error: tutorErr } = await db
+      .from("tutors")
+      .select("id, email")
+      .ilike("email", email || "")
+      .maybeSingle();
+    if (tutorErr) {
+      console.error("[admin/bookings] tutor lookup error", tutorErr);
+      return { error: NextResponse.json({ error: "auth_error" }, { status: 500 }) };
+    }
+
+    if (isAdminEmail(email)) {
+      // Admin: prova sempre a risalire al tutor collegato all'email; in fallback usa il primo tutor disponibile.
+      let tutorId = tutor?.id || null;
+      if (!tutorId) {
+        const { data: fallback } = await db
+          .from("tutors")
+          .select("id")
+          .order("created_at", { ascending: true })
+          .limit(1);
+        tutorId = fallback?.[0]?.id || null;
+      }
+      return { viewer: { isAdmin: true, tutorId, email } };
+    }
+
+    if (!tutor) {
+      return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
+    }
+    return { viewer: { isAdmin: false, tutorId: tutor.id, email } };
   } catch (error) {
     console.error("[admin/bookings] auth error", error);
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return { error: NextResponse.json({ error: "unauthorized" }, { status: 401 }) };
   }
 }
 
@@ -71,7 +133,10 @@ function mapBooking(row: any) {
     status: (row.status as string | null) || (slot.status as string | null),
     callType: slot.call_type?.slug as string | null,
     callTypeName: slot.call_type?.name as string | null,
-    tutorName: slot.tutor?.display_name as string | null,
+    tutorName:
+      (slot.tutor?.display_name as string | null) ||
+      (slot.tutor?.full_name as string | null) ||
+      (slot.tutor?.email as string | null),
   };
 }
 
@@ -96,14 +161,34 @@ async function fetchDefaultTutor(db: ReturnType<typeof supabaseServer>, tutorId?
     if (error) throw new Error(error.message);
     if (data) return data as TutorRow;
   }
+  // Preferisci il tutor con l'email di default, altrimenti il primo disponibile
+  const { data: byEmail, error: byEmailErr } = await db
+    .from("tutors")
+    .select("id, display_name, email")
+    .eq("email", DEFAULT_TUTOR_EMAIL)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  if (byEmailErr) throw new Error(byEmailErr.message);
+  if (byEmail && byEmail[0]) return byEmail[0] as TutorRow;
+
   const { data, error } = await db
     .from("tutors")
     .select("id, display_name, email")
     .order("created_at", { ascending: true })
-    .limit(1)
+    .limit(1);
+  if (error) throw new Error(error.message);
+  if (!data || !data[0]) throw new Error("Nessun tutor configurato");
+  return data[0] as TutorRow;
+}
+
+async function fetchTutorById(db: ReturnType<typeof supabaseServer>, tutorId: string) {
+  const { data, error } = await db
+    .from("tutors")
+    .select("id, display_name, email")
+    .eq("id", tutorId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Nessun tutor configurato");
+  if (!data) throw new Error("Tutor non trovato");
   return data as TutorRow;
 }
 
@@ -117,16 +202,25 @@ async function ensureBookableSlot(
     allowSlotId?: string | null;
   },
 ) {
-  const duration = Number(opts.durationMin) > 0 ? Number(opts.durationMin) : opts.callType.duration_min;
+  const duration =
+    Number.isFinite(Number(opts.durationMin)) && Number(opts.durationMin) > 0
+      ? Number(opts.durationMin)
+      : Number(opts.callType.duration_min);
+  if (!duration || Number.isNaN(duration) || duration <= 0) {
+    throw new Error("Durata slot non valida");
+  }
+  const endMs = new Date(opts.startsAtIso).getTime() + duration * 60000;
+  const endIso = new Date(endMs).toISOString();
   const { data: existing, error } = await db
     .from("call_slots")
     .select("id, status, call_type_id, tutor_id, starts_at, duration_min")
     .eq("tutor_id", opts.tutor.id)
-    .eq("starts_at", opts.startsAtIso)
-    .maybeSingle();
+    .gte("starts_at", opts.startsAtIso)
+    .lt("starts_at", endIso);
   if (error) throw new Error(error.message);
 
-  let slot: SlotRow | null = (existing as SlotRow) || null;
+  let slot: SlotRow | null =
+    existing?.find((s: any) => s.starts_at === opts.startsAtIso) || null;
   if (!slot) {
     const { data: created, error: createErr } = await db
       .from("call_slots")
@@ -138,15 +232,39 @@ async function ensureBookableSlot(
           duration_min: duration,
           status: "available",
         },
-        { onConflict: "tutor_id,starts_at" },
+        { onConflict: "tutor_id,starts_at", ignoreDuplicates: true },
       )
       .select("id, status, starts_at, duration_min")
-      .maybeSingle();
+      .limit(1);
     if (createErr) throw new Error(createErr.message);
-    slot = created as SlotRow;
+    slot = (created && created[0]) as SlotRow;
   }
 
-  if (slot.status === "booked" && slot.id !== opts.allowSlotId) {
+  if (!slot) {
+    const { data: fallback, error: fallbackErr } = await db
+      .from("call_slots")
+      .select("id, status, call_type_id, tutor_id, starts_at, duration_min")
+      .eq("tutor_id", opts.tutor.id)
+      .eq("starts_at", opts.startsAtIso)
+      .maybeSingle();
+    if (fallbackErr) throw new Error(fallbackErr.message);
+    slot = (fallback as SlotRow | null) || null;
+  }
+
+  if (!slot) {
+    throw new Error("Impossibile recuperare lo slot richiesto");
+  }
+
+  let overlapSlots = (existing || []).filter((s) => {
+    const ts = new Date(s.starts_at).getTime();
+    const start = new Date(opts.startsAtIso).getTime();
+    return ts >= start && ts < endMs;
+  });
+  if (slot && !overlapSlots.find((s) => s.id === slot?.id)) {
+    overlapSlots = [...overlapSlots, slot];
+  }
+
+  if (overlapSlots.some((s) => s.status === "booked" && s.id !== opts.allowSlotId)) {
     throw new Error("Slot già prenotato");
   }
 
@@ -160,9 +278,9 @@ async function ensureBookableSlot(
       })
       .eq("id", slot.id)
       .select("id, status, starts_at, duration_min")
-      .maybeSingle();
+      .limit(1);
     if (updErr) throw new Error(updErr.message);
-    return updated as SlotRow;
+    return (updated && updated[0]) as SlotRow;
   }
 
   const { data: locked, error: lockErr } = await db
@@ -176,10 +294,27 @@ async function ensureBookableSlot(
     .eq("id", slot.id)
     .eq("status", "available")
     .select("id, status, starts_at, duration_min")
-    .maybeSingle();
+    .limit(1);
   if (lockErr) throw new Error(lockErr.message);
-  if (!locked) throw new Error("Slot non disponibile");
-  return locked as SlotRow;
+  if (!locked || !locked[0]) throw new Error("Slot non disponibile");
+  const lockedSlot = locked[0] as SlotRow;
+
+  // blocca anche gli slot sovrapposti ancora disponibili
+  const overlapIds = overlapSlots.map((s) => s.id).filter(Boolean);
+  if (overlapIds.length) {
+    await db
+      .from("call_slots")
+      .update({
+        status: "booked",
+        call_type_id: opts.callType.id,
+        duration_min: duration,
+        updated_at: new Date().toISOString(),
+      })
+      .in("id", overlapIds)
+      .eq("status", "available");
+  }
+
+  return lockedSlot;
 }
 
 async function releaseSlot(db: ReturnType<typeof supabaseServer>, slotId?: string | null) {
@@ -204,7 +339,7 @@ async function fetchBookingById(db: ReturnType<typeof supabaseServer>, id: strin
           duration_min,
           status,
           call_type:call_types ( id, slug, name, duration_min ),
-          tutor:tutors ( id, display_name )
+          tutor:tutors ( id, display_name, full_name, email )
         ),
         full_name,
         email,
@@ -222,18 +357,34 @@ async function fetchBookingById(db: ReturnType<typeof supabaseServer>, id: strin
 
 export async function GET(request: NextRequest) {
   try {
-    const authError = await requireAdmin(request);
-    if (authError) return authError;
-
     const db = supabaseServer();
     if (!db) {
       return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const meta = searchParams.get("meta") === "1";
+    const { error: authError, viewer } = await resolveViewer(request, db);
+    if (authError) return authError;
 
-    const { data, error } = await db
+  const { searchParams } = new URL(request.url);
+  const meta = searchParams.get("meta") === "1";
+  const requestedTutorId = searchParams.get("tutorId");
+  let effectiveTutorId = viewer?.isAdmin
+    ? requestedTutorId && requestedTutorId !== "all"
+      ? requestedTutorId
+      : viewer?.tutorId || null
+    : viewer?.tutorId || null;
+  if (!effectiveTutorId && viewer?.isAdmin) {
+    const { data: fallback } = await db
+      .from("tutors")
+      .select("id")
+      .order("created_at", { ascending: true })
+      .limit(1);
+    effectiveTutorId = fallback?.[0]?.id || null;
+  }
+  const tutorFilter = effectiveTutorId;
+  const includeTutorSummary = meta && viewer && effectiveTutorId;
+
+    let query = db
       .from("call_bookings")
       .select(
         `
@@ -246,7 +397,7 @@ export async function GET(request: NextRequest) {
             duration_min,
             status,
             call_type:call_types ( id, slug, name, duration_min ),
-            tutor:tutors ( id, display_name )
+          tutor:tutors ( id, display_name, full_name, email )
           ),
           full_name,
           email,
@@ -258,27 +409,139 @@ export async function GET(request: NextRequest) {
       .order("booked_at", { ascending: false })
       .limit(500);
 
+    if (tutorFilter) {
+      query = query.eq("tutor_id", tutorFilter);
+    }
+
+    const { data, error } = await query;
+
     if (error) {
       throw new Error(error.message);
     }
 
-    const bookings = (data || []).map(mapBooking);
+    const bookings = (data || []).map(mapBooking).filter(Boolean);
 
     if (!meta) {
       return NextResponse.json({ bookings });
     }
 
-    const [{ data: callTypes, error: ctErr }, { data: tutors, error: tutorErr }] = await Promise.all([
-      db.from("call_types").select("id, slug, name, duration_min, active").eq("active", true),
-      db.from("tutors").select("id, display_name, email").order("display_name", { ascending: true }),
-    ]);
+    const tutorsQuery = viewer?.isAdmin
+      ? db.from("tutors").select("id, display_name, full_name, email").order("display_name", { ascending: true })
+      : db
+          .from("tutors")
+          .select("id, display_name, full_name, email, hours_due")
+          .eq("id", viewer?.tutorId || "")
+          .limit(1);
+
+    const [{ data: callTypes, error: ctErr }, { data: tutors, error: tutorErr }, tutorSummary] =
+      await Promise.all([
+        db.from("call_types").select("id, slug, name, duration_min, active").eq("active", true),
+        tutorsQuery,
+        (async () => {
+          if (!includeTutorSummary) return null;
+          try {
+            const [tutorRes, studentsRes, assignedRes] = await Promise.all([
+              db.from("tutors").select("hours_due").eq("id", effectiveTutorId || "").maybeSingle(),
+              db
+                .from("black_students")
+                .select(
+                  "id, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id)"
+                )
+                .eq("videolesson_tutor_id", effectiveTutorId || "")
+                .order("start_date", { ascending: true })
+                .limit(200),
+              db
+                .from("tutor_assignments")
+                .select(
+                  "student_id, black_students!inner(id, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))"
+                )
+                .eq("tutor_id", effectiveTutorId || "")
+                .limit(300),
+            ]);
+
+            const map = new Map<string, any>();
+            (studentsRes.data || []).forEach((s: any) => {
+              if (s?.id) map.set(s.id, s);
+            });
+            (assignedRes.data || []).forEach((row: any) => {
+              const s = row?.black_students;
+              if (s?.id && !map.has(s.id)) {
+                map.set(s.id, s);
+              }
+            });
+
+            const students = Array.from(map.values()).map((s: any) => {
+              const profile = Array.isArray(s?.profiles) ? s.profiles[0] : s?.profiles;
+              const displayName =
+                s?.preferred_name ||
+                profile?.full_name ||
+                s?.student_email ||
+                s?.parent_email ||
+                "Studente";
+              const hoursPaid = Number(s?.hours_paid ?? 0);
+              const hoursConsumed = Number(s?.hours_consumed ?? 0);
+              const isBlack = Boolean(
+                profile?.stripe_price_id ||
+                  (typeof s?.status === "string" && s.status.toLowerCase() !== "inactive")
+              );
+              const emails = [s?.student_email, s?.parent_email]
+                .filter(Boolean)
+                .map((v: string) => v.toLowerCase());
+              return {
+                id: s?.id as string,
+                name: displayName,
+                email: (s?.student_email as string | null) || (s?.parent_email as string | null) || null,
+                phone: (s?.student_phone as string | null) || (s?.parent_phone as string | null) || null,
+                hoursPaid,
+                hoursConsumed,
+                remainingPaid: Math.max(0, hoursPaid),
+                isBlack,
+                emails,
+              };
+            });
+
+            return {
+              hoursDue: Number(tutorRes.data?.hours_due ?? 0),
+              students,
+            };
+          } catch (summaryErr) {
+            console.error("[admin/bookings] tutor summary error", summaryErr);
+            return null;
+          }
+        })(),
+      ]);
     if (ctErr) throw new Error(ctErr.message);
     if (tutorErr) throw new Error(tutorErr.message);
 
+    let bookingsWithStudents = bookings;
+    if (Array.isArray(tutorSummary?.students) && tutorSummary.students.length) {
+      bookingsWithStudents = bookings.map((b) => {
+        const match = tutorSummary.students.find((s: any) => {
+          const email = (b.email || "").toLowerCase();
+          if (!email) return false;
+          if (Array.isArray(s.emails) && s.emails.some((e: string) => e && e.toLowerCase() === email)) {
+            return true;
+          }
+          const studentEmail = (s.email || "").toLowerCase();
+          return studentEmail && email === studentEmail;
+        });
+        return match
+          ? {
+              ...b,
+              studentId: match.id,
+              remainingPaid: match.remainingPaid,
+            }
+          : b;
+      });
+    }
+
     return NextResponse.json({
-      bookings,
+      bookings: bookingsWithStudents,
       callTypes: callTypes || [],
       tutors: tutors || [],
+      currentTutorId: effectiveTutorId || null,
+      viewerIsAdmin: Boolean(viewer?.isAdmin),
+      tutorSummary,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Errore prenotazioni" }, { status: 500 });
@@ -287,19 +550,21 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authError = await requireAdmin(request);
-    if (authError) return authError;
     const db = supabaseServer();
     if (!db) {
       return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
     }
+    const { error: authError, viewer } = await resolveViewer(request, db);
+    if (authError) return authError;
 
     const body = await request.json();
     const startsAtIso = normalizeIso(body.startsAt);
     if (!startsAtIso) return NextResponse.json({ error: "Data/ora non valida" }, { status: 400 });
 
     const callType = await fetchCallType(db, String(body.callTypeSlug || "onboarding"));
-    const tutor = await fetchDefaultTutor(db, body.tutorId);
+    const tutor = viewer?.isAdmin
+      ? await fetchDefaultTutor(db, body.tutorId)
+      : await fetchTutorById(db, viewer?.tutorId || "");
     const slot = await ensureBookableSlot(db, {
       startsAtIso,
       callType,
@@ -332,7 +597,7 @@ export async function POST(request: NextRequest) {
             duration_min,
             status,
             call_type:call_types ( id, slug, name, duration_min ),
-            tutor:tutors ( id, display_name )
+          tutor:tutors ( id, display_name, full_name, email )
           ),
           full_name,
           email,
@@ -351,22 +616,27 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const authError = await requireAdmin(request);
-    if (authError) return authError;
     const db = supabaseServer();
     if (!db) {
       return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
     }
+    const { error: authError, viewer } = await resolveViewer(request, db);
+    if (authError) return authError;
     const body = await request.json();
     const id = String(body.id || "").trim();
     if (!id) return NextResponse.json({ error: "ID mancante" }, { status: 400 });
 
     const existing = await fetchBookingById(db, id);
     if (!existing) return NextResponse.json({ error: "Booking non trovato" }, { status: 404 });
+    if (!viewer?.isAdmin && viewer?.tutorId && existing.tutorId !== viewer.tutorId) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
 
     const callTypeSlug = body.callTypeSlug || existing.callType || "onboarding";
     const callType = await fetchCallType(db, String(callTypeSlug));
-    const tutor = await fetchDefaultTutor(db, body.tutorId || existing.tutorId);
+    const tutor = viewer?.isAdmin
+      ? await fetchDefaultTutor(db, body.tutorId || existing.tutorId)
+      : await fetchTutorById(db, viewer?.tutorId || existing.tutorId || "");
 
     const startsAtIso = normalizeIso(body.startsAt || existing.startsAt);
     if (!startsAtIso) return NextResponse.json({ error: "Data/ora non valida" }, { status: 400 });
@@ -411,18 +681,21 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const authError = await requireAdmin(request);
-    if (authError) return authError;
     const db = supabaseServer();
     if (!db) {
       return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
     }
+    const { error: authError, viewer } = await resolveViewer(request, db);
+    if (authError) return authError;
     const body = await request.json();
     const id = String(body.id || "").trim();
     if (!id) return NextResponse.json({ error: "ID mancante" }, { status: 400 });
 
     const existing = await fetchBookingById(db, id);
     if (!existing) return NextResponse.json({ error: "Booking non trovato" }, { status: 404 });
+    if (!viewer?.isAdmin && viewer?.tutorId && existing.tutorId !== viewer.tutorId) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
 
     const { error: delErr } = await db.from("call_bookings").delete().eq("id", id);
     if (delErr) throw new Error(delErr.message);

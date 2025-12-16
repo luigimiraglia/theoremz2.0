@@ -24,6 +24,26 @@ export const metadata = {
   },
 };
 
+const inlineRocket = (
+  <Image
+    alt="Icona razzo"
+    src="/images/rocket.webp"
+    width={26}
+    height={26}
+    className="inline-block h-[1.15em] w-[1.15em] translate-y-[1px]"
+  />
+);
+
+const inlineChat = (
+  <Image
+    alt="Icona chat"
+    src="/images/mess.webp"
+    width={24}
+    height={24}
+    className="inline-block h-[1.05em] w-[1.05em] translate-y-[1px]"
+  />
+);
+
 const highlights = [
   {
     icon: <Sparkles className="h-4 w-4 text-sky-600" aria-hidden />,
@@ -140,7 +160,8 @@ export default function StartPage() {
 
         <section className="mt-7 rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-sm backdrop-blur">
           <h2 className="text-center text-[18px] font-extrabold text-slate-900">
-            Le storie più belle 💬
+            Le storie più belle{" "}
+            {inlineChat}
           </h2>
           <p className="mt-2 text-center text-[13px] font-semibold text-slate-500">
             Storie reali raccolte da chat e report condivisi con le famiglie.
@@ -182,7 +203,7 @@ export default function StartPage() {
 
         <section className="mt-7 rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-sm backdrop-blur">
           <h2 className="text-center text-[18px] font-extrabold text-slate-900">
-            Pronti a partire? 🚀
+            Pronti a partire? {inlineRocket}
           </h2>
           <p className="mt-2 text-center text-[13.5px] text-slate-600">
             Puoi attivare Theoremz Black o richiedere un Mentor 1:1 quando vuoi, con garanzia 100% soddisfatti o rimborsati.

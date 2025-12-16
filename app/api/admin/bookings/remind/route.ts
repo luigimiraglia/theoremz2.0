@@ -5,7 +5,7 @@ import { supabaseServer } from "@/lib/supabase";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ALLOWED_EMAIL = "luigi.miraglia006@gmail.com";
+const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
 const ROME_TZ = "Europe/Rome";
 
 type BookingRow = {
@@ -13,6 +13,7 @@ type BookingRow = {
   full_name: string;
   email: string;
   note?: string | null;
+  tutor_id?: string | null;
   slot: {
     starts_at: string;
     duration_min: number | null;
@@ -21,9 +22,10 @@ type BookingRow = {
   } | null;
 };
 
-function isAdminEmail(email?: string | null) {
-  return Boolean(email && email.toLowerCase() === ALLOWED_EMAIL);
-}
+type Viewer = { isAdmin: boolean; tutorId: string | null; email: string | null };
+
+const isAdminEmail = (email?: string | null) =>
+  Boolean(email && email.toLowerCase() === ADMIN_EMAIL);
 
 async function getAdminAuth() {
   try {
@@ -35,27 +37,51 @@ async function getAdminAuth() {
   }
 }
 
-async function requireAdmin(request: NextRequest) {
-  if (process.env.NODE_ENV === "development") return null;
+async function resolveViewer(
+  request: NextRequest,
+  db: ReturnType<typeof supabaseServer>,
+): Promise<{ error?: NextResponse; viewer?: Viewer }> {
+  if (process.env.NODE_ENV === "development") {
+    return { viewer: { isAdmin: true, tutorId: null, email: null } };
+  }
 
   const authHeader = request.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return { error: NextResponse.json({ error: "unauthorized" }, { status: 401 }) };
   }
   const token = authHeader.slice("Bearer ".length);
   const adminAuth = await getAdminAuth();
   if (!adminAuth) {
-    return NextResponse.json({ error: "admin_auth_unavailable" }, { status: 503 });
+    return { error: NextResponse.json({ error: "admin_auth_unavailable" }, { status: 503 }) };
   }
+
   try {
     const decoded = await adminAuth.verifyIdToken(token);
-    if (!isAdminEmail(decoded.email)) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    const email = decoded.email?.toLowerCase() || null;
+    if (!email) {
+      return { error: NextResponse.json({ error: "unauthorized" }, { status: 401 }) };
     }
-    return null;
+
+    if (isAdminEmail(email)) {
+      return { viewer: { isAdmin: true, tutorId: null, email } };
+    }
+
+    const { data: tutor, error: tutorErr } = await db
+      .from("tutors")
+      .select("id")
+      .ilike("email", email || "")
+      .maybeSingle();
+    if (tutorErr) {
+      console.error("[admin/bookings/remind] tutor lookup error", tutorErr);
+      return { error: NextResponse.json({ error: "auth_error" }, { status: 500 }) };
+    }
+    if (!tutor) {
+      return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
+    }
+    return { viewer: { isAdmin: false, tutorId: tutor.id, email } };
   } catch (error) {
     console.error("[admin/bookings/remind] auth error", error);
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return { error: NextResponse.json({ error: "unauthorized" }, { status: 401 }) };
   }
 }
 
@@ -157,6 +183,7 @@ async function fetchBooking(db: ReturnType<typeof supabaseServer>, id: string) {
         full_name,
         email,
         note,
+        tutor_id,
         slot:call_slots (
           starts_at,
           duration_min,
@@ -173,21 +200,24 @@ async function fetchBooking(db: ReturnType<typeof supabaseServer>, id: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authError = await requireAdmin(request);
+    const db = supabaseServer();
+    if (!db) {
+      return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
+    }
+
+    const { error: authError, viewer } = await resolveViewer(request, db);
     if (authError) return authError;
 
     const body = await request.json();
     const id = String(body.id || "").trim();
     if (!id) return NextResponse.json({ error: "ID mancante" }, { status: 400 });
 
-    const db = supabaseServer();
-    if (!db) {
-      return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
-    }
-
     const booking = await fetchBooking(db, id);
     if (!booking || !booking.slot) {
       return NextResponse.json({ error: "Booking non trovato" }, { status: 404 });
+    }
+    if (!viewer?.isAdmin && viewer?.tutorId && booking.tutor_id !== viewer.tutorId) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
     if (!booking.email) {
       return NextResponse.json({ error: "Email mancante" }, { status: 400 });

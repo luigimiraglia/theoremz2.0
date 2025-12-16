@@ -10,6 +10,7 @@ type Booking = {
   slotId?: string;
   callTypeId?: string | null;
   tutorId?: string | null;
+  studentId?: string | null;
   startsAt: string;
   durationMin: number | null;
   callType: string | null;
@@ -19,10 +20,11 @@ type Booking = {
   email: string;
   note: string | null;
   status?: string | null;
+  remainingPaid?: number | null;
 };
 
 type CallTypeMeta = { id: string; slug: string; name: string; duration_min: number };
-type TutorMeta = { id: string; display_name?: string | null; email?: string | null };
+type TutorMeta = { id: string; display_name?: string | null; full_name?: string | null; email?: string | null };
 type BookingDraft = {
   id: string | null;
   fullName: string;
@@ -80,22 +82,241 @@ type Message = {
   meta?: { image?: { id?: string; mime_type?: string | null } };
 };
 
+function tutorLabel(t?: TutorMeta | null) {
+  if (!t) return "Tutor";
+  return t.display_name || t.full_name || t.email || "Tutor";
+}
+
+async function buildHeaders() {
+  const headers: Record<string, string> = {};
+  try {
+    const { auth } = await import("@/lib/firebase");
+    const token = await auth.currentUser?.getIdToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  } catch (err) {
+    console.warn("[admin/whatsapp] missing firebase token", err);
+  }
+  return headers;
+}
+
+function TutorRow({
+  tutor,
+  buildHeaders,
+  onUpdated,
+  onDeleted,
+  setTutorsLoading,
+  setTutorError,
+}: {
+  tutor: TutorMeta & { full_name?: string | null; phone?: string | null; notes?: string | null; bio?: string | null };
+  buildHeaders: () => Promise<Record<string, string>>;
+  onUpdated: (t: TutorMeta & { full_name?: string | null; phone?: string | null; notes?: string | null; bio?: string | null }) => void;
+  onDeleted: (id: string) => void;
+  setTutorsLoading: (v: boolean) => void;
+  setTutorError: (v: string | null) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white">
+      {editing ? (
+        <TutorEditForm
+          tutor={tutor}
+          onCancel={() => setEditing(false)}
+          onSave={async (patch) => {
+            setTutorsLoading(true);
+            setTutorError(null);
+            try {
+              const headers = await buildHeaders();
+              headers["Content-Type"] = "application/json";
+              const res = await fetch("/api/admin/tutors", {
+                method: "PATCH",
+                headers,
+                body: JSON.stringify(patch),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+              onUpdated(data.tutor);
+              setEditing(false);
+            } catch (err: any) {
+              setTutorError(err?.message || "Errore aggiornamento tutor");
+            } finally {
+              setTutorsLoading(false);
+            }
+          }}
+        />
+      ) : (
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="font-semibold">{tutorLabel(tutor)}</p>
+            <p className="text-xs text-slate-300">{tutor.email || "email n/d"}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setEditing(true)}
+              className="text-xs rounded-lg border border-white/20 px-2 py-1 text-slate-100 hover:border-white/40"
+            >
+              Modifica
+            </button>
+            <button
+              onClick={async () => {
+                if (!window.confirm("Rimuovere questo tutor?")) return;
+                setTutorsLoading(true);
+                try {
+                  const headers = await buildHeaders();
+                  headers["Content-Type"] = "application/json";
+                  const res = await fetch("/api/admin/tutors", {
+                    method: "DELETE",
+                    headers,
+                    body: JSON.stringify({ id: tutor.id }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+                  onDeleted(tutor.id);
+                } catch (err: any) {
+                  setTutorError(err?.message || "Errore eliminazione tutor");
+                } finally {
+                  setTutorsLoading(false);
+                }
+              }}
+              className="text-xs rounded-lg border border-red-400/60 px-2 py-1 text-red-200 hover:border-red-300"
+            >
+              Rimuovi
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TutorEditForm({
+  tutor,
+  onSave,
+  onCancel,
+}: {
+  tutor: TutorMeta & { full_name?: string | null; phone?: string | null; notes?: string | null; bio?: string | null };
+  onSave: (patch: { id: string; displayName?: string; fullName?: string; email?: string; phone?: string; notes?: string }) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [displayName, setDisplayName] = useState(tutor.display_name || "");
+  const [fullName, setFullName] = useState((tutor as any).full_name || tutor.display_name || "");
+  const [email, setEmail] = useState(tutor.email || "");
+  const [phone, setPhone] = useState((tutor as any).phone || "");
+  const [notes, setNotes] = useState((tutor as any).notes || (tutor as any).bio || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({
+        id: tutor.id,
+        displayName,
+        fullName,
+        email,
+        phone,
+        notes,
+      });
+      onCancel();
+    } catch (err: any) {
+      setError(err?.message || "Errore salvataggio");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white">
+      <div className="grid grid-cols-1 gap-2">
+        <label className="text-xs text-slate-300">
+          Nome visibile
+          <input
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className="mt-1 w-full rounded-md border border-white/10 bg-white/10 px-2 py-1 text-sm text-white placeholder:text-slate-400 focus:border-sky-400"
+            placeholder="Display name"
+          />
+        </label>
+        <label className="text-xs text-slate-300">
+          Nome completo
+          <input
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="mt-1 w-full rounded-md border border-white/10 bg-white/10 px-2 py-1 text-sm text-white placeholder:text-slate-400 focus:border-sky-400"
+            placeholder="Full name"
+          />
+        </label>
+        <label className="text-xs text-slate-300">
+          Email
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="mt-1 w-full rounded-md border border-white/10 bg-white/10 px-2 py-1 text-sm text-white placeholder:text-slate-400 focus:border-sky-400"
+            placeholder="email@dominio.it"
+            required
+          />
+        </label>
+        <label className="text-xs text-slate-300">
+          Telefono
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="mt-1 w-full rounded-md border border-white/10 bg-white/10 px-2 py-1 text-sm text-white placeholder:text-slate-400 focus:border-sky-400"
+            placeholder="+39..."
+          />
+        </label>
+        <label className="text-xs text-slate-300">
+          Note interne
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="mt-1 w-full rounded-md border border-white/10 bg-white/10 px-2 py-1 text-sm text-white placeholder:text-slate-400 focus:border-sky-400"
+            rows={3}
+            placeholder="Note o info sul tutor"
+          />
+        </label>
+      </div>
+      {error ? <p className="text-xs text-amber-300">{error}</p> : null}
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-400 disabled:opacity-60"
+        >
+          {saving ? "Salvo..." : "Salva"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={saving}
+          className="rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white hover:border-white/40 disabled:opacity-60"
+        >
+          Annulla
+        </button>
+      </div>
+    </form>
+  );
+}
+
 type DetailResponse = {
   conversation: ConversationItem;
   messages: Message[];
 };
 
 const statusStyles: Record<string, string> = {
-  bot: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  tutor: "bg-blue-100 text-blue-800 border-blue-200",
-  waiting_tutor: "bg-amber-100 text-amber-800 border-amber-200",
-  default: "bg-slate-100 text-slate-800 border-slate-200",
+  bot: "bg-sky-500/15 text-sky-100 border-sky-400/40",
+  tutor: "bg-indigo-500/15 text-indigo-100 border-indigo-400/40",
+  waiting_tutor: "bg-amber-400/20 text-amber-100 border-amber-300/40",
+  default: "bg-slate-800/60 text-slate-100 border-slate-700/70",
 };
 
 const riskStyles: Record<string, string> = {
-  red: "bg-red-100 text-red-800",
-  yellow: "bg-amber-100 text-amber-800",
-  green: "bg-emerald-100 text-emerald-800",
+  red: "bg-rose-500/20 text-rose-100",
+  yellow: "bg-amber-400/20 text-amber-100",
+  green: "bg-sky-500/20 text-sky-100",
 };
 
 const allowedEmail = "luigi.miraglia006@gmail.com";
@@ -132,6 +353,39 @@ export default function WhatsAppAdmin() {
   const [bookingMeta, setBookingMeta] = useState<{ callTypes: CallTypeMeta[]; tutors: TutorMeta[] }>(
     { callTypes: [], tutors: [] },
   );
+  const [selectedTutorId, setSelectedTutorId] = useState<string>("all");
+  const [tutorList, setTutorList] = useState<TutorMeta[]>([]);
+  const [tutorsLoading, setTutorsLoading] = useState(false);
+  const [tutorError, setTutorError] = useState<string | null>(null);
+  const [showTutorPanel, setShowTutorPanel] = useState(false);
+  const [assignmentTutorId, setAssignmentTutorId] = useState<string>("");
+  const [assignmentName, setAssignmentName] = useState("");
+  const [assignmentEmail, setAssignmentEmail] = useState("");
+  const [assignmentPhone, setAssignmentPhone] = useState("");
+  const [assigningStudent, setAssigningStudent] = useState(false);
+  const [assignStudentMsg, setAssignStudentMsg] = useState<string | null>(null);
+  const [showStudentPanel, setShowStudentPanel] = useState(false);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [students, setStudents] = useState<
+    Array<{
+      id: string;
+      name: string;
+      email?: string | null;
+      phone?: string | null;
+      tutorId?: string | null;
+      tutorName?: string | null;
+      remainingPaid?: number;
+      hoursPaid?: number;
+      hoursConsumed?: number;
+      isBlack?: boolean;
+    }>
+  >([]);
+  const [studentError, setStudentError] = useState<string | null>(null);
+  const [hoursInput, setHoursInput] = useState<Record<string, string>>({});
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+  const [studentDrafts, setStudentDrafts] = useState<
+    Record<string, { name: string; email: string; phone: string; tutorId: string }>
+  >({});
   const [bookingDraft, setBookingDraft] = useState<BookingDraft>(() => ({
     id: null,
     fullName: "",
@@ -141,7 +395,7 @@ export default function WhatsAppAdmin() {
     time: "10:00",
     callTypeSlug: "onboarding",
     tutorId: "",
-    durationMin: "",
+    durationMin: "60",
     status: "confirmed",
   }));
   const [showBookingForm, setShowBookingForm] = useState(false);
@@ -154,50 +408,175 @@ export default function WhatsAppAdmin() {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const hasAccess = useMemo(
     () => Boolean(user?.email && user.email.toLowerCase() === allowedEmail),
     [user?.email]
   );
 
-  const buildHeaders = useCallback(async () => {
-    const headers: Record<string, string> = {};
-    try {
-      const { auth } = await import("@/lib/firebase");
-      const token = await auth.currentUser?.getIdToken();
-      if (token) headers.Authorization = `Bearer ${token}`;
-    } catch (err) {
-      console.warn("[admin/whatsapp] missing firebase token", err);
-    }
-    return headers;
-  }, []);
-
-  const fetchBookings = useCallback(async () => {
-    setLoadingBookings(true);
+  const fetchStudents = useCallback(async () => {
+    setStudentsLoading(true);
+    setStudentError(null);
     try {
       const headers = await buildHeaders();
-      const res = await fetch("/api/admin/bookings?meta=1", { headers, cache: "no-store" });
+      const res = await fetch("/api/admin/students", { headers, cache: "no-store" });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || `HTTP ${res.status}`);
-      }
-      setBookingMeta({
-        callTypes: Array.isArray(data.callTypes) ? data.callTypes : [],
-        tutors: Array.isArray(data.tutors) ? data.tutors : [],
-      });
-      setBookingDraft((prev) => ({
-        ...prev,
-        callTypeSlug: prev.callTypeSlug || data.callTypes?.[0]?.slug || "onboarding",
-        tutorId: prev.tutorId || data.tutors?.[0]?.id || "",
-      }));
-      setBookings(Array.isArray(data.bookings) ? data.bookings : []);
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      const list = Array.isArray(data?.students) ? data.students : [];
+      setStudents(list);
     } catch (err: any) {
-      console.error("[admin/whatsapp] bookings error", err);
-      setError(err?.message || "Errore prenotazioni");
+      setStudentError(err?.message || "Errore caricamento studenti");
+      console.error(err);
     } finally {
-      setLoadingBookings(false);
+      setStudentsLoading(false);
     }
   }, [buildHeaders]);
+
+  const handleAddHours = useCallback(
+    async (studentId: string) => {
+      const raw = hoursInput[studentId] || "";
+      const hours = Number(raw.replace(",", "."));
+      if (!Number.isFinite(hours) || hours <= 0) {
+        setStudentError("Inserisci ore valide");
+        return;
+      }
+      setStudentError(null);
+      setStudentsLoading(true);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/students", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ studentId, hours }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+        setStudents((prev) =>
+          prev.map((s) =>
+            s.id === studentId
+              ? {
+                  ...s,
+                  hoursPaid: data.hoursPaid ?? s.hoursPaid,
+                  remainingPaid: data.remainingPaid ?? s.remainingPaid,
+                }
+              : s
+          )
+        );
+        setHoursInput((prev) => ({ ...prev, [studentId]: "" }));
+      } catch (err: any) {
+        setStudentError(err?.message || "Errore aggiunta ore");
+      } finally {
+        setStudentsLoading(false);
+      }
+    },
+    [buildHeaders, hoursInput],
+  );
+
+  const handleEditStudent = useCallback(
+    (student: { id: string; name?: string | null; email?: string | null; phone?: string | null; tutorId?: string | null }) => {
+      setStudentError(null);
+      setEditingStudentId(student.id);
+      setStudentDrafts((prev) => ({
+        ...prev,
+        [student.id]: {
+          name: student.name || "",
+          email: student.email || "",
+          phone: student.phone || "",
+          tutorId: student.tutorId || tutorList[0]?.id || "",
+        },
+      }));
+    },
+    [tutorList],
+  );
+
+  const handleSaveStudent = useCallback(
+    async (studentId: string) => {
+      const draft = studentDrafts[studentId];
+      if (!draft) return;
+      setStudentsLoading(true);
+      setStudentError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/students", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({
+            studentId,
+            name: draft.name,
+            email: draft.email,
+            phone: draft.phone,
+            tutorId: draft.tutorId || undefined,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+        const updated = data.student;
+        if (updated?.id) {
+          setStudents((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
+        }
+        setEditingStudentId(null);
+      } catch (err: any) {
+        setStudentError(err?.message || "Errore aggiornamento studente");
+      } finally {
+        setStudentsLoading(false);
+      }
+    },
+    [buildHeaders, studentDrafts],
+  );
+
+  const fetchBookings = useCallback(
+    async (opts?: { tutorId?: string }) => {
+      setLoadingBookings(true);
+      const targetTutor = opts?.tutorId ?? selectedTutorId;
+      try {
+        const headers = await buildHeaders();
+        const params = new URLSearchParams({ meta: "1" });
+        if (targetTutor && targetTutor !== "all") params.set("tutorId", targetTutor);
+        const res = await fetch(`/api/admin/bookings?${params.toString()}`, { headers, cache: "no-store" });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || `HTTP ${res.status}`);
+        }
+        const tutors = Array.isArray(data.tutors)
+          ? data.tutors.map((t: any) => ({
+              ...t,
+              display_name: t.display_name || t.full_name || t.email || "Tutor",
+            }))
+          : [];
+        const viewerIsAdmin = Boolean(data.viewerIsAdmin);
+        let nextTutor =
+          targetTutor && targetTutor !== "auto"
+            ? targetTutor
+            : data.currentTutorId || (viewerIsAdmin ? "all" : tutors?.[0]?.id) || "";
+        if (viewerIsAdmin && targetTutor === "all") nextTutor = "all";
+        setSelectedTutorId(nextTutor || "all");
+        setBookingMeta({
+          callTypes: Array.isArray(data.callTypes) ? data.callTypes : [],
+          tutors,
+        });
+        setTutorList(tutors);
+        const defaultTutorForForm =
+          nextTutor === "all" ? tutors?.[0]?.id || "" : (nextTutor as string);
+        setBookingDraft((prev) => ({
+          ...prev,
+          callTypeSlug: prev.callTypeSlug || data.callTypes?.[0]?.slug || "onboarding",
+          tutorId: prev.tutorId || defaultTutorForForm,
+        }));
+        setBookings(
+          Array.isArray(data.bookings)
+            ? data.bookings.filter((b: any) => b && b.id)
+            : [],
+        );
+      } catch (err: any) {
+        console.error("[admin/whatsapp] bookings error", err);
+        setError(err?.message || "Errore prenotazioni");
+      } finally {
+        setLoadingBookings(false);
+      }
+    },
+    [buildHeaders, selectedTutorId],
+  );
 
   const fetchList = useCallback(
     async (opts?: { keepSelection?: boolean; searchOverride?: string }) => {
@@ -435,9 +814,75 @@ export default function WhatsAppAdmin() {
 
   useEffect(() => {
     if (showBookings && bookings.length === 0 && !loadingBookings) {
-      fetchBookings();
+      fetchBookings({ tutorId: selectedTutorId });
     }
-  }, [bookings.length, fetchBookings, loadingBookings, showBookings]);
+  }, [showBookings]); // intentionally minimal deps to avoid loop
+
+  const fetchTutors = useCallback(async () => {
+    setTutorsLoading(true);
+    setTutorError(null);
+    try {
+      const headers = await buildHeaders();
+      const res = await fetch("/api/admin/tutors", { headers, cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      const tutors = Array.isArray(data.tutors) ? data.tutors : [];
+      setTutorList(tutors);
+      if (!assignmentTutorId && tutors[0]?.id) {
+        setAssignmentTutorId(tutors[0].id);
+      }
+    } catch (err: any) {
+      console.error("[admin/whatsapp] tutor fetch error", err);
+      setTutorError(err?.message || "Errore caricamento tutor");
+    } finally {
+      setTutorsLoading(false);
+    }
+  }, [buildHeaders, assignmentTutorId]);
+
+  const handleAssignStudentToTutor = useCallback(async () => {
+    const targetTutorId = assignmentTutorId || tutorList[0]?.id || "";
+    const targetTutor =
+      tutorList.find((t) => t.id === targetTutorId) || tutorList[0] || null;
+    if (
+      !targetTutorId ||
+      (!assignmentEmail.trim() && !assignmentPhone.trim())
+    ) {
+      setAssignStudentMsg("Inserisci nome, email o telefono e seleziona un tutor");
+      return;
+    }
+    if (targetTutor && !targetTutor.email) {
+      setAssignStudentMsg("Completa l'email del tutor per vederlo in Studenti assegnati.");
+      return;
+    }
+    setAssigningStudent(true);
+    setAssignStudentMsg(null);
+    setTutorError(null);
+    try {
+      const headers = await buildHeaders();
+      headers["Content-Type"] = "application/json";
+      const res = await fetch("/api/admin/tutor-assignments", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          tutorId: targetTutorId,
+          studentEmail: assignmentEmail.trim() || undefined,
+          studentPhone: assignmentPhone.trim() || undefined,
+          studentName: assignmentName.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      setAssignStudentMsg("Studente assegnato con successo");
+      setAssignmentEmail("");
+      setAssignmentPhone("");
+      setAssignmentName("");
+    } catch (err: any) {
+      console.error("[admin/whatsapp] assign student error", err);
+      setAssignStudentMsg(err?.message || "Errore assegnazione studente");
+    } finally {
+      setAssigningStudent(false);
+    }
+  }, [assignmentTutorId, assignmentEmail, assignmentName, assignmentPhone, buildHeaders, tutorList]);
 
   const handleSend = async (statusOverride?: string) => {
     if (!selected || !draft.trim()) return;
@@ -483,6 +928,13 @@ export default function WhatsAppAdmin() {
     return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
   };
 
+  const formatHoursLabel = (val?: number | null) => {
+    if (val === null || val === undefined) return "—";
+    const n = Number(val);
+    if (!Number.isFinite(n)) return "—";
+    return Number.isInteger(n) ? `${n}h` : `${n.toFixed(1)}h`;
+  };
+
   const openBookingEditor = (booking?: Booking | null) => {
     const { date, time } = isoToLocalParts(booking?.startsAt);
     const fallbackDate =
@@ -494,7 +946,11 @@ export default function WhatsAppAdmin() {
       bookingMeta.callTypes[0]?.slug ||
       "onboarding";
     const tutorId =
-      booking?.tutorId || bookingDraft.tutorId || bookingMeta.tutors[0]?.id || "";
+      booking?.tutorId ||
+      bookingDraft.tutorId ||
+      (selectedTutorId !== "all" ? selectedTutorId : "") ||
+      bookingMeta.tutors[0]?.id ||
+      "";
     setBookingDraft({
       id: booking?.id || null,
       fullName: booking?.fullName || "",
@@ -504,7 +960,7 @@ export default function WhatsAppAdmin() {
       time: fallbackTime,
       callTypeSlug,
       tutorId,
-      durationMin: booking?.durationMin ? String(booking.durationMin) : "",
+      durationMin: booking?.durationMin ? String(booking.durationMin) : "60",
       status: booking?.status === "cancelled" ? "cancelled" : "confirmed",
     });
     setBookingActionError(null);
@@ -517,6 +973,13 @@ export default function WhatsAppAdmin() {
       setBookingActionError("Data/ora non valida");
       return;
     }
+    const safeCallType =
+      bookingDraft.callTypeSlug || bookingMeta.callTypes[0]?.slug || "onboarding";
+    const safeTutorId =
+      bookingDraft.tutorId ||
+      (selectedTutorId !== "all" ? selectedTutorId : "") ||
+      bookingMeta.tutors[0]?.id ||
+      null;
     setBookingSaving(true);
     setBookingActionError(null);
     try {
@@ -524,12 +987,12 @@ export default function WhatsAppAdmin() {
       headers["Content-Type"] = "application/json";
       const payload: Record<string, any> = {
         startsAt: startsAtIso,
-        callTypeSlug: bookingDraft.callTypeSlug,
-        tutorId: bookingDraft.tutorId || undefined,
+        callTypeSlug: safeCallType,
+        tutorId: safeTutorId || undefined,
         fullName: bookingDraft.fullName,
         email: bookingDraft.email,
         note: bookingDraft.note,
-        durationMin: bookingDraft.durationMin ? Number(bookingDraft.durationMin) : undefined,
+        durationMin: bookingDraft.durationMin ? Number(bookingDraft.durationMin) : 60,
         status: bookingDraft.status,
       };
       const method = bookingDraft.id ? "PATCH" : "POST";
@@ -543,9 +1006,15 @@ export default function WhatsAppAdmin() {
       if (!res.ok) {
         throw new Error(data?.error || `HTTP ${res.status}`);
       }
+      if (!data.booking || !data.booking.id) {
+        // Risposta vuota o inconsistente: ricaria la lista e chiudi
+        await fetchBookings();
+        setShowBookingForm(false);
+        return;
+      }
       if (data.booking) {
         setBookings((prev) => {
-          const list = prev.filter((b) => b.id !== data.booking.id);
+          const list = prev.filter((b) => b && b.id && b.id !== data.booking.id);
           list.push(data.booking);
           return list;
         });
@@ -578,7 +1047,7 @@ export default function WhatsAppAdmin() {
       if (!res.ok) {
         throw new Error(data?.error || `HTTP ${res.status}`);
       }
-      setBookings((prev) => prev.filter((b) => b.id !== id));
+    setBookings((prev) => prev.filter((b) => b && b.id && b.id !== id));
       if (bookingDraft.id === id) {
         setShowBookingForm(false);
       }
@@ -729,7 +1198,7 @@ export default function WhatsAppAdmin() {
               Conversazioni live, stato e scheda cliente. Aggiorna con cautela.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
             <button
               onClick={() => {
                 setShowBookings(true);
@@ -766,6 +1235,25 @@ export default function WhatsAppAdmin() {
             >
               <ListFilter className="h-4 w-4" aria-hidden />
               Da contattare
+            </button>
+            <button
+              onClick={() => {
+                setShowTutorPanel(true);
+                fetchTutors();
+              }}
+              className="px-3 py-2 rounded-lg bg-gradient-to-r from-purple-400 via-fuchsia-500 to-pink-500 text-slate-950 text-sm font-semibold border border-white/10 shadow-[0_10px_40px_rgba(236,72,153,0.35)] hover:shadow-[0_12px_48px_rgba(232,121,249,0.35)] transition inline-flex items-center gap-2"
+            >
+              Gestisci tutor
+            </button>
+            <button
+              onClick={() => {
+                setShowStudentPanel(true);
+                fetchTutors();
+                fetchStudents();
+              }}
+              className="px-3 py-2 rounded-lg bg-gradient-to-r from-slate-200 to-white text-slate-900 text-sm font-semibold border border-slate-300 hover:border-emerald-400 transition inline-flex items-center gap-2"
+            >
+              Studenti
             </button>
             <button
               onClick={() => setPolling((prev) => !prev)}
@@ -1138,9 +1626,33 @@ export default function WhatsAppAdmin() {
             <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-indigo-300">Calendario</p>
-                <h2 className="text-lg font-semibold text-slate-50">Prenotazioni call</h2>
+                <h2 className="text-lg font-semibold text-slate-50">
+                  Prenotazioni call{" "}
+                  {selectedTutorId !== "all" &&
+                    tutorLabel(bookingMeta.tutors.find((t) => t.id === selectedTutorId))
+                      ? `· ${
+                          tutorLabel(bookingMeta.tutors.find((t) => t.id === selectedTutorId))
+                        }`
+                      : ""}
+                </h2>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                <select
+                  value={selectedTutorId}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setSelectedTutorId(next);
+                    fetchBookings({ tutorId: next });
+                  }}
+                  className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs font-semibold text-slate-200 focus:border-sky-400 focus:outline-none"
+                >
+                  <option value="all">Tutti i tutor</option>
+                  {bookingMeta.tutors.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.display_name || "Tutor"}
+                    </option>
+                  ))}
+                </select>
                 <button
                   onClick={() =>
                     setBookingMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
@@ -1369,7 +1881,7 @@ export default function WhatsAppAdmin() {
                         >
                           {bookingMeta.tutors.map((t) => (
                             <option key={t.id} value={t.id}>
-                              {t.display_name || "Tutor"}
+                              {tutorLabel(t)}
                             </option>
                           ))}
                         </select>
@@ -1449,9 +1961,9 @@ export default function WhatsAppAdmin() {
                   {bookings
                     .slice()
                     .sort((a, b) => (a.startsAt > b.startsAt ? 1 : -1))
-                    .map((b) => (
+                    .map((b, idx) => (
                       <div
-                        key={b.id}
+                        key={b.id || b.slotId || b.startsAt || `${b.email}-${idx}`}
                         className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100"
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -1476,7 +1988,7 @@ export default function WhatsAppAdmin() {
                           {b.fullName} — {b.email}
                         </div>
                         <div className="text-[11px] text-slate-500">
-                          Tutor: {b.tutorName || "n.d."} · {b.durationMin || "—"} min
+                          Tutor: {b.tutorName || tutorLabel(tutorList.find((t) => t.id === b.tutorId))} · {b.durationMin || "—"} min
                         </div>
                         {b.note && (
                           <div className="mt-1 rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1 text-[11px] text-slate-200">
@@ -1534,6 +2046,313 @@ export default function WhatsAppAdmin() {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTutorPanel && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-900/90 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-sky-300">Tutor</p>
+                <h3 className="text-lg font-semibold text-white">Gestione tutor</h3>
+              </div>
+              <button
+                onClick={() => setShowTutorPanel(false)}
+                className="rounded-lg border border-white/15 px-3 py-1 text-xs font-semibold text-white hover:border-sky-400"
+              >
+                Chiudi
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-200">Tutor disponibili</p>
+                  {tutorError && <p className="text-xs text-amber-400">{tutorError}</p>}
+                </div>
+                <button
+                  onClick={fetchTutors}
+                  className="text-xs text-sky-300 hover:text-sky-200"
+                  disabled={tutorsLoading}
+                >
+                  {tutorsLoading ? "Aggiorno..." : "Refresh"}
+                </button>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {tutorsLoading && <p className="text-sm text-slate-400">Carico tutor...</p>}
+                {!tutorsLoading && tutorList.length === 0 && (
+                  <p className="text-sm text-slate-400">Nessun tutor trovato.</p>
+                )}
+                {tutorList.map((t) => (
+                  <TutorRow
+                    key={t.id}
+                    tutor={t}
+                    buildHeaders={buildHeaders}
+                    onUpdated={(updated) => {
+                      setTutorList((prev) =>
+                        prev
+                          .map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
+                          .sort((a, b) => (a.display_name || a.email || "").localeCompare(b.display_name || b.email || "")),
+                      );
+                    }}
+                    onDeleted={(id) => setTutorList((prev) => prev.filter((x) => x.id !== id))}
+                    setTutorsLoading={setTutorsLoading}
+                    setTutorError={setTutorError}
+                  />
+                ))}
+              </div>
+              <AddTutorForm
+                onCreate={async (name, email) => {
+                  setTutorsLoading(true);
+                  setTutorError(null);
+                  try {
+                    const headers = await buildHeaders();
+                    headers["Content-Type"] = "application/json";
+                    const res = await fetch("/api/admin/tutors", {
+                      method: "POST",
+                      headers,
+                      body: JSON.stringify({ displayName: name, email }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+                    setTutorList((prev) =>
+                      [...prev, data.tutor].sort((a, b) =>
+                        (a.display_name || a.email || "").localeCompare(b.display_name || b.email || ""),
+                      ),
+                    );
+                  } catch (err: any) {
+                    setTutorError(err?.message || "Errore creazione tutor");
+                  } finally {
+                    setTutorsLoading(false);
+                  }
+                }}
+              />
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-white">Assegna studente a tutor</p>
+                  {assignStudentMsg && (
+                    <span className="text-[11px] font-semibold text-emerald-200">{assignStudentMsg}</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <select
+                    value={assignmentTutorId}
+                    onChange={(e) => setAssignmentTutorId(e.target.value)}
+                    className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+                  >
+                    {tutorList.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {tutorLabel(t)}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    value={assignmentName}
+                    onChange={(e) => setAssignmentName(e.target.value)}
+                    placeholder="Nome studente"
+                    className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+                  />
+                  <input
+                    value={assignmentEmail}
+                    onChange={(e) => setAssignmentEmail(e.target.value)}
+                    placeholder="Email studente"
+                    className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+                    type="email"
+                  />
+                  <input
+                    value={assignmentPhone}
+                    onChange={(e) => setAssignmentPhone(e.target.value)}
+                    placeholder="Telefono (facoltativo)"
+                    className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+                  />
+                  <button
+                    onClick={handleAssignStudentToTutor}
+                    disabled={assigningStudent || tutorList.length === 0}
+                    className="rounded-lg bg-emerald-500 text-slate-900 font-semibold px-3 py-2 text-sm hover:bg-emerald-400 disabled:opacity-60"
+                    type="button"
+                  >
+                    {assigningStudent ? "Assegno..." : "Assegna studente"}
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  Inserisci email o telefono (anche studenti non Black) e assegna al tutor selezionato.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showStudentPanel && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-slate-950/70 p-4">
+          <div className="w-full max-w-4xl rounded-2xl border border-white/10 bg-slate-900/90 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Studenti</p>
+                <h3 className="text-lg font-semibold text-white">Elenco studenti</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={fetchStudents}
+                  className="rounded-lg border border-white/20 px-3 py-1 text-xs font-semibold text-white hover:border-emerald-400"
+                  disabled={studentsLoading}
+                >
+                  {studentsLoading ? "Aggiorno..." : "Refresh"}
+                </button>
+                <button
+                  onClick={() => setShowStudentPanel(false)}
+                  className="rounded-lg border border-white/15 px-3 py-1 text-xs font-semibold text-white hover:border-emerald-400"
+                >
+                  Chiudi
+                </button>
+              </div>
+            </div>
+            <div className="p-4 space-y-3">
+              {studentError && (
+                <div className="rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-100">
+                  {studentError}
+                </div>
+              )}
+              {studentsLoading ? (
+                <div className="text-sm text-slate-300">Carico studenti...</div>
+              ) : null}
+              {!studentsLoading && students.length === 0 ? (
+                <div className="text-sm text-slate-300">Nessuno studente trovato.</div>
+              ) : null}
+              {!studentsLoading && students.length > 0 ? (
+                <div className="grid gap-2 max-h-[70vh] overflow-y-auto pr-1">
+                  {students.map((s) => (
+                    <div
+                      key={s.id}
+                      className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white"
+                    >
+                      {editingStudentId === s.id ? (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <input
+                              value={studentDrafts[s.id]?.name || ""}
+                              onChange={(e) =>
+                                setStudentDrafts((prev) => ({
+                                  ...prev,
+                                  [s.id]: { ...(prev[s.id] || {}), name: e.target.value },
+                                }))
+                              }
+                              placeholder="Nome"
+                              className="rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white placeholder:text-slate-500"
+                            />
+                            <input
+                              value={studentDrafts[s.id]?.email || ""}
+                              onChange={(e) =>
+                                setStudentDrafts((prev) => ({
+                                  ...prev,
+                                  [s.id]: { ...(prev[s.id] || {}), email: e.target.value },
+                                }))
+                              }
+                              placeholder="Email"
+                              className="rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white placeholder:text-slate-500"
+                              type="email"
+                            />
+                            <input
+                              value={studentDrafts[s.id]?.phone || ""}
+                              onChange={(e) =>
+                                setStudentDrafts((prev) => ({
+                                  ...prev,
+                                  [s.id]: { ...(prev[s.id] || {}), phone: e.target.value },
+                                }))
+                              }
+                              placeholder="Telefono"
+                              className="rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white placeholder:text-slate-500"
+                            />
+                            <select
+                              value={studentDrafts[s.id]?.tutorId || ""}
+                              onChange={(e) =>
+                                setStudentDrafts((prev) => ({
+                                  ...prev,
+                                  [s.id]: { ...(prev[s.id] || {}), tutorId: e.target.value },
+                                }))
+                              }
+                              className="rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white"
+                            >
+                              {tutorList.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {tutorLabel(t)}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleSaveStudent(s.id)}
+                              disabled={studentsLoading}
+                              className="rounded-lg bg-emerald-500 text-slate-900 px-3 py-1 text-[11px] font-semibold hover:bg-emerald-400 disabled:opacity-60"
+                            >
+                              Salva
+                            </button>
+                            <button
+                              onClick={() => setEditingStudentId(null)}
+                              className="rounded-lg border border-white/20 px-3 py-1 text-[11px] font-semibold text-white hover:border-amber-300"
+                            >
+                              Annulla
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-semibold">
+                                {s.name}
+                                {s.isBlack ? (
+                                  <span className="ml-2 rounded-full bg-indigo-500/20 px-2 py-0.5 text-[11px] font-bold text-indigo-100">
+                                    Black
+                                  </span>
+                                ) : null}
+                              </p>
+                              <p className="text-[11px] text-slate-300">
+                                {s.email || "Email n/d"} {s.phone ? `• ${s.phone}` : ""}
+                              </p>
+                              <p className="text-[11px] text-slate-300">
+                                Tutor: {s.tutorName || "n/d"}
+                              </p>
+                            </div>
+                            <div className="text-right text-xs font-semibold text-emerald-200">
+                              Rimaste: {formatHoursLabel(s.remainingPaid || 0)}
+                            </div>
+                          </div>
+                          <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            <input
+                              value={hoursInput[s.id] || ""}
+                              onChange={(e) =>
+                                setHoursInput((prev) => ({ ...prev, [s.id]: e.target.value }))
+                              }
+                              placeholder="+ ore"
+                              className="w-24 rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white placeholder:text-slate-500"
+                              type="number"
+                              min="0"
+                              step="0.5"
+                            />
+                            <button
+                              onClick={() => handleAddHours(s.id)}
+                              className="rounded-lg bg-emerald-500 text-slate-900 px-3 py-1 text-[11px] font-semibold hover:bg-emerald-400"
+                              disabled={studentsLoading}
+                            >
+                              Aggiungi ore
+                            </button>
+                            <button
+                              onClick={() => handleEditStudent(s)}
+                              className="rounded-lg border border-white/20 px-3 py-1 text-[11px] font-semibold text-white hover:border-emerald-300"
+                            >
+                              Modifica
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1638,6 +2457,58 @@ export default function WhatsAppAdmin() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function AddTutorForm({ onCreate }: { onCreate: (name: string, email: string) => Promise<void> }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-3">
+      <p className="text-sm font-semibold text-white">Aggiungi tutor</p>
+      {error && <p className="text-xs text-amber-300">{error}</p>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Nome"
+          className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+        />
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+          type="email"
+        />
+      </div>
+      <button
+        onClick={async () => {
+          if (!name.trim() || !email.trim()) {
+            setError("Nome ed email sono obbligatori");
+            return;
+          }
+          setSaving(true);
+          setError(null);
+          try {
+            await onCreate(name.trim(), email.trim());
+            setName("");
+            setEmail("");
+          } catch (err: any) {
+            setError(err?.message || "Errore creazione");
+          } finally {
+            setSaving(false);
+          }
+        }}
+        disabled={saving}
+        className="w-full rounded-lg bg-sky-500 text-slate-900 font-semibold px-3 py-2 text-sm hover:bg-sky-400 disabled:opacity-60"
+      >
+        {saving ? "Creo..." : "Crea tutor"}
+      </button>
     </div>
   );
 }

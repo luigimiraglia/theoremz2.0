@@ -25,6 +25,16 @@ export const metadata = {
   },
 };
 
+const inlineChat = (
+  <Image
+    alt="Icona chat"
+    src="/images/mess.webp"
+    width={24}
+    height={24}
+    className="inline-block h-[1.05em] w-[1.05em] translate-y-[1px]"
+  />
+);
+
 type Action = {
   href: string;
   label: string;
@@ -234,7 +244,8 @@ export default function StartGenitorePage() {
 
         <section className="mt-7 rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-sm backdrop-blur">
           <h2 className="text-center text-[18px] font-extrabold text-slate-900">
-            Testimonianze vere 💬
+            Testimonianze vere{" "}
+            {inlineChat}
           </h2>
           <p className="mt-2 text-center text-[13px] font-semibold text-slate-500">
             Genitori che hanno visto cambiare metodo, voti e serenità in casa.

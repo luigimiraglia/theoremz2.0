@@ -4,6 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 
 export default function TutorHero() {
+  const inlineMemo = (
+    <Image
+      alt="Icona appunti"
+      src="/images/memo.webp"
+      width={20}
+      height={20}
+      className="align-middle inline-block h-[1.1em] w-[1.1em] translate-y-[1px]"
+    />
+  );
+
   return (
     <section className="mx-6 my-6 max-w-screen-xl xl:mx-auto rounded-[24px] bg-gray-100/60 [.dark_&]:bg-slate-800 px-4 pb-6 sm:px-6 sm:pb-10 lg:px-8">
       <div className="flex flex-col-reverse md:flex-row md:items-center md:gap-8">
@@ -13,7 +23,14 @@ export default function TutorHero() {
             Tutor dedicato
           </h2>
           <p className="text-[28px] sm:text-[30px] font-bold leading-tight text-slate-900 [.dark_&]:text-white">
-            per ogni studente <span className="align-middle">👨‍💻</span>
+            per ogni studente{" "}
+            <Image
+              alt="Icona persona al computer"
+              src="/images/man-pc.webp"
+              width={28}
+              height={28}
+              className="align-middle inline-block h-[1.2em] w-[1.2em]"
+            />
           </p>
 
           <p className="mt-2 text-[18px] sm:text-[19px] font-semibold text-rose-500">
@@ -22,7 +39,7 @@ export default function TutorHero() {
           <p className="text-[17px] sm:text-[18px] font-medium leading-relaxed text-slate-700 [.dark_&]:text-white">
             Scopri i nostri percorsi! Gli studenti sono guidati a 360° da un
             insegnante esperto per raggiungere i loro obiettivi scolastici{" "}
-            <span className="align-middle">📝</span>
+            {inlineMemo}
           </p>
 
           {/* CTA */}

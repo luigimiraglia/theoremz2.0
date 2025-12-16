@@ -1,5 +1,6 @@
 // app/chi-siamo/page.tsx
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 // ====== SEO ======
@@ -247,7 +248,14 @@ export default function ChiSiamoPage() {
                   </a>
                 </div>
                 <div>
-                  💬 WhatsApp:{" "}
+                  <Image
+                    alt="Icona chat"
+                    src="/images/mess.webp"
+                    width={24}
+                    height={24}
+                    className="mr-1.5 inline-block h-[1.1em] w-[1.1em] translate-y-[2px]"
+                  />
+                  WhatsApp:{" "}
                   <a
                     href={CONTACT.whatsapp}
                     target="_blank"

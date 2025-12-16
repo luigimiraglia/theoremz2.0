@@ -70,6 +70,8 @@ export default function TheoremzAIAssistant({
     setSending(true);
     setTyping(true);
 
+    const history = messages.slice(-14).map(({ role, content }) => ({ role, content }));
+
     try {
       const res = await fetch("/api/theoremz-ai", {
         method: "POST",
@@ -82,7 +84,7 @@ export default function TheoremzAIAssistant({
               role: "system",
               content: systemPrompt({ lessonId, lessonTitle }),
             },
-            ...messages.map(({ role, content }) => ({ role, content })),
+            ...history,
             { role: "user", content },
           ],
           userId: user?.uid ?? undefined,

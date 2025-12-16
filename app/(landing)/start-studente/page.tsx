@@ -28,7 +28,7 @@ export const metadata = {
 type Action = {
   href: string;
   label: string;
-  emoji?: string;
+  emoji?: ReactNode;
   gradient: string;
   hover: string;
   shadow: string;
@@ -52,11 +52,41 @@ type Faq = {
   answer: string;
 };
 
+const inlineRocket = (
+  <Image
+    alt="Icona razzo"
+    src="/images/rocket.webp"
+    width={26}
+    height={26}
+    className="inline-block h-[1.15em] w-[1.15em] translate-y-[1px]"
+  />
+);
+
+const inlineCheck = (
+  <Image
+    alt="Icona check"
+    src="/images/check.webp"
+    width={22}
+    height={22}
+    className="inline-block h-[1.05em] w-[1.05em] translate-y-[1px]"
+  />
+);
+
+const inlineChat = (
+  <Image
+    alt="Icona chat"
+    src="/images/mess.webp"
+    width={24}
+    height={24}
+    className="inline-block h-[1.05em] w-[1.05em] translate-y-[1px]"
+  />
+);
+
 const actions: Action[] = [
   {
     href: "/start-studente/form",
     label: "Fai il quiz da 1 minuto",
-    emoji: "🚀",
+    emoji: inlineRocket,
     gradient: "from-sky-400 via-sky-500 to-indigo-500",
     hover: "hover:from-sky-500 hover:via-sky-600 hover:to-indigo-600",
     shadow: "shadow-[0_12px_24px_-12px_rgba(14,165,233,0.8)]",
@@ -153,12 +183,12 @@ const faqs: Faq[] = [
   },
 ];
 
-const progressChecks = [
-  ["Allenamenti guidati ogni settimana", "✅"],
+const progressChecks: Array<[string, ReactNode]> = [
+  ["Allenamenti guidati ogni settimana", inlineCheck],
   ["Report voto e media sempre aggiornati", "📊"],
-  ["Chat con tutor e reminder verifiche", "💬"],
+  ["Chat con tutor e reminder verifiche", inlineChat],
   ["Garanzia 100% soddisfatti o rimborsati", "🛡️"],
-] as const;
+];
 
 export default function StartStudentePage() {
   return (
@@ -231,7 +261,8 @@ export default function StartStudentePage() {
 
         <section className="mt-7 rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-sm backdrop-blur">
           <h2 className="text-center text-[18px] font-extrabold text-slate-900">
-            Le storie più belle 💬
+            Le storie più belle{" "}
+            {inlineChat}
           </h2>
           <p className="mt-2 text-center text-[13px] font-semibold text-slate-500">
             Messaggi reali dalla nostra chat: risultati concreti, zero stress.
@@ -273,18 +304,18 @@ export default function StartStudentePage() {
 
         <section className="mt-7 rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-sm backdrop-blur">
           <h2 className="text-center text-[18px] font-extrabold text-slate-900">
-            Pronto a partire? 🚀
+            Pronto a partire? {inlineRocket}
           </h2>
           <p className="mt-2 text-center text-[13.5px] text-slate-600">
             Attiva Theoremz Black o il Mentor quando vuoi: tutti i percorsi hanno garanzia 100% soddisfatti o rimborsati.
           </p>
           <div className="mt-4 grid gap-2">
-            {progressChecks.map(([label, emoji]) => (
+            {progressChecks.map(([label, icon]) => (
               <div
                 key={label}
                 className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3 text-[13px] text-slate-600"
               >
-                <span className="text-base">{emoji}</span>
+                <span className="text-base leading-none">{icon}</span>
                 <span>{label}</span>
               </div>
             ))}
@@ -317,7 +348,12 @@ function ActionButton({ action }: { action: Action }) {
   return (
     <Link href={action.href} className={className}>
       {action.emoji && (
-        <span className={isPrimary ? "text-lg" : "text-sm"} aria-hidden>
+        <span
+          className={
+            (isPrimary ? "text-lg" : "text-sm") +
+            " inline-flex items-center leading-none"
+          }
+        >
           {action.emoji}
         </span>
       )}

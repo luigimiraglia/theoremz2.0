@@ -1,4 +1,5 @@
 // app/esercizi/page.tsx
+import type { ReactNode } from "react";
 import BuyLink from "@/components/BuyLink";
 import Image from "next/image";
 export default function RisoluzioneEserciziPage() {
@@ -91,6 +92,60 @@ export default function RisoluzioneEserciziPage() {
     },
   ];
 
+  const inlineRocket = (
+    <Image
+      alt="Icona razzo"
+      src="/images/rocket.webp"
+      width={26}
+      height={26}
+      className="inline-block h-[1.15em] w-[1.15em] translate-y-[1px]"
+    />
+  );
+
+  const inlineChat = (
+    <Image
+      alt="Icona chat"
+      src="/images/mess.webp"
+      width={24}
+      height={24}
+      className="inline-block h-[1.05em] w-[1.05em] translate-y-[1px]"
+    />
+  );
+
+  const inlineCheck = (
+    <Image
+      alt="Icona check"
+      src="/images/check.webp"
+      width={22}
+      height={22}
+      className="inline-block h-[1.05em] w-[1.05em] translate-y-[1px]"
+    />
+  );
+
+  const guarantees: { key: string; title: ReactNode; description: string }[] = [
+    {
+      key: "refund",
+      title: "🔒 Rimborso 100%",
+      description:
+        "Se non risolviamo o se non sei soddisfatto della spiegazione.",
+    },
+    {
+      key: "sla",
+      title: "⚡ SLA chiaro",
+      description: "Consegna entro 2 ore (premium in < 30 min).",
+    },
+    {
+      key: "support",
+      title: (
+        <span className="inline-flex items-center gap-2">
+          {inlineChat}
+          <span>Supporto</span>
+        </span>
+      ),
+      description: "Chat inclusa per chiarimenti post-consegna.",
+    },
+  ];
+
   return (
     <main className="bg-white text-slate-900">
       <script
@@ -108,7 +163,8 @@ export default function RisoluzioneEserciziPage() {
           <div className="grid gap-6 md:items-center">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-[11px] sm:text-[12px] font-bold text-sky-700 ring-1 ring-sky-200">
-                🚀 Risoluzione Veloce Esercizi
+                {inlineRocket}
+                <span>Risoluzione Veloce Esercizi</span>
               </div>
 
               <h1
@@ -335,8 +391,8 @@ export default function RisoluzioneEserciziPage() {
             ))}
           </div>
           <p className="mt-3 text-center text-[12.5px] sm:text-[13.5px] text-slate-500">
-            ✅ Se qualcosa non è chiaro, puoi scrivere in chat: ti aiutiamo a
-            capire ogni passaggio.
+            {inlineCheck} Se qualcosa non è chiaro, puoi scrivere in chat: ti
+            aiutiamo a capire ogni passaggio.
           </p>
         </div>
       </section>
@@ -365,23 +421,16 @@ export default function RisoluzioneEserciziPage() {
             Perché scegliere Theoremz
           </h3>
           <div className="mt-5 grid gap-5 md:grid-cols-3">
-            {[
-              [
-                "🔒 Rimborso 100%",
-                "Se non risolviamo o se non sei soddisfatto della spiegazione.",
-              ],
-              ["⚡ SLA chiaro", "Consegna entro 2 ore (premium in < 30 min)."],
-              ["💬 Supporto", "Chat inclusa per chiarimenti post-consegna."],
-            ].map(([h, p]) => (
+            {guarantees.map(({ key, title, description }) => (
               <div
-                key={h}
+                key={key}
                 className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200"
               >
-                <div className="text-[16px] sm:text-[18px] font-extrabold text-slate-900">
-                  {h}
+                <div className="text-[16px] sm:text-[18px] font-extrabold text-slate-900 flex items-center gap-2">
+                  {title}
                 </div>
                 <p className="mt-1 text-[14px] sm:text-[15px] text-slate-600">
-                  {p}
+                  {description}
                 </p>
               </div>
             ))}

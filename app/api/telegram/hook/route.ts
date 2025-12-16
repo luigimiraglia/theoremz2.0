@@ -371,7 +371,7 @@ async function cmdADDTUTOR({ db, chatId, text }: CmdCtx) {
   if (!raw) {
     return send(
       chatId,
-      "Uso: /addtutor Nome Cognome;Telefono;Email (telefono/email opzionali, separati da ;)"
+      "Uso: /addtutor Nome Cognome;Telefono;Email — serve almeno nome ed email."
     );
   }
   const parts = raw.split(";").map((p) => p.trim());
@@ -384,6 +384,10 @@ async function cmdADDTUTOR({ db, chatId, text }: CmdCtx) {
   }
   const phone = parts[1] || null;
   const email = parts[2]?.toLowerCase() || null;
+
+  if (!email) {
+    return send(chatId, "❌ Inserisci anche l'email del tutor per collegare l'account.");
+  }
 
   if (email) {
     const { data: existing, error: lookupErr } = await db

@@ -16,6 +16,16 @@ type MarqueeProps = {
 };
 
 export default function TheoremzHero() {
+  const inlineCheck = (
+    <Image
+      alt="Icona check"
+      src="/images/check.webp"
+      width={24}
+      height={24}
+      className="inline-block h-[1.05em] w-[1.05em] translate-y-[1px]"
+    />
+  );
+
   const items = [
     { label: "Limiti", icon: <FaInfinity /> },
     { label: "Dinamica", icon: <BsGraphUp /> },
@@ -51,7 +61,7 @@ export default function TheoremzHero() {
             <span className="text-sky-600 decoration-[3px] decoration-sky-300/70">
               medie
             </span>{" "}
-            trattati ✅
+            trattati {inlineCheck}
           </h1>
           <p className="mt-4 text-[15.5px] font-medium leading-relaxed md:text-base">
             Su{" "}

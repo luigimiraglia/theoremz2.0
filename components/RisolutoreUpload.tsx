@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { Upload, Loader2, ImageIcon, Camera, Wand2, Sparkles, Copy, RefreshCw, Eye, EyeOff } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -16,6 +17,9 @@ type Solution = {
   steps: Array<{ title: string; body: string }>;
   checks?: string[] | null;
 };
+
+const MAX_FILE_SIZE_MB = 8;
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 export default function RisolutoreUpload() {
   const [fileName, setFileName] = useState("");
@@ -67,12 +71,27 @@ export default function RisolutoreUpload() {
       setSolution(null);
       return;
     }
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setError("Carica un'immagine JPG, PNG o WebP");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      setError(`Limite ${MAX_FILE_SIZE_MB}MB: riduci la foto prima di caricarla`);
+      return;
+    }
+
+    setError(null);
     setFileName(file.name);
     setState("uploading");
+
+    const objectUrl = URL.createObjectURL(file);
+    setImagePreview(objectUrl);
+
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result?.toString() || "";
-      setImagePreview(result);
       setImageData(result);
       setState("idle");
     };
@@ -164,7 +183,14 @@ export default function RisolutoreUpload() {
             ✍️ Aggiungi note (testo) per chiarire cosa vuoi.
           </div>
           <div className="rounded-xl bg-white/70 px-3 py-2 font-semibold text-slate-700 shadow-sm [.dark_&]:bg-slate-800/60 [.dark_&]:text-white">
-            ✅ Passaggi numerati + controlli finali e latex.
+            <Image
+              alt="Icona check"
+              src="/images/check.webp"
+              width={20}
+              height={20}
+              className="mr-1 inline-block h-[1.05em] w-[1.05em] translate-y-[2px]"
+            />
+            Passaggi numerati + controlli finali e latex.
           </div>
         </div>
       </div>

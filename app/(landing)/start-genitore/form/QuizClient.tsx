@@ -86,6 +86,16 @@ const PLANS = {
 
 const QUIZ_ID = "start-genitore" as const;
 
+const inlineChat = (
+  <Image
+    alt="Icona chat"
+    src="/images/mess.webp"
+    width={24}
+    height={24}
+    className="inline-block h-[1.05em] w-[1.05em] translate-y-[1px]"
+  />
+);
+
 type Plan = (typeof PLANS)[keyof typeof PLANS];
 
 type PhoneStatus = "idle" | "missing" | "sending" | "submitted" | "error";
@@ -359,7 +369,7 @@ function FinalScreen({ answers, phone, onPhoneChange, phoneStatus, onSubmitPhone
               </p>
             )}
             <p className="text-[12px] font-semibold text-slate-500">
-              💬 Ti invieremo solo il report e risorse utili per i genitori.
+              {inlineChat}{" "}Ti invieremo solo il report e risorse utili per i genitori.
             </p>
           </>
         )}

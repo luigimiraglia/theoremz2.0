@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 // components/Footer.tsx  (SERVER)
+import Image from "next/image";
 import Link from "next/link";
 import ConsentManagerLink from "./ConsentManagerLink";
 export default function Footer() {
@@ -136,7 +137,14 @@ export default function Footer() {
 
         <p className="text-center text-sm mt-8">
           Sviluppato e scritto al 100% da matematici e fisici italiani e NON da
-          algoritmi 🇮🇹❤️
+          algoritmi 🇮🇹{" "}
+          <Image
+            alt="Icona cuore"
+            src="/images/heart.webp"
+            width={18}
+            height={18}
+            className="inline-block h-[1.1em] w-[1.1em] translate-y-[2px]"
+          />
         </p>
       </div>
     </footer>

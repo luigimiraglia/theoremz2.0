@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function BlackPopup() {
@@ -73,7 +74,16 @@ export default function BlackPopup() {
         href="/black"
         className="relative overflow-hidden bg-gradient-to-r from-gray-900 via-black to-gray-900 font-bold py-3 px-6 rounded-lg text-white mx-4 mt-2 hover:from-gray-800 hover:via-gray-900 hover:to-gray-800 transition-all duration-300 transform hover:scale-105 active:scale-95 before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:translate-x-[-100%] before:animate-[shimmer_2s_infinite] before:skew-x-12"
       >
-        <span className="relative z-10">🚀 Sblocca tutto ora!</span>
+        <span className="relative z-10 inline-flex items-center gap-2">
+          <Image
+            alt="Icona razzo"
+            src="/images/rocket.webp"
+            width={26}
+            height={26}
+            className="inline-block h-[1.15em] w-[1.15em] translate-y-[1px]"
+          />
+          <span>Sblocca tutto ora!</span>
+        </span>
       </Link>
       <style jsx>{`
         @keyframes shimmer {

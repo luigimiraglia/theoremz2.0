@@ -19,6 +19,7 @@ const SATURDAY_WEEKDAY = 6; // JS: Saturday
 export type BlackSchedulerVariant = "onboarding" | "check";
 
 const SLOT_RANGE_LABEL = `${ALLOWED_SLOTS[0]} e ${ALLOWED_SLOTS[ALLOWED_SLOTS.length - 1]}`;
+const GENERIC_MIN_DAYS = 1; // prenotabile da domani
 
 const VARIANT_COPY: Record<
   BlackSchedulerVariant,
@@ -44,10 +45,10 @@ const VARIANT_COPY: Record<
     durationMinutes: 30,
     callTypeLabel: "Onboarding Black",
     callTypeSlug: "onboarding",
-    dateLabel: "Seleziona data (da sabato in poi)",
+    dateLabel: "Seleziona data disponibile",
     slotLabel: "Seleziona orario (30 minuti)",
     slotPill: "30 min",
-    statusIntro: "Step 1: scegli una data disponibile a partire da sabato.",
+    statusIntro: "Step 1: scegli una data disponibile.",
     slotPrompt: `Step 1: scegli uno slot tra ${SLOT_RANGE_LABEL}.`,
     askContactFields: true,
   },
@@ -102,11 +103,8 @@ function toIsoDateLocal(date: Date) {
 function getFirstBookableDate(): Date {
   const base = new Date();
   base.setHours(0, 0, 0, 0);
-  const diff = (SATURDAY_WEEKDAY - base.getDay() + 7) % 7;
-  if (diff === 0) return base; // già sabato
-  const nextSat = new Date(base);
-  nextSat.setDate(base.getDate() + diff);
-  return nextSat;
+  base.setDate(base.getDate() + GENERIC_MIN_DAYS); // domani
+  return base;
 }
 
 function capitalize(value: string) {
@@ -184,7 +182,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
     const nowRome = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Rome" }));
     nowRome.setHours(0, 0, 0, 0);
     const min = new Date(nowRome);
-    min.setDate(min.getDate() + 2); // oggi -> dopodomani
+    min.setDate(min.getDate() + GENERIC_MIN_DAYS); // oggi -> domani
     const max = new Date(nowRome);
     max.setDate(max.getDate() + 14); // entro 2 settimane
     return { start: toIsoDateLocal(min), end: toIsoDateLocal(max) };
@@ -219,6 +217,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
     copy.statusIntro,
   );
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [dayStatus, setDayStatus] = useState<Record<string, "unknown" | "available" | "full" | "error">>({});
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const defaultEmail =
@@ -253,6 +252,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
       if (!selectedDay) return;
       setLoadingSlots(true);
       try {
+        setDayStatus((prev) => ({ ...prev, [selectedDay.id]: "unknown" }));
         const res = await fetch(
           `/api/black-onboarding/book?date=${selectedDay.id}&type=${copy.callTypeSlug}`,
           {
@@ -261,20 +261,43 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
         );
         const data = await res.json();
         if (res.ok) {
-          setBookedSlots(Array.isArray(data?.booked) ? data.booked : []);
+          const bookedTimes = Array.isArray(data?.booked)
+            ? data.booked
+                .map((b: any) => (typeof b === "string" ? b : b?.time))
+                .filter(Boolean)
+            : [];
+          const availableSlots = Array.isArray(data?.available) ? data.available : [];
+          setBookedSlots(bookedTimes);
           setStatus("idle");
           setStatusDetail(copy.slotPrompt);
+          const state = availableSlots.length > 0 ? "available" : "full";
+          setDayStatus((prev) => ({ ...prev, [selectedDay.id]: state }));
+          if (state === "full") {
+            setSelectedSlot(null);
+            setStatus("error");
+            setStatusDetail("Giornata completa. Scegli un altro giorno.");
+          }
         } else {
-          setBookedSlots([]);
+          const bookedTimes = Array.isArray(data?.booked)
+            ? data.booked
+                .map((b: any) => (typeof b === "string" ? b : b?.time))
+                .filter(Boolean)
+            : [];
+          setBookedSlots(bookedTimes);
           setStatus("error");
           setStatusDetail(data?.error || "Impossibile caricare disponibilità.");
+          setDayStatus((prev) => ({ ...prev, [selectedDay.id]: "error" }));
         }
       } catch (err: any) {
         setBookedSlots([]);
         setStatus("error");
         setStatusDetail(err?.message || "Errore rete.");
+        if (selectedDay) {
+          setDayStatus((prev) => ({ ...prev, [selectedDay.id]: "error" }));
+        }
       } finally {
         setLoadingSlots(false);
+        setSelectedSlot(null);
       }
     };
     fetchAvailability();
@@ -460,7 +483,15 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
                   <div className="grid grid-cols-7 gap-2 text-sm">
                     {calendarDays.map((day) => {
                       const isSelected = selectedDay?.id === day.id;
-                      const disabled = !day.isAllowed || day.isPast;
+                      const state = dayStatus[day.id] || "unknown";
+                      const isFull = state === "full";
+                      const disabled = !day.isAllowed || day.isPast || isFull;
+                      const label =
+                        state === "full"
+                          ? "Completo"
+                          : isSelected
+                            ? "Selezionata"
+                            : undefined;
                       return (
                         <button
                           key={day.id}
@@ -475,22 +506,29 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
                               month: currentMonth.toLocaleString("it-IT", { month: "short" }),
                               fullLabel: day.fullLabel,
                             });
+                            setBookedSlots([]);
                             setSelectedSlot(null);
+                            setDayStatus((prev) => ({ ...prev, [day.id]: "unknown" }));
                             setStatus("idle");
                             setStatusDetail(copy.slotPrompt);
                           }}
                           className={`relative flex h-12 flex-col items-center justify-center rounded-xl border text-[13px] font-semibold transition ${
                             disabled
                               ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-600"
-                              : isSelected
-                                ? "border-slate-900 bg-slate-900 text-white shadow-sm ring-1 ring-slate-900/70 dark:border-slate-100/30 dark:bg-slate-100/10 dark:text-white dark:ring-1 dark:ring-slate-100/20"
+                            : isSelected
+                              ? "border-slate-900 bg-slate-900 text-white shadow-sm ring-1 ring-slate-900/70 dark:border-slate-100/30 dark:bg-slate-100/10 dark:text-white dark:ring-1 dark:ring-slate-100/20"
                                 : day.inCurrentMonth
                                   ? "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/80 dark:text-white dark:hover:border-slate-700"
                                   : "border-slate-100 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-500"
                           }`}
                         >
                           <span>{day.dayNumber}</span>
-                          {!disabled && (
+                          {label && (
+                            <span className="mt-1 rounded-full bg-slate-900 px-2 py-[1px] text-[11px] font-semibold text-white">
+                              {label}
+                            </span>
+                          )}
+                          {!disabled && !label && (
                             <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400" />
                           )}
                         </button>
@@ -523,6 +561,11 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
 
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 xl:grid-cols-2">
                     {selectedDay ? (
+                      loadingSlots ? (
+                        <div className="col-span-2 flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
+                          Carico gli slot...
+                        </div>
+                      ) : (
                       timeSlots.map((slot) => {
                         const isSelected = selectedSlot === slot.time;
                         const isBooked = bookedSlots.includes(slot.time);
@@ -550,8 +593,8 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
                             <div className="flex items-center justify-between">
                               <p className="text-base font-bold">{slot.time}</p>
                               {isBooked ? (
-                                <span className="rounded-full bg-slate-200 px-2 py-[2px] text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                  Prenotato
+                                <span className="ml-1 rounded-full bg-slate-200 px-2 py-[2px] text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                  Occupato
                                 </span>
                               ) : (
                                 <span
@@ -568,6 +611,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
                           </button>
                         );
                       })
+                      )
                     ) : (
                       <div className="col-span-2 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-300 sm:col-span-2">
                         Seleziona una data per vedere gli slot disponibili.

@@ -1,6 +1,6 @@
 // components/SocialProof.tsx  (SERVER, niente "use client")
 import Image from "next/image";
-import { FaHeart, FaStar, FaCommentDots } from "react-icons/fa";
+import { FaStar } from "react-icons/fa";
 
 export default function SocialProof() {
   return (
@@ -41,8 +41,20 @@ export default function SocialProof() {
           <span className="text-blue-500">330K+</span> like e commenti positivi
         </p>
         <span className="mt-2 flex items-center justify-center gap-3">
-          <FaHeart className="h-9 w-9 text-white" aria-hidden />
-          <FaCommentDots className="h-9 w-9 text-white" aria-hidden />
+          <Image
+            alt="Icona cuore"
+            src="/images/heart.webp"
+            width={36}
+            height={36}
+            className="h-9 w-9"
+          />
+          <Image
+            alt="Icona chat"
+            src="/images/mess.webp"
+            width={36}
+            height={36}
+            className="h-9 w-9"
+          />
         </span>
       </div>
 

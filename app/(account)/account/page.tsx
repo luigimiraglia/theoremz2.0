@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions */
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import {
   BookOpen,
   CalendarClock,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import NewsletterSettings from "@/components/NewsletterSettings";
 import TempAccessInfo from "@/components/TempAccessInfo";
@@ -28,6 +29,17 @@ const GradesChartRecharts = dynamic(
     ),
   }
 );
+
+type TutorStudent = {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  hoursPaid?: number;
+  hoursConsumed?: number;
+  remainingPaid?: number;
+  isBlack?: boolean;
+};
 
 /* ───────────────── helpers data ───────────────── */
 // Normalizza in millisecondi: accetta Date | string ISO | number (ms/sec) | Firestore Timestamp
@@ -211,6 +223,14 @@ export default function AccountPage() {
   const [weeklyCheckLoading, setWeeklyCheckLoading] = useState(false);
   const [weeklyCheckError, setWeeklyCheckError] = useState<string | null>(null);
 
+  const [nextBooking, setNextBooking] = useState<{
+    hasBooking: boolean;
+    startsAt: string | null;
+    callTypeName?: string | null;
+  } | null>(null);
+  const [nextBookingLoading, setNextBookingLoading] = useState(false);
+  const [nextBookingError, setNextBookingError] = useState<string | null>(null);
+
   useEffect(() => {
     let active = true;
     const fetchWeeklyCheck = async () => {
@@ -256,8 +276,195 @@ export default function AccountPage() {
     };
   }, [isSubscribed, planTier, user?.uid]);
 
+  useEffect(() => {
+    let active = true;
+    const fetchNextBooking = async () => {
+      if (!user?.uid) {
+        setNextBooking(null);
+        setNextBookingError(null);
+        setNextBookingLoading(false);
+        return;
+      }
+      setNextBookingLoading(true);
+      setNextBookingError(null);
+      try {
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) throw new Error("Token non disponibile");
+        const res = await fetch("/api/me/next-booking", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!active) return;
+        if (res.ok) {
+          setNextBooking({
+            hasBooking: Boolean(data?.hasBooking),
+            startsAt: data?.booking?.startsAt || null,
+            callTypeName: data?.booking?.callTypeName || data?.booking?.callType || null,
+          });
+        } else {
+          setNextBooking(null);
+          setNextBookingError(data?.error || "Errore prenotazione");
+        }
+      } catch (err: any) {
+        if (active) {
+          setNextBooking(null);
+          setNextBookingError(err?.message || "Errore rete");
+        }
+      } finally {
+        if (active) setNextBookingLoading(false);
+      }
+    };
+    fetchNextBooking();
+    return () => {
+      active = false;
+    };
+  }, [user?.uid]);
+
+  // Tutor: se l'utente è un tutor, mostra il calendario delle sue prenotazioni
+  const [tutorMode, setTutorMode] = useState<"tutor" | "none">("none");
+  const [tutorData, setTutorData] = useState<{
+    bookings: any[];
+    callTypes: any[];
+    tutorName?: string | null;
+    hoursDue?: number | null;
+    students?: TutorStudent[];
+  } | null>(null);
+  const [tutorLoading, setTutorLoading] = useState(false);
+  const [tutorError, setTutorError] = useState<string | null>(null);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [scheduleStudentId, setScheduleStudentId] = useState<string>("");
+  const [scheduleDate, setScheduleDate] = useState(() => ymd(new Date()));
+  const [scheduleTime, setScheduleTime] = useState("15:00");
+  const [scheduleCallType, setScheduleCallType] = useState<string | null>(null);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  useEffect(() => {
+    if (Array.isArray(tutorData?.callTypes) && tutorData.callTypes[0]?.slug) {
+      setScheduleCallType(tutorData.callTypes[0].slug);
+    }
+  }, [tutorData?.callTypes]);
+  // Disponibilità tutor
+  const [availFrom, setAvailFrom] = useState(() => ymd(new Date()));
+  const [availTo, setAvailTo] = useState(() => ymd(new Date()));
+  const [availStart, setAvailStart] = useState("09:00");
+  const [availEnd, setAvailEnd] = useState("18:00");
+  const [availDays, setAvailDays] = useState<Set<number>>(new Set([0, 1, 2, 3, 4])); // lun-ven
+  const [availSaving, setAvailSaving] = useState(false);
+  const [availMsg, setAvailMsg] = useState<string | null>(null);
+  const [completeBookingId, setCompleteBookingId] = useState<string | null>(null);
+  const [completeError, setCompleteError] = useState<string | null>(null);
+
+  const loadTutorBookings = useCallback(async () => {
+    if (!user?.email) {
+      setTutorMode("none");
+      setTutorData(null);
+      setTutorError(null);
+      return;
+    }
+    setTutorLoading(true);
+    setTutorError(null);
+    try {
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("Token non disponibile");
+      const res = await fetch("/api/admin/bookings?meta=1", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(data?.bookings)) {
+        const normalizeHours = (v: any) => {
+          const n = Number(v);
+          return Number.isFinite(n) ? n : 0;
+        };
+        const students = Array.isArray(data?.tutorSummary?.students)
+          ? data.tutorSummary.students
+              .map((s: any, idx: number) => {
+                const hoursPaid = normalizeHours(
+                  s?.hoursPaid ?? s?.hours_paid ?? s?.remainingPaid ?? 0
+                );
+                const hoursConsumed = normalizeHours(
+                  s?.hoursConsumed ?? s?.hours_consumed ?? 0
+                );
+                return {
+                  id: s?.id ? String(s.id) : `student-${idx}`,
+                  name:
+                    s?.name ||
+                    s?.fullName ||
+                    s?.displayName ||
+                    s?.student_name ||
+                    s?.student_email ||
+                    s?.parent_email ||
+                    "Studente",
+                  email: s?.email || s?.student_email || s?.parent_email || null,
+                  phone: s?.phone || s?.student_phone || s?.parent_phone || null,
+                  hoursPaid,
+                  hoursConsumed,
+                  remainingPaid: Math.max(
+                    0,
+                    normalizeHours(s?.remainingPaid ?? hoursPaid)
+                  ),
+                  isBlack: Boolean(
+                    s?.isBlack ||
+                      s?.status === "active" ||
+                      hoursPaid > 0 ||
+                      hoursConsumed > 0
+                  ),
+                } as TutorStudent;
+              })
+              .filter(Boolean)
+          : [];
+        const hoursDue = data?.tutorSummary
+          ? normalizeHours(data.tutorSummary.hoursDue)
+          : null;
+        const tutorName =
+          (Array.isArray(data?.tutors) && data.tutors[0]?.display_name) ||
+          (Array.isArray(data?.tutors) && data.tutors[0]?.email) ||
+          user.email;
+        setTutorData({
+          bookings: data.bookings,
+          callTypes: data.callTypes || [],
+          tutorName,
+          hoursDue,
+          students,
+        });
+        setTutorMode("tutor");
+      } else {
+        setTutorMode("none");
+        setTutorData(null);
+        if (res.status !== 403 && res.status !== 401 && data?.error) {
+          setTutorError(data.error);
+        }
+      }
+    } catch (err: any) {
+      setTutorMode("none");
+      if (user?.email) {
+        setTutorError(err?.message || "Errore caricamento calendario tutor");
+      }
+    } finally {
+      setTutorLoading(false);
+    }
+  }, [user?.email]);
+
+  useEffect(() => {
+    loadTutorBookings();
+  }, [loadTutorBookings]);
+
   // UI state: none (pagina unica, sezioni verticali)
   const [gradesVersion, setGradesVersion] = useState(0);
+
+  const nextBookingLabel = useMemo(() => {
+    const source =
+      nextBooking?.hasBooking && nextBooking.startsAt
+        ? nextBooking.startsAt
+        : weeklyCheck?.hasBooking && weeklyCheck.startsAt
+          ? weeklyCheck.startsAt
+          : null;
+    if (source) {
+      return formatDateTimeLabel(source);
+    }
+    return null;
+  }, [nextBooking, weeklyCheck]);
 
   const handleSaveUsername = async () => {
     const clean = username.trim().toLowerCase();
@@ -347,6 +554,302 @@ export default function AccountPage() {
       } catch {}
     })();
   }, [user?.uid]);
+
+  const isTutor = tutorMode === "tutor" && Boolean(tutorData);
+  const tutorStudents = useMemo(
+    () => (isTutor && Array.isArray(tutorData?.students) ? tutorData.students : []),
+    [isTutor, tutorData?.students]
+  );
+  const tutorTotalRemainingPaid = useMemo(
+    () =>
+      tutorStudents.reduce(
+        (acc, s) => acc + (Number.isFinite(Number(s?.remainingPaid)) ? Number(s.remainingPaid) : 0),
+        0
+      ),
+    [tutorStudents]
+  );
+  const tutorHoursDue = useMemo(() => {
+    if (!isTutor) return null;
+    const n = Number(tutorData?.hoursDue);
+    return Number.isFinite(n) ? n : null;
+  }, [isTutor, tutorData?.hoursDue]);
+  const tutorGrouped = useMemo(() => {
+    if (!isTutor || !tutorData) return [];
+    const sorted = [...(tutorData.bookings || [])].sort((a, b) => {
+      const aTs = new Date(a?.startsAt || "").getTime();
+      const bTs = new Date(b?.startsAt || "").getTime();
+      return (Number.isNaN(aTs) ? 0 : aTs) - (Number.isNaN(bTs) ? 0 : bTs);
+    });
+    const now = Date.now() - 30 * 60 * 1000;
+    const upcoming = sorted.filter((b) => {
+      const ts = new Date(b?.startsAt || "").getTime();
+      return !Number.isNaN(ts) && ts >= now;
+    });
+    const base = upcoming.length ? upcoming : sorted;
+    const grouped: { key: string; label: string; items: any[] }[] = [];
+    base.forEach((bk: any) => {
+      const { key, label } = formatTutorDayLabel(bk?.startsAt);
+      const existing = grouped.find((g) => g.key === key);
+      if (existing) existing.items.push(bk);
+      else grouped.push({ key, label, items: [bk] });
+    });
+    grouped.sort((a, b) => {
+      const aTs = new Date(a.key).getTime();
+      const bTs = new Date(b.key).getTime();
+      return (Number.isNaN(aTs) ? 0 : aTs) - (Number.isNaN(bTs) ? 0 : bTs);
+    });
+    return grouped;
+  }, [isTutor, tutorData]);
+
+  const tutorCallDuration = useCallback(
+    (bk: any) => {
+      if (Number(bk?.durationMin) > 0) return Number(bk.durationMin);
+      const match =
+        tutorData?.callTypes?.find?.(
+          (ct: any) =>
+            ct?.id === bk?.callTypeId ||
+            ct?.slug === bk?.callType ||
+            ct?.id === bk?.call_type_id
+        ) || null;
+      if (match && Number(match.duration_min) > 0)
+        return Number(match.duration_min);
+      return 60;
+    },
+    [tutorData?.callTypes]
+  );
+
+  const tutorDayList = useMemo(
+    () =>
+      tutorGrouped.map((g) => {
+        const first = g.items[0];
+        const time = first?.startsAt ? formatTutorTimeRange(first.startsAt, tutorCallDuration(first)) : "";
+        return {
+          key: g.key,
+          label: g.label,
+          meta: time,
+          count: g.items.length,
+        };
+      }),
+    [tutorGrouped, tutorCallDuration]
+  );
+
+  const tutorDayCountMap = useMemo(() => {
+    const m = new Map<string, number>();
+    tutorDayList.forEach((d) => m.set(d.key, d.count));
+    return m;
+  }, [tutorDayList]);
+
+  const tutorDaySet = useMemo(() => new Set(tutorDayList.map((d) => d.key)), [tutorDayList]);
+
+  const [selectedTutorDay, setSelectedTutorDay] = useState<string | null>(null);
+  const [tutorCalendarMonth, setTutorCalendarMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
+  const todayYmd = useMemo(() => ymd(new Date()), []);
+  const selectedScheduleStudent = useMemo(
+    () => tutorStudents.find((s) => s.id === scheduleStudentId) || tutorStudents[0] || null,
+    [scheduleStudentId, tutorStudents],
+  );
+  const toggleAvailDay = useCallback((d: number) => {
+    setAvailDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(d)) next.delete(d);
+      else next.add(d);
+      return next;
+    });
+  }, []);
+
+  const openScheduleModal = useCallback(
+    (opts?: { studentId?: string; date?: string }) => {
+      const nextStudentId = opts?.studentId || tutorStudents[0]?.id || "";
+      setScheduleStudentId(nextStudentId);
+      setScheduleDate(opts?.date || todayYmd);
+      setScheduleTime("15:00");
+      setScheduleError(null);
+      setScheduleModalOpen(true);
+      if (Array.isArray(tutorData?.callTypes) && tutorData.callTypes[0]?.slug) {
+        setScheduleCallType((prev) => prev || tutorData.callTypes[0].slug);
+      }
+    },
+    [todayYmd, tutorStudents, tutorData?.callTypes],
+  );
+
+  const handleScheduleSubmit = useCallback(async () => {
+    const student = tutorStudents.find((s) => s.id === scheduleStudentId) || tutorStudents[0];
+    if (!student) {
+      setScheduleError("Seleziona uno studente");
+      return;
+    }
+    const callTypeSlug =
+      scheduleCallType || tutorData?.callTypes?.[0]?.slug || "videolezione";
+    const iso = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
+    setScheduleSaving(true);
+    setScheduleError(null);
+    try {
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("Token non disponibile");
+      const res = await fetch("/api/admin/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          startsAt: iso,
+          callTypeSlug,
+          durationMin: 60,
+          fullName: student.name || "Studente",
+          email: student.email || "noreply@theoremz.com",
+          note: student.phone ? `Telefono: ${student.phone}` : undefined,
+          status: "confirmed",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      setScheduleModalOpen(false);
+      await loadTutorBookings();
+    } catch (err: any) {
+      setScheduleError(err?.message || "Errore prenotazione");
+    } finally {
+      setScheduleSaving(false);
+    }
+  }, [
+    tutorStudents,
+    scheduleStudentId,
+    scheduleCallType,
+    tutorData?.callTypes,
+    scheduleDate,
+    scheduleTime,
+    loadTutorBookings,
+  ]);
+
+  const handleGenerateAvailability = useCallback(async () => {
+    setAvailSaving(true);
+    setAvailMsg(null);
+    try {
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("Token non disponibile");
+      const daysOfWeek = Array.from(availDays.values());
+      const defaultCallType =
+        scheduleCallType ||
+        tutorData?.callTypes?.[0]?.slug ||
+        "videolezione";
+      const defaultSlot =
+        Number(tutorData?.callTypes?.[0]?.duration_min) > 0
+          ? Number(tutorData.callTypes[0].duration_min)
+          : 30;
+      const res = await fetch("/api/admin/availability", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          dateFrom: availFrom,
+          dateTo: availTo,
+          timeStart: availStart,
+          timeEnd: availEnd,
+          slotMinutes: defaultSlot,
+          daysOfWeek,
+          callTypeSlug: defaultCallType,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      setAvailMsg(`Disponibilità inserite: ${data?.slots || "ok"}`);
+      await loadTutorBookings();
+    } catch (err: any) {
+      setAvailMsg(err?.message || "Errore disponibilità");
+    } finally {
+      setAvailSaving(false);
+    }
+  }, [
+    availFrom,
+    availTo,
+    availStart,
+    availEnd,
+    availDays,
+    tutorData?.callTypes,
+    loadTutorBookings,
+  ]);
+
+  const handleCompleteBooking = useCallback(
+    async (booking?: any) => {
+      const bookingId = booking?.id || booking;
+      if (!bookingId) return;
+      setCompleteBookingId(bookingId);
+      setCompleteError(null);
+      try {
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) throw new Error("Token non disponibile");
+        const res = await fetch("/api/admin/bookings/complete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ id: bookingId, studentId: booking?.studentId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+        await loadTutorBookings();
+      } catch (err: any) {
+        setCompleteError(err?.message || "Errore salvataggio");
+      } finally {
+        setCompleteBookingId(null);
+      }
+    },
+    [loadTutorBookings],
+  );
+
+  useEffect(() => {
+    if (!tutorDayList.length) {
+      setSelectedTutorDay(null);
+      return;
+    }
+    const upcoming =
+      tutorDayList.find((d) => d.key >= todayYmd) ||
+      tutorDayList[0] ||
+      null;
+    if (!selectedTutorDay || !tutorDayList.find((d) => d.key === selectedTutorDay)) {
+      setSelectedTutorDay(upcoming?.key || tutorDayList[0].key);
+    }
+  }, [tutorDayList, selectedTutorDay, todayYmd]);
+
+  useEffect(() => {
+    if (!selectedTutorDay) return;
+    const d = new Date(`${selectedTutorDay}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return;
+    setTutorCalendarMonth((prev) => {
+      if (prev.year === d.getFullYear() && prev.month === d.getMonth()) return prev;
+      return { year: d.getFullYear(), month: d.getMonth() };
+    });
+  }, [selectedTutorDay]);
+
+  const selectedTutorGroup = useMemo(
+    () => tutorGrouped.find((g) => g.key === selectedTutorDay) || null,
+    [tutorGrouped, selectedTutorDay],
+  );
+
+  const handleTutorMonthChange = (delta: number) => {
+    setTutorCalendarMonth((prev) => {
+      const d = new Date(prev.year, prev.month + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    });
+  };
+
+  const tutorCalendarRows = useMemo(() => monthMatrix(tutorCalendarMonth.year, tutorCalendarMonth.month), [
+    tutorCalendarMonth,
+  ]);
+  const tutorMonthLabel = useMemo(
+    () =>
+      new Date(tutorCalendarMonth.year, tutorCalendarMonth.month, 1).toLocaleString("it-IT", {
+        month: "long",
+        year: "numeric",
+      }),
+    [tutorCalendarMonth],
+  );
 
   // Skeleton
   if (!user) {
@@ -441,6 +944,12 @@ export default function AccountPage() {
                 {user.email}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
+                {nextBookingLabel && (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white">
+                    <CalendarClock className="h-4 w-4" aria-hidden />
+                    Prossima call: {nextBookingLabel}
+                  </span>
+                )}
                 {!isSubscribed && (
                   <Link
                     href="/black#pricing"
@@ -489,204 +998,748 @@ export default function AccountPage() {
         </div>
       </section>
 
-      {/* Azioni rapide */}
-      <section className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/60">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 [.dark_&]:text-slate-300">
-              Azioni rapide
-            </p>
-            <p className="text-sm text-slate-600 [.dark_&]:text-slate-200">Vai diretto alle funzioni principali.</p>
-          </div>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Link
-            href="/interrogazione"
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-sky-500 px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
-          >
-            <PlayCircle className="h-4 w-4" /> Interrogazione
-          </Link>
-          <Link
-            href="/risolutore"
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
-          >
-            <ListChecks className="h-4 w-4" /> Risolutore
-          </Link>
-          <Link
-            href="/compiti"
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
-          >
-            <FileText className="h-4 w-4" /> Correggi compiti
-          </Link>
-          <Link
-            href="/simula-verifica"
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
-          >
-            <TimerIcon className="h-4 w-4" /> Simula verifica
-          </Link>
-        </div>
-      </section>
-
-      {isSubscribed && planTier === "Black" && (
-        <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-4 text-white shadow-sm [.dark_&]:border-slate-700">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
-                Check settimanale Black
-              </p>
-              <p className="text-sm text-white/80">
-                20 minuti con il tuo tutor per allineare obiettivi e dubbi.
-              </p>
+      {isTutor ? (
+        <section className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white [.dark_&]:bg-slate-900 shadow-sm px-4 py-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 [.dark_&]:text-slate-300">
+                  Calendario tutor
+                </p>
+                <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">
+                  {tutorData?.tutorName || "Tutor"} · {user.email}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {tutorLoading ? (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    Aggiornamento…
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={loadTutorBookings}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 hover:bg-slate-50 [.dark_&]:hover:bg-slate-800/60"
+                  disabled={tutorLoading}
+                >
+                  Aggiorna
+                </button>
+              </div>
             </div>
-            {isCheckingWeeklyCall ? (
-              <div className="text-sm font-semibold text-white/80">Controllo slot...</div>
-            ) : weeklyCheck?.hasBooking ? (
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white">
-                <CalendarClock className="h-4 w-4" aria-hidden />
-                Prossima call: {formatDateTimeLabel(weeklyCheck.startsAt)}
+            {tutorError ? (
+              <div className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-700 [.dark_&]:bg-rose-500/10 [.dark_&]:text-rose-100">
+                {tutorError}
               </div>
-            ) : weeklyCheck ? (
-              <Link
-                href="/black-check-percorso-call"
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-400 px-4 py-2 text-sm font-extrabold text-slate-900 shadow-lg shadow-blue-500/30 transition hover:bg-blue-300"
-              >
-                Prenota la call settimanale
-                <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-            ) : (
-              <div className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-semibold text-white/80">
-                Impossibile verificare le prenotazioni, riprova più tardi.
-              </div>
-            )}
+            ) : null}
           </div>
-          {weeklyCheckError && (
-            <p className="mt-2 text-xs text-amber-200">
-              Non riesco a verificare le prenotazioni di questa settimana ({weeklyCheckError}). Se
-              non hai già fissato la call, puoi aprire la pagina di prenotazione.
-            </p>
-          )}
+
+          <div className="grid gap-4 lg:grid-cols-[280px,1fr]">
+            <div className="rounded-2xl border border-slate-200 bg-white [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900 shadow-sm p-4 space-y-2">
+              <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">Ore da pagare</p>
+              <div className="text-3xl font-black text-slate-900 [.dark_&]:text-white">
+                {tutorLoading ? (
+                  <span className="inline-block h-6 w-20 animate-pulse rounded bg-slate-200 [.dark_&]:bg-slate-800" />
+                ) : (
+                  formatHoursLabel(tutorHoursDue)
+                )}
+              </div>
+              <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                Saldo ore registrate meno pagamenti. Logga le lezioni e i pagamenti per tenere il conteggio aggiornato.
+              </p>
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800/60 [.dark_&]:text-slate-200">
+                Ore prepagate dagli studenti assegnati: {formatHoursLabel(tutorTotalRemainingPaid)}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900 shadow-sm p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">
+                    Studenti assegnati
+                  </p>
+                  <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                    Elenco studenti collegati al tuo profilo tutor.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadTutorBookings}
+                  className="text-[11px] rounded-lg border border-slate-200 px-3 py-1 font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
+                  disabled={tutorLoading}
+                >
+                  Refresh
+                </button>
+              </div>
+              <div className="mt-3 space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                {tutorLoading && !tutorStudents.length ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 3 }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        className="h-16 rounded-xl border border-slate-200 bg-slate-50 animate-pulse [.dark_&]:border-slate-800 [.dark_&]:bg-slate-800/60"
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                {!tutorLoading && !tutorStudents.length ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 px-3 py-3 text-sm text-slate-500 [.dark_&]:border-slate-700 [.dark_&]:text-slate-300">
+                    Nessuno studente assegnato al momento.
+                  </div>
+                ) : null}
+                {tutorStudents.map((s) => (
+                  <div
+                    key={s.id}
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/60"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-semibold text-slate-900 [.dark_&]:text-white">
+                          {s.name}
+                        </p>
+                        <p className="text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                          {(s.email || "Email n/d") +
+                            (s.phone ? ` • ${s.phone}` : "")}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {Number(s.remainingPaid) > 0 ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold text-emerald-800 [.dark_&]:bg-emerald-500/15 [.dark_&]:text-emerald-200">
+                            {formatHoursLabel(s.remainingPaid)} rimaste
+                          </span>
+                        ) : null}
+                        {s.isBlack ? (
+                          <span className="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-[11px] font-bold text-indigo-800 [.dark_&]:bg-indigo-500/15 [.dark_&]:text-indigo-200">
+                            Black
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <p className="mt-1 text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                      Ore erogate: {formatHoursLabel(s.hoursConsumed)} · Disponibili: {formatHoursLabel(s.remainingPaid)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openScheduleModal({ studentId: s.id })}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
+                      >
+                        Programma
+                      </button>
+                      {s.isBlack && s.phone ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const tail = s.phone.replace(/\D/g, "").slice(-10);
+                            if (!tail) return;
+                            window.open(`/admin/whatsapp?tail=${tail}`, "_blank");
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 px-3 py-1 text-[11px] font-semibold text-indigo-800 hover:bg-indigo-50 [.dark_&]:border-indigo-500 [.dark_&]:text-indigo-200 [.dark_&]:hover:bg-indigo-500/10"
+                        >
+                          Apri scheda
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[320px,1fr]">
+            <div className="rounded-2xl border border-slate-200 bg-white [.dark_&]:bg-slate-900 shadow-sm p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">Calendario</p>
+                  <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                    Clicca un giorno per vedere gli slot.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openScheduleModal({ date: selectedTutorDay || todayYmd })}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
+                  >
+                    Programma
+                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleTutorMonthChange(-1)}
+                      className="h-8 w-8 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
+                      aria-label="Mese precedente"
+                    >
+                      ‹
+                    </button>
+                    <div className="px-2 text-xs font-bold uppercase text-slate-600 [.dark_&]:text-slate-300">
+                      {tutorMonthLabel}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleTutorMonthChange(1)}
+                      className="h-8 w-8 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
+                      aria-label="Mese successivo"
+                    >
+                      ›
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-px rounded-lg bg-slate-100 [.dark_&]:bg-slate-800">
+                {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((day) => (
+                  <div
+                    key={day}
+                    className="bg-white [.dark_&]:bg-slate-900 py-2 text-center text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-300"
+                  >
+                    {day}
+                  </div>
+                ))}
+                {tutorCalendarRows.map((row, ridx) =>
+                  row.map((cell, cidx) => {
+                    if (!cell) {
+                      return (
+                        <div
+                          key={`${ridx}-${cidx}-empty`}
+                          className="bg-slate-50 [.dark_&]:bg-slate-900 h-14"
+                        />
+                      );
+                    }
+                    const ds = ymd(cell);
+                    const hasBookings = tutorDaySet.has(ds);
+                    const isSelected = selectedTutorDay === ds;
+                    const isToday = ds === todayYmd;
+                    const count = tutorDayCountMap.get(ds) || 0;
+                    const base =
+                      "h-14 flex flex-col items-center justify-center gap-1 border text-xs font-semibold transition";
+                    const classes = isSelected
+                      ? "border-blue-500 bg-blue-50 text-blue-900 [.dark_&]:border-sky-500 [.dark_&]:bg-sky-500/15 [.dark_&]:text-sky-100"
+                      : hasBookings
+                        ? "border-slate-200 bg-white text-slate-800 hover:border-blue-200 hover:bg-blue-50 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-900 [.dark_&]:text-white [.dark_&]:hover:border-sky-500/50 [.dark_&]:hover:bg-sky-500/10"
+                        : "border-slate-100 bg-slate-50 text-slate-400 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/40 [.dark_&]:text-slate-600";
+                    return (
+                      <button
+                        key={ds}
+                        type="button"
+                        onClick={() => hasBookings && setSelectedTutorDay(ds)}
+                        className={`${base} ${classes}`}
+                        disabled={!hasBookings}
+                      >
+                        <span className="text-sm font-black">
+                          {cell.getDate()}
+                          {isToday ? <span className="ml-1 text-[10px] font-bold text-blue-600 [.dark_&]:text-sky-300">oggi</span> : null}
+                        </span>
+                        {hasBookings ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200">
+                            {count} slot
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-slate-400 [.dark_&]:text-slate-600">
+                            —
+                          </span>
+                        )}
+                      </button>
+                    );
+                  }),
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white [.dark_&]:bg-slate-900 shadow-sm">
+              <div className="border-b border-slate-200 [.dark_&]:border-slate-800 px-4 py-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">
+                    {selectedTutorGroup?.label || "Seleziona un giorno"}
+                  </p>
+                  <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                    {selectedTutorGroup ? `${selectedTutorGroup.items.length} appuntamenti` : "Nessuna selezione"}
+                  </p>
+                </div>
+                {selectedTutorGroup ? (
+                  <div className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200">
+                    {new Date(selectedTutorGroup.key).toLocaleDateString("it-IT", {
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </div>
+                ) : null}
+              </div>
+              <div className="p-4 space-y-3">
+                {!selectedTutorGroup && !tutorLoading ? (
+                  <div className="text-sm font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                    Seleziona un giorno per vedere le call prenotate.
+                  </div>
+                ) : null}
+                {selectedTutorGroup?.items.map((bk: any) => {
+                  const duration = tutorCallDuration(bk);
+                  const callLabel = bk?.callTypeName || bk?.callType || "Call";
+                  const status = (bk?.status || "confirmed") as string;
+                  const statusLabel =
+                    status === "cancelled"
+                      ? "Cancellata"
+                      : status === "confirmed"
+                        ? "Confermata"
+                        : status === "completed"
+                          ? "Effettuata"
+                          : status;
+                  const statusClass =
+                    status === "cancelled"
+                      ? "bg-rose-100 text-rose-700 [.dark_&]:bg-rose-500/15 [.dark_&]:text-rose-200"
+                      : status === "completed"
+                        ? "bg-blue-100 text-blue-700 [.dark_&]:bg-sky-500/15 [.dark_&]:text-sky-100"
+                        : "bg-emerald-100 text-emerald-700 [.dark_&]:bg-emerald-500/15 [.dark_&]:text-emerald-200";
+                  return (
+                    <div
+                      key={bk?.id || bk?.slotId || bk?.startsAt}
+                      className="rounded-xl border border-slate-200 [.dark_&]:border-slate-800 bg-slate-50 [.dark_&]:bg-slate-900/60 px-4 py-3 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="text-sm font-black text-slate-900 [.dark_&]:text-white">
+                            {formatTutorTimeRange(bk?.startsAt, duration)}
+                          </div>
+                          <div className="text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                            {callLabel} · {duration} min
+                          </div>
+                          <div className="text-xs font-semibold text-slate-700 [.dark_&]:text-slate-200">
+                            {bk?.fullName || "Studente"}
+                          </div>
+                          {bk?.note ? (
+                            <div className="text-[11px] font-medium text-slate-500 [.dark_&]:text-slate-300">
+                              {bk.note}
+                            </div>
+                          ) : null}
+                        </div>
+                        <span
+                          className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold ${statusClass}`}
+                    >
+                      {statusLabel}
+                    </span>
+                        {status !== "completed" &&
+                        status !== "cancelled" &&
+                        (bk?.remainingPaid === undefined || Number(bk?.remainingPaid ?? 0) > 0) ? (
+                          <button
+                            type="button"
+                            onClick={() => handleCompleteBooking(bk)}
+                            disabled={completeBookingId === bk?.id}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60 disabled:opacity-60"
+                      >
+                        {completeBookingId === bk?.id ? "Salvo..." : "Segna effettuata"}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+            {completeError ? (
+              <div className="text-[12px] font-semibold text-rose-600 [.dark_&]:text-rose-300">
+                {completeError}
+              </div>
+            ) : null}
+            {tutorLoading ? (
+              <div className="text-sm font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                Caricamento slot...
+              </div>
+            ) : null}
+              </div>
+            </div>
+            </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900 shadow-sm p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">Disponibilità calendario</p>
+                <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                  Genera slot disponibili in un intervallo, con giorni e fasce personalizzate.
+                </p>
+              </div>
+              {availMsg && (
+                <span className="text-[11px] font-semibold text-emerald-600 [.dark_&]:text-emerald-300">
+                  {availMsg}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                Dal
+                <input
+                  type="date"
+                  value={availFrom}
+                  onChange={(e) => setAvailFrom(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                />
+              </label>
+              <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                Al
+                <input
+                  type="date"
+                  value={availTo}
+                  onChange={(e) => setAvailTo(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                />
+              </label>
+              <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                Dalle
+                <input
+                  type="time"
+                  value={availStart}
+                  onChange={(e) => setAvailStart(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                />
+              </label>
+              <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                Alle
+                <input
+                  type="time"
+                  value={availEnd}
+                  onChange={(e) => setAvailEnd(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                />
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((d, idx) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => toggleAvailDay(idx)}
+                  className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
+                    availDays.has(idx)
+                      ? "border-blue-500 bg-blue-50 text-blue-700 [.dark_&]:border-sky-500 [.dark_&]:bg-sky-500/15 [.dark_&]:text-sky-100"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200 [.dark_&]:hover:border-sky-500/50 [.dark_&]:hover:bg-sky-500/10"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setAvailDays(new Set([0, 1, 2, 3, 4]))}
+                className="ml-auto rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-200 [.dark_&]:hover:bg-slate-800/60"
+              >
+                No weekend
+              </button>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleGenerateAvailability}
+                disabled={availSaving}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white shadow hover:brightness-110 disabled:opacity-60"
+              >
+                {availSaving ? "Generazione..." : "Aggiungi disponibilità"}
+              </button>
+            </div>
+          </div>
+
         </section>
+      ) : (
+        <>
+          {/* Azioni rapide */}
+          <section className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/60">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 [.dark_&]:text-slate-300">
+                  Azioni rapide
+                </p>
+                <p className="text-sm text-slate-600 [.dark_&]:text-slate-200">Vai diretto alle funzioni principali.</p>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Link
+                href="/interrogazione"
+                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-sky-500 px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
+              >
+                <PlayCircle className="h-4 w-4" /> Interrogazione
+              </Link>
+              <Link
+                href="/risolutore"
+                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
+              >
+                <ListChecks className="h-4 w-4" /> Risolutore
+              </Link>
+              <Link
+                href="/compiti"
+                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
+              >
+                <FileText className="h-4 w-4" /> Correggi compiti
+              </Link>
+              <Link
+                href="/simula-verifica"
+                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 hover:scale-105"
+              >
+                <TimerIcon className="h-4 w-4" /> Simula verifica
+              </Link>
+            </div>
+          </section>
+
+          {isSubscribed && planTier === "Black" && (
+            <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-4 text-white shadow-sm [.dark_&]:border-slate-700">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                    Check settimanale Black
+                  </p>
+                  <p className="text-sm text-white/80">
+                    20 minuti con il tuo tutor per allineare obiettivi e dubbi.
+                  </p>
+                </div>
+                {isCheckingWeeklyCall ? (
+                  <div className="text-sm font-semibold text-white/80">Controllo slot...</div>
+                ) : weeklyCheck?.hasBooking ? (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white">
+                    <CalendarClock className="h-4 w-4" aria-hidden />
+                    Prossima call: {formatDateTimeLabel(weeklyCheck.startsAt)}
+                  </div>
+                ) : weeklyCheck ? (
+                  <Link
+                    href="/black-check-percorso-call"
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-400 px-4 py-2 text-sm font-extrabold text-slate-900 shadow-lg shadow-blue-500/30 transition hover:bg-blue-300"
+                  >
+                    Prenota la call settimanale
+                    <ArrowRight className="h-4 w-4" aria-hidden />
+                  </Link>
+                ) : (
+                  <div className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-semibold text-white/80">
+                    Impossibile verificare le prenotazioni, riprova più tardi.
+                  </div>
+                )}
+              </div>
+              {weeklyCheckError && (
+                <p className="mt-2 text-xs text-amber-200">
+                  Non riesco a verificare le prenotazioni di questa settimana ({weeklyCheckError}). Se
+                  non hai già fissato la call, puoi aprire la pagina di prenotazione.
+                </p>
+              )}
+            </section>
+          )}
+
+          {/* Temp Access Info */}
+          <TempAccessInfo />
+
+          {/* Avatar picker rimosso */}
+
+          {/* PANORAMICA: rimosso blocco badge */}
+
+          {/* PERCORSO (skill path) */}
+          <TracksCard savedSlugs={savedLessons || []} profile={profile} />
+
+          {/* VERIFICHE PROGRAMMATE */}
+          <ScheduledExamsCard
+            onGradeAdded={() => setGradesVersion((v) => v + 1)}
+            refreshKey={gradesVersion}
+          />
+
+          {/* CONTINUA A STUDIARE */}
+          <Card
+            title="Continua a studiare"
+            subtitle="Riprendi da dove avevi lasciato."
+            right={
+              <button
+                onClick={() => router.push("/matematica")}
+                className="text-sm text-blue-700 [.dark_&]:text-sky-300 hover:underline font-semibold"
+              >
+                Vai al catalogo →
+              </button>
+            }
+          >
+            {!savedLessons ? (
+              <div className="flex gap-3 overflow-x-auto">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="min-w-[260px] h-24 rounded-2xl bg-slate-100 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : savedLessons.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto scroll-smooth snap-x">
+                {savedLessons.map((slug) => (
+                  <div
+                    key={slug}
+                    className="min-w-[280px] snap-start rounded-2xl bg-white [.dark_&]:bg-slate-800 border border-slate-200 p-3 shadow-sm flex items-center gap-3"
+                  >
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-sky-400 text-white flex items-center justify-center font-bold">
+                      {(slug?.[0] || "L").toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold truncate capitalize text-slate-800 [.dark_&]:text-white">
+                        {slug.replace(/-/g, " ")}
+                      </div>
+                      <div className="text-xs text-slate-500 truncate">/{slug}</div>
+                    </div>
+                    <Link
+                      href={`/${slug}`}
+                      className="text-[#1a5fd6] text-sm font-semibold hover:underline"
+                    >
+                      Apri
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title="Nessuna lezione salvata"
+                actionLabel="Esplora le lezioni"
+                onAction={() => router.push("/matematica")}
+              />
+            )}
+          </Card>
+
+          {/* VOTI E ANDAMENTO */}
+          <GradesCard userId={user.uid} refreshKey={gradesVersion} />
+
+          {/* PROFILO */}
+          <div id="profilo" className="h-0" aria-hidden="true" />
+          <Card title="Profilo" subtitle="Personalizza il tuo profilo pubblico.">
+            <ProfileSection
+              userId={user.uid}
+              username={username}
+              setUsername={setUsername}
+              onSaveUsername={handleSaveUsername}
+              usernameLoading={usernameLoading}
+              usernameSaved={usernameSaved}
+              onProfileChange={(patch) =>
+                setProfile((p) => ({ ...(p || {}), ...patch }))
+              }
+            />
+          </Card>
+
+          {/* NEWSLETTER */}
+          <NewsletterSettings variant="compact" className="w-full" />
+
+          {/* ABBONAMENTO */}
+          <Card title="Stato abbonamento">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-600 [.dark_&]:text-white">
+                Il mio piano
+              </span>
+              <span className="text-sm font-medium truncate">{planDisplayLabel}</span>
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-sm text-slate-600 [.dark_&]:text-white">
+                Attivo da
+              </span>
+              <span className="text-sm font-medium">
+                {isSubscribed && subscriptionSince
+                  ? formatDate(subscriptionSince)
+                  : "—"}
+              </span>
+            </div>
+            <button
+              onClick={handleUpgrade}
+              className="mt-4 w-full rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] text-white py-2 text-sm font-semibold"
+            >
+              {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
+            </button>
+          </Card>
+        </>
       )}
 
-      {/* Temp Access Info */}
-      <TempAccessInfo />
-
-      {/* Avatar picker rimosso */}
-
-      {/* PANORAMICA: rimosso blocco badge */}
-
-      {/* PERCORSO (skill path) */}
-      <TracksCard savedSlugs={savedLessons || []} profile={profile} />
-
-      {/* VERIFICHE PROGRAMMATE */}
-      <ScheduledExamsCard
-        onGradeAdded={() => setGradesVersion((v) => v + 1)}
-        refreshKey={gradesVersion}
-      />
-
-      {/* CONTINUA A STUDIARE */}
-      <Card
-        title="Continua a studiare"
-        subtitle="Riprendi da dove avevi lasciato."
-        right={
-          <button
-            onClick={() => router.push("/matematica")}
-            className="text-sm text-blue-700 [.dark_&]:text-sky-300 hover:underline font-semibold"
-          >
-            Vai al catalogo →
-          </button>
-        }
-      >
-        {!savedLessons ? (
-          <div className="flex gap-3 overflow-x-auto">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="min-w-[260px] h-24 rounded-2xl bg-slate-100 animate-pulse"
-              />
-            ))}
-          </div>
-        ) : savedLessons.length > 0 ? (
-          <div className="flex gap-3 overflow-x-auto scroll-smooth snap-x">
-            {savedLessons.map((slug) => (
-              <div
-                key={slug}
-                className="min-w-[280px] snap-start rounded-2xl bg-white [.dark_&]:bg-slate-800 border border-slate-200 p-3 shadow-sm flex items-center gap-3"
-              >
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-sky-400 text-white flex items-center justify-center font-bold">
-                  {(slug?.[0] || "L").toUpperCase()}
+      {isTutor && scheduleModalOpen ? (
+        <FirstExamPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={() => setScheduleModalOpen(false)} />
+            <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 [.dark_&]:text-slate-300">
+                    Nuova lezione
+                  </p>
+                  <p className="text-lg font-bold text-slate-900 [.dark_&]:text-white">Programma con uno studente</p>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold truncate capitalize text-slate-800 [.dark_&]:text-white">
-                    {slug.replace(/-/g, " ")}
-                  </div>
-                  <div className="text-xs text-slate-500 truncate">/{slug}</div>
-                </div>
-                <Link
-                  href={`/${slug}`}
-                  className="text-[#1a5fd6] text-sm font-semibold hover:underline"
+                <button
+                  type="button"
+                  onClick={() => setScheduleModalOpen(false)}
+                  className="text-sm text-slate-500 hover:text-slate-800 [.dark_&]:text-slate-300 [.dark_&]:hover:text-white"
                 >
-                  Apri
-                </Link>
+                  Chiudi
+                </button>
               </div>
-            ))}
+
+              {!tutorStudents.length ? (
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 [.dark_&]:border-amber-500/40 [.dark_&]:bg-amber-500/10 [.dark_&]:text-amber-100">
+                  Nessuno studente assegnato: assegna uno studente prima di programmare.
+                </div>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  <label className="block text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                    Studente
+                    <select
+                      value={scheduleStudentId}
+                      onChange={(e) => setScheduleStudentId(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                    >
+                      {tutorStudents.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} {s.email ? `· ${s.email}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className="block text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                      Data
+                      <input
+                        type="date"
+                        value={scheduleDate}
+                        onChange={(e) => setScheduleDate(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                      />
+                    </label>
+                    <label className="block text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                      Ora
+                      <input
+                        type="time"
+                        value={scheduleTime}
+                        onChange={(e) => setScheduleTime(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Tipo fisso: usiamo il primo disponibile senza mostrarlo */}
+
+                  {selectedScheduleStudent?.phone ? (
+                    <p className="text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-300">
+                      Telefono studente: {selectedScheduleStudent.phone}
+                    </p>
+                  ) : null}
+                  {scheduleError ? (
+                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-700 [.dark_&]:border-rose-500/40 [.dark_&]:bg-rose-500/10 [.dark_&]:text-rose-100">
+                      {scheduleError}
+                    </div>
+                  ) : null}
+
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScheduleModalOpen(false);
+                        setScheduleError(null);
+                      }}
+                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
+                    >
+                      Annulla
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleScheduleSubmit}
+                      disabled={scheduleSaving || !tutorStudents.length}
+                      className="rounded-lg bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-2 text-sm font-bold text-white shadow-md transition hover:brightness-110 disabled:opacity-60"
+                    >
+                      {scheduleSaving ? "Programmo..." : "Programma"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        ) : (
-          <EmptyState
-            title="Nessuna lezione salvata"
-            actionLabel="Esplora le lezioni"
-            onAction={() => router.push("/matematica")}
-          />
-        )}
-      </Card>
-
-      {/* VOTI E ANDAMENTO */}
-      <GradesCard userId={user.uid} refreshKey={gradesVersion} />
-
-      {/* PROFILO */}
-      <div id="profilo" className="h-0" aria-hidden="true" />
-      <Card title="Profilo" subtitle="Personalizza il tuo profilo pubblico.">
-        <ProfileSection
-          userId={user.uid}
-          username={username}
-          setUsername={setUsername}
-          onSaveUsername={handleSaveUsername}
-          usernameLoading={usernameLoading}
-          usernameSaved={usernameSaved}
-          onProfileChange={(patch) =>
-            setProfile((p) => ({ ...(p || {}), ...patch }))
-          }
-        />
-      </Card>
-
-      {/* NEWSLETTER */}
-      <NewsletterSettings variant="compact" className="w-full" />
-
-      {/* ABBONAMENTO */}
-      <Card title="Stato abbonamento">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-slate-600 [.dark_&]:text-white">
-            Il mio piano
-          </span>
-          <span className="text-sm font-medium truncate">{planDisplayLabel}</span>
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-sm text-slate-600 [.dark_&]:text-white">
-            Attivo da
-          </span>
-          <span className="text-sm font-medium">
-            {isSubscribed && subscriptionSince
-              ? formatDate(subscriptionSince)
-              : "—"}
-          </span>
-        </div>
-        <button
-          onClick={handleUpgrade}
-          className="mt-4 w-full rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] text-white py-2 text-sm font-semibold"
-        >
-          {isSubscribed ? "Gestisci abbonamento" : "Passa a Black"}
-        </button>
-      </Card>
+        </FirstExamPortal>
+      ) : null}
 
     </main>
   );
@@ -856,6 +1909,37 @@ function formatDateTimeLabel(input?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatHoursLabel(val?: number | null) {
+  if (val === null || val === undefined) return "—";
+  const n = Number(val);
+  if (!Number.isFinite(n)) return "—";
+  return Number.isInteger(n) ? `${n}h` : `${n.toFixed(1)}h`;
+}
+
+function formatTutorDayLabel(input?: string | null) {
+  if (!input) return { key: "n.d.", label: "Data non disponibile" };
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime()))
+    return { key: input, label: input };
+  const key = d.toISOString().slice(0, 10);
+  const label = d.toLocaleDateString("it-IT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  return { key, label };
+}
+
+function formatTutorTimeRange(input?: string | null, durationMin?: number | null) {
+  if (!input) return "Orario non disponibile";
+  const start = new Date(input);
+  if (Number.isNaN(start.getTime())) return "Orario non disponibile";
+  const dur = Number(durationMin) > 0 ? Number(durationMin) : 30;
+  const end = new Date(start.getTime() + dur * 60_000);
+  const opts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
+  return `${start.toLocaleTimeString("it-IT", opts)} - ${end.toLocaleTimeString("it-IT", opts)}`;
 }
 
 /* ────────────────────── icons ────────────────────── */

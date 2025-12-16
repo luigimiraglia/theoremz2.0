@@ -20,8 +20,9 @@ const ALLOWED_SLOTS = [
 const DEFAULT_CALL_TYPE_SLUG = "onboarding";
 const DEFAULT_TUTOR_EMAIL = "luigi.miraglia006@gmail.com";
 const ROME_TZ = "Europe/Rome";
-const CHECK_MIN_DAYS = 2; // oggi -> dopodomani
+const CHECK_MIN_DAYS = 1; // oggi -> domani
 const CHECK_MAX_DAYS = 14; // entro due settimane
+const GENERIC_MIN_DAYS = 1; // tutte le call: prenotabili da domani
 
 const fromUser = process.env.GMAIL_USER;
 const appPass = process.env.GMAIL_APP_PASS;
@@ -103,42 +104,70 @@ async function getCallTypes(
 }
 
 async function getDefaultTutor(db: ReturnType<typeof supabaseServer>) {
-  const { data, error } = await db
-    .from("tutors")
-    .select("id, display_name, email")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (data) return data as TutorRow;
-
-  // Fallback: try via email lookup
+  // Preferisci tutor con email di default
   const { data: byEmail, error: byEmailErr } = await db
     .from("tutors")
     .select("id, display_name, email")
     .eq("email", DEFAULT_TUTOR_EMAIL)
-    .maybeSingle();
+    .order("created_at", { ascending: true })
+    .limit(1);
   if (byEmailErr) throw new Error(byEmailErr.message);
-  if (!byEmail) throw new Error("Nessun tutor configurato");
-  return byEmail as TutorRow;
+  if (byEmail && byEmail[0]) return byEmail[0] as TutorRow;
+
+  // altrimenti primo disponibile
+  const { data, error } = await db
+    .from("tutors")
+    .select("id, display_name, email")
+    .order("created_at", { ascending: true })
+    .limit(1);
+  if (error) throw new Error(error.message);
+  if (!data || !data[0]) throw new Error("Nessun tutor configurato");
+  return data[0] as TutorRow;
 }
 
-async function fetchSlotsForDate(
+async function fetchTutorSlotsForDate(
   db: ReturnType<typeof supabaseServer>,
-  callTypeId: string,
+  tutorId: string,
   date: string,
 ) {
   const startDay = `${date}T00:00:00Z`;
   const endDay = `${date}T23:59:59Z`;
   const { data, error } = await db
     .from("call_slots")
-    .select("id, starts_at, status")
-    .eq("call_type_id", callTypeId)
+    .select("id, starts_at, status, call_type_id, duration_min")
+    .eq("tutor_id", tutorId)
     .gte("starts_at", startDay)
     .lte("starts_at", endDay)
     .order("starts_at", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as SlotRow[];
+}
+
+async function markSlotsWithBookings(
+  db: ReturnType<typeof supabaseServer>,
+  slots: SlotRow[],
+): Promise<SlotRow[]> {
+  if (!slots.length) return slots;
+  const ids = slots.map((s) => s.id).filter(Boolean);
+  const { data, error } = await db
+    .from("call_bookings")
+    .select("slot_id")
+    .in("slot_id", ids);
+  if (error) throw new Error(error.message);
+  const bookedSet = new Set((data || []).map((row: any) => row.slot_id as string));
+  return slots.map((slot) =>
+    bookedSet.has(slot.id) ? ({ ...slot, status: "booked" } as SlotRow) : slot,
+  );
+}
+
+async function slotAlreadyBooked(db: ReturnType<typeof supabaseServer>, slotId: string) {
+  const { data, error } = await db
+    .from("call_bookings")
+    .select("id")
+    .eq("slot_id", slotId)
+    .limit(1);
+  if (error) throw new Error(error.message);
+  return Boolean(data && data.length > 0);
 }
 
 async function ensureSlotsForDate(
@@ -156,7 +185,7 @@ async function ensureSlotsForDate(
   }));
   const { error } = await db
     .from("call_slots")
-    .upsert(rows, { onConflict: "tutor_id,starts_at" })
+    .upsert(rows, { onConflict: "tutor_id,starts_at", ignoreDuplicates: true })
     .select("id");
   if (error) throw new Error(error.message);
 }
@@ -175,6 +204,13 @@ function extractAvailability(slots: SlotRow[]) {
   };
 }
 
+function overlapsWindow(slot: SlotRow, startIso: string, endIso: string) {
+  const start = new Date(startIso).getTime();
+  const end = new Date(endIso).getTime();
+  const ts = new Date(slot.starts_at).getTime();
+  return ts >= start && ts < end;
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const date = normalizeDate(searchParams.get("date") || "");
@@ -185,8 +221,20 @@ export async function GET(req: Request) {
   }
 
   let range: { minDate?: string; maxDate?: string } | null = null;
+  const today = todayInRome();
+  const minGeneric = formatDateOnly(addDays(today, GENERIC_MIN_DAYS));
+
+  if (date < minGeneric) {
+    return NextResponse.json({
+      date,
+      available: [],
+      booked: [],
+      callTypes: [callTypeSlug || DEFAULT_CALL_TYPE_SLUG],
+      range: { minDate: minGeneric },
+    });
+  }
+
   if (callTypeSlug === "check-percorso") {
-    const today = todayInRome();
     const minDate = formatDateOnly(addDays(today, CHECK_MIN_DAYS));
     const maxDate = formatDateOnly(addDays(today, CHECK_MAX_DAYS));
     range = { minDate, maxDate };
@@ -217,15 +265,55 @@ export async function GET(req: Request) {
     if (!callTypes.length) throw new Error("Tipi di chiamata non trovati");
 
     const allSlots: { slot: SlotRow; callType: CallTypeRow }[] = [];
+    const allowedTimes = ALLOWED_SLOTS.map((t) => ({ time: t, iso: toUtcIso(date, t) }));
 
+    // Assicura slot per ogni callType, poi calcola disponibilità globale per tutor
     for (const callType of callTypes) {
-      let slots = await fetchSlotsForDate(db, callType.id, date);
-      if (slots.length === 0) {
+      let slots = await fetchTutorSlotsForDate(db, tutor.id, date);
+      if (!slots.some((s) => s.call_type_id === callType.id)) {
         await ensureSlotsForDate(db, callType, tutor, date);
-        slots = await fetchSlotsForDate(db, callType.id, date);
+        slots = await fetchTutorSlotsForDate(db, tutor.id, date);
       }
-      slots.forEach((slot) => allSlots.push({ slot, callType }));
+      const slotsWithBookings = await markSlotsWithBookings(db, slots);
+      slotsWithBookings.forEach((slot) => allSlots.push({ slot, callType }));
     }
+
+    // blocca orari sovrapposti alle prenotazioni esistenti (anche se non c'è uno slot marcato booked)
+    const startDay = `${date}T00:00:00Z`;
+    const endDay = `${date}T23:59:59Z`;
+    const { data: dayBookings, error: dayBookingsErr } = await db
+      .from("call_bookings")
+      .select(
+        `
+        id,
+        status,
+        slot:call_slots!inner ( starts_at, duration_min, tutor_id ),
+        call_type:call_types ( duration_min )
+      `,
+      )
+      .eq("status", "confirmed")
+      .eq("call_slots.tutor_id", tutor.id)
+      .gte("call_slots.starts_at", startDay)
+      .lte("call_slots.starts_at", endDay);
+    if (dayBookingsErr) throw new Error(dayBookingsErr.message);
+
+    const blockedTimes = new Set<string>();
+    (dayBookings || []).forEach((b: any) => {
+      const startIso = b?.slot?.starts_at;
+      const dur =
+        Number(b?.call_type?.duration_min) > 0
+          ? Number(b?.call_type?.duration_min)
+          : Number(b?.slot?.duration_min) > 0
+            ? Number(b?.slot?.duration_min)
+            : 30;
+      if (!startIso) return;
+      const startMs = new Date(startIso).getTime();
+      const endMs = startMs + dur * 60000;
+      allowedTimes.forEach((t) => {
+        const ts = new Date(t.iso).getTime();
+        if (ts >= startMs && ts < endMs) blockedTimes.add(t.time);
+      });
+    });
 
     const bookedDetailed = allSlots
       .filter(({ slot }) => slot.status === "booked")
@@ -235,14 +323,23 @@ export async function GET(req: Request) {
         callType: callType.slug,
       }));
 
-    const availableSet = new Set<string>();
+    const timeToStatus = new Map<string, { booked: number; total: number }>();
     allSlots.forEach(({ slot }) => {
-      if (slot.status !== "booked") availableSet.add(timeFromIsoUtc(slot.starts_at));
+      const t = timeFromIsoUtc(slot.starts_at);
+      const entry = timeToStatus.get(t) || { booked: 0, total: 0 };
+      entry.total += 1;
+      if (slot.status === "booked") entry.booked += 1;
+      timeToStatus.set(t, entry);
     });
+    const available = Array.from(timeToStatus.entries())
+      // considera l'orario disponibile solo se nessuno slot è booked e non è bloccato da altre prenotazioni
+      .filter(([time, v]) => v.booked === 0 && !blockedTimes.has(time))
+      .map(([time]) => time)
+      .sort();
 
     return NextResponse.json({
       date,
-      available: Array.from(availableSet).sort(),
+      available,
       booked: bookedDetailed,
       callTypes: callTypes.map((c) => c.slug),
       range,
@@ -282,8 +379,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Data o orario non validi" }, { status: 400 });
     }
 
+    const today = todayInRome();
+    const minGeneric = formatDateOnly(addDays(today, GENERIC_MIN_DAYS));
+
+    if (normalizedDate < minGeneric) {
+      return NextResponse.json(
+        { error: `Puoi prenotare a partire da ${minGeneric} (almeno 1 giorno di anticipo).` },
+        { status: 400 },
+      );
+    }
+
     if (callTypeSlug === "check-percorso") {
-      const today = todayInRome();
       const minDate = formatDateOnly(addDays(today, CHECK_MIN_DAYS));
       const maxDate = formatDateOnly(addDays(today, CHECK_MAX_DAYS));
       if (normalizedDate < minDate || normalizedDate > maxDate) {
@@ -312,19 +418,28 @@ export async function POST(req: Request) {
         ? Number(callDurationMinutes)
         : callType.duration_min;
 
+    // assicura che tutti gli slot del giorno per questo callType esistano
+    await ensureSlotsForDate(db, callType, tutor, normalizedDate);
+
     const slotStartIso = toUtcIso(normalizedDate, timeSlot);
-    const { data: fetchedSlot, error: slotErr } = await db
-      .from("call_slots")
-      .select("id, starts_at, status")
-      .eq("call_type_id", callType.id)
-      .eq("starts_at", slotStartIso)
-      .maybeSingle();
-    if (slotErr) throw new Error(slotErr.message);
+    const slotEndIso = new Date(new Date(slotStartIso).getTime() + durationMinutes * 60000).toISOString();
 
-    let slot = fetchedSlot as SlotRow | null;
+    const daySlots = await markSlotsWithBookings(
+      db,
+      await fetchTutorSlotsForDate(db, tutor.id, normalizedDate),
+    );
+    const overlapping = daySlots.filter((s) => overlapsWindow(s, slotStartIso, slotEndIso));
 
-    if (!slot) {
-      // crea lo slot al volo, gestendo eventuale race con onConflict
+    const overlappingBooked = overlapping.filter((s) => s.status === "booked");
+    if (overlappingBooked.length) {
+      const { booked } = extractAvailability(daySlots);
+      return NextResponse.json({ error: "Slot già prenotato", booked }, { status: 409 });
+    }
+
+    const slot = overlapping.find((s) => s.starts_at === slotStartIso) || null;
+
+    let ensuredSlot = slot;
+    if (!ensuredSlot) {
       const { data: created, error: createErr } = await db
         .from("call_slots")
         .upsert(
@@ -338,40 +453,63 @@ export async function POST(req: Request) {
           { onConflict: "tutor_id,starts_at" },
         )
         .select("id, starts_at, status")
-        .maybeSingle();
+        .limit(1);
       if (createErr) throw new Error(createErr.message);
-      slot = created as SlotRow;
+      ensuredSlot = (created || [])[0] as SlotRow;
     }
 
-    if (slot.status !== "available") {
-      const slots = await fetchSlotsForDate(db, callType.id, normalizedDate);
-      const { booked } = extractAvailability(slots);
-      return NextResponse.json(
-        { error: "Slot già prenotato", booked },
-        { status: 409 },
-      );
+    if (ensuredSlot?.status !== "available") {
+      const { booked } = extractAvailability(daySlots);
+      return NextResponse.json({ error: "Slot già prenotato", booked }, { status: 409 });
     }
 
+    const slotBooked = await slotAlreadyBooked(db, ensuredSlot.id);
+    if (slotBooked) {
+      const { booked } = extractAvailability(daySlots);
+      return NextResponse.json({ error: "Slot già prenotato", booked }, { status: 409 });
+    }
+
+    const nowIso = new Date().toISOString();
     const { data: locked, error: lockErr } = await db
       .from("call_slots")
-      .update({ status: "booked", updated_at: new Date().toISOString() })
-      .eq("id", slot.id)
+      .update({
+        status: "booked",
+        call_type_id: callType.id,
+        duration_min: durationMinutes,
+        updated_at: nowIso,
+      })
+      .eq("id", ensuredSlot.id)
       .eq("status", "available")
       .select("id")
-      .maybeSingle();
+      .limit(1);
     if (lockErr) throw new Error(lockErr.message);
-    if (!locked) {
-      const slots = await fetchSlotsForDate(db, callType.id, normalizedDate);
-      const { booked } = extractAvailability(slots);
-      return NextResponse.json(
-        { error: "Slot già prenotato", booked },
-        { status: 409 },
-      );
+    if (!locked || !locked[0]) {
+      const { booked } = extractAvailability(daySlots);
+      return NextResponse.json({ error: "Slot già prenotato", booked }, { status: 409 });
+    }
+
+    // blocca gli slot sovrapposti
+    const overlapIds = Array.from(
+      new Set(
+        [...overlapping.map((s) => s.id), ensuredSlot.id].filter(Boolean),
+      ),
+    );
+    if (overlapIds.length) {
+      await db
+        .from("call_slots")
+        .update({
+          status: "booked",
+          call_type_id: callType.id,
+          duration_min: durationMinutes,
+          updated_at: nowIso,
+        })
+        .in("id", overlapIds)
+        .eq("status", "available");
     }
 
     const userId = accUid || null;
     const { error: bookingErr } = await db.from("call_bookings").insert({
-      slot_id: slot.id,
+      slot_id: ensuredSlot.id,
       call_type_id: callType.id,
       tutor_id: tutor.id,
       user_id: userId,
@@ -380,7 +518,21 @@ export async function POST(req: Request) {
       note: extraNote || null,
       status: "confirmed",
     });
-    if (bookingErr) throw new Error(bookingErr.message);
+    if (bookingErr) {
+      if (
+        bookingErr.code === "23505" ||
+        (typeof bookingErr.message === "string" &&
+          bookingErr.message.includes("call_bookings_slot_id_key"))
+      ) {
+        const slots = await fetchTutorSlotsForDate(db, tutor.id, normalizedDate);
+        const { booked } = extractAvailability(slots);
+        return NextResponse.json(
+          { error: "Slot già prenotato", booked },
+          { status: 409 },
+        );
+      }
+      throw new Error(bookingErr.message);
+    }
 
     if (userId) {
       try {
@@ -447,14 +599,17 @@ Username: ${accUsername || "—"}
       replyTo: replyEmail,
     });
 
-    const slots = await fetchSlotsForDate(db, callType.id, normalizedDate);
+    const slots = await markSlotsWithBookings(
+      db,
+      await fetchTutorSlotsForDate(db, tutor.id, normalizedDate),
+    );
     const { booked } = extractAvailability(slots);
 
     return NextResponse.json({
       ok: true,
       booked,
       callType: callType.slug,
-      slot: slot.id,
+      slot: ensuredSlot?.id || slot?.id || null,
     });
   } catch (err: any) {
     return NextResponse.json(
