@@ -52,10 +52,22 @@ export async function GET(request: Request) {
       ? {
           id: booking.id,
           status: booking.status,
-          startsAt: booking.slot?.starts_at || null,
-          endsAt: booking.slot?.ends_at || null,
-          callType: booking.call_type?.slug || null,
-          callTypeName: booking.call_type?.name || null,
+          startsAt: (() => {
+            const slot = Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
+            return (slot as any)?.starts_at || null;
+          })(),
+          endsAt: (() => {
+            const slot = Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
+            return (slot as any)?.ends_at || null;
+          })(),
+          callType: (() => {
+            const ct = Array.isArray(booking.call_type) ? booking.call_type[0] : booking.call_type;
+            return (ct as any)?.slug || null;
+          })(),
+          callTypeName: (() => {
+            const ct = Array.isArray(booking.call_type) ? booking.call_type[0] : booking.call_type;
+            return (ct as any)?.name || null;
+          })(),
         }
       : null,
   });
