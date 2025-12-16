@@ -1042,7 +1042,7 @@ export default function AccountPage() {
           <div className="grid gap-4 lg:grid-cols-[280px,1fr]">
             <div className="rounded-2xl border border-slate-200 bg-white [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900 shadow-sm p-4 space-y-2">
               <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">Saldo</p>
-              <div className="text-5xl font-black text-sky-600 [.dark_&]:text-sky-300 leading-tight">
+              <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-blue-700 to-sky-500 leading-tight drop-shadow-[0_12px_30px_rgba(40,88,200,0.32)]">
                 {tutorLoading ? (
                   <span className="inline-block h-8 w-28 animate-pulse rounded bg-slate-200 [.dark_&]:bg-slate-800" />
                 ) : (
