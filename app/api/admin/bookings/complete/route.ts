@@ -181,6 +181,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ore disponibili esaurite per lo studente" }, { status: 409 });
     }
 
+    // Segna la booking come completata solo se non lo è già (idempotenza server-side)
+    const completionTs = new Date().toISOString();
+    const { data: statusRow, error: statusUpdateErr } = await db
+      .from("call_bookings")
+      .update({ status: "completed", updated_at: completionTs })
+      .eq("id", id)
+      .neq("status", "completed")
+      .select("id")
+      .maybeSingle();
+    if (statusUpdateErr) return NextResponse.json({ error: statusUpdateErr.message }, { status: 500 });
+    if (!statusRow) {
+      return NextResponse.json({ error: "Booking già segnato come effettuato" }, { status: 409 });
+    }
+
     // Update tutor hours_due
     const { data: tutorRow, error: tutorErr } = await db
       .from("tutors")
@@ -189,31 +203,34 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     if (tutorErr) return NextResponse.json({ error: tutorErr.message }, { status: 500 });
     const currentDue = Number(tutorRow?.hours_due ?? 0);
-    await db.from("tutors").update({ hours_due: currentDue + hoursToDeduct }).eq("id", booking.tutor_id);
+    const { error: tutorUpdateErr } = await db
+      .from("tutors")
+      .update({ hours_due: currentDue + hoursToDeduct })
+      .eq("id", booking.tutor_id);
+    if (tutorUpdateErr) return NextResponse.json({ error: tutorUpdateErr.message }, { status: 500 });
 
     // Scala ore allo studente
-    await db
+    const { error: studentUpdateErr } = await db
       .from("black_students")
       .update({
         hours_consumed: hoursConsumed + hoursToDeduct,
         hours_paid: Math.max(0, hoursPaid - hoursToDeduct),
       })
       .eq("id", studentId);
+    if (studentUpdateErr) return NextResponse.json({ error: studentUpdateErr.message }, { status: 500 });
 
     // Log tutor session
     const happenedAt =
       slot?.starts_at ||
       new Date().toISOString().slice(0, 10);
-    await db.from("tutor_sessions").insert({
+    const { error: sessionErr } = await db.from("tutor_sessions").insert({
       tutor_id: booking.tutor_id,
       student_id: studentId,
       duration: hoursToDeduct,
       happened_at: happenedAt.slice(0, 10),
       note: booking.full_name || null,
     });
-
-    // Update booking status
-    await db.from("call_bookings").update({ status: "completed", updated_at: new Date().toISOString() }).eq("id", id);
+    if (sessionErr) return NextResponse.json({ error: sessionErr.message }, { status: 500 });
 
     return NextResponse.json({
       ok: true,

@@ -6,6 +6,8 @@ export const dynamic = "force-dynamic";
 
 const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
 const DEFAULT_TUTOR_EMAIL = "luigi.miraglia006@gmail.com";
+const DEFAULT_CALL_TYPE = "ripetizione";
+const DEFAULT_DURATION_MIN = 60;
 
 type CallTypeRow = { id: string; slug: string; name: string; duration_min: number };
 type TutorRow = { id: string; display_name?: string | null; email?: string | null };
@@ -577,7 +579,11 @@ export async function POST(request: NextRequest) {
     const startsAtIso = normalizeIso(body.startsAt);
     if (!startsAtIso) return NextResponse.json({ error: "Data/ora non valida" }, { status: 400 });
 
-    const callType = await fetchCallType(db, String(body.callTypeSlug || "onboarding"));
+    const forceRipetizione = !(viewer?.isAdmin);
+    const callTypeSlug = forceRipetizione ? DEFAULT_CALL_TYPE : String(body.callTypeSlug || "onboarding");
+    const durationMinutes = forceRipetizione ? DEFAULT_DURATION_MIN : body.durationMin;
+
+    const callType = await fetchCallType(db, callTypeSlug);
     const tutor = viewer?.isAdmin
       ? await fetchDefaultTutor(db, body.tutorId)
       : await fetchTutorById(db, viewer?.tutorId || "");
@@ -585,7 +591,7 @@ export async function POST(request: NextRequest) {
       startsAtIso,
       callType,
       tutor,
-      durationMin: body.durationMin,
+      durationMin: durationMinutes,
     });
 
     const payload = {
@@ -648,7 +654,9 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 
-    const callTypeSlug = body.callTypeSlug || existing.callType || "onboarding";
+    const forceRipetizione = !(viewer?.isAdmin);
+    const callTypeSlug = forceRipetizione ? DEFAULT_CALL_TYPE : (body.callTypeSlug || existing.callType || "onboarding");
+    const forcedDuration = forceRipetizione ? DEFAULT_DURATION_MIN : (body.durationMin || existing.durationMin);
     const callType = await fetchCallType(db, String(callTypeSlug));
     const tutor = viewer?.isAdmin
       ? await fetchDefaultTutor(db, body.tutorId || existing.tutorId)
@@ -661,7 +669,7 @@ export async function PATCH(request: NextRequest) {
       startsAtIso,
       callType,
       tutor,
-      durationMin: body.durationMin || existing.durationMin,
+      durationMin: forcedDuration,
       allowSlotId: existing.slotId || null,
     });
 

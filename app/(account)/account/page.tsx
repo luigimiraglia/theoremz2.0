@@ -29,6 +29,8 @@ const GradesChartRecharts = dynamic(
     ),
   }
 );
+const DEFAULT_CALL_TYPE = "ripetizione";
+const DEFAULT_DURATION_MIN = 60;
 
 type TutorStudent = {
   id: string;
@@ -336,12 +338,12 @@ export default function AccountPage() {
   const [scheduleStudentId, setScheduleStudentId] = useState<string>("");
   const [scheduleDate, setScheduleDate] = useState(() => ymd(new Date()));
   const [scheduleTime, setScheduleTime] = useState("15:00");
-  const [scheduleCallType, setScheduleCallType] = useState<string | null>(null);
+  const [scheduleCallType, setScheduleCallType] = useState<string | null>(DEFAULT_CALL_TYPE);
   const [scheduleSaving, setScheduleSaving] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   useEffect(() => {
     if (Array.isArray(tutorData?.callTypes) && tutorData.callTypes[0]?.slug) {
-      setScheduleCallType(tutorData.callTypes[0].slug);
+      setScheduleCallType(DEFAULT_CALL_TYPE);
     }
   }, [tutorData?.callTypes]);
   // Disponibilità tutor
@@ -580,12 +582,7 @@ export default function AccountPage() {
       const bTs = new Date(b?.startsAt || "").getTime();
       return (Number.isNaN(aTs) ? 0 : aTs) - (Number.isNaN(bTs) ? 0 : bTs);
     });
-    const now = Date.now() - 30 * 60 * 1000;
-    const upcoming = sorted.filter((b) => {
-      const ts = new Date(b?.startsAt || "").getTime();
-      return !Number.isNaN(ts) && ts >= now;
-    });
-    const base = upcoming.length ? upcoming : sorted;
+    const base = sorted;
     const grouped: { key: string; label: string; items: any[] }[] = [];
     base.forEach((bk: any) => {
       const { key, label } = formatTutorDayLabel(bk?.startsAt);
@@ -668,9 +665,7 @@ export default function AccountPage() {
       setScheduleTime("15:00");
       setScheduleError(null);
       setScheduleModalOpen(true);
-      if (Array.isArray(tutorData?.callTypes) && tutorData.callTypes[0]?.slug) {
-        setScheduleCallType((prev) => prev || tutorData.callTypes[0].slug);
-      }
+      setScheduleCallType((prev) => prev || DEFAULT_CALL_TYPE);
     },
     [todayYmd, tutorStudents, tutorData?.callTypes],
   );
@@ -681,8 +676,7 @@ export default function AccountPage() {
       setScheduleError("Seleziona uno studente");
       return;
     }
-    const callTypeSlug =
-      scheduleCallType || tutorData?.callTypes?.[0]?.slug || "videolezione";
+    const callTypeSlug = DEFAULT_CALL_TYPE;
     const iso = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
     setScheduleSaving(true);
     setScheduleError(null);
@@ -698,7 +692,7 @@ export default function AccountPage() {
         body: JSON.stringify({
           startsAt: iso,
           callTypeSlug,
-          durationMin: 60,
+          durationMin: DEFAULT_DURATION_MIN,
           fullName: student.name || "Studente",
           email: student.email || "noreply@theoremz.com",
           note: student.phone ? `Telefono: ${student.phone}` : undefined,
@@ -731,14 +725,8 @@ export default function AccountPage() {
       const token = await getAuth().currentUser?.getIdToken();
       if (!token) throw new Error("Token non disponibile");
       const daysOfWeek = Array.from(availDays.values());
-      const defaultCallType =
-        scheduleCallType ||
-        tutorData?.callTypes?.[0]?.slug ||
-        "videolezione";
-      const defaultSlot =
-        Number(tutorData?.callTypes?.[0]?.duration_min) > 0
-          ? Number(tutorData?.callTypes?.[0]?.duration_min)
-          : 30;
+      const defaultCallType = DEFAULT_CALL_TYPE;
+      const defaultSlot = DEFAULT_DURATION_MIN;
       const res = await fetch("/api/admin/availability", {
         method: "POST",
         headers: {

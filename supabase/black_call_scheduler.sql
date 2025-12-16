@@ -199,7 +199,7 @@ insert into public.call_types (slug, name, description, duration_min)
 values
   ('onboarding', 'Onboarding Black', 'Prima call di setup', 30),
   ('check-percorso', 'Check percorso Black', 'Follow-up da 20 minuti', 20),
-  ('ripetizione', 'Ripetizione', 'Lezione singola personalizzata', 55)
+  ('ripetizione', 'Ripetizione', 'Lezione singola personalizzata', 60)
 on conflict (slug) do nothing;
 
 -- Esempio tutor (singolo)
