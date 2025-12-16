@@ -32,6 +32,18 @@ export async function GET(request: NextRequest) {
   const db = supabaseServer();
   if (!db) return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
   try {
+    const { data: assignmentRows } = await db
+      .from("tutor_assignments")
+      .select("student_id, tutor_id, hourly_rate");
+    const assignmentMap = new Map<string, { tutorId: string; hourlyRate?: number | null }>();
+    (assignmentRows || []).forEach((row: any) => {
+      if (!row?.student_id || !row?.tutor_id) return;
+      assignmentMap.set(row.student_id, {
+        tutorId: row.tutor_id,
+        hourlyRate: row.hourly_rate != null ? Number(row.hourly_rate) : null,
+      });
+    });
+
     const { data, error } = await db
       .from("black_students")
       .select(
@@ -57,6 +69,7 @@ export async function GET(request: NextRequest) {
       const hoursPaid = Number(s?.hours_paid ?? 0);
       const hoursConsumed = Number(s?.hours_consumed ?? 0);
       const remaining = Math.max(0, hoursPaid, hoursPaid - hoursConsumed);
+      const assignment = assignmentMap.get(s?.id || "");
       return {
         id: s?.id as string,
         name:
@@ -67,11 +80,12 @@ export async function GET(request: NextRequest) {
           "Studente",
         email: s?.student_email || s?.parent_email || null,
         phone: s?.student_phone || s?.parent_phone || null,
-        tutorId: tutor?.id || s?.videolesson_tutor_id || null,
+        tutorId: tutor?.id || s?.videolesson_tutor_id || assignment?.tutorId || null,
         tutorName: tutor?.display_name || tutor?.full_name || tutor?.email || null,
         hoursPaid,
         hoursConsumed,
         remainingPaid: remaining,
+        hourlyRate: assignment?.hourlyRate ?? null,
         isBlack: (s?.status || "").toLowerCase() !== "inactive",
       };
     });
@@ -133,10 +147,23 @@ export async function PATCH(request: NextRequest) {
     const studentId = String(body.studentId || "").trim();
     if (!studentId) return NextResponse.json({ error: "studentId mancante" }, { status: 400 });
 
+    const { data: existing, error: existingErr } = await db
+      .from("black_students")
+      .select("id, hours_paid, hours_consumed, videolesson_tutor_id")
+      .eq("id", studentId)
+      .maybeSingle();
+    if (existingErr) return NextResponse.json({ error: existingErr.message }, { status: 500 });
+    if (!existing) return NextResponse.json({ error: "Studente non trovato" }, { status: 404 });
+
     const name = (body.name || body.preferredName || "").trim();
     const email = (body.email || body.studentEmail || body.parentEmail || "").trim().toLowerCase();
     const phone = (body.phone || body.studentPhone || body.parentPhone || "").trim();
     const tutorId = body.tutorId ? String(body.tutorId).trim() : null;
+    const hoursPaidRaw = body.hoursPaid;
+    const hoursConsumedRaw = body.hoursConsumed;
+    const hourlyRateRaw = body.hourlyRate;
+    const effectiveTutorId = tutorId || existing.videolesson_tutor_id || null;
+    const wantsHourlyRateUpdate = hourlyRateRaw !== undefined;
 
     const updates: Record<string, any> = { updated_at: new Date().toISOString() };
     if (name) updates.preferred_name = name;
@@ -149,9 +176,40 @@ export async function PATCH(request: NextRequest) {
       updates.parent_phone = phone;
     }
     if (tutorId) updates.videolesson_tutor_id = tutorId;
+    if (hoursPaidRaw !== undefined) {
+      const next = Number(hoursPaidRaw);
+      if (!Number.isFinite(next) || next < 0) {
+        return NextResponse.json({ error: "hoursPaid non valido" }, { status: 400 });
+      }
+      updates.hours_paid = next;
+    }
+    if (hoursConsumedRaw !== undefined) {
+      const next = Number(hoursConsumedRaw);
+      if (!Number.isFinite(next) || next < 0) {
+        return NextResponse.json({ error: "hoursConsumed non valido" }, { status: 400 });
+      }
+      updates.hours_consumed = next;
+    }
 
     if (Object.keys(updates).length === 1) {
       return NextResponse.json({ error: "Nessun campo da aggiornare" }, { status: 400 });
+    }
+
+    if (wantsHourlyRateUpdate && !effectiveTutorId) {
+      return NextResponse.json({ error: "Imposta un tutor per salvare la tariffa oraria" }, { status: 400 });
+    }
+
+    let existingAssignmentRate: number | null = null;
+    if (effectiveTutorId) {
+      const { data: assignment } = await db
+        .from("tutor_assignments")
+        .select("hourly_rate")
+        .eq("student_id", studentId)
+        .eq("tutor_id", effectiveTutorId)
+        .maybeSingle();
+      if (assignment?.hourly_rate != null) {
+        existingAssignmentRate = Number(assignment.hourly_rate);
+      }
     }
 
     if (tutorId) {
@@ -162,12 +220,6 @@ export async function PATCH(request: NextRequest) {
         .maybeSingle();
       if (tutorErr) return NextResponse.json({ error: tutorErr.message }, { status: 500 });
       if (!tutor) return NextResponse.json({ error: "Tutor non trovato" }, { status: 404 });
-      await db
-        .from("tutor_assignments")
-        .upsert(
-          { tutor_id: tutorId, student_id: studentId, role: "videolezione" },
-          { onConflict: "tutor_id,student_id" },
-        );
     }
 
     const { data: updated, error: updErr } = await db
@@ -194,6 +246,28 @@ export async function PATCH(request: NextRequest) {
     if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
     if (!updated) return NextResponse.json({ error: "Studente non trovato" }, { status: 404 });
 
+    if (effectiveTutorId && (tutorId || wantsHourlyRateUpdate)) {
+      await db
+        .from("tutor_assignments")
+        .upsert(
+          { tutor_id: effectiveTutorId, student_id: studentId, role: "videolezione", hourly_rate: hourlyRateRaw ?? existingAssignmentRate ?? null },
+          { onConflict: "tutor_id,student_id" },
+        );
+    }
+
+    let hourlyRate: number | null = existingAssignmentRate;
+    if (effectiveTutorId) {
+      const { data: rateRow } = await db
+        .from("tutor_assignments")
+        .select("hourly_rate")
+        .eq("student_id", studentId)
+        .eq("tutor_id", effectiveTutorId)
+        .maybeSingle();
+      if (rateRow?.hourly_rate != null) {
+        hourlyRate = Number(rateRow.hourly_rate);
+      }
+    }
+
     const tutor = (updated as any)?.tutor;
     const hoursPaid = Number((updated as any)?.hours_paid ?? 0);
     const hoursConsumed = Number((updated as any)?.hours_consumed ?? 0);
@@ -214,6 +288,7 @@ export async function PATCH(request: NextRequest) {
         hoursPaid,
         hoursConsumed,
         remainingPaid: remaining,
+        hourlyRate,
         isBlack: ((updated as any)?.status || "").toLowerCase() !== "inactive",
       },
     });

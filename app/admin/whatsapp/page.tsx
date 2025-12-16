@@ -24,7 +24,28 @@ type Booking = {
 };
 
 type CallTypeMeta = { id: string; slug: string; name: string; duration_min: number };
-type TutorMeta = { id: string; display_name?: string | null; full_name?: string | null; email?: string | null };
+type TutorStudent = {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  hoursPaid?: number;
+  hoursConsumed?: number;
+  remainingPaid?: number;
+  isBlack?: boolean;
+  hourlyRate?: number | null;
+};
+type TutorMeta = {
+  id: string;
+  display_name?: string | null;
+  full_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+  bio?: string | null;
+  hoursDue?: number | null;
+  students?: TutorStudent[];
+};
 type BookingDraft = {
   id: string | null;
   fullName: string;
@@ -87,6 +108,20 @@ function tutorLabel(t?: TutorMeta | null) {
   return t.display_name || t.full_name || t.email || "Tutor";
 }
 
+function formatHoursLabel(val?: number | null) {
+  if (val === null || val === undefined) return "—";
+  const n = Number(val);
+  if (!Number.isFinite(n)) return "—";
+  return Number.isInteger(n) ? `${n}h` : `${n.toFixed(1)}h`;
+}
+
+function formatEuro(val?: number | null) {
+  if (val === null || val === undefined) return "€—";
+  const n = Number(val);
+  if (!Number.isFinite(n)) return "€—";
+  return `€${n.toFixed(2)}`;
+}
+
 async function buildHeaders() {
   const headers: Record<string, string> = {};
   try {
@@ -107,14 +142,62 @@ function TutorRow({
   setTutorsLoading,
   setTutorError,
 }: {
-  tutor: TutorMeta & { full_name?: string | null; phone?: string | null; notes?: string | null; bio?: string | null };
+  tutor: TutorMeta;
   buildHeaders: () => Promise<Record<string, string>>;
-  onUpdated: (t: TutorMeta & { full_name?: string | null; phone?: string | null; notes?: string | null; bio?: string | null }) => void;
+  onUpdated: (t: TutorMeta) => void;
   onDeleted: (id: string) => void;
   setTutorsLoading: (v: boolean) => void;
   setTutorError: (v: string | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [hoursDraft, setHoursDraft] = useState<string>(tutor.hoursDue != null ? String(tutor.hoursDue) : "");
+  const [hoursSaving, setHoursSaving] = useState(false);
+  const totalAmountDue = useMemo(() => {
+    const list = tutor.students || [];
+    return list.reduce((sum, s) => {
+      const rate = Number(s.hourlyRate ?? 0);
+      const consumed = Number(s.hoursConsumed ?? 0);
+      if (!Number.isFinite(rate) || !Number.isFinite(consumed)) return sum;
+      return sum + rate * consumed;
+    }, 0);
+  }, [tutor.students]);
+
+  useEffect(() => {
+    setHoursDraft(tutor.hoursDue != null ? String(tutor.hoursDue) : "");
+  }, [tutor.hoursDue]);
+
+  const updateHoursDue = async (next: number) => {
+    setHoursSaving(true);
+    setTutorsLoading(true);
+    setTutorError(null);
+    try {
+      const headers = await buildHeaders();
+      headers["Content-Type"] = "application/json";
+      const res = await fetch("/api/admin/tutors", {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ id: tutor.id, hoursDue: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      onUpdated(data.tutor);
+      setHoursDraft(String(next));
+    } catch (err: any) {
+      setTutorError(err?.message || "Errore update ore tutor");
+    } finally {
+      setHoursSaving(false);
+      setTutorsLoading(false);
+    }
+  };
+
+  const handleSaveHours = async () => {
+    const parsed = Number((hoursDraft || "").toString().replace(",", "."));
+    if (!Number.isFinite(parsed)) {
+      setTutorError("Inserisci ore valide");
+      return;
+    }
+    await updateHoursDue(parsed);
+  };
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white">
@@ -145,43 +228,125 @@ function TutorRow({
           }}
         />
       ) : (
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <p className="font-semibold">{tutorLabel(tutor)}</p>
-            <p className="text-xs text-slate-300">{tutor.email || "email n/d"}</p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="font-semibold">{tutorLabel(tutor)}</p>
+              <p className="text-xs text-slate-300">{tutor.email || "email n/d"}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setEditing(true)}
+                className="text-xs rounded-lg border border-white/20 px-2 py-1 text-slate-100 hover:border-white/40"
+              >
+                Modifica
+              </button>
+              <button
+                onClick={async () => {
+                  if (!window.confirm("Rimuovere questo tutor?")) return;
+                  setTutorsLoading(true);
+                  try {
+                    const headers = await buildHeaders();
+                    headers["Content-Type"] = "application/json";
+                    const res = await fetch("/api/admin/tutors", {
+                      method: "DELETE",
+                      headers,
+                      body: JSON.stringify({ id: tutor.id }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+                    onDeleted(tutor.id);
+                  } catch (err: any) {
+                    setTutorError(err?.message || "Errore eliminazione tutor");
+                  } finally {
+                    setTutorsLoading(false);
+                  }
+                }}
+                className="text-xs rounded-lg border border-red-400/60 px-2 py-1 text-red-200 hover:border-red-300"
+              >
+                Rimuovi
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setEditing(true)}
-              className="text-xs rounded-lg border border-white/20 px-2 py-1 text-slate-100 hover:border-white/40"
-            >
-              Modifica
-            </button>
-            <button
-              onClick={async () => {
-                if (!window.confirm("Rimuovere questo tutor?")) return;
-                setTutorsLoading(true);
-                try {
-                  const headers = await buildHeaders();
-                  headers["Content-Type"] = "application/json";
-                  const res = await fetch("/api/admin/tutors", {
-                    method: "DELETE",
-                    headers,
-                    body: JSON.stringify({ id: tutor.id }),
-                  });
-                  const data = await res.json();
-                  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
-                  onDeleted(tutor.id);
-                } catch (err: any) {
-                  setTutorError(err?.message || "Errore eliminazione tutor");
-                } finally {
-                  setTutorsLoading(false);
-                }
-              }}
-              className="text-xs rounded-lg border border-red-400/60 px-2 py-1 text-red-200 hover:border-red-300"
-            >
-              Rimuovi
-            </button>
+
+          <div className="grid gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 font-semibold text-emerald-100">
+                Ore da pagare: {formatHoursLabel(tutor.hoursDue)}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 font-semibold text-slate-100">
+                Saldo (ore×tariffa): {formatEuro(totalAmountDue)}
+              </span>
+              <button
+                onClick={() => updateHoursDue(0)}
+                disabled={hoursSaving}
+                className="rounded-lg border border-white/20 px-2 py-1 text-[11px] font-semibold text-white hover:border-emerald-300 disabled:opacity-60"
+              >
+                Azzera
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                value={hoursDraft}
+                onChange={(e) => setHoursDraft(e.target.value)}
+                placeholder="Ore dovute"
+                className="w-28 rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white placeholder:text-slate-500"
+                type="number"
+                step="0.5"
+              />
+              <button
+                onClick={handleSaveHours}
+                disabled={hoursSaving}
+                className="rounded-lg bg-emerald-500 text-slate-900 px-3 py-1 text-xs font-semibold hover:bg-emerald-400 disabled:opacity-60"
+              >
+                {hoursSaving ? "Salvo..." : "Aggiorna ore dovute"}
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-white/10 bg-slate-900/60 px-2 py-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] uppercase tracking-[0.15em] text-slate-400">
+                Studenti assegnati
+              </p>
+              <span className="text-[11px] text-slate-300">{tutor.students?.length || 0}</span>
+            </div>
+            {tutor.students && tutor.students.length > 0 ? (
+              <div className="mt-2 grid gap-2">
+                {tutor.students.slice(0, 8).map((s) => (
+                  <div
+                    key={s.id}
+                    className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold">{s.name}</p>
+                      <span className="text-[11px] text-emerald-200">
+                        Rimaste: {formatHoursLabel(s.remainingPaid)}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      {s.email || "Email n/d"}
+                      {s.phone ? ` • ${s.phone}` : ""}
+                    </p>
+                    <p className="text-[11px] text-slate-300">
+                      Tariffa: {s.hourlyRate != null ? `${s.hourlyRate} €/h` : "n/d"}
+                    </p>
+                    {Number(s.hoursConsumed ?? 0) > 0 && s.hourlyRate != null ? (
+                      <p className="text-[11px] text-emerald-200">
+                        Saldo stimato: {formatEuro(Number(s.hourlyRate) * Number(s.hoursConsumed))}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+                {tutor.students.length > 8 && (
+                  <p className="text-[11px] text-slate-400">
+                    +{tutor.students.length - 8} altri studenti
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-[11px] text-slate-400">Nessuno studente collegato.</p>
+            )}
           </div>
         </div>
       )}
@@ -358,6 +523,8 @@ export default function WhatsAppAdmin() {
   const [tutorsLoading, setTutorsLoading] = useState(false);
   const [tutorError, setTutorError] = useState<string | null>(null);
   const [showTutorPanel, setShowTutorPanel] = useState(false);
+  const [showAddTutorForm, setShowAddTutorForm] = useState(false);
+  const [showAssignTutorForm, setShowAssignTutorForm] = useState(false);
   const [assignmentTutorId, setAssignmentTutorId] = useState<string>("");
   const [assignmentName, setAssignmentName] = useState("");
   const [assignmentEmail, setAssignmentEmail] = useState("");
@@ -377,6 +544,7 @@ export default function WhatsAppAdmin() {
       remainingPaid?: number;
       hoursPaid?: number;
       hoursConsumed?: number;
+      hourlyRate?: number | null;
       isBlack?: boolean;
     }>
   >([]);
@@ -384,7 +552,18 @@ export default function WhatsAppAdmin() {
   const [hoursInput, setHoursInput] = useState<Record<string, string>>({});
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [studentDrafts, setStudentDrafts] = useState<
-    Record<string, { name: string; email: string; phone: string; tutorId: string }>
+    Record<
+      string,
+      {
+        name: string;
+        email: string;
+        phone: string;
+        tutorId: string;
+        hoursPaid?: string;
+        hoursConsumed?: string;
+        hourlyRate?: string;
+      }
+    >
   >({});
   const [bookingDraft, setBookingDraft] = useState<BookingDraft>(() => ({
     id: null,
@@ -483,10 +662,19 @@ export default function WhatsAppAdmin() {
           email: student.email || "",
           phone: student.phone || "",
           tutorId: student.tutorId || tutorList[0]?.id || "",
+          hoursPaid: students.find((s) => s.id === student.id)?.hoursPaid != null ? String(students.find((s) => s.id === student.id)?.hoursPaid) : "",
+          hoursConsumed:
+            students.find((s) => s.id === student.id)?.hoursConsumed != null
+              ? String(students.find((s) => s.id === student.id)?.hoursConsumed)
+              : "",
+          hourlyRate:
+            students.find((s) => s.id === student.id)?.hourlyRate != null
+              ? String(students.find((s) => s.id === student.id)?.hourlyRate)
+              : "",
         },
       }));
     },
-    [tutorList],
+    [tutorList, students],
   );
 
   const handleSaveStudent = useCallback(
@@ -498,6 +686,25 @@ export default function WhatsAppAdmin() {
       try {
         const headers = await buildHeaders();
         headers["Content-Type"] = "application/json";
+        const hoursPaid = draft.hoursPaid !== undefined && draft.hoursPaid !== ""
+          ? Number(String(draft.hoursPaid).replace(",", "."))
+          : undefined;
+        const hoursConsumed = draft.hoursConsumed !== undefined && draft.hoursConsumed !== ""
+          ? Number(String(draft.hoursConsumed).replace(",", "."))
+          : undefined;
+        const hourlyRate = draft.hourlyRate !== undefined && draft.hourlyRate !== ""
+          ? Number(String(draft.hourlyRate).replace(",", "."))
+          : undefined;
+        if ((hoursPaid !== undefined && (Number.isNaN(hoursPaid) || hoursPaid < 0)) || (hoursConsumed !== undefined && (Number.isNaN(hoursConsumed) || hoursConsumed < 0))) {
+          setStudentError("Ore non valide");
+          setStudentsLoading(false);
+          return;
+        }
+        if (hourlyRate !== undefined && Number.isNaN(hourlyRate)) {
+          setStudentError("Tariffa oraria non valida");
+          setStudentsLoading(false);
+          return;
+        }
         const res = await fetch("/api/admin/students", {
           method: "PATCH",
           headers,
@@ -507,6 +714,9 @@ export default function WhatsAppAdmin() {
             email: draft.email,
             phone: draft.phone,
             tutorId: draft.tutorId || undefined,
+            hoursPaid,
+            hoursConsumed,
+            hourlyRate,
           }),
         });
         const data = await res.json();
@@ -926,13 +1136,6 @@ export default function WhatsAppAdmin() {
   const formatTime = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
-  };
-
-  const formatHoursLabel = (val?: number | null) => {
-    if (val === null || val === undefined) return "—";
-    const n = Number(val);
-    if (!Number.isFinite(n)) return "—";
-    return Number.isInteger(n) ? `${n}h` : `${n.toFixed(1)}h`;
   };
 
   const openBookingEditor = (booking?: Booking | null) => {
@@ -2053,132 +2256,166 @@ export default function WhatsAppAdmin() {
 
       {showTutorPanel && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-900/90 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+          <div className="w-full max-w-5xl rounded-2xl border border-white/10 bg-slate-900/95 shadow-2xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-sky-300">Tutor</p>
                 <h3 className="text-lg font-semibold text-white">Gestione tutor</h3>
               </div>
-              <button
-                onClick={() => setShowTutorPanel(false)}
-                className="rounded-lg border border-white/15 px-3 py-1 text-xs font-semibold text-white hover:border-sky-400"
-              >
-                Chiudi
-              </button>
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-200">Tutor disponibili</p>
-                  {tutorError && <p className="text-xs text-amber-400">{tutorError}</p>}
-                </div>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={fetchTutors}
-                  className="text-xs text-sky-300 hover:text-sky-200"
+                  className="rounded-lg border border-white/20 px-3 py-1 text-xs font-semibold text-sky-200 hover:border-sky-400"
                   disabled={tutorsLoading}
                 >
                   {tutorsLoading ? "Aggiorno..." : "Refresh"}
                 </button>
+                <button
+                  onClick={() => {
+                    setShowTutorPanel(false);
+                    setShowAddTutorForm(false);
+                    setShowAssignTutorForm(false);
+                  }}
+                  className="rounded-lg border border-white/15 px-3 py-1 text-xs font-semibold text-white hover:border-sky-400"
+                >
+                  Chiudi
+                </button>
               </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {tutorsLoading && <p className="text-sm text-slate-400">Carico tutor...</p>}
-                {!tutorsLoading && tutorList.length === 0 && (
-                  <p className="text-sm text-slate-400">Nessun tutor trovato.</p>
-                )}
-                {tutorList.map((t) => (
-                  <TutorRow
-                    key={t.id}
-                    tutor={t}
-                    buildHeaders={buildHeaders}
-                    onUpdated={(updated) => {
-                      setTutorList((prev) =>
-                        prev
-                          .map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
-                          .sort((a, b) => (a.display_name || a.email || "").localeCompare(b.display_name || b.email || "")),
-                      );
-                    }}
-                    onDeleted={(id) => setTutorList((prev) => prev.filter((x) => x.id !== id))}
-                    setTutorsLoading={setTutorsLoading}
-                    setTutorError={setTutorError}
-                  />
-                ))}
-              </div>
-              <AddTutorForm
-                onCreate={async (name, email) => {
-                  setTutorsLoading(true);
-                  setTutorError(null);
-                  try {
-                    const headers = await buildHeaders();
-                    headers["Content-Type"] = "application/json";
-                    const res = await fetch("/api/admin/tutors", {
-                      method: "POST",
-                      headers,
-                      body: JSON.stringify({ displayName: name, email }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
-                    setTutorList((prev) =>
-                      [...prev, data.tutor].sort((a, b) =>
-                        (a.display_name || a.email || "").localeCompare(b.display_name || b.email || ""),
-                      ),
-                    );
-                  } catch (err: any) {
-                    setTutorError(err?.message || "Errore creazione tutor");
-                  } finally {
-                    setTutorsLoading(false);
-                  }
-                }}
-              />
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-white">Assegna studente a tutor</p>
-                  {assignStudentMsg && (
-                    <span className="text-[11px] font-semibold text-emerald-200">{assignStudentMsg}</span>
-                  )}
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="flex flex-wrap items-center gap-3 justify-between">
+                <div>
+                  <p className="text-sm text-slate-200">Tutor disponibili</p>
+                  {tutorError && <p className="text-xs text-amber-400">{tutorError}</p>}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <select
-                    value={assignmentTutorId}
-                    onChange={(e) => setAssignmentTutorId(e.target.value)}
-                    className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
-                  >
-                    {tutorList.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {tutorLabel(t)}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    value={assignmentName}
-                    onChange={(e) => setAssignmentName(e.target.value)}
-                    placeholder="Nome studente"
-                    className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
-                  />
-                  <input
-                    value={assignmentEmail}
-                    onChange={(e) => setAssignmentEmail(e.target.value)}
-                    placeholder="Email studente"
-                    className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
-                    type="email"
-                  />
-                  <input
-                    value={assignmentPhone}
-                    onChange={(e) => setAssignmentPhone(e.target.value)}
-                    placeholder="Telefono (facoltativo)"
-                    className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
-                  />
+                <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={handleAssignStudentToTutor}
-                    disabled={assigningStudent || tutorList.length === 0}
-                    className="rounded-lg bg-emerald-500 text-slate-900 font-semibold px-3 py-2 text-sm hover:bg-emerald-400 disabled:opacity-60"
-                    type="button"
+                    onClick={() => setShowAddTutorForm((v) => !v)}
+                    className="rounded-lg bg-sky-500 text-slate-900 px-3 py-1.5 text-xs font-semibold hover:bg-sky-400"
                   >
-                    {assigningStudent ? "Assegno..." : "Assegna studente"}
+                    {showAddTutorForm ? "Chiudi aggiunta" : "Aggiungi tutor"}
+                  </button>
+                  <button
+                    onClick={() => setShowAssignTutorForm((v) => !v)}
+                    className="rounded-lg bg-emerald-500 text-slate-900 px-3 py-1.5 text-xs font-semibold hover:bg-emerald-400"
+                  >
+                    {showAssignTutorForm ? "Chiudi assegnazione" : "Assegna studente"}
                   </button>
                 </div>
-                <p className="text-[11px] text-slate-300">
-                  Inserisci email o telefono (anche studenti non Black) e assegna al tutor selezionato.
-                </p>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+                <div className="space-y-3">
+                  <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
+                    {tutorsLoading && <p className="text-sm text-slate-400">Carico tutor...</p>}
+                    {!tutorsLoading && tutorList.length === 0 && (
+                      <p className="text-sm text-slate-400">Nessun tutor trovato.</p>
+                    )}
+                    {tutorList.map((t) => (
+                      <TutorRow
+                        key={t.id}
+                        tutor={t}
+                        buildHeaders={buildHeaders}
+                        onUpdated={(updated) => {
+                          setTutorList((prev) =>
+                            prev
+                              .map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
+                              .sort((a, b) => (a.display_name || a.email || "").localeCompare(b.display_name || b.email || "")),
+                          );
+                        }}
+                        onDeleted={(id) => setTutorList((prev) => prev.filter((x) => x.id !== id))}
+                        setTutorsLoading={setTutorsLoading}
+                        setTutorError={setTutorError}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {showAddTutorForm && (
+                    <AddTutorForm
+                      onCreate={async (name, email) => {
+                        setTutorsLoading(true);
+                        setTutorError(null);
+                        try {
+                          const headers = await buildHeaders();
+                          headers["Content-Type"] = "application/json";
+                          const res = await fetch("/api/admin/tutors", {
+                            method: "POST",
+                            headers,
+                            body: JSON.stringify({ displayName: name, email }),
+                          });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+                          setTutorList((prev) =>
+                            [...prev, data.tutor].sort((a, b) =>
+                              (a.display_name || a.email || "").localeCompare(b.display_name || b.email || ""),
+                            ),
+                          );
+                          setShowAddTutorForm(false);
+                        } catch (err: any) {
+                          setTutorError(err?.message || "Errore creazione tutor");
+                        } finally {
+                          setTutorsLoading(false);
+                        }
+                      }}
+                    />
+                  )}
+
+                  {showAssignTutorForm && (
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-white">Assegna studente a tutor</p>
+                        {assignStudentMsg && (
+                          <span className="text-[11px] font-semibold text-emerald-200">{assignStudentMsg}</span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <select
+                          value={assignmentTutorId}
+                          onChange={(e) => setAssignmentTutorId(e.target.value)}
+                          className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+                        >
+                          {tutorList.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {tutorLabel(t)}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          value={assignmentName}
+                          onChange={(e) => setAssignmentName(e.target.value)}
+                          placeholder="Nome studente"
+                          className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+                        />
+                        <input
+                          value={assignmentEmail}
+                          onChange={(e) => setAssignmentEmail(e.target.value)}
+                          placeholder="Email studente"
+                          className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+                          type="email"
+                        />
+                        <input
+                          value={assignmentPhone}
+                          onChange={(e) => setAssignmentPhone(e.target.value)}
+                          placeholder="Telefono (facoltativo)"
+                          className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+                        />
+                        <button
+                          onClick={handleAssignStudentToTutor}
+                          disabled={assigningStudent || tutorList.length === 0}
+                          className="rounded-lg bg-emerald-500 text-slate-900 font-semibold px-3 py-2 text-sm hover:bg-emerald-400 disabled:opacity-60"
+                          type="button"
+                        >
+                          {assigningStudent ? "Assegno..." : "Assegna studente"}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-slate-300">
+                        Inserisci email o telefono (anche studenti non Black) e assegna al tutor selezionato.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -2273,20 +2510,64 @@ export default function WhatsAppAdmin() {
                                   [s.id]: { ...(prev[s.id] || {}), tutorId: e.target.value },
                                 }))
                               }
-                              className="rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white"
-                            >
-                              {tutorList.map((t) => (
-                                <option key={t.id} value={t.id}>
-                                  {tutorLabel(t)}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleSaveStudent(s.id)}
-                              disabled={studentsLoading}
-                              className="rounded-lg bg-emerald-500 text-slate-900 px-3 py-1 text-[11px] font-semibold hover:bg-emerald-400 disabled:opacity-60"
+                          className="rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white"
+                        >
+                          {tutorList.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {tutorLabel(t)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <input
+                          value={studentDrafts[s.id]?.hoursPaid || ""}
+                          onChange={(e) =>
+                            setStudentDrafts((prev) => ({
+                              ...prev,
+                              [s.id]: { ...(prev[s.id] || {}), hoursPaid: e.target.value },
+                            }))
+                          }
+                          placeholder="Ore pagate"
+                          className="rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white placeholder:text-slate-500"
+                          type="number"
+                          step="0.5"
+                          min="0"
+                        />
+                        <input
+                          value={studentDrafts[s.id]?.hoursConsumed || ""}
+                          onChange={(e) =>
+                            setStudentDrafts((prev) => ({
+                              ...prev,
+                              [s.id]: { ...(prev[s.id] || {}), hoursConsumed: e.target.value },
+                            }))
+                          }
+                          placeholder="Ore consumate"
+                          className="rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white placeholder:text-slate-500"
+                          type="number"
+                          step="0.5"
+                          min="0"
+                        />
+                        <input
+                          value={studentDrafts[s.id]?.hourlyRate || ""}
+                          onChange={(e) =>
+                            setStudentDrafts((prev) => ({
+                              ...prev,
+                              [s.id]: { ...(prev[s.id] || {}), hourlyRate: e.target.value },
+                            }))
+                          }
+                          placeholder="€ / ora"
+                          className="rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white placeholder:text-slate-500"
+                          type="number"
+                          step="0.5"
+                          min="0"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveStudent(s.id)}
+                          disabled={studentsLoading}
+                          className="rounded-lg bg-emerald-500 text-slate-900 px-3 py-1 text-[11px] font-semibold hover:bg-emerald-400 disabled:opacity-60"
                             >
                               Salva
                             </button>
@@ -2316,6 +2597,17 @@ export default function WhatsAppAdmin() {
                               <p className="text-[11px] text-slate-300">
                                 Tutor: {s.tutorName || "n/d"}
                               </p>
+                              <p className="text-[11px] text-slate-300">
+                                Ore: {formatHoursLabel(s.hoursPaid)} pagate · {formatHoursLabel(s.hoursConsumed)} consumate
+                              </p>
+                              <p className="text-[11px] text-slate-300">
+                                Tariffa: {s.hourlyRate != null ? `${s.hourlyRate} €/h` : "n/d"}
+                              </p>
+                              {s.hourlyRate != null && s.hoursConsumed != null ? (
+                                <p className="text-[11px] text-emerald-200">
+                                  Saldo stimato: {formatEuro(Number(s.hourlyRate) * Number(s.hoursConsumed || 0))}
+                                </p>
+                              ) : null}
                             </div>
                             <div className="text-right text-xs font-semibold text-emerald-200">
                               Rimaste: {formatHoursLabel(s.remainingPaid || 0)}

@@ -41,6 +41,7 @@ type TutorStudent = {
   hoursConsumed?: number;
   remainingPaid?: number;
   isBlack?: boolean;
+  hourlyRate?: number | null;
 };
 
 /* ───────────────── helpers data ───────────────── */
@@ -388,6 +389,10 @@ export default function AccountPage() {
                 const hoursConsumed = normalizeHours(
                   s?.hoursConsumed ?? s?.hours_consumed ?? 0
                 );
+                const hourlyRate =
+                  typeof s?.hourlyRate === "number"
+                    ? s.hourlyRate
+                    : normalizeHours(s?.hourlyRate);
                 return {
                   id: s?.id ? String(s.id) : `student-${idx}`,
                   name:
@@ -406,6 +411,7 @@ export default function AccountPage() {
                     0,
                     normalizeHours(s?.remainingPaid ?? hoursPaid)
                   ),
+                  hourlyRate: Number.isFinite(Number(hourlyRate)) ? Number(hourlyRate) : null,
                   isBlack: Boolean(
                     s?.isBlack ||
                       s?.status === "active" ||
@@ -568,6 +574,16 @@ export default function AccountPage() {
         (acc, s) => acc + (Number.isFinite(Number(s?.remainingPaid)) ? Number(s.remainingPaid) : 0),
         0
       ),
+    [tutorStudents]
+  );
+  const tutorAmountDue = useMemo(
+    () =>
+      tutorStudents.reduce((acc, s) => {
+        const rate = Number(s?.hourlyRate ?? 0);
+        const consumed = Number(s?.hoursConsumed ?? 0);
+        if (!Number.isFinite(rate) || !Number.isFinite(consumed)) return acc;
+        return acc + rate * consumed;
+      }, 0),
     [tutorStudents]
   );
   const tutorHoursDue = useMemo(() => {
@@ -1025,17 +1041,25 @@ export default function AccountPage() {
 
           <div className="grid gap-4 lg:grid-cols-[280px,1fr]">
             <div className="rounded-2xl border border-slate-200 bg-white [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900 shadow-sm p-4 space-y-2">
-              <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">Ore da pagare</p>
-              <div className="text-3xl font-black text-slate-900 [.dark_&]:text-white">
+              <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">Saldo</p>
+              <div className="text-5xl font-black text-sky-600 [.dark_&]:text-sky-300 leading-tight">
+                {tutorLoading ? (
+                  <span className="inline-block h-8 w-28 animate-pulse rounded bg-slate-200 [.dark_&]:bg-slate-800" />
+                ) : (
+                  formatEuro(tutorAmountDue)
+                )}
+              </div>
+              <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                Stima basata su ore erogate e tariffa per studente. Aggiorna le ore per vedere il saldo corrente.
+              </p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800/60 [.dark_&]:text-slate-200">
+                Ore da pagare:{" "}
                 {tutorLoading ? (
                   <span className="inline-block h-6 w-20 animate-pulse rounded bg-slate-200 [.dark_&]:bg-slate-800" />
                 ) : (
                   formatHoursLabel(tutorHoursDue)
                 )}
               </div>
-              <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
-                Saldo ore registrate meno pagamenti. Logga le lezioni e i pagamenti per tenere il conteggio aggiornato.
-              </p>
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800/60 [.dark_&]:text-slate-200">
                 Ore prepagate dagli studenti assegnati: {formatHoursLabel(tutorTotalRemainingPaid)}
               </div>
@@ -1106,6 +1130,9 @@ export default function AccountPage() {
                     </div>
                     <p className="mt-1 text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
                       Ore erogate: {formatHoursLabel(s.hoursConsumed)} · Disponibili: {formatHoursLabel(s.remainingPaid)}
+                    </p>
+                    <p className="text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                      Tariffa: {s.hourlyRate != null ? `${s.hourlyRate} €/h` : "n/d"}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button
@@ -1905,6 +1932,18 @@ function formatHoursLabel(val?: number | null) {
   const n = Number(val);
   if (!Number.isFinite(n)) return "—";
   return Number.isInteger(n) ? `${n}h` : `${n.toFixed(1)}h`;
+}
+
+function formatEuro(val?: number | null) {
+  if (val === null || val === undefined) return "€—";
+  const n = Number(val);
+  if (!Number.isFinite(n)) return "€—";
+  return n.toLocaleString("it-IT", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function formatTutorDayLabel(input?: string | null) {

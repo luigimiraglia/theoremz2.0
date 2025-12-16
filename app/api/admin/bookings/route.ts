@@ -471,13 +471,14 @@ export async function GET(request: NextRequest) {
               db
                 .from("tutor_assignments")
                 .select(
-                  "student_id, black_students!inner(id, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))"
+                  "student_id, hourly_rate, black_students!inner(id, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))"
                 )
                 .eq("tutor_id", effectiveTutorId || "")
                 .limit(300),
             ]);
 
             const map = new Map<string, any>();
+            const rateMap = new Map<string, number | null>();
             (studentsRes.data || []).forEach((s: any) => {
               if (s?.id) map.set(s.id, s);
             });
@@ -485,6 +486,9 @@ export async function GET(request: NextRequest) {
               const s = row?.black_students;
               if (s?.id && !map.has(s.id)) {
                 map.set(s.id, s);
+              }
+              if (s?.id) {
+                rateMap.set(s.id, row?.hourly_rate != null ? Number(row.hourly_rate) : null);
               }
             });
 
@@ -498,6 +502,7 @@ export async function GET(request: NextRequest) {
                 "Studente";
               const hoursPaid = Number(s?.hours_paid ?? 0);
               const hoursConsumed = Number(s?.hours_consumed ?? 0);
+              const hourlyRate = rateMap.get(s?.id) ?? null;
               const isBlack = Boolean(
                 profile?.stripe_price_id ||
                   (typeof s?.status === "string" && s.status.toLowerCase() !== "inactive")
@@ -512,6 +517,7 @@ export async function GET(request: NextRequest) {
                 phone: (s?.student_phone as string | null) || (s?.parent_phone as string | null) || null,
                 hoursPaid,
                 hoursConsumed,
+                hourlyRate,
                 remainingPaid: Math.max(0, hoursPaid),
                 isBlack,
                 emails,

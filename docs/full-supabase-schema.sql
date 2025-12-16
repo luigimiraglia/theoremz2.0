@@ -383,6 +383,7 @@ CREATE TABLE public.tutor_assignments (
   student_id uuid NOT NULL,
   role text DEFAULT 'videolezione'::text,
   hours_allocated numeric DEFAULT 0,
+  hourly_rate numeric,
   CONSTRAINT tutor_assignments_pkey PRIMARY KEY (tutor_id, student_id),
   CONSTRAINT tutor_assignments_tutor_id_fkey FOREIGN KEY (tutor_id) REFERENCES public.tutors(id),
   CONSTRAINT tutor_assignments_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.black_students(id)
