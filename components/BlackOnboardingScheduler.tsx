@@ -14,7 +14,6 @@ import {
 
 const ALLOWED_SLOTS = ["17:00", "17:20", "17:40", "18:00", "18:20", "18:40", "19:00"] as const;
 const WEEKDAYS_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
-const SATURDAY_WEEKDAY = 6; // JS: Saturday
 
 export type BlackSchedulerVariant = "onboarding" | "check";
 

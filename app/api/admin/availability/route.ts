@@ -61,7 +61,7 @@ function parseDate(input?: string | null) {
 export async function POST(request: NextRequest) {
   const db = supabaseServer();
   if (!db) return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
-  const { error: authError, email, tutorId: viewerTutorId, isAdmin } = await resolveViewer(request, db);
+  const { error: authError, tutorId: viewerTutorId, isAdmin } = await resolveViewer(request, db);
   if (authError) return authError;
 
   try {
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     const payload: any[] = [];
-    let cursor = new Date(dateFrom);
+    const cursor = new Date(dateFrom);
     while (cursor.getTime() <= dateTo.getTime()) {
       const dow = (cursor.getDay() + 6) % 7; // convert Sunday=6
       if (daysOfWeek.includes(dow)) {

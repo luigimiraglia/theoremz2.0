@@ -429,7 +429,7 @@ export default function WhatsAppAdmin() {
     } finally {
       setStudentsLoading(false);
     }
-  }, [buildHeaders]);
+  }, []);
 
   const handleAddHours = useCallback(
     async (studentId: string) => {
@@ -469,7 +469,7 @@ export default function WhatsAppAdmin() {
         setStudentsLoading(false);
       }
     },
-    [buildHeaders, hoursInput],
+    [hoursInput],
   );
 
   const handleEditStudent = useCallback(
@@ -522,7 +522,7 @@ export default function WhatsAppAdmin() {
         setStudentsLoading(false);
       }
     },
-    [buildHeaders, studentDrafts],
+    [studentDrafts],
   );
 
   const fetchBookings = useCallback(
@@ -575,7 +575,7 @@ export default function WhatsAppAdmin() {
         setLoadingBookings(false);
       }
     },
-    [buildHeaders, selectedTutorId],
+    [selectedTutorId],
   );
 
   const fetchList = useCallback(
@@ -609,7 +609,7 @@ export default function WhatsAppAdmin() {
         setLoadingList(false);
       }
     },
-    [buildHeaders, search]
+    [search]
   );
 
   const fetchDetail = useCallback(
@@ -642,7 +642,7 @@ export default function WhatsAppAdmin() {
         if (!opts?.silent) setLoadingDetail(false);
       }
     },
-    [buildHeaders]
+    []
   );
 
   const calendarDays = useMemo(() => {
@@ -698,7 +698,7 @@ export default function WhatsAppAdmin() {
         return err?.message || "Errore salvataggio";
       }
     },
-    [buildHeaders, fetchDetail, fetchList]
+    [fetchDetail, fetchList]
   );
 
   const handleMarkContact = useCallback(
@@ -723,7 +723,7 @@ export default function WhatsAppAdmin() {
         return err?.message || "Errore aggiornamento contatto";
       }
     },
-    [buildHeaders, fetchDetail, fetchList]
+    [fetchDetail, fetchList]
   );
 
   const handleOpenContactFromPanel = useCallback(
@@ -816,7 +816,7 @@ export default function WhatsAppAdmin() {
     if (showBookings && bookings.length === 0 && !loadingBookings) {
       fetchBookings({ tutorId: selectedTutorId });
     }
-  }, [showBookings]); // intentionally minimal deps to avoid loop
+  }, [showBookings, bookings.length, loadingBookings, fetchBookings, selectedTutorId]);
 
   const fetchTutors = useCallback(async () => {
     setTutorsLoading(true);
@@ -837,7 +837,7 @@ export default function WhatsAppAdmin() {
     } finally {
       setTutorsLoading(false);
     }
-  }, [buildHeaders, assignmentTutorId]);
+  }, [assignmentTutorId]);
 
   const handleAssignStudentToTutor = useCallback(async () => {
     const targetTutorId = assignmentTutorId || tutorList[0]?.id || "";
