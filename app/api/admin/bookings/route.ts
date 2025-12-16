@@ -9,7 +9,14 @@ const DEFAULT_TUTOR_EMAIL = "luigi.miraglia006@gmail.com";
 
 type CallTypeRow = { id: string; slug: string; name: string; duration_min: number };
 type TutorRow = { id: string; display_name?: string | null; email?: string | null };
-type SlotRow = { id: string; status?: string | null; starts_at: string; duration_min?: number | null };
+type SlotRow = {
+  id: string;
+  status?: string | null;
+  starts_at: string;
+  duration_min?: number | null;
+  call_type_id?: string | null;
+  tutor_id?: string | null;
+};
 
 const isAdminEmail = (email?: string | null) =>
   Boolean(email && email.toLowerCase() === ADMIN_EMAIL);

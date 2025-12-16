@@ -83,11 +83,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Booking già segnato come effettuato" }, { status: 409 });
     }
 
+    const slot = Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
     const durationMin =
       Number(body.hours) > 0
         ? Number(body.hours) * 60
-        : Number(booking.slot?.duration_min) > 0
-          ? Number(booking.slot.duration_min)
+        : Number(slot?.duration_min) > 0
+          ? Number(slot.duration_min)
           : 60;
     const hours = Math.max(0.25, Number(durationMin) / 60);
 
@@ -201,7 +202,7 @@ export async function POST(request: NextRequest) {
 
     // Log tutor session
     const happenedAt =
-      booking.slot?.starts_at ||
+      slot?.starts_at ||
       new Date().toISOString().slice(0, 10);
     await db.from("tutor_sessions").insert({
       tutor_id: booking.tutor_id,

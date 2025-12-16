@@ -718,10 +718,10 @@ export default function AccountPage() {
     tutorStudents,
     scheduleStudentId,
     scheduleCallType,
-    tutorData?.callTypes,
     scheduleDate,
     scheduleTime,
     loadTutorBookings,
+    tutorData?.callTypes,
   ]);
 
   const handleGenerateAvailability = useCallback(async () => {
@@ -771,6 +771,7 @@ export default function AccountPage() {
     availEnd,
     availDays,
     tutorData?.callTypes,
+    scheduleCallType,
     loadTutorBookings,
   ]);
 
@@ -1130,7 +1131,7 @@ export default function AccountPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            const tail = s.phone.replace(/\D/g, "").slice(-10);
+                            const tail = (s.phone || "").replace(/\D/g, "").slice(-10);
                             if (!tail) return;
                             window.open(`/admin/whatsapp?tail=${tail}`, "_blank");
                           }}
