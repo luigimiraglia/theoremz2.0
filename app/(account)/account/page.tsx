@@ -737,7 +737,7 @@ export default function AccountPage() {
         "videolezione";
       const defaultSlot =
         Number(tutorData?.callTypes?.[0]?.duration_min) > 0
-          ? Number(tutorData.callTypes[0].duration_min)
+          ? Number(tutorData?.callTypes?.[0]?.duration_min)
           : 30;
       const res = await fetch("/api/admin/availability", {
         method: "POST",

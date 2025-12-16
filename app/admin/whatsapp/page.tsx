@@ -882,7 +882,7 @@ export default function WhatsAppAdmin() {
     } finally {
       setAssigningStudent(false);
     }
-  }, [assignmentTutorId, assignmentEmail, assignmentName, assignmentPhone, buildHeaders, tutorList]);
+  }, [assignmentTutorId, assignmentEmail, assignmentName, assignmentPhone, tutorList]);
 
   const handleSend = async (statusOverride?: string) => {
     if (!selected || !draft.trim()) return;
