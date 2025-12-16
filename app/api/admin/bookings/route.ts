@@ -262,13 +262,22 @@ async function ensureBookableSlot(
     throw new Error("Impossibile recuperare lo slot richiesto");
   }
 
-  let overlapSlots = (existing || []).filter((s) => {
+  const normalizedExisting: Required<SlotRow>[] = (existing || []).map((s) => ({
+    id: s.id,
+    status: s.status || "available",
+    starts_at: s.starts_at,
+    duration_min: s.duration_min,
+    call_type_id: (s as any).call_type_id,
+    tutor_id: (s as any).tutor_id,
+  }));
+
+  let overlapSlots = normalizedExisting.filter((s) => {
     const ts = new Date(s.starts_at).getTime();
     const start = new Date(opts.startsAtIso).getTime();
     return ts >= start && ts < endMs;
   });
   if (slot && !overlapSlots.find((s) => s.id === slot?.id)) {
-    overlapSlots = [...overlapSlots, slot];
+    overlapSlots = [...overlapSlots, slot as Required<SlotRow>];
   }
 
   if (overlapSlots.some((s) => s.status === "booked" && s.id !== opts.allowSlotId)) {

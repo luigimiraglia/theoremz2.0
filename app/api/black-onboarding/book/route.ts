@@ -32,7 +32,7 @@ const toEmail =
 let transporter: nodemailer.Transporter | null = null;
 
 type CallTypeRow = { id: string; slug: string; name: string; duration_min: number };
-type SlotRow = { id: string; starts_at: string; status: string };
+type SlotRow = { id: string; starts_at: string; status: string; call_type_id?: string | null };
 type TutorRow = { id: string; display_name?: string | null; email?: string | null };
 
 function ensureTransporter() {
