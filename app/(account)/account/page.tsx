@@ -140,9 +140,9 @@ export default function AccountPage() {
             data.planTier.toLowerCase().includes("essential")
               ? "Essential"
               : typeof data.planLabel === "string" &&
-                data.planLabel.toLowerCase().includes("essential")
-              ? "Essential"
-              : "Black";
+                  data.planLabel.toLowerCase().includes("essential")
+                ? "Essential"
+                : "Black";
           setPlanTier(tier as "Essential" | "Black");
           if (tier === "Essential") {
             setPlanLabel("Essential");
@@ -303,7 +303,8 @@ export default function AccountPage() {
           setNextBooking({
             hasBooking: Boolean(data?.hasBooking),
             startsAt: data?.booking?.startsAt || null,
-            callTypeName: data?.booking?.callTypeName || data?.booking?.callType || null,
+            callTypeName:
+              data?.booking?.callTypeName || data?.booking?.callType || null,
           });
         } else {
           setNextBooking(null);
@@ -336,10 +337,14 @@ export default function AccountPage() {
   const [tutorLoading, setTutorLoading] = useState(false);
   const [tutorError, setTutorError] = useState<string | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState<"create" | "edit">("create");
+  const [editingBooking, setEditingBooking] = useState<any | null>(null);
   const [scheduleStudentId, setScheduleStudentId] = useState<string>("");
   const [scheduleDate, setScheduleDate] = useState(() => ymd(new Date()));
   const [scheduleTime, setScheduleTime] = useState("15:00");
-  const [scheduleCallType, setScheduleCallType] = useState<string | null>(DEFAULT_CALL_TYPE);
+  const [scheduleCallType, setScheduleCallType] = useState<string | null>(
+    DEFAULT_CALL_TYPE
+  );
   const [scheduleSaving, setScheduleSaving] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   useEffect(() => {
@@ -352,11 +357,17 @@ export default function AccountPage() {
   const [availTo, setAvailTo] = useState(() => ymd(new Date()));
   const [availStart, setAvailStart] = useState("09:00");
   const [availEnd, setAvailEnd] = useState("18:00");
-  const [availDays, setAvailDays] = useState<Set<number>>(new Set([0, 1, 2, 3, 4])); // lun-ven
+  const [availDays, setAvailDays] = useState<Set<number>>(
+    new Set([0, 1, 2, 3, 4])
+  ); // lun-ven
   const [availSaving, setAvailSaving] = useState(false);
   const [availMsg, setAvailMsg] = useState<string | null>(null);
-  const [completeBookingId, setCompleteBookingId] = useState<string | null>(null);
+  const [completeBookingId, setCompleteBookingId] = useState<string | null>(
+    null
+  );
   const [completeError, setCompleteError] = useState<string | null>(null);
+  const [cancelBookingId, setCancelBookingId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const loadTutorBookings = useCallback(async () => {
     if (!user?.email) {
@@ -403,15 +414,19 @@ export default function AccountPage() {
                     s?.student_email ||
                     s?.parent_email ||
                     "Studente",
-                  email: s?.email || s?.student_email || s?.parent_email || null,
-                  phone: s?.phone || s?.student_phone || s?.parent_phone || null,
+                  email:
+                    s?.email || s?.student_email || s?.parent_email || null,
+                  phone:
+                    s?.phone || s?.student_phone || s?.parent_phone || null,
                   hoursPaid,
                   hoursConsumed,
                   remainingPaid: Math.max(
                     0,
                     normalizeHours(s?.remainingPaid ?? hoursPaid)
                   ),
-                  hourlyRate: Number.isFinite(Number(hourlyRate)) ? Number(hourlyRate) : null,
+                  hourlyRate: Number.isFinite(Number(hourlyRate))
+                    ? Number(hourlyRate)
+                    : null,
                   isBlack: Boolean(
                     s?.isBlack ||
                       s?.status === "active" ||
@@ -565,13 +580,18 @@ export default function AccountPage() {
 
   const isTutor = tutorMode === "tutor" && Boolean(tutorData);
   const tutorStudents = useMemo(
-    () => (isTutor && Array.isArray(tutorData?.students) ? tutorData.students : []),
+    () =>
+      isTutor && Array.isArray(tutorData?.students) ? tutorData.students : [],
     [isTutor, tutorData?.students]
   );
   const tutorTotalRemainingPaid = useMemo(
     () =>
       tutorStudents.reduce(
-        (acc, s) => acc + (Number.isFinite(Number(s?.remainingPaid)) ? Number(s.remainingPaid) : 0),
+        (acc, s) =>
+          acc +
+          (Number.isFinite(Number(s?.remainingPaid))
+            ? Number(s.remainingPaid)
+            : 0),
         0
       ),
     [tutorStudents]
@@ -635,7 +655,9 @@ export default function AccountPage() {
     () =>
       tutorGrouped.map((g) => {
         const first = g.items[0];
-        const time = first?.startsAt ? formatTutorTimeRange(first.startsAt, tutorCallDuration(first)) : "";
+        const time = first?.startsAt
+          ? formatTutorTimeRange(first.startsAt, tutorCallDuration(first))
+          : "";
         return {
           key: g.key,
           label: g.label,
@@ -652,7 +674,10 @@ export default function AccountPage() {
     return m;
   }, [tutorDayList]);
 
-  const tutorDaySet = useMemo(() => new Set(tutorDayList.map((d) => d.key)), [tutorDayList]);
+  const tutorDaySet = useMemo(
+    () => new Set(tutorDayList.map((d) => d.key)),
+    [tutorDayList]
+  );
 
   const [selectedTutorDay, setSelectedTutorDay] = useState<string | null>(null);
   const [tutorCalendarMonth, setTutorCalendarMonth] = useState(() => {
@@ -661,8 +686,11 @@ export default function AccountPage() {
   });
   const todayYmd = useMemo(() => ymd(new Date()), []);
   const selectedScheduleStudent = useMemo(
-    () => tutorStudents.find((s) => s.id === scheduleStudentId) || tutorStudents[0] || null,
-    [scheduleStudentId, tutorStudents],
+    () =>
+      tutorStudents.find((s) => s.id === scheduleStudentId) ||
+      tutorStudents[0] ||
+      null,
+    [scheduleStudentId, tutorStudents]
   );
   const toggleAvailDay = useCallback((d: number) => {
     setAvailDays((prev) => {
@@ -676,6 +704,8 @@ export default function AccountPage() {
   const openScheduleModal = useCallback(
     (opts?: { studentId?: string; date?: string }) => {
       const nextStudentId = opts?.studentId || tutorStudents[0]?.id || "";
+      setScheduleMode("create");
+      setEditingBooking(null);
       setScheduleStudentId(nextStudentId);
       setScheduleDate(opts?.date || todayYmd);
       setScheduleTime("15:00");
@@ -683,22 +713,74 @@ export default function AccountPage() {
       setScheduleModalOpen(true);
       setScheduleCallType((prev) => prev || DEFAULT_CALL_TYPE);
     },
-    [todayYmd, tutorStudents, tutorData?.callTypes],
+    [todayYmd, tutorStudents, tutorData?.callTypes]
+  );
+
+  const openEditBooking = useCallback(
+    (booking: any) => {
+      if (!booking) return;
+      const startDate = booking.startsAt ? new Date(booking.startsAt) : null;
+      const fallbackDate =
+        startDate && !Number.isNaN(startDate.getTime())
+          ? ymd(startDate)
+          : todayYmd;
+      setScheduleMode("edit");
+      setEditingBooking(booking);
+      setScheduleStudentId(booking.studentId || "");
+      setScheduleDate(fallbackDate);
+      setScheduleTime(toInputTime(booking.startsAt) || "15:00");
+      setScheduleError(null);
+      setScheduleModalOpen(true);
+    },
+    [todayYmd]
   );
 
   const handleScheduleSubmit = useCallback(async () => {
-    const student = tutorStudents.find((s) => s.id === scheduleStudentId) || tutorStudents[0];
-    if (!student) {
-      setScheduleError("Seleziona uno studente");
+    const parsedDate = new Date(
+      `${scheduleDate}T${scheduleTime || "00:00"}:00`
+    );
+    if (Number.isNaN(parsedDate.getTime())) {
+      setScheduleError("Inserisci data e ora valide");
       return;
     }
-    const callTypeSlug = DEFAULT_CALL_TYPE;
-    const iso = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
+    const iso = parsedDate.toISOString();
     setScheduleSaving(true);
     setScheduleError(null);
     try {
       const token = await getAuth().currentUser?.getIdToken();
       if (!token) throw new Error("Token non disponibile");
+
+      if (scheduleMode === "edit" && editingBooking?.id) {
+        const res = await fetch("/api/admin/bookings", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            id: editingBooking.id,
+            startsAt: iso,
+            durationMin: editingBooking.durationMin,
+            callTypeSlug: editingBooking.callType || undefined,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+        setScheduleModalOpen(false);
+        setEditingBooking(null);
+        setScheduleMode("create");
+        await loadTutorBookings();
+        return;
+      }
+
+      const student =
+        tutorStudents.find((s) => s.id === scheduleStudentId) ||
+        tutorStudents[0];
+      if (!student) {
+        setScheduleError("Seleziona uno studente");
+        return;
+      }
+      const callTypeSlug = DEFAULT_CALL_TYPE;
       const res = await fetch("/api/admin/bookings", {
         method: "POST",
         headers: {
@@ -732,6 +814,8 @@ export default function AccountPage() {
     scheduleTime,
     loadTutorBookings,
     tutorData?.callTypes,
+    scheduleMode,
+    editingBooking,
   ]);
 
   const handleGenerateAvailability = useCallback(async () => {
@@ -794,7 +878,10 @@ export default function AccountPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ id: bookingId, studentId: booking?.studentId }),
+          body: JSON.stringify({
+            id: bookingId,
+            studentId: booking?.studentId,
+          }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
@@ -805,7 +892,42 @@ export default function AccountPage() {
         setCompleteBookingId(null);
       }
     },
-    [loadTutorBookings],
+    [loadTutorBookings]
+  );
+
+  const handleCancelBooking = useCallback(
+    async (booking?: any) => {
+      const bookingId = booking?.id || booking;
+      if (!bookingId) return;
+      if (typeof window !== "undefined") {
+        const confirmed = window.confirm(
+          "Vuoi cancellare questa lezione? Verrà liberato lo slot."
+        );
+        if (!confirmed) return;
+      }
+      setCancelBookingId(bookingId);
+      setCancelError(null);
+      try {
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) throw new Error("Token non disponibile");
+        const res = await fetch("/api/admin/bookings", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ id: bookingId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+        await loadTutorBookings();
+      } catch (err: any) {
+        setCancelError(err?.message || "Errore cancellazione");
+      } finally {
+        setCancelBookingId(null);
+      }
+    },
+    [loadTutorBookings]
   );
 
   useEffect(() => {
@@ -814,10 +936,11 @@ export default function AccountPage() {
       return;
     }
     const upcoming =
-      tutorDayList.find((d) => d.key >= todayYmd) ||
-      tutorDayList[0] ||
-      null;
-    if (!selectedTutorDay || !tutorDayList.find((d) => d.key === selectedTutorDay)) {
+      tutorDayList.find((d) => d.key >= todayYmd) || tutorDayList[0] || null;
+    if (
+      !selectedTutorDay ||
+      !tutorDayList.find((d) => d.key === selectedTutorDay)
+    ) {
       setSelectedTutorDay(upcoming?.key || tutorDayList[0].key);
     }
   }, [tutorDayList, selectedTutorDay, todayYmd]);
@@ -827,14 +950,15 @@ export default function AccountPage() {
     const d = new Date(`${selectedTutorDay}T00:00:00`);
     if (Number.isNaN(d.getTime())) return;
     setTutorCalendarMonth((prev) => {
-      if (prev.year === d.getFullYear() && prev.month === d.getMonth()) return prev;
+      if (prev.year === d.getFullYear() && prev.month === d.getMonth())
+        return prev;
       return { year: d.getFullYear(), month: d.getMonth() };
     });
   }, [selectedTutorDay]);
 
   const selectedTutorGroup = useMemo(
     () => tutorGrouped.find((g) => g.key === selectedTutorDay) || null,
-    [tutorGrouped, selectedTutorDay],
+    [tutorGrouped, selectedTutorDay]
   );
 
   const handleTutorMonthChange = (delta: number) => {
@@ -844,16 +968,21 @@ export default function AccountPage() {
     });
   };
 
-  const tutorCalendarRows = useMemo(() => monthMatrix(tutorCalendarMonth.year, tutorCalendarMonth.month), [
-    tutorCalendarMonth,
-  ]);
+  const tutorCalendarRows = useMemo(
+    () => monthMatrix(tutorCalendarMonth.year, tutorCalendarMonth.month),
+    [tutorCalendarMonth]
+  );
   const tutorMonthLabel = useMemo(
     () =>
-      new Date(tutorCalendarMonth.year, tutorCalendarMonth.month, 1).toLocaleString("it-IT", {
+      new Date(
+        tutorCalendarMonth.year,
+        tutorCalendarMonth.month,
+        1
+      ).toLocaleString("it-IT", {
         month: "long",
         year: "numeric",
       }),
-    [tutorCalendarMonth],
+    [tutorCalendarMonth]
   );
 
   // Skeleton
@@ -879,7 +1008,8 @@ export default function AccountPage() {
     "U"
   ).toUpperCase();
 
-  const isCheckingWeeklyCall = weeklyCheckLoading || (!weeklyCheck && !weeklyCheckError);
+  const isCheckingWeeklyCall =
+    weeklyCheckLoading || (!weeklyCheck && !weeklyCheckError);
 
   // Badges component per riutilizzo
   const BadgesRow = () => (
@@ -906,9 +1036,7 @@ export default function AccountPage() {
               }
             >
               <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
-              <span className="font-bold text-white">
-                {planDisplayLabel}
-              </span>
+              <span className="font-bold text-white">{planDisplayLabel}</span>
               {subscriptionDuration && (
                 <span className="text-white/80 font-medium ml-0.5">
                   · {subscriptionDuration}
@@ -917,7 +1045,11 @@ export default function AccountPage() {
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 text-xs bg-black/20 px-2.5 py-1 rounded-full">
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-3.5 w-3.5"
+              >
                 <path d="M6 10V8a6 6 0 1112 0v2h1a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V11a1 1 0 011-1h1zm2 0h8V8a4 4 0 00-8 0v2z" />
               </svg>
               Free
@@ -1063,7 +1195,9 @@ export default function AccountPage() {
 
           <div className="grid gap-4 lg:grid-cols-[280px,1fr]">
             <div className="rounded-2xl border border-slate-200 bg-white [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900 shadow-sm p-4 space-y-2">
-              <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">Saldo</p>
+              <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">
+                Saldo
+              </p>
               <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-blue-700 to-sky-500 leading-tight drop-shadow-[0_12px_30px_rgba(40,88,200,0.32)]">
                 {tutorLoading ? (
                   <span className="inline-block h-8 w-28 animate-pulse rounded bg-slate-200 [.dark_&]:bg-slate-800" />
@@ -1072,7 +1206,8 @@ export default function AccountPage() {
                 )}
               </div>
               <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
-                Stima basata su ore erogate e tariffa per studente. Aggiorna le ore per vedere il saldo corrente.
+                Stima basata su ore erogate e tariffa per studente. Aggiorna le
+                ore per vedere il saldo corrente.
               </p>
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800/60 [.dark_&]:text-slate-200">
                 Ore da pagare:{" "}
@@ -1083,7 +1218,8 @@ export default function AccountPage() {
                 )}
               </div>
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800/60 [.dark_&]:text-slate-200">
-                Ore prepagate dagli studenti assegnati: {formatHoursLabel(tutorTotalRemainingPaid)}
+                Ore prepagate dagli studenti assegnati:{" "}
+                {formatHoursLabel(tutorTotalRemainingPaid)}
               </div>
             </div>
 
@@ -1143,39 +1279,43 @@ export default function AccountPage() {
                             {formatHoursLabel(s.remainingPaid)} rimaste
                           </span>
                         ) : null}
+                        {s.isBlack ? (
+                          <span className="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-[11px] font-bold text-indigo-800 [.dark_&]:bg-indigo-500/15 [.dark_&]:text-indigo-200">
+                            Black
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <p className="mt-1 text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                      Ore erogate: {formatHoursLabel(s.hoursConsumed)} ·
+                      Disponibili: {formatHoursLabel(s.remainingPaid)}
+                    </p>
+                    <p className="text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
+                      Tariffa:{" "}
+                      {s.hourlyRate != null ? `${s.hourlyRate} €/h` : "n/d"}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openScheduleModal({ studentId: s.id })}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
+                      >
+                        Programma
+                      </button>
                       {s.isBlack ? (
-                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-[11px] font-bold text-indigo-800 [.dark_&]:bg-indigo-500/15 [.dark_&]:text-indigo-200">
-                          Black
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            router.push(`/tutor/scheda-black?studentId=${s.id}`)
+                          }
+                          className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 px-3 py-1 text-[11px] font-semibold text-indigo-800 hover:bg-indigo-50 [.dark_&]:border-indigo-500 [.dark_&]:text-indigo-200 [.dark_&]:hover:bg-indigo-500/10"
+                        >
+                          Scheda Black
+                        </button>
                       ) : null}
                     </div>
                   </div>
-                  <p className="mt-1 text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
-                    Ore erogate: {formatHoursLabel(s.hoursConsumed)} · Disponibili: {formatHoursLabel(s.remainingPaid)}
-                  </p>
-                  <p className="text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-400">
-                    Tariffa: {s.hourlyRate != null ? `${s.hourlyRate} €/h` : "n/d"}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openScheduleModal({ studentId: s.id })}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
-                    >
-                      Programma
-                    </button>
-                    {s.isBlack ? (
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/tutor/scheda-black?studentId=${s.id}`)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 px-3 py-1 text-[11px] font-semibold text-indigo-800 hover:bg-indigo-50 [.dark_&]:border-indigo-500 [.dark_&]:text-indigo-200 [.dark_&]:hover:bg-indigo-500/10"
-                      >
-                        Scheda Black
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
+                ))}
               </div>
             </div>
           </div>
@@ -1184,7 +1324,9 @@ export default function AccountPage() {
             <div className="rounded-2xl border border-slate-200 bg-white [.dark_&]:bg-slate-900 shadow-sm p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">Calendario</p>
+                  <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">
+                    Calendario
+                  </p>
                   <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
                     Clicca un giorno per vedere gli slot.
                   </p>
@@ -1192,7 +1334,9 @@ export default function AccountPage() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => openScheduleModal({ date: selectedTutorDay || todayYmd })}
+                    onClick={() =>
+                      openScheduleModal({ date: selectedTutorDay || todayYmd })
+                    }
                     className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
                   >
                     Programma
@@ -1222,14 +1366,16 @@ export default function AccountPage() {
               </div>
 
               <div className="grid grid-cols-7 gap-px rounded-lg bg-slate-100 [.dark_&]:bg-slate-800">
-                {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((day) => (
-                  <div
-                    key={day}
-                    className="bg-white [.dark_&]:bg-slate-900 py-2 text-center text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-300"
-                  >
-                    {day}
-                  </div>
-                ))}
+                {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map(
+                  (day) => (
+                    <div
+                      key={day}
+                      className="bg-white [.dark_&]:bg-slate-900 py-2 text-center text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-300"
+                    >
+                      {day}
+                    </div>
+                  )
+                )}
                 {tutorCalendarRows.map((row, ridx) =>
                   row.map((cell, cidx) => {
                     if (!cell) {
@@ -1262,7 +1408,11 @@ export default function AccountPage() {
                       >
                         <span className="text-sm font-black">
                           {cell.getDate()}
-                          {isToday ? <span className="ml-1 text-[10px] font-bold text-blue-600 [.dark_&]:text-sky-300">oggi</span> : null}
+                          {isToday ? (
+                            <span className="ml-1 text-[10px] font-bold text-blue-600 [.dark_&]:text-sky-300">
+                              oggi
+                            </span>
+                          ) : null}
                         </span>
                         {hasBookings ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200">
@@ -1275,7 +1425,7 @@ export default function AccountPage() {
                         )}
                       </button>
                     );
-                  }),
+                  })
                 )}
               </div>
             </div>
@@ -1287,16 +1437,21 @@ export default function AccountPage() {
                     {selectedTutorGroup?.label || "Seleziona un giorno"}
                   </p>
                   <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
-                    {selectedTutorGroup ? `${selectedTutorGroup.items.length} appuntamenti` : "Nessuna selezione"}
+                    {selectedTutorGroup
+                      ? `${selectedTutorGroup.items.length} appuntamenti`
+                      : "Nessuna selezione"}
                   </p>
                 </div>
                 {selectedTutorGroup ? (
                   <div className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200">
-                    {new Date(selectedTutorGroup.key).toLocaleDateString("it-IT", {
-                      day: "2-digit",
-                      month: "long",
-                      year: "numeric",
-                    })}
+                    {new Date(selectedTutorGroup.key).toLocaleDateString(
+                      "it-IT",
+                      {
+                        day: "2-digit",
+                        month: "long",
+                        year: "numeric",
+                      }
+                    )}
                   </div>
                 ) : null}
               </div>
@@ -1324,6 +1479,10 @@ export default function AccountPage() {
                       : status === "completed"
                         ? "bg-blue-100 text-blue-700 [.dark_&]:bg-sky-500/15 [.dark_&]:text-sky-100"
                         : "bg-emerald-100 text-emerald-700 [.dark_&]:bg-emerald-500/15 [.dark_&]:text-emerald-200";
+                  const canEdit =
+                    status !== "completed" && status !== "cancelled";
+                  const isCancelling = cancelBookingId === bk?.id;
+                  const isCompleting = completeBookingId === bk?.id;
                   return (
                     <div
                       key={bk?.id || bk?.slotId || bk?.startsAt}
@@ -1346,47 +1505,76 @@ export default function AccountPage() {
                             </div>
                           ) : null}
                         </div>
-                        <span
-                          className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold ${statusClass}`}
-                    >
-                      {statusLabel}
-                    </span>
-                        {status !== "completed" &&
-                        status !== "cancelled" &&
-                        (bk?.remainingPaid === undefined || Number(bk?.remainingPaid ?? 0) > 0) ? (
+                        <div className="flex flex-col items-end gap-2">
+                          <span
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold ${statusClass}`}
+                          >
+                            {statusLabel}
+                          </span>
+                          {canEdit &&
+                          (bk?.remainingPaid === undefined ||
+                            Number(bk?.remainingPaid ?? 0) > 0) ? (
+                            <button
+                              type="button"
+                              onClick={() => handleCompleteBooking(bk)}
+                              disabled={isCompleting}
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60 disabled:opacity-60"
+                            >
+                              {isCompleting ? "Salvo..." : "Segna effettuata"}
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                      {canEdit ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
                           <button
                             type="button"
-                            onClick={() => handleCompleteBooking(bk)}
-                            disabled={completeBookingId === bk?.id}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60 disabled:opacity-60"
-                      >
-                        {completeBookingId === bk?.id ? "Salvo..." : "Segna effettuata"}
-                      </button>
-                    ) : null}
+                            onClick={() => openEditBooking(bk)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
+                          >
+                            Modifica orario
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCancelBooking(bk)}
+                            disabled={isCancelling}
+                            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-3 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 [.dark_&]:border-rose-500/40 [.dark_&]:text-rose-200 [.dark_&]:hover:bg-rose-500/10 disabled:opacity-60"
+                          >
+                            {isCancelling ? "Cancello..." : "Cancella"}
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+                {cancelError ? (
+                  <div className="text-[12px] font-semibold text-rose-600 [.dark_&]:text-rose-300">
+                    {cancelError}
                   </div>
-                </div>
-              );
-            })}
-            {completeError ? (
-              <div className="text-[12px] font-semibold text-rose-600 [.dark_&]:text-rose-300">
-                {completeError}
-              </div>
-            ) : null}
-            {tutorLoading ? (
-              <div className="text-sm font-semibold text-slate-600 [.dark_&]:text-slate-300">
-                Caricamento slot...
-              </div>
-            ) : null}
+                ) : null}
+                {completeError ? (
+                  <div className="text-[12px] font-semibold text-rose-600 [.dark_&]:text-rose-300">
+                    {completeError}
+                  </div>
+                ) : null}
+                {tutorLoading ? (
+                  <div className="text-sm font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                    Caricamento slot...
+                  </div>
+                ) : null}
               </div>
             </div>
-            </div>
+          </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900 shadow-sm p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">Disponibilità calendario</p>
+                <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">
+                  Disponibilità calendario
+                </p>
                 <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
-                  Genera slot disponibili in un intervallo, con giorni e fasce personalizzate.
+                  Genera slot disponibili in un intervallo, con giorni e fasce
+                  personalizzate.
                 </p>
               </div>
               {availMsg && (
@@ -1434,20 +1622,22 @@ export default function AccountPage() {
               </label>
             </div>
             <div className="flex flex-wrap gap-2">
-              {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((d, idx) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => toggleAvailDay(idx)}
-                  className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
-                    availDays.has(idx)
-                      ? "border-blue-500 bg-blue-50 text-blue-700 [.dark_&]:border-sky-500 [.dark_&]:bg-sky-500/15 [.dark_&]:text-sky-100"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200 [.dark_&]:hover:border-sky-500/50 [.dark_&]:hover:bg-sky-500/10"
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
+              {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map(
+                (d, idx) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => toggleAvailDay(idx)}
+                    className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
+                      availDays.has(idx)
+                        ? "border-blue-500 bg-blue-50 text-blue-700 [.dark_&]:border-sky-500 [.dark_&]:bg-sky-500/15 [.dark_&]:text-sky-100"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200 [.dark_&]:hover:border-sky-500/50 [.dark_&]:hover:bg-sky-500/10"
+                    }`}
+                  >
+                    {d}
+                  </button>
+                )
+              )}
               <button
                 type="button"
                 onClick={() => setAvailDays(new Set([0, 1, 2, 3, 4]))}
@@ -1467,7 +1657,6 @@ export default function AccountPage() {
               </button>
             </div>
           </div>
-
         </section>
       ) : (
         <>
@@ -1478,7 +1667,9 @@ export default function AccountPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 [.dark_&]:text-slate-300">
                   Azioni rapide
                 </p>
-                <p className="text-sm text-slate-600 [.dark_&]:text-slate-200">Vai diretto alle funzioni principali.</p>
+                <p className="text-sm text-slate-600 [.dark_&]:text-slate-200">
+                  Vai diretto alle funzioni principali.
+                </p>
               </div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -1521,7 +1712,9 @@ export default function AccountPage() {
                   </p>
                 </div>
                 {isCheckingWeeklyCall ? (
-                  <div className="text-sm font-semibold text-white/80">Controllo slot...</div>
+                  <div className="text-sm font-semibold text-white/80">
+                    Controllo slot...
+                  </div>
                 ) : weeklyCheck?.hasBooking ? (
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white">
                     <CalendarClock className="h-4 w-4" aria-hidden />
@@ -1543,8 +1736,9 @@ export default function AccountPage() {
               </div>
               {weeklyCheckError && (
                 <p className="mt-2 text-xs text-amber-200">
-                  Non riesco a verificare le prenotazioni di questa settimana ({weeklyCheckError}). Se
-                  non hai già fissato la call, puoi aprire la pagina di prenotazione.
+                  Non riesco a verificare le prenotazioni di questa settimana (
+                  {weeklyCheckError}). Se non hai già fissato la call, puoi
+                  aprire la pagina di prenotazione.
                 </p>
               )}
             </section>
@@ -1602,7 +1796,9 @@ export default function AccountPage() {
                       <div className="font-semibold truncate capitalize text-slate-800 [.dark_&]:text-white">
                         {slug.replace(/-/g, " ")}
                       </div>
-                      <div className="text-xs text-slate-500 truncate">/{slug}</div>
+                      <div className="text-xs text-slate-500 truncate">
+                        /{slug}
+                      </div>
                     </div>
                     <Link
                       href={`/${slug}`}
@@ -1627,7 +1823,10 @@ export default function AccountPage() {
 
           {/* PROFILO */}
           <div id="profilo" className="h-0" aria-hidden="true" />
-          <Card title="Profilo" subtitle="Personalizza il tuo profilo pubblico.">
+          <Card
+            title="Profilo"
+            subtitle="Personalizza il tuo profilo pubblico."
+          >
             <ProfileSection
               userId={user.uid}
               username={username}
@@ -1650,7 +1849,9 @@ export default function AccountPage() {
               <span className="text-sm text-slate-600 [.dark_&]:text-white">
                 Il mio piano
               </span>
-              <span className="text-sm font-medium truncate">{planDisplayLabel}</span>
+              <span className="text-sm font-medium truncate">
+                {planDisplayLabel}
+              </span>
             </div>
             <div className="flex items-center justify-between mt-2">
               <span className="text-sm text-slate-600 [.dark_&]:text-white">
@@ -1675,44 +1876,78 @@ export default function AccountPage() {
       {isTutor && scheduleModalOpen ? (
         <FirstExamPortal>
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-            <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={() => setScheduleModalOpen(false)} />
+            <div
+              className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"
+              onClick={() => {
+                setScheduleModalOpen(false);
+                setEditingBooking(null);
+                setScheduleMode("create");
+              }}
+            />
             <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 [.dark_&]:text-slate-300">
-                    Nuova lezione
+                    {scheduleMode === "edit"
+                      ? "Modifica lezione"
+                      : "Nuova lezione"}
                   </p>
-                  <p className="text-lg font-bold text-slate-900 [.dark_&]:text-white">Programma con uno studente</p>
+                  <p className="text-lg font-bold text-slate-900 [.dark_&]:text-white">
+                    {scheduleMode === "edit"
+                      ? "Aggiorna data e ora"
+                      : "Programma con uno studente"}
+                  </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setScheduleModalOpen(false)}
+                  onClick={() => {
+                    setScheduleModalOpen(false);
+                    setEditingBooking(null);
+                    setScheduleMode("create");
+                  }}
                   className="text-sm text-slate-500 hover:text-slate-800 [.dark_&]:text-slate-300 [.dark_&]:hover:text-white"
                 >
                   Chiudi
                 </button>
               </div>
 
-              {!tutorStudents.length ? (
+              {scheduleMode === "create" && !tutorStudents.length ? (
                 <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 [.dark_&]:border-amber-500/40 [.dark_&]:bg-amber-500/10 [.dark_&]:text-amber-100">
-                  Nessuno studente assegnato: assegna uno studente prima di programmare.
+                  Nessuno studente assegnato: assegna uno studente prima di
+                  programmare.
                 </div>
               ) : (
                 <div className="mt-4 space-y-3">
-                  <label className="block text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
-                    Studente
-                    <select
-                      value={scheduleStudentId}
-                      onChange={(e) => setScheduleStudentId(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
-                    >
-                      {tutorStudents.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} {s.email ? `· ${s.email}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  {scheduleMode === "edit" ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800/60 [.dark_&]:text-slate-100">
+                      <p className="text-[11px] uppercase tracking-wide text-slate-500 [.dark_&]:text-slate-300">
+                        Studente
+                      </p>
+                      <p className="text-sm font-bold text-slate-900 [.dark_&]:text-white">
+                        {editingBooking?.fullName || "Studente"}
+                      </p>
+                      {editingBooking?.email ? (
+                        <p className="text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                          {editingBooking.email}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <label className="block text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                      Studente
+                      <select
+                        value={scheduleStudentId}
+                        onChange={(e) => setScheduleStudentId(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                      >
+                        {tutorStudents.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} {s.email ? `· ${s.email}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label className="block text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
@@ -1737,7 +1972,8 @@ export default function AccountPage() {
 
                   {/* Tipo fisso: usiamo il primo disponibile senza mostrarlo */}
 
-                  {selectedScheduleStudent?.phone ? (
+                  {scheduleMode === "create" &&
+                  selectedScheduleStudent?.phone ? (
                     <p className="text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-300">
                       Telefono studente: {selectedScheduleStudent.phone}
                     </p>
@@ -1754,6 +1990,8 @@ export default function AccountPage() {
                       onClick={() => {
                         setScheduleModalOpen(false);
                         setScheduleError(null);
+                        setEditingBooking(null);
+                        setScheduleMode("create");
                       }}
                       className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
                     >
@@ -1762,10 +2000,19 @@ export default function AccountPage() {
                     <button
                       type="button"
                       onClick={handleScheduleSubmit}
-                      disabled={scheduleSaving || !tutorStudents.length}
+                      disabled={
+                        scheduleSaving ||
+                        (scheduleMode === "create" && !tutorStudents.length)
+                      }
                       className="rounded-lg bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-2 text-sm font-bold text-white shadow-md transition hover:brightness-110 disabled:opacity-60"
                     >
-                      {scheduleSaving ? "Programmo..." : "Programma"}
+                      {scheduleSaving
+                        ? scheduleMode === "edit"
+                          ? "Salvo..."
+                          : "Programmo..."
+                        : scheduleMode === "edit"
+                          ? "Salva modifiche"
+                          : "Programma"}
                     </button>
                   </div>
                 </div>
@@ -1774,7 +2021,6 @@ export default function AccountPage() {
           </div>
         </FirstExamPortal>
       ) : null}
-
     </main>
   );
 }
@@ -1967,8 +2213,7 @@ function formatEuro(val?: number | null) {
 function formatTutorDayLabel(input?: string | null) {
   if (!input) return { key: "n.d.", label: "Data non disponibile" };
   const d = new Date(input);
-  if (Number.isNaN(d.getTime()))
-    return { key: input, label: input };
+  if (Number.isNaN(d.getTime())) return { key: input, label: input };
   const key = d.toISOString().slice(0, 10);
   const label = d.toLocaleDateString("it-IT", {
     weekday: "long",
@@ -1978,13 +2223,19 @@ function formatTutorDayLabel(input?: string | null) {
   return { key, label };
 }
 
-function formatTutorTimeRange(input?: string | null, durationMin?: number | null) {
+function formatTutorTimeRange(
+  input?: string | null,
+  durationMin?: number | null
+) {
   if (!input) return "Orario non disponibile";
   const start = new Date(input);
   if (Number.isNaN(start.getTime())) return "Orario non disponibile";
   const dur = Number(durationMin) > 0 ? Number(durationMin) : 30;
   const end = new Date(start.getTime() + dur * 60_000);
-  const opts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
+  const opts: Intl.DateTimeFormatOptions = {
+    hour: "2-digit",
+    minute: "2-digit",
+  };
   return `${start.toLocaleTimeString("it-IT", opts)} - ${end.toLocaleTimeString("it-IT", opts)}`;
 }
 
@@ -2697,8 +2948,8 @@ function GradesCard({
       setGrade("6");
       setDate(isoDay());
       setAddGradeModalOpen(false);
-    } catch {}
-    finally {
+    } catch {
+    } finally {
       setSavingGrade(false);
     }
   }
@@ -2781,13 +3032,18 @@ function GradesCard({
           {items.length > 0 && (
             <div className="mt-3 space-y-3">
               {visibleRows.map((it) => {
-                const friendlyDateRaw = new Date(`${it.date}T00:00:00`).toLocaleDateString(
-                  "it-IT",
-                  { weekday: "short", day: "numeric", month: "short" }
-                );
+                const friendlyDateRaw = new Date(
+                  `${it.date}T00:00:00`
+                ).toLocaleDateString("it-IT", {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                });
                 const friendlyDate =
-                  friendlyDateRaw.charAt(0).toUpperCase() + friendlyDateRaw.slice(1);
-                const subjectLabel = it.subject === "matematica" ? "Matematica" : "Fisica";
+                  friendlyDateRaw.charAt(0).toUpperCase() +
+                  friendlyDateRaw.slice(1);
+                const subjectLabel =
+                  it.subject === "matematica" ? "Matematica" : "Fisica";
                 const accent =
                   it.subject === "matematica"
                     ? "from-[#2b7fff] via-[#3d8bff] to-[#55d4ff]"
@@ -2955,6 +3211,13 @@ function ymd(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+function toInputTime(iso?: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 function monthMatrix(year: number, month: number) {
   // month: 0-11
   const first = new Date(year, month, 1);
@@ -3104,7 +3367,9 @@ function ScheduledExamsCard({
   const [showAllFuture, setShowAllFuture] = useState(false);
   const [showAllPast, setShowAllPast] = useState(false);
   const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
-  const [calendarSelectedDate, setCalendarSelectedDate] = useState<string | null>(null);
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState<
+    string | null
+  >(null);
   const [calendarGradeModal, setCalendarGradeModal] = useState<{
     exam: ExamItem;
     subject: "matematica" | "fisica";
@@ -3121,7 +3386,9 @@ function ScheduledExamsCard({
     }
   }, [addModalOpen, date, today]);
 
-  function normalizeSubjectLabel(label?: string | null): "matematica" | "fisica" {
+  function normalizeSubjectLabel(
+    label?: string | null
+  ): "matematica" | "fisica" {
     const raw = (label || "").toLowerCase();
     if (raw.includes("fisic")) return "fisica";
     return "matematica";
@@ -3346,9 +3613,7 @@ function ScheduledExamsCard({
     const value = Number(calendarGradeModal.grade);
     if (!Number.isFinite(value)) return;
     const bounded = Math.max(0, Math.min(10, value));
-    setCalendarGradeModal((prev) =>
-      prev ? { ...prev, saving: true } : prev
-    );
+    setCalendarGradeModal((prev) => (prev ? { ...prev, saving: true } : prev));
     try {
       await persistGradeOnServer(
         calendarGradeModal.exam.id,
@@ -3391,7 +3656,9 @@ function ScheduledExamsCard({
   const pastItemsSorted = [...items]
     .filter((it) => it.date < today)
     .sort((a, b) => b.date.localeCompare(a.date));
-  const upcomingList = showAllFuture ? upcomingItems : upcomingItems.slice(0, 3);
+  const upcomingList = showAllFuture
+    ? upcomingItems
+    : upcomingItems.slice(0, 3);
   const pastList = showAllPast ? pastItemsSorted : pastItemsSorted.slice(0, 3);
   const addDateIsPast = Boolean(date && date < today);
   const firstDateIsPast = Boolean(firstDate && firstDate < today);
@@ -3412,12 +3679,11 @@ function ScheduledExamsCard({
       label = `Tra ${rem}g`;
     }
 
-    const draft =
-      gradeDrafts[it.id] || {
-        grade: "",
-        subject: "matematica",
-        saving: false,
-      };
+    const draft = gradeDrafts[it.id] || {
+      grade: "",
+      subject: "matematica",
+      saving: false,
+    };
     const canAddGrade = rem <= 0 && !it.grade;
 
     const accent =
@@ -4085,8 +4351,9 @@ function ScheduledExamsCard({
                         prev
                           ? {
                               ...prev,
-                              subject: e.target
-                                .value as "matematica" | "fisica",
+                              subject: e.target.value as
+                                | "matematica"
+                                | "fisica",
                             }
                           : prev
                       )
@@ -4130,9 +4397,7 @@ function ScheduledExamsCard({
                   }
                   className="rounded-lg bg-gradient-to-r from-[#2b7fff] to-[#55d4ff] text-white px-4 py-1.5 text-sm font-semibold disabled:opacity-60"
                 >
-                  {calendarGradeModal.saving
-                    ? "Salvataggio…"
-                    : "Salva voto"}
+                  {calendarGradeModal.saving ? "Salvataggio…" : "Salva voto"}
                 </button>
               </div>
             </div>
@@ -4142,5 +4407,5 @@ function ScheduledExamsCard({
     </Card>
   );
 }
-"/* eslint-disable @typescript-eslint/no-unused-vars */\n"
-"/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions */\n"
+("/* eslint-disable @typescript-eslint/no-unused-vars */\n");
+("/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions */\n");
