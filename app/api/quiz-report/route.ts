@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { adminDb } from "@/lib/firebaseAdmin";
+import { supabaseServer } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -400,6 +401,102 @@ async function logQuizLead({
   };
 
   await adminDb.collection("quiz_leads").add(doc);
+
+  // Inserisci/aggiorna anche nella tabella manual_leads (Supabase) per il follow-up automatico
+  if (quiz === "start-studente") {
+    try {
+      await upsertManualLeadFromQuiz({ phone, quizLabel, planName: plan?.name });
+    } catch (err) {
+      console.error("quiz-report manual_leads sync error", err);
+    }
+  }
+}
+
+const FOLLOWUP_STEPS_DAYS = [1, 2, 7, 30];
+
+function normalizePhone(raw?: string | null) {
+  if (!raw) return null;
+  const compact = raw.replace(/\s+/g, "").trim();
+  const digits = compact.replace(/\D/g, "");
+  if (!digits) return null;
+  if (compact.startsWith("+")) return `+${digits}`;
+  if (digits.startsWith("00") && digits.length > 2) return `+${digits.slice(2)}`;
+  return `+${digits}`;
+}
+
+function addDays(base: Date, days: number) {
+  const next = new Date(base);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function computeNextFollowUp(stepIndex: number, from: Date) {
+  const offset = FOLLOWUP_STEPS_DAYS[stepIndex];
+  if (offset === undefined) return null;
+  return addDays(from, offset);
+}
+
+async function upsertManualLeadFromQuiz({
+  phone,
+  quizLabel,
+  planName,
+}: {
+  phone: string;
+  quizLabel: string;
+  planName?: string;
+}) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return;
+  }
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) return;
+
+  const db = supabaseServer();
+  const now = new Date();
+  const nextFollowUp = computeNextFollowUp(0, now);
+  const noteParts = [`Quiz: ${quizLabel}`];
+  if (planName) noteParts.push(`Piano: ${planName}`);
+  const note = noteParts.join(" • ").slice(0, 220);
+
+  // Se esiste già, riattiva e resetta il follow-up
+  const { data: existing, error: fetchErr } = await db
+    .from("manual_leads")
+    .select("id, status")
+    .eq("whatsapp_phone", normalizedPhone)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (fetchErr) throw fetchErr;
+
+  if (existing?.id) {
+    const { error: updateErr } = await db
+      .from("manual_leads")
+      .update({
+        whatsapp_phone: normalizedPhone,
+        channel: "whatsapp",
+        status: "active",
+        current_step: 0,
+        next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : null,
+        last_contacted_at: null,
+        completed_at: null,
+        note,
+      })
+      .eq("id", existing.id);
+    if (updateErr) throw updateErr;
+    return;
+  }
+
+  const { error: insertErr } = await db.from("manual_leads").insert({
+    full_name: null,
+    whatsapp_phone: normalizedPhone,
+    instagram_handle: null,
+    channel: "whatsapp",
+    status: "active",
+    current_step: 0,
+    next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : null,
+    note,
+  });
+  if (insertErr) throw insertErr;
 }
 
 function buildPlanTemplateMessage({ plan, quiz }: { plan: PlanInfo; quiz: QuizKind }) {

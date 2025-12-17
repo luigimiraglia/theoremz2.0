@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import clsx from "clsx";
 import { useAuth } from "@/lib/AuthContext";
-import { ArrowRight, ListFilter } from "lucide-react";
+import { ArrowRight, ListFilter, MessageCircle } from "lucide-react";
 
 type Booking = {
   id: string;
@@ -1504,6 +1504,13 @@ export default function WhatsAppAdmin() {
                 >
                   Vai
                 </button>
+                <a
+                  href="/admin/leads"
+                  className="absolute -right-1 -bottom-10 inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold text-slate-100 shadow hover:border-emerald-400/60 hover:text-emerald-200"
+                >
+                  <MessageCircle size={14} />
+                  Leads manuali
+                </a>
               </div>
             </div>
 
