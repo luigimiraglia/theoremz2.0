@@ -415,7 +415,7 @@ export default function BlackFollowupsPage() {
       chosenPrefix = matchingPrefix;
       numberPart = digits.slice(matchingPrefix.replace("+", "").length);
     }
-    const autoNoteParts = [];
+    const autoNoteParts: string[] = [];
     if (student.year_class) autoNoteParts.push(`Classe: ${student.year_class}`);
     if (student.track) autoNoteParts.push(`Percorso: ${student.track}`);
     if (student.student_email || student.parent_email) {
