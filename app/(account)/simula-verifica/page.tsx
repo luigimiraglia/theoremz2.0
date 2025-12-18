@@ -301,7 +301,7 @@ export default function SimulaVerificaPage() {
       `}</style>
 
       <header className="relative overflow-hidden rounded-2xl border border-indigo-200/50 bg-gradient-to-br from-cyan-600 via-blue-600 to-sky-600 text-white shadow-[0_10px_40px_rgba(37,99,235,0.35)]">
-        <div className="absolute inset-0 opacity-25 mix-blend-overlay bg-[radial-gradient(ellipse_at_top_left,white,transparent_50%)]" />
+        <div className="absolute inset-0 opacity-25 mix-blend-overlay bg-[radial-gradient(circle_at_0%_0%,white,transparent_50%)]" />
         <div className="relative p-5 sm:p-8">
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Simula una verifica</h1>
           <p className="text-white/90 text-sm mt-1 max-w-2xl">

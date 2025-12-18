@@ -1064,7 +1064,7 @@ export default function AccountPage() {
     <main className="mx-auto max-w-6xl p-4 sm:p-6 space-y-6">
       {/* HERO */}
       <section className="relative overflow-hidden rounded-2xl border border-indigo-200/50 bg-gradient-to-br from-cyan-600 via-blue-600 to-sky-600 text-white shadow-[0_10px_40px_rgba(37,99,235,0.35)]">
-        <div className="absolute inset-0 opacity-25 mix-blend-overlay bg-[radial-gradient(ellipse_at_top_left,white,transparent_50%)]" />
+        <div className="absolute inset-0 opacity-25 mix-blend-overlay bg-[radial-gradient(circle_at_0%_0%,white,transparent_50%)]" />
         <div className="relative p-5 sm:p-8">
           {/* Badges in alto a sinistra - visibili solo su mobile */}
           <div className="sm:hidden mb-2 -mt-2 -ml-1">
