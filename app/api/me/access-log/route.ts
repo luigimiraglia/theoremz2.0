@@ -1,15 +1,27 @@
 import { NextResponse } from "next/server";
-import { adminAuth } from "@/lib/firebaseAdmin";
 import { logStudentAccessLite } from "@/lib/studentLiteSync";
+
+async function getAdminAuth() {
+  try {
+    const { adminAuth } = await import("@/lib/firebaseAdmin");
+    return adminAuth;
+  } catch (error) {
+    console.warn("[access-log] admin auth unavailable", error);
+    return null;
+  }
+}
 
 async function getUid(req: Request) {
   const header = req.headers.get("authorization") || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
   if (!token) return null;
   try {
+    const adminAuth = await getAdminAuth();
+    if (!adminAuth) return null;
     const decoded = await adminAuth.verifyIdToken(token);
     return decoded.uid as string;
-  } catch {
+  } catch (error) {
+    console.warn("[access-log] verify token failed", error);
     return null;
   }
 }

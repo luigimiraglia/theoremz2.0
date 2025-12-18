@@ -1461,21 +1461,28 @@ export default function WhatsAppAdmin() {
             <button
               onClick={() => setPolling((prev) => !prev)}
               className={clsx(
-                "px-3 py-2 rounded-lg border text-sm font-semibold transition",
+                "px-3 py-2 rounded-lg border text-sm font-semibold transition shadow-sm",
                 polling
-                  ? "bg-emerald-500 text-slate-900 border-emerald-400 hover:border-emerald-200"
-                  : "bg-slate-800 text-slate-100 border-slate-700 hover:border-emerald-400"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:border-emerald-300"
+                  : "bg-white text-slate-900 border-slate-200 hover:border-emerald-300"
               )}
             >
               {polling ? "Live ON" : "Live OFF"}
             </button>
             <button
               onClick={() => fetchList({ keepSelection: true })}
-              className="px-3 py-2 rounded-lg bg-slate-800 text-slate-100 text-sm border border-slate-700 hover:border-emerald-400 transition"
+              className="px-3 py-2 rounded-lg bg-slate-900 text-white text-sm border border-slate-900 hover:bg-slate-800 transition shadow-sm"
               disabled={loadingList}
             >
               {loadingList ? "Aggiorno..." : "Refresh"}
             </button>
+            <a
+              href="/admin/black-followups"
+              className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-900 shadow-sm hover:border-emerald-300 inline-flex items-center gap-2"
+            >
+              <ListFilter size={16} />
+              Black follow-up
+            </a>
           </div>
         </header>
 

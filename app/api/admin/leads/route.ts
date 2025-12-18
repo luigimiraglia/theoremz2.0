@@ -274,6 +274,41 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ lead: mapLead(data) });
   }
 
+  if (action === "restart") {
+    const { data: existing, error: fetchErr } = await db
+      .from("manual_leads")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (fetchErr) {
+      console.error("[admin/leads] restart fetch error", fetchErr);
+      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+    }
+    if (!existing) {
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+    const now = new Date();
+    const nextFollowUp = computeNextFollowUp(0, now);
+    const updatePayload: Record<string, any> = {
+      current_step: 0,
+      status: "active",
+      last_contacted_at: now.toISOString(),
+      next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : null,
+      completed_at: null,
+    };
+    const { data, error } = await db
+      .from("manual_leads")
+      .update(updatePayload)
+      .eq("id", id)
+      .select("*")
+      .maybeSingle();
+    if (error) {
+      console.error("[admin/leads] restart update error", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ lead: mapLead(data) });
+  }
+
   const patch: Record<string, any> = {};
   if (body.name !== undefined) {
     const name = typeof body.name === "string" ? body.name.trim() : "";

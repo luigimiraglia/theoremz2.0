@@ -16,6 +16,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import Link from "next/link";
 
 type Lead = {
   id: string;
@@ -125,6 +126,7 @@ export default function LeadsAdminPage() {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [advancingId, setAdvancingId] = useState<string | null>(null);
+  const [restartingId, setRestartingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
@@ -321,6 +323,34 @@ export default function LeadsAdminPage() {
     [fetchLeads, applyLeadUpdate]
   );
 
+  const handleRestart = useCallback(
+    async (id: string) => {
+      setRestartingId(id);
+      setError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/leads", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ id, action: "restart" }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+        if (json?.lead) {
+          applyLeadUpdate(json.lead);
+        } else {
+          await fetchLeads();
+        }
+      } catch (err: any) {
+        setError(err?.message || "Errore riavvio ciclo lead");
+      } finally {
+        setRestartingId(null);
+      }
+    },
+    [fetchLeads, applyLeadUpdate]
+  );
+
   const dayDue = useMemo(() => {
     const list = data?.due || [];
     return list.map((lead) => {
@@ -366,13 +396,20 @@ export default function LeadsAdminPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <a
+            <Link
               href="/admin/whatsapp"
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:border-slate-300"
             >
               <MessageCircle size={16} />
               WhatsApp Admin
-            </a>
+            </Link>
+            <Link
+              href="/admin/black-followups"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:border-slate-300"
+            >
+              <ListFilter size={16} />
+              Black follow-up
+            </Link>
             <button
               onClick={fetchAllLeads}
               disabled={loadingAll}
@@ -663,6 +700,18 @@ export default function LeadsAdminPage() {
                             Apri Instagram
                           </a>
                         ) : null}
+                        <button
+                          onClick={() => handleRestart(lead.id)}
+                          disabled={restartingId === lead.id}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:border-indigo-300 disabled:opacity-60"
+                        >
+                          {restartingId === lead.id ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <RefreshCcw size={16} />
+                          )}
+                          Ha risposto (restart)
+                        </button>
                         <button
                           onClick={() => handleAdvance(lead.id)}
                           disabled={advancingId === lead.id}
