@@ -713,7 +713,7 @@ export default function AccountPage() {
       setScheduleModalOpen(true);
       setScheduleCallType((prev) => prev || DEFAULT_CALL_TYPE);
     },
-    [todayYmd, tutorStudents, tutorData?.callTypes]
+    [todayYmd, tutorStudents]
   );
 
   const openEditBooking = useCallback(
@@ -809,11 +809,9 @@ export default function AccountPage() {
   }, [
     tutorStudents,
     scheduleStudentId,
-    scheduleCallType,
     scheduleDate,
     scheduleTime,
     loadTutorBookings,
-    tutorData?.callTypes,
     scheduleMode,
     editingBooking,
   ]);
@@ -858,8 +856,6 @@ export default function AccountPage() {
     availStart,
     availEnd,
     availDays,
-    tutorData?.callTypes,
-    scheduleCallType,
     loadTutorBookings,
   ]);
 

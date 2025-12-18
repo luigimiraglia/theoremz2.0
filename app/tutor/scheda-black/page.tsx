@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { getAuth } from "firebase/auth";
@@ -191,25 +191,6 @@ export default function TutorBlackCardPage() {
       </div>
     </main>
   );
-}
-
-function formatHoursLabel(val?: number | null) {
-  if (val === null || val === undefined) return "—";
-  const n = Number(val);
-  if (!Number.isFinite(n)) return "—";
-  return Number.isInteger(n) ? `${n}h` : `${n.toFixed(1)}h`;
-}
-
-function formatEuro(val?: number | null) {
-  if (val === null || val === undefined) return "€—";
-  const n = Number(val);
-  if (!Number.isFinite(n)) return "€—";
-  return n.toLocaleString("it-IT", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 }
 
 function formatDate(input?: string | null) {

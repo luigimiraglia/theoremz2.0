@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import clsx from "clsx";
+import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { ArrowRight, ListFilter, MessageCircle } from "lucide-react";
 
@@ -1476,13 +1477,13 @@ export default function WhatsAppAdmin() {
             >
               {loadingList ? "Aggiorno..." : "Refresh"}
             </button>
-            <a
+            <Link
               href="/admin/black-followups"
               className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-900 shadow-sm hover:border-emerald-300 inline-flex items-center gap-2"
             >
               <ListFilter size={16} />
               Black follow-up
-            </a>
+            </Link>
           </div>
         </header>
 
@@ -1511,13 +1512,13 @@ export default function WhatsAppAdmin() {
                 >
                   Vai
                 </button>
-                <a
+                <Link
                   href="/admin/leads"
                   className="absolute -right-1 -bottom-10 inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold text-slate-100 shadow hover:border-emerald-400/60 hover:text-emerald-200"
                 >
                   <MessageCircle size={14} />
                   Leads manuali
-                </a>
+                </Link>
               </div>
             </div>
 

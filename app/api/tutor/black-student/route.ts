@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   try {
     const decoded = await adminAuth.verifyIdToken(token);
     viewerEmail = decoded.email?.toLowerCase() || null;
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
