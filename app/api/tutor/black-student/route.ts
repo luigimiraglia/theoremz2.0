@@ -124,8 +124,6 @@ export async function GET(request: NextRequest) {
         nextAssessmentDate: data.next_assessment_date,
         aiDescription: data.ai_description,
         status: data.status,
-        readiness: data.readiness,
-        risk: data.risk_level,
         lastContactedAt: data.last_contacted_at,
         hoursPaid,
         hoursConsumed,
