@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { getAuth } from "firebase/auth";
-import { Loader2, Phone, Mail, ClipboardList, Shield } from "lucide-react";
+import { Loader2, Phone, Mail, ClipboardList, Shield, Pencil } from "lucide-react";
 
 type StudentDetail = {
   id: string;
@@ -20,8 +20,6 @@ type StudentDetail = {
   nextAssessmentDate?: string | null;
   aiDescription?: string | null;
   status?: string | null;
-  readiness?: number | null;
-  risk?: string | null;
   lastContactedAt?: string | null;
   hoursPaid?: number;
   hoursConsumed?: number;
@@ -36,6 +34,14 @@ export default function TutorBlackCardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [student, setStudent] = useState<StudentDetail | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [meta, setMeta] = useState({
+    name: "",
+    goal: "",
+    difficulty: "",
+    aiNotes: "",
+  });
 
   useEffect(() => {
     let active = true;
@@ -69,6 +75,12 @@ export default function TutorBlackCardPage() {
           hoursConsumed: Number(s?.hoursConsumed ?? s?.hours_consumed ?? 0),
           remainingPaid: Number(s?.remainingPaid ?? 0),
         });
+        setMeta({
+          name: s.name || "",
+          goal: s.goal || "",
+          difficulty: s.difficultyFocus || "",
+          aiNotes: s.aiDescription || "",
+        });
       } catch (err: any) {
         if (!active) return;
         setError(err?.message || "Errore caricamento scheda");
@@ -80,6 +92,48 @@ export default function TutorBlackCardPage() {
       active = false;
     };
   }, [searchParams, user?.email]);
+
+  const handleSave = async () => {
+    if (!student?.id) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("Token non disponibile");
+      const res = await fetch("/api/tutor/black-student", {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          studentId: student.id,
+          name: meta.name || student.name,
+          goal: meta.goal,
+          difficultyFocus: meta.difficulty,
+          aiDescription: meta.aiNotes,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      setStudent((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: meta.name || prev.name,
+              goal: meta.goal,
+              difficultyFocus: meta.difficulty,
+              aiDescription: meta.aiNotes,
+            }
+          : prev
+      );
+      setEditing(false);
+    } catch (err: any) {
+      setError(err?.message || "Errore salvataggio dati");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -153,27 +207,117 @@ export default function TutorBlackCardPage() {
             <Field label="Track" value={student.track} />
             <Field label="Start" value={formatDate(student.startDate)} />
             <Field label="Ultimo accesso" value={formatDate(student.lastContactedAt)} />
-            <Field label="Stato" value={student.status} />
-            <Field label="Readiness" value={student.readiness != null ? `${student.readiness}` : null} />
-            <Field label="Rischio" value={student.risk} />
+            <Field
+              label="Abbonamento"
+              value={
+                student.status
+                  ? student.status.toLowerCase() === "active"
+                    ? "Attivo"
+                    : student.status
+                  : null
+              }
+            />
           </div>
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 space-y-3">
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Obiettivi e verifica
-          </p>
-          <div className="grid gap-2 md:grid-cols-2">
-            <Field label="Goal" value={student.goal} />
-            <Field label="Focus difficoltà" value={student.difficultyFocus} />
-            <Field label="Prossima verifica" value={student.nextAssessmentSubject} />
-            <Field label="Data prossima verifica" value={formatDate(student.nextAssessmentDate)} />
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Obiettivi e verifica
+            </p>
+            <button
+              type="button"
+              onClick={() => setEditing((v) => !v)}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              {editing ? "Annulla" : "Modifica"}
+            </button>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Note AI</p>
-            <p className="whitespace-pre-wrap">{student.aiDescription || "—"}</p>
-          </div>
+
+          {editing ? (
+            <div className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-300">
+                    Nome
+                  </label>
+                  <input
+                    type="text"
+                    value={meta.name}
+                    onChange={(e) => setMeta((prev) => ({ ...prev, name: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    placeholder="Nome studente"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-300">
+                    Obiettivo
+                  </label>
+                  <input
+                    type="text"
+                    value={meta.goal}
+                    onChange={(e) => setMeta((prev) => ({ ...prev, goal: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    placeholder="Obiettivo principale"
+                  />
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-300">
+                    Difficoltà
+                  </label>
+                  <input
+                    type="text"
+                    value={meta.difficulty}
+                    onChange={(e) =>
+                      setMeta((prev) => ({ ...prev, difficulty: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    placeholder="Difficoltà principali"
+                  />
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-300">
+                    Note insegnante
+                  </label>
+                  <textarea
+                    value={meta.aiNotes}
+                    onChange={(e) => setMeta((prev) => ({ ...prev, aiNotes: e.target.value }))}
+                    className="w-full min-h-[120px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    placeholder="Note insegnante"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  Salva
+                </button>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Aggiorna obiettivo, difficoltà e note insegnante.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-2 md:grid-cols-2">
+                <Field label="Obiettivo" value={student.goal} />
+                <Field label="Difficoltà" value={student.difficultyFocus} />
+                <Field label="Prossima verifica" value={student.nextAssessmentSubject} />
+                <Field label="Data prossima verifica" value={formatDate(student.nextAssessmentDate)} />
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Note insegnante</p>
+                <p className="whitespace-pre-wrap">{student.aiDescription || "—"}</p>
+              </div>
+            </>
+          )}
         </section>
 
         {student.phone && (

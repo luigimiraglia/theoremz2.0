@@ -71,8 +71,6 @@ export async function GET(request: NextRequest) {
         next_assessment_date,
         ai_description,
         status,
-        readiness,
-        risk_level,
         last_contacted_at,
         hours_paid,
         hours_consumed,
@@ -160,8 +158,15 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const studentId = typeof body.studentId === "string" ? body.studentId.trim() : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
+  const goal = typeof body.goal === "string" ? body.goal.trim() : undefined;
+  const difficultyFocus =
+    typeof body.difficultyFocus === "string" ? body.difficultyFocus.trim() : undefined;
+  const aiDescription =
+    typeof body.aiDescription === "string" ? body.aiDescription.trim() : undefined;
   if (!studentId) return NextResponse.json({ error: "studentId mancante" }, { status: 400 });
-  if (!name) return NextResponse.json({ error: "name mancante" }, { status: 400 });
+  if (!name && goal === undefined && difficultyFocus === undefined && aiDescription === undefined) {
+    return NextResponse.json({ error: "nessun campo da aggiornare" }, { status: 400 });
+  }
 
   try {
     const { data: student, error } = await db
@@ -187,11 +192,17 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 
+    const patch: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (name) patch.preferred_name = name;
+    if (goal !== undefined) patch.goal = goal || null;
+    if (difficultyFocus !== undefined) patch.difficulty_focus = difficultyFocus || null;
+    if (aiDescription !== undefined) patch.ai_description = aiDescription || null;
+
     const { error: updErr, data: updated } = await db
       .from("black_students")
-      .update({ preferred_name: name, updated_at: new Date().toISOString() })
+      .update(patch)
       .eq("id", studentId)
-      .select("id, preferred_name")
+      .select("id, preferred_name, goal, difficulty_focus, ai_description")
       .maybeSingle();
     if (updErr) throw updErr;
     return NextResponse.json({ student: updated });
