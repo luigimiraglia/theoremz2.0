@@ -608,8 +608,13 @@ export default function AccountPage() {
         if (!Number.isFinite(rate) || !Number.isFinite(consumed)) return acc;
         return acc + rate * consumed;
       }, 0),
-    [tutorStudents]
+  [tutorStudents]
   );
+  const tutorAmountDueDisplay = useMemo(() => {
+    if (!isTutor) return null;
+    if (tutorHoursDue === 0) return 0;
+    return tutorAmountDue;
+  }, [isTutor, tutorHoursDue, tutorAmountDue]);
   const tutorHoursDue = useMemo(() => {
     if (!isTutor) return null;
     const n = Number(tutorData?.hoursDue);
@@ -893,6 +898,44 @@ export default function AccountPage() {
       }
     },
     [loadTutorBookings]
+  );
+
+  const handleRenameStudent = useCallback(
+    async (student: TutorStudent) => {
+      const currentName = student.name || "";
+      const nextName = window.prompt("Nuovo nome studente", currentName)?.trim();
+      if (!nextName || nextName === currentName) return;
+      setRenamingStudentId(student.id);
+      setTutorError(null);
+      try {
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) throw new Error("Token non disponibile");
+        const res = await fetch("/api/tutor/black-student", {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ studentId: student.id, name: nextName }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+        setTutorData((prev) => {
+          if (!prev?.students) return prev;
+          return {
+            ...prev,
+            students: prev.students.map((s) =>
+              s.id === student.id ? { ...s, name: nextName } : s
+            ),
+          };
+        });
+      } catch (err: any) {
+        setTutorError(err?.message || "Errore aggiornamento nome");
+      } finally {
+        setRenamingStudentId(null);
+      }
+    },
+    []
   );
 
   const handleCancelBooking = useCallback(
@@ -1202,7 +1245,7 @@ export default function AccountPage() {
                 {tutorLoading ? (
                   <span className="inline-block h-8 w-28 animate-pulse rounded bg-slate-200 [.dark_&]:bg-slate-800" />
                 ) : (
-                  formatEuro(tutorAmountDue)
+                  formatEuro(tutorAmountDueDisplay ?? tutorAmountDue)
                 )}
               </div>
               <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
@@ -1302,6 +1345,21 @@ export default function AccountPage() {
                       >
                         Programma
                       </button>
+                      {s.isBlack ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRenameStudent(s)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60 disabled:opacity-60"
+                          disabled={renamingStudentId === s.id}
+                        >
+                          {renamingStudentId === s.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Pencil className="h-3 w-3" />
+                          )}
+                          Rinomina
+                        </button>
+                      ) : null}
                       {s.isBlack ? (
                         <button
                           type="button"
