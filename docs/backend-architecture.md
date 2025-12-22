@@ -156,6 +156,7 @@ Legacy tables (`black_students`, `black_assessments`, `black_grades`, `black_not
 4. **Saved lessons**: deterministic IDs per `(uid, slug, status)` to prevent duplicates between bot/account/API.
 5. **Newsletter**: any subscription/unsubscription updates `student_profiles.newsletter_opt_in`.
 6. **Black upgrade**: toggling `student_profiles.is_black` runs `promote_to_black` trigger (calls custom function to ensure `black_students` row).
+7. **Tutor billing baseline**: `tutor_assignments.consumed_baseline numeric NOT NULL default 0` stores already-factored hours per studente-tutor. Admin can set the baseline = current `hours_consumed` to reset a tutor’s balance without touching historical lessons; billing uses `max(0, hours_consumed - consumed_baseline)`.
 
 ---
 

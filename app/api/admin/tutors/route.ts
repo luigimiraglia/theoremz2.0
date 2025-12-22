@@ -54,7 +54,7 @@ export async function GET(request: Request) {
       .select(
         "tutor_id, student:black_students!inner(id, preferred_name, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, status)",
       ),
-    db.from("tutor_assignments").select("tutor_id, student_id, hourly_rate"),
+    db.from("tutor_assignments").select("tutor_id, student_id, hourly_rate, consumed_baseline"),
   ]);
 
   if (tutorErr) return NextResponse.json({ error: tutorErr.message }, { status: 500 });
@@ -63,10 +63,12 @@ export async function GET(request: Request) {
   if (assignmentErr) return NextResponse.json({ error: assignmentErr.message }, { status: 500 });
 
   const rateMap = new Map<string, number | null>();
+  const baselineMap = new Map<string, number | null>();
   (assignmentRates || []).forEach((row: any) => {
     if (!row?.tutor_id || !row?.student_id) return;
     const key = `${row.tutor_id}__${row.student_id}`;
     rateMap.set(key, row.hourly_rate != null ? Number(row.hourly_rate) : null);
+    baselineMap.set(key, row.consumed_baseline != null ? Number(row.consumed_baseline) : 0);
   });
 
   const studentsByTutor = new Map<string, any[]>();
@@ -74,6 +76,7 @@ export async function GET(request: Request) {
     if (!tutorId || !raw) return;
     const hoursPaid = Number(raw.hours_paid ?? 0);
     const hoursConsumed = Number(raw.hours_consumed ?? 0);
+    const baseline = baselineMap.get(`${tutorId}__${raw.id}`) ?? 0;
     const remainingPaid = Math.max(0, hoursPaid, hoursPaid - hoursConsumed);
     const name =
       raw.preferred_name ||
@@ -81,6 +84,7 @@ export async function GET(request: Request) {
       raw.parent_email ||
       "Studente";
     const hourlyRate = rateMap.get(`${tutorId}__${raw.id}`) ?? null;
+    const chargeableHours = Math.max(0, hoursConsumed - baseline);
     const student = {
       id: raw.id as string,
       name,
@@ -90,6 +94,8 @@ export async function GET(request: Request) {
       hoursConsumed,
       remainingPaid,
       hourlyRate,
+      consumedBaseline: baseline,
+      chargeableHours,
       isBlack: typeof raw.status === "string" ? raw.status.toLowerCase() !== "inactive" : true,
     };
     const list = studentsByTutor.get(tutorId) || [];

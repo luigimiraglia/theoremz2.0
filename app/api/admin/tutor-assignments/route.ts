@@ -202,3 +202,69 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err?.message || "Errore assegnazione tutor" }, { status: 500 });
   }
 }
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
+
+    const db = supabaseServer();
+    if (!db) return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
+
+    const body = await request.json().catch(() => ({}));
+    const tutorId = String(body.tutorId || "").trim();
+    const studentId = String(body.studentId || "").trim();
+    const hourlyRateRaw = body.hourlyRate;
+    const baselineRaw = body.consumedBaseline ?? body.baseline;
+    if (!tutorId || !studentId) {
+      return NextResponse.json({ error: "tutorId e studentId obbligatori" }, { status: 400 });
+    }
+    if (hourlyRateRaw === undefined && baselineRaw === undefined && body.role === undefined) {
+      return NextResponse.json({ error: "Nessun campo da aggiornare" }, { status: 400 });
+    }
+
+    const patch: Record<string, any> = {
+      tutor_id: tutorId,
+      student_id: studentId,
+    };
+    if (hourlyRateRaw !== undefined) {
+      const hr = Number(hourlyRateRaw);
+      if (!Number.isFinite(hr)) {
+        return NextResponse.json({ error: "hourlyRate non valido" }, { status: 400 });
+      }
+      patch.hourly_rate = hr;
+    }
+    if (baselineRaw !== undefined) {
+      const base = Number(baselineRaw);
+      if (!Number.isFinite(base) || base < 0) {
+        return NextResponse.json({ error: "baseline non valida" }, { status: 400 });
+      }
+      patch.consumed_baseline = base;
+    }
+    if (body.role) {
+      patch.role = String(body.role);
+    }
+
+    const { data, error } = await db
+      .from("tutor_assignments")
+      .upsert(patch, { onConflict: "tutor_id,student_id" })
+      .select("tutor_id, student_id, hourly_rate, consumed_baseline, role")
+      .limit(1);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({
+      assignment: data?.[0]
+        ? {
+            tutorId: data[0].tutor_id,
+            studentId: data[0].student_id,
+            hourlyRate: data[0].hourly_rate,
+            consumedBaseline: data[0].consumed_baseline,
+            role: data[0].role,
+          }
+        : null,
+    });
+  } catch (err: any) {
+    console.error("[admin/tutor-assignments] patch unexpected", err);
+    return NextResponse.json({ error: err?.message || "Errore aggiornamento assegnazione" }, { status: 500 });
+  }
+}

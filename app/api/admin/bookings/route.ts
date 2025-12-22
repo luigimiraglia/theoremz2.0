@@ -209,6 +209,8 @@ async function ensureBookableSlot(
     tutor: TutorRow;
     durationMin?: number | null;
     allowSlotId?: string | null;
+    requireRemaining?: boolean;
+    studentId?: string | null;
   },
 ) {
   const duration =
@@ -218,8 +220,24 @@ async function ensureBookableSlot(
   if (!duration || Number.isNaN(duration) || duration <= 0) {
     throw new Error("Durata slot non valida");
   }
-  const endMs = new Date(opts.startsAtIso).getTime() + duration * 60000;
+  const startMs = new Date(opts.startsAtIso).getTime();
+  const endMs = startMs + duration * 60000;
   const endIso = new Date(endMs).toISOString();
+
+  if (opts.requireRemaining && opts.studentId) {
+    const { data: remainingRow, error: remainingErr } = await db
+      .from("black_students")
+      .select("hours_paid, hours_consumed")
+      .eq("id", opts.studentId)
+      .maybeSingle();
+    if (remainingErr) throw new Error(remainingErr.message);
+    const hoursPaid = Number(remainingRow?.hours_paid ?? 0);
+    const hoursConsumed = Number(remainingRow?.hours_consumed ?? 0);
+    const remaining = Math.max(0, hoursPaid - hoursConsumed);
+    if (remaining <= 0) {
+      throw new Error("Ore insufficienti");
+    }
+  }
   const { data: existing, error } = await db
     .from("call_slots")
     .select("id, status, call_type_id, tutor_id, starts_at, duration_min")
@@ -383,24 +401,24 @@ export async function GET(request: NextRequest) {
     const { error: authError, viewer } = await resolveViewer(request, db);
     if (authError) return authError;
 
-  const { searchParams } = new URL(request.url);
-  const meta = searchParams.get("meta") === "1";
-  const requestedTutorId = searchParams.get("tutorId");
-  let effectiveTutorId = viewer?.isAdmin
-    ? requestedTutorId && requestedTutorId !== "all"
-      ? requestedTutorId
-      : viewer?.tutorId || null
-    : viewer?.tutorId || null;
-  if (!effectiveTutorId && viewer?.isAdmin) {
-    const { data: fallback } = await db
-      .from("tutors")
-      .select("id")
-      .order("created_at", { ascending: true })
-      .limit(1);
-    effectiveTutorId = fallback?.[0]?.id || null;
-  }
-  const tutorFilter = effectiveTutorId;
-  const includeTutorSummary = meta && viewer && effectiveTutorId;
+    const { searchParams } = new URL(request.url);
+    const meta = searchParams.get("meta") === "1";
+    const requestedTutorId = searchParams.get("tutorId");
+    let effectiveTutorId = viewer?.isAdmin
+      ? requestedTutorId && requestedTutorId !== "all"
+        ? requestedTutorId
+        : viewer?.tutorId || null
+      : viewer?.tutorId || null;
+    if (!effectiveTutorId && viewer?.isAdmin) {
+      const { data: fallback } = await db
+        .from("tutors")
+        .select("id")
+        .order("created_at", { ascending: true })
+        .limit(1);
+      effectiveTutorId = fallback?.[0]?.id || null;
+    }
+    const tutorFilter = effectiveTutorId;
+    const includeTutorSummary = meta && viewer && effectiveTutorId;
 
     let query = db
       .from("call_bookings")
@@ -471,7 +489,7 @@ export async function GET(request: NextRequest) {
               db
                 .from("tutor_assignments")
                 .select(
-                  "student_id, hourly_rate, black_students!inner(id, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))"
+                  "student_id, hourly_rate, consumed_baseline, black_students!inner(id, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))"
                 )
                 .eq("tutor_id", effectiveTutorId || "")
                 .limit(300),
@@ -479,6 +497,7 @@ export async function GET(request: NextRequest) {
 
             const map = new Map<string, any>();
             const rateMap = new Map<string, number | null>();
+            const baselineMap = new Map<string, number | null>();
             (studentsRes.data || []).forEach((s: any) => {
               if (s?.id) map.set(s.id, s);
             });
@@ -489,6 +508,10 @@ export async function GET(request: NextRequest) {
               }
               if (s?.id) {
                 rateMap.set(s.id, row?.hourly_rate != null ? Number(row.hourly_rate) : null);
+                baselineMap.set(
+                  s.id,
+                  row?.consumed_baseline != null ? Number(row.consumed_baseline) : 0,
+                );
               }
             });
 
@@ -503,6 +526,8 @@ export async function GET(request: NextRequest) {
               const hoursPaid = Number(s?.hours_paid ?? 0);
               const hoursConsumed = Number(s?.hours_consumed ?? 0);
               const hourlyRate = rateMap.get(s?.id) ?? null;
+              const consumedBaseline = baselineMap.get(s?.id) ?? 0;
+              const chargeableHours = Math.max(0, hoursConsumed - consumedBaseline);
               const isBlack = Boolean(
                 profile?.stripe_price_id ||
                   (typeof s?.status === "string" && s.status.toLowerCase() !== "inactive")
@@ -518,6 +543,8 @@ export async function GET(request: NextRequest) {
                 hoursPaid,
                 hoursConsumed,
                 hourlyRate,
+                consumedBaseline,
+                chargeableHours,
                 remainingPaid: Math.max(0, hoursPaid),
                 isBlack,
                 emails,
@@ -593,11 +620,20 @@ export async function POST(request: NextRequest) {
     const tutor = viewer?.isAdmin
       ? await fetchDefaultTutor(db, body.tutorId)
       : await fetchTutorById(db, viewer?.tutorId || "");
+    const status =
+      body.status === "cancelled"
+        ? "cancelled"
+        : body.status === "completed"
+          ? "completed"
+          : "confirmed";
+
     const slot = await ensureBookableSlot(db, {
       startsAtIso,
       callType,
       tutor,
       durationMin: durationMinutes,
+      requireRemaining: true,
+      studentId: body.studentId || null,
     });
 
     const payload = {
@@ -608,7 +644,7 @@ export async function POST(request: NextRequest) {
       email: String(body.email || "noreply@theoremz.com"),
       note: body.note ? String(body.note) : null,
       user_id: body.userId ? String(body.userId) : null,
-      status: body.status === "cancelled" ? "cancelled" : "confirmed",
+      status,
     };
 
     const { data: inserted, error } = await db
@@ -677,6 +713,8 @@ export async function PATCH(request: NextRequest) {
       tutor,
       durationMin: forcedDuration,
       allowSlotId: existing.slotId || null,
+      requireRemaining: true,
+      studentId: body.studentId || existing.studentId || null,
     });
 
     const updates: Record<string, any> = {
@@ -687,11 +725,13 @@ export async function PATCH(request: NextRequest) {
       email: String(body.email || existing.email || "noreply@theoremz.com"),
       note: body.note !== undefined ? (body.note ? String(body.note) : null) : existing.note,
       status:
-        body.status === "cancelled"
-          ? "cancelled"
-          : body.status === "confirmed" || !body.status
-            ? "confirmed"
-            : existing.status || "confirmed",
+        body.status === "completed"
+          ? "completed"
+          : body.status === "cancelled"
+            ? "cancelled"
+            : body.status === "confirmed" || !body.status
+              ? "confirmed"
+              : existing.status || "confirmed",
       updated_at: new Date().toISOString(),
     };
 
@@ -725,6 +765,12 @@ export async function DELETE(request: NextRequest) {
     if (!existing) return NextResponse.json({ error: "Booking non trovato" }, { status: 404 });
     if (!viewer?.isAdmin && viewer?.tutorId && existing.tutorId !== viewer.tutorId) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+    if (existing.status === "completed") {
+      return NextResponse.json(
+        { error: "Non puoi cancellare una lezione completata" },
+        { status: 400 },
+      );
     }
 
     const { error: delErr } = await db.from("call_bookings").delete().eq("id", id);

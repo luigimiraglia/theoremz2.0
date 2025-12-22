@@ -43,6 +43,8 @@ type TutorStudent = {
   remainingPaid?: number;
   isBlack?: boolean;
   hourlyRate?: number | null;
+  consumedBaseline?: number | null;
+  chargeableHours?: number | null;
 };
 
 /* ───────────────── helpers data ───────────────── */
@@ -348,6 +350,7 @@ export default function AccountPage() {
   );
   const [scheduleSaving, setScheduleSaving] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [schedulePast, setSchedulePast] = useState(false);
   useEffect(() => {
     if (Array.isArray(tutorData?.callTypes) && tutorData.callTypes[0]?.slug) {
       setScheduleCallType(DEFAULT_CALL_TYPE);
@@ -404,6 +407,13 @@ export default function AccountPage() {
                 const hoursConsumed = normalizeHours(
                   s?.hoursConsumed ?? s?.hours_consumed ?? 0
                 );
+                const consumedBaseline = normalizeHours(
+                  s?.consumedBaseline ?? s?.consumed_baseline ?? 0
+                );
+                const chargeableHours = Math.max(
+                  0,
+                  hoursConsumed - consumedBaseline
+                );
                 const hourlyRate =
                   typeof s?.hourlyRate === "number"
                     ? s.hourlyRate
@@ -424,6 +434,8 @@ export default function AccountPage() {
                     s?.phone || s?.student_phone || s?.parent_phone || null,
                   hoursPaid,
                   hoursConsumed,
+                  consumedBaseline,
+                  chargeableHours,
                   remainingPaid: Math.max(
                     0,
                     normalizeHours(s?.remainingPaid ?? hoursPaid)
@@ -609,9 +621,14 @@ export default function AccountPage() {
     () =>
       tutorStudents.reduce((acc, s) => {
         const rate = Number(s?.hourlyRate ?? 0);
-        const consumed = Number(s?.hoursConsumed ?? 0);
-        if (!Number.isFinite(rate) || !Number.isFinite(consumed)) return acc;
-        return acc + rate * consumed;
+        const billable = Number.isFinite(Number(s?.chargeableHours))
+          ? Number(s.chargeableHours)
+          : Math.max(
+              0,
+              Number(s?.hoursConsumed ?? 0) - Number(s?.consumedBaseline ?? 0)
+            );
+        if (!Number.isFinite(rate) || !Number.isFinite(billable)) return acc;
+        return acc + rate * billable;
       }, 0),
   [tutorStudents]
   );
@@ -721,6 +738,7 @@ export default function AccountPage() {
       setScheduleError(null);
       setScheduleModalOpen(true);
       setScheduleCallType((prev) => prev || DEFAULT_CALL_TYPE);
+      setSchedulePast(false);
     },
     [todayYmd, tutorStudents]
   );
@@ -740,6 +758,7 @@ export default function AccountPage() {
       setScheduleTime(toInputTime(booking.startsAt) || "15:00");
       setScheduleError(null);
       setScheduleModalOpen(true);
+      setSchedulePast(false);
     },
     [todayYmd]
   );
@@ -760,19 +779,21 @@ export default function AccountPage() {
       if (!token) throw new Error("Token non disponibile");
 
       if (scheduleMode === "edit" && editingBooking?.id) {
-        const res = await fetch("/api/admin/bookings", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            id: editingBooking.id,
-            startsAt: iso,
-            durationMin: editingBooking.durationMin,
-            callTypeSlug: editingBooking.callType || undefined,
-          }),
-        });
+      const res = await fetch("/api/admin/bookings", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id: editingBooking.id,
+          startsAt: iso,
+          durationMin: editingBooking.durationMin,
+          callTypeSlug: editingBooking.callType || undefined,
+          status: schedulePast ? "completed" : undefined,
+          studentId: scheduleStudentId || editingBooking.studentId || undefined,
+        }),
+      });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
         setScheduleModalOpen(false);
@@ -803,7 +824,8 @@ export default function AccountPage() {
           fullName: student.name || "Studente",
           email: student.email || "noreply@theoremz.com",
           note: student.phone ? `Telefono: ${student.phone}` : undefined,
-          status: "confirmed",
+          studentId: student.id,
+          status: schedulePast ? "completed" : "confirmed",
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -823,6 +845,7 @@ export default function AccountPage() {
     loadTutorBookings,
     scheduleMode,
     editingBooking,
+    schedulePast,
   ]);
 
   const handleGenerateAvailability = useCallback(async () => {
@@ -2036,6 +2059,15 @@ export default function AccountPage() {
                       Telefono studente: {selectedScheduleStudent.phone}
                     </p>
                   ) : null}
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={schedulePast}
+                      onChange={(e) => setSchedulePast(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    Lezione già svolta (segna come completata)
+                  </label>
                   {scheduleError ? (
                     <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-700 [.dark_&]:border-rose-500/40 [.dark_&]:bg-rose-500/10 [.dark_&]:text-rose-100">
                       {scheduleError}
