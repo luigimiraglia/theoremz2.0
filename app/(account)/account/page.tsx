@@ -17,6 +17,8 @@ import {
   ArrowRight,
   Loader2,
   Pencil,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import NewsletterSettings from "@/components/NewsletterSettings";
 import TempAccessInfo from "@/components/TempAccessInfo";
@@ -32,6 +34,10 @@ const GradesChartRecharts = dynamic(
 );
 const DEFAULT_CALL_TYPE = "ripetizione";
 const DEFAULT_DURATION_MIN = 60;
+const AVAIL_DEFAULT_START_HOUR = 8;
+const AVAIL_DEFAULT_END_HOUR = 20;
+const AVAIL_HOUR_HEIGHT = 56;
+const WEEKDAYS_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"] as const;
 
 type TutorStudent = {
   id: string;
@@ -366,6 +372,164 @@ export default function AccountPage() {
   ); // lun-ven
   const [availSaving, setAvailSaving] = useState(false);
   const [availMsg, setAvailMsg] = useState<string | null>(null);
+  const [showAddAvail, setShowAddAvail] = useState(false);
+  const [availSlots, setAvailSlots] = useState<any[]>([]);
+  const [availSlotsLoading, setAvailSlotsLoading] = useState(false);
+  const [availDeleteMsg, setAvailDeleteMsg] = useState<string | null>(null);
+  const [availDeleteFrom, setAvailDeleteFrom] = useState(() => ymd(new Date()));
+  const [availDeleteTo, setAvailDeleteTo] = useState(() => ymd(new Date(Date.now() + 7 * 86400000)));
+  const [availDeleteStart, setAvailDeleteStart] = useState("00:00");
+  const [availDeleteEnd, setAvailDeleteEnd] = useState("23:59");
+  const [availDeleteDays, setAvailDeleteDays] = useState<Set<number>>(new Set());
+  const [availCalendarMonth, setAvailCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [selectedAvailDayId, setSelectedAvailDayId] = useState<string | null>(
+    null
+  );
+  const availSlotsByDay = useMemo(() => {
+    const map = new Map<
+      string,
+      Array<{
+        id: string;
+        label: string;
+        startMinutes: number;
+        durationMin: number;
+      }>
+    >();
+    availSlots.forEach((slot) => {
+      const slotTs = slot?.starts_at || slot?.startsAt;
+      const slotDate = slotTs ? new Date(slotTs) : null;
+      if (!slotDate || Number.isNaN(slotDate.getTime())) return;
+      const key = ymd(slotDate);
+      if (!key) return;
+      const durationRaw = Number(
+        slot?.duration_min ?? slot?.durationMin ?? DEFAULT_DURATION_MIN
+      );
+      const durationMin =
+        Number.isFinite(durationRaw) && durationRaw > 0
+          ? durationRaw
+          : DEFAULT_DURATION_MIN;
+      const startMinutes = slotDate.getHours() * 60 + slotDate.getMinutes();
+      const label = slotDate.toLocaleTimeString("it-IT", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const id =
+        slot?.id != null
+          ? String(slot.id)
+          : `${key}-${label}-${durationMin}`;
+      const list = map.get(key) || [];
+      list.push({ id, label, startMinutes, durationMin });
+      map.set(key, list);
+    });
+    for (const [key, list] of map.entries()) {
+      list.sort((a, b) => a.startMinutes - b.startMinutes);
+      map.set(key, list);
+    }
+    return map;
+  }, [availSlots]);
+  const availDayIds = useMemo(
+    () => Array.from(availSlotsByDay.keys()).sort(),
+    [availSlotsByDay]
+  );
+  const availCalendarDays = useMemo(
+    () => buildAvailabilityCalendar(availCalendarMonth),
+    [availCalendarMonth]
+  );
+  const selectedAvailSlots = useMemo(
+    () =>
+      selectedAvailDayId ? availSlotsByDay.get(selectedAvailDayId) || [] : [],
+    [selectedAvailDayId, availSlotsByDay]
+  );
+  const availGridMeta = useMemo(() => {
+    const earliest =
+      selectedAvailSlots.length > 0
+        ? Math.min(...selectedAvailSlots.map((s) => s.startMinutes))
+        : AVAIL_DEFAULT_START_HOUR * 60;
+    const latest =
+      selectedAvailSlots.length > 0
+        ? Math.max(
+            ...selectedAvailSlots.map(
+              (s) => s.startMinutes + s.durationMin
+            )
+          )
+        : AVAIL_DEFAULT_END_HOUR * 60;
+    const startHour = Math.min(
+      AVAIL_DEFAULT_START_HOUR,
+      Math.floor(earliest / 60)
+    );
+    const endHour = Math.max(
+      AVAIL_DEFAULT_END_HOUR,
+      Math.ceil(latest / 60)
+    );
+    const totalHours = Math.max(1, endHour - startHour);
+    return {
+      startHour,
+      endHour,
+      totalHours,
+      gridHeight: totalHours * AVAIL_HOUR_HEIGHT,
+    };
+  }, [selectedAvailSlots]);
+  const selectedAvailLabel = useMemo(() => {
+    const date = parseYmdDate(selectedAvailDayId || undefined);
+    if (!date) return null;
+    const label = date.toLocaleDateString("it-IT", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+    });
+    return capitalize(label);
+  }, [selectedAvailDayId]);
+
+  useEffect(() => {
+    if (availDayIds.length === 0) {
+      setSelectedAvailDayId(null);
+      return;
+    }
+    setSelectedAvailDayId((prev) => {
+      if (prev && availSlotsByDay.has(prev)) return prev;
+      return availDayIds[0];
+    });
+    if (selectedAvailDayId && availSlotsByDay.has(selectedAvailDayId)) return;
+    const fallbackDate = parseYmdDate(availDayIds[0]);
+    if (!fallbackDate) return;
+    setAvailCalendarMonth((prev) => {
+      const nextMonth = new Date(
+        fallbackDate.getFullYear(),
+        fallbackDate.getMonth(),
+        1
+      );
+      if (
+        prev.getFullYear() === nextMonth.getFullYear() &&
+        prev.getMonth() === nextMonth.getMonth()
+      )
+        return prev;
+      return nextMonth;
+    });
+  }, [availDayIds, availSlotsByDay, selectedAvailDayId]);
+
+  const fetchAvailabilitySlots = useCallback(async () => {
+    if (!user?.email) return;
+    setAvailSlotsLoading(true);
+    setAvailDeleteMsg(null);
+    try {
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("Token non disponibile");
+      const res = await fetch("/api/admin/availability", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      setAvailSlots(Array.isArray(data?.slots) ? data.slots : []);
+    } catch (err: any) {
+      setAvailDeleteMsg(err?.message || "Errore caricamento disponibilità");
+    } finally {
+      setAvailSlotsLoading(false);
+    }
+  }, [user?.email]);
   const [completeBookingId, setCompleteBookingId] = useState<string | null>(
     null
   );
@@ -375,6 +539,13 @@ export default function AccountPage() {
   const [renamingStudentId, setRenamingStudentId] = useState<string | null>(
     null
   );
+  const isTutor = tutorMode === "tutor" && Boolean(tutorData);
+
+  useEffect(() => {
+    if (isTutor) {
+      fetchAvailabilitySlots();
+    }
+  }, [isTutor, fetchAvailabilitySlots]);
 
   const loadTutorBookings = useCallback(async () => {
     if (!user?.email) {
@@ -594,7 +765,6 @@ export default function AccountPage() {
     })();
   }, [user?.uid]);
 
-  const isTutor = tutorMode === "tutor" && Boolean(tutorData);
   const tutorStudents = useMemo(
     () =>
       isTutor && Array.isArray(tutorData?.students) ? tutorData.students : [],
@@ -676,6 +846,56 @@ export default function AccountPage() {
     },
     [tutorData?.callTypes]
   );
+  const unpaidBookingIds = useMemo(() => {
+    const bookings = Array.isArray(tutorData?.bookings)
+      ? tutorData.bookings
+      : [];
+    if (!bookings.length || !tutorStudents.length) return new Set<string>();
+    const studentIdByEmail = new Map<string, string>();
+    const remainingByStudent = new Map<string, number>();
+    tutorStudents.forEach((s) => {
+      if (s.email) studentIdByEmail.set(s.email.toLowerCase(), s.id);
+      remainingByStudent.set(s.id, getStudentRemainingMinutes(s));
+    });
+    const now = Date.now();
+    const grouped = new Map<string, any[]>();
+    bookings.forEach((bk) => {
+      const status = String(bk?.status || "confirmed").toLowerCase();
+      if (status === "completed" || status === "cancelled") return;
+      const startMs = getBookingStartMs(bk);
+      if (startMs == null || startMs < now) return;
+      const studentId =
+        bk?.studentId ||
+        (bk?.email ? studentIdByEmail.get(String(bk.email).toLowerCase()) : null);
+      if (!studentId) return;
+      const list = grouped.get(studentId) || [];
+      list.push(bk);
+      grouped.set(studentId, list);
+    });
+    const unpaid = new Set<string>();
+    grouped.forEach((list, studentId) => {
+      const sorted = [...list].sort((a, b) => {
+        const aMs = getBookingStartMs(a) ?? 0;
+        const bMs = getBookingStartMs(b) ?? 0;
+        return aMs - bMs;
+      });
+      let remaining = remainingByStudent.get(studentId) ?? 0;
+      sorted.forEach((bk) => {
+        const durationRaw = Number(tutorCallDuration(bk));
+        const durationMin =
+          Number.isFinite(durationRaw) && durationRaw > 0
+            ? durationRaw
+            : DEFAULT_DURATION_MIN;
+        if (remaining >= durationMin) {
+          remaining -= durationMin;
+        } else {
+          unpaid.add(getBookingKey(bk));
+          remaining = 0;
+        }
+      });
+    });
+    return unpaid;
+  }, [tutorData?.bookings, tutorStudents, tutorCallDuration]);
 
   const tutorDayList = useMemo(
     () =>
@@ -718,6 +938,67 @@ export default function AccountPage() {
       null,
     [scheduleStudentId, tutorStudents]
   );
+  const scheduleWillBeUnpaid = useMemo(() => {
+    if (scheduleMode !== "create") return false;
+    if (schedulePast) return false;
+    if (!selectedScheduleStudent) return false;
+    if (!scheduleDate || !scheduleTime) return false;
+    const draftDate = new Date(`${scheduleDate}T${scheduleTime}:00`);
+    if (Number.isNaN(draftDate.getTime())) return false;
+    const draftMs = draftDate.getTime();
+    if (draftMs < Date.now()) return false;
+    const studentId = selectedScheduleStudent.id;
+    const bookings = Array.isArray(tutorData?.bookings)
+      ? tutorData.bookings
+      : [];
+    const futureBookings = bookings.filter((bk) => {
+      const status = String(bk?.status || "confirmed").toLowerCase();
+      if (status === "completed" || status === "cancelled") return false;
+      const startMs = getBookingStartMs(bk);
+      if (startMs == null || startMs < Date.now()) return false;
+      if (bk?.studentId === studentId) return true;
+      const studentEmail = selectedScheduleStudent.email
+        ? selectedScheduleStudent.email.toLowerCase()
+        : null;
+      if (!studentEmail) return false;
+      return String(bk?.email || "").toLowerCase() === studentEmail;
+    });
+    const draftBooking = {
+      __draft: true,
+      startsAt: draftDate.toISOString(),
+      durationMin: DEFAULT_DURATION_MIN,
+    };
+    const sorted = [...futureBookings, draftBooking].sort((a: any, b: any) => {
+      const aMs = getBookingStartMs(a) ?? 0;
+      const bMs = getBookingStartMs(b) ?? 0;
+      return aMs - bMs;
+    });
+    let remaining = getStudentRemainingMinutes(selectedScheduleStudent);
+    for (const bk of sorted) {
+      const durationRaw = bk.__draft
+        ? DEFAULT_DURATION_MIN
+        : Number(tutorCallDuration(bk));
+      const durationMin =
+        Number.isFinite(durationRaw) && durationRaw > 0
+          ? durationRaw
+          : DEFAULT_DURATION_MIN;
+      if (remaining >= durationMin) {
+        remaining -= durationMin;
+        continue;
+      }
+      if (bk.__draft) return true;
+      remaining = 0;
+    }
+    return false;
+  }, [
+    scheduleMode,
+    schedulePast,
+    scheduleDate,
+    scheduleTime,
+    selectedScheduleStudent,
+    tutorData?.bookings,
+    tutorCallDuration,
+  ]);
   const toggleAvailDay = useCallback((d: number) => {
     setAvailDays((prev) => {
       const next = new Set(prev);
@@ -779,21 +1060,22 @@ export default function AccountPage() {
       if (!token) throw new Error("Token non disponibile");
 
       if (scheduleMode === "edit" && editingBooking?.id) {
-      const res = await fetch("/api/admin/bookings", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          id: editingBooking.id,
-          startsAt: iso,
-          durationMin: editingBooking.durationMin,
-          callTypeSlug: editingBooking.callType || undefined,
-          status: schedulePast ? "completed" : undefined,
-          studentId: scheduleStudentId || editingBooking.studentId || undefined,
-        }),
-      });
+        const res = await fetch("/api/admin/bookings", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            id: editingBooking.id,
+            startsAt: iso,
+            durationMin: editingBooking.durationMin,
+            callTypeSlug: editingBooking.callType || undefined,
+            status: schedulePast ? "completed" : undefined,
+            studentId: scheduleStudentId || editingBooking.studentId || undefined,
+            allowUnpaid: true,
+          }),
+        });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
         setScheduleModalOpen(false);
@@ -811,6 +1093,7 @@ export default function AccountPage() {
         return;
       }
       const callTypeSlug = DEFAULT_CALL_TYPE;
+      const note = student.phone ? `Telefono: ${student.phone}` : undefined;
       const res = await fetch("/api/admin/bookings", {
         method: "POST",
         headers: {
@@ -823,9 +1106,10 @@ export default function AccountPage() {
           durationMin: DEFAULT_DURATION_MIN,
           fullName: student.name || "Studente",
           email: student.email || "noreply@theoremz.com",
-          note: student.phone ? `Telefono: ${student.phone}` : undefined,
+          note,
           studentId: student.id,
           status: schedulePast ? "completed" : "confirmed",
+          allowUnpaid: true,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -851,6 +1135,7 @@ export default function AccountPage() {
   const handleGenerateAvailability = useCallback(async () => {
     setAvailSaving(true);
     setAvailMsg(null);
+    setAvailDeleteMsg(null);
     try {
       const token = await getAuth().currentUser?.getIdToken();
       if (!token) throw new Error("Token non disponibile");
@@ -876,7 +1161,7 @@ export default function AccountPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
       setAvailMsg(`Disponibilità inserite: ${data?.slots || "ok"}`);
-      await loadTutorBookings();
+      await Promise.all([loadTutorBookings(), fetchAvailabilitySlots()]);
     } catch (err: any) {
       setAvailMsg(err?.message || "Errore disponibilità");
     } finally {
@@ -889,6 +1174,7 @@ export default function AccountPage() {
     availEnd,
     availDays,
     loadTutorBookings,
+    fetchAvailabilitySlots,
   ]);
 
   const handleCompleteBooking = useCallback(
@@ -1543,6 +1829,8 @@ export default function AccountPage() {
                   </div>
                 ) : null}
                 {selectedTutorGroup?.items.map((bk: any) => {
+                  const bookingKey = getBookingKey(bk);
+                  const isUnpaid = unpaidBookingIds.has(bookingKey);
                   const duration = tutorCallDuration(bk);
                   const callLabel = bk?.callTypeName || bk?.callType || "Call";
                   const status = (bk?.status || "confirmed") as string;
@@ -1564,9 +1852,10 @@ export default function AccountPage() {
                     status !== "completed" && status !== "cancelled";
                   const isCancelling = cancelBookingId === bk?.id;
                   const isCompleting = completeBookingId === bk?.id;
+                  const note = stripUnpaidNote(bk?.note);
                   return (
                     <div
-                      key={bk?.id || bk?.slotId || bk?.startsAt}
+                      key={bookingKey}
                       className="rounded-xl border border-slate-200 [.dark_&]:border-slate-800 bg-slate-50 [.dark_&]:bg-slate-900/60 px-4 py-3 shadow-sm"
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -1580,9 +1869,9 @@ export default function AccountPage() {
                           <div className="text-xs font-semibold text-slate-700 [.dark_&]:text-slate-200">
                             {bk?.fullName || "Studente"}
                           </div>
-                          {bk?.note ? (
+                          {note ? (
                             <div className="text-[11px] font-medium text-slate-500 [.dark_&]:text-slate-300">
-                              {bk.note}
+                              {note}
                             </div>
                           ) : null}
                         </div>
@@ -1592,9 +1881,12 @@ export default function AccountPage() {
                           >
                             {statusLabel}
                           </span>
-                          {canEdit &&
-                          (bk?.remainingPaid === undefined ||
-                            Number(bk?.remainingPaid ?? 0) > 0) ? (
+                          {isUnpaid ? (
+                            <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-800 [.dark_&]:bg-amber-500/15 [.dark_&]:text-amber-100">
+                              Non pagata
+                            </span>
+                          ) : null}
+                          {canEdit ? (
                             <button
                               type="button"
                               onClick={() => handleCompleteBooking(bk)}
@@ -1654,88 +1946,458 @@ export default function AccountPage() {
                   Disponibilità calendario
                 </p>
                 <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
-                  Genera slot disponibili in un intervallo, con giorni e fasce
-                  personalizzate.
+                  Vedi e gestisci le disponibilità pubblicate sul calendario.
                 </p>
               </div>
-              {availMsg && (
-                <span className="text-[11px] font-semibold text-emerald-600 [.dark_&]:text-emerald-300">
-                  {availMsg}
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {availMsg && (
+                  <span className="text-[11px] font-semibold text-emerald-600 [.dark_&]:text-emerald-300">
+                    {availMsg}
+                  </span>
+                )}
+                {availDeleteMsg && (
+                  <span className="text-[11px] font-semibold text-rose-600 [.dark_&]:text-rose-300">
+                    {availDeleteMsg}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
-                Dal
-                <input
-                  type="date"
-                  value={availFrom}
-                  onChange={(e) => setAvailFrom(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
-                />
-              </label>
-              <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
-                Al
-                <input
-                  type="date"
-                  value={availTo}
-                  onChange={(e) => setAvailTo(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
-                />
-              </label>
-              <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
-                Dalle
-                <input
-                  type="time"
-                  value={availStart}
-                  onChange={(e) => setAvailStart(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
-                />
-              </label>
-              <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
-                Alle
-                <input
-                  type="time"
-                  value={availEnd}
-                  onChange={(e) => setAvailEnd(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
-                />
-              </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fetchAvailabilitySlots()}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white [.dark_&]:hover:bg-slate-800/70"
+              >
+                Aggiorna disponibilità
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddAvail((v) => !v)}
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:brightness-110"
+              >
+                {showAddAvail ? "Chiudi aggiunta" : "Aggiungi disponibilità"}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setAvailDeleteMsg(null);
+                  try {
+                    const token = await getAuth().currentUser?.getIdToken();
+                    if (!token) throw new Error("Token non disponibile");
+                    const res = await fetch("/api/admin/availability", {
+                      method: "DELETE",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({ resetAll: true }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+                    setAvailDeleteMsg(`Rimosse ${data?.deleted ?? 0} disponibilità future`);
+                    await fetchAvailabilitySlots();
+                  } catch (err: any) {
+                    setAvailDeleteMsg(err?.message || "Errore reset disponibilità");
+                  }
+                }}
+                className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:brightness-110"
+              >
+                Reset disponibilità future
+              </button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map(
-                (d, idx) => (
+
+            {showAddAvail ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                    Dal
+                    <input
+                      type="date"
+                      value={availFrom}
+                      onChange={(e) => setAvailFrom(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                    />
+                  </label>
+                  <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                    Al
+                    <input
+                      type="date"
+                      value={availTo}
+                      onChange={(e) => setAvailTo(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                    />
+                  </label>
+                  <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                    Dalle
+                    <input
+                      type="time"
+                      value={availStart}
+                      onChange={(e) => setAvailStart(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                    />
+                  </label>
+                  <label className="text-[11px] font-semibold text-slate-600 [.dark_&]:text-slate-300">
+                    Alle
+                    <input
+                      type="time"
+                      value={availEnd}
+                      onChange={(e) => setAvailEnd(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-white"
+                    />
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map(
+                    (d, idx) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => toggleAvailDay(idx)}
+                        className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
+                          availDays.has(idx)
+                            ? "border-blue-500 bg-blue-50 text-blue-700 [.dark_&]:border-sky-500 [.dark_&]:bg-sky-500/15 [.dark_&]:text-sky-100"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200 [.dark_&]:hover:border-sky-500/50 [.dark_&]:hover:bg-sky-500/10"
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    )
+                  )}
                   <button
-                    key={d}
                     type="button"
-                    onClick={() => toggleAvailDay(idx)}
-                    className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
-                      availDays.has(idx)
-                        ? "border-blue-500 bg-blue-50 text-blue-700 [.dark_&]:border-sky-500 [.dark_&]:bg-sky-500/15 [.dark_&]:text-sky-100"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200 [.dark_&]:hover:border-sky-500/50 [.dark_&]:hover:bg-sky-500/10"
-                    }`}
+                    onClick={() => setAvailDays(new Set([0, 1, 2, 3, 4]))}
+                    className="ml-auto rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-200 [.dark_&]:hover:bg-slate-800/60"
                   >
-                    {d}
+                    No weekend
                   </button>
-                )
-              )}
-              <button
-                type="button"
-                onClick={() => setAvailDays(new Set([0, 1, 2, 3, 4]))}
-                className="ml-auto rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-200 [.dark_&]:hover:bg-slate-800/60"
-              >
-                No weekend
-              </button>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGenerateAvailability}
+                    disabled={availSaving}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white shadow hover:brightness-110 disabled:opacity-60"
+                  >
+                    {availSaving ? "Generazione..." : "Aggiungi disponibilità"}
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            <div className="mt-2 rounded-xl border border-slate-200 [.dark_&]:border-slate-800 bg-slate-50 [.dark_&]:bg-slate-900/60 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-700 [.dark_&]:text-slate-100">
+                  Calendario disponibilità
+                </p>
+                <span className="text-[11px] text-slate-500 [.dark_&]:text-slate-300">
+                  {availSlotsLoading ? "Carico..." : `${availSlots.length} slot`}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500 [.dark_&]:text-slate-300">
+                        Date pubblicate
+                      </p>
+                      <p className="text-lg font-semibold text-slate-900 [.dark_&]:text-white">
+                        {availCalendarMonth.toLocaleString("it-IT", {
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        aria-label="Mese precedente"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-800 [.dark_&]:text-slate-200 [.dark_&]:hover:bg-slate-800/70"
+                        onClick={() =>
+                          setAvailCalendarMonth((prev) =>
+                            new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
+                          )
+                        }
+                      >
+                        <ChevronLeft className="h-4 w-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Mese successivo"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-800 [.dark_&]:text-slate-200 [.dark_&]:hover:bg-slate-800/70"
+                        onClick={() =>
+                          setAvailCalendarMonth((prev) =>
+                            new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+                          )
+                        }
+                      >
+                        <ChevronRight className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-7 text-center text-[12px] font-semibold text-slate-500 [.dark_&]:text-slate-300">
+                    {WEEKDAYS_SHORT.map((day) => (
+                      <div key={day} className="py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-2 text-sm">
+                    {availCalendarDays.map((day) => {
+                      const isSelected = selectedAvailDayId === day.id;
+                      const hasSlots = availSlotsByDay.has(day.id);
+                      const disabled = !hasSlots;
+                      const label = isSelected ? "Selezionata" : undefined;
+                      return (
+                        <button
+                          key={day.id}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => {
+                            if (disabled) return;
+                            setSelectedAvailDayId(day.id);
+                          }}
+                          className={`relative flex h-12 flex-col items-center justify-center rounded-xl border text-[13px] font-semibold transition ${
+                            disabled
+                              ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/50 [.dark_&]:text-slate-600"
+                              : isSelected
+                                ? "border-slate-900 bg-slate-900 text-white shadow-sm ring-1 ring-slate-900/70 [.dark_&]:border-slate-100/30 [.dark_&]:bg-slate-100/10 [.dark_&]:text-white [.dark_&]:ring-1 [.dark_&]:ring-slate-100/20"
+                                : day.inCurrentMonth
+                                  ? "border-slate-200 bg-white hover:border-slate-300 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/80 [.dark_&]:text-white [.dark_&]:hover:border-slate-700"
+                                  : "border-slate-100 bg-slate-50 text-slate-500 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/40 [.dark_&]:text-slate-500"
+                          }`}
+                        >
+                          <span>{day.dayNumber}</span>
+                          {label && (
+                            <span className="mt-1 rounded-full bg-slate-900 px-2 py-[1px] text-[11px] font-semibold text-white">
+                              {label}
+                            </span>
+                          )}
+                          {!disabled && !label && (
+                            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {availDayIds.length === 0 && !availSlotsLoading ? (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/60 [.dark_&]:text-slate-200">
+                      Nessuna disponibilità pubblicata.
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500 [.dark_&]:text-slate-300">
+                        Slot del giorno
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900 [.dark_&]:text-white">
+                        {selectedAvailLabel || "Seleziona una data."}
+                      </p>
+                    </div>
+                    <span className="text-[11px] text-slate-500 [.dark_&]:text-slate-300">
+                      {availSlotsLoading
+                        ? "Carico..."
+                        : `${selectedAvailSlots.length} slot`}
+                    </span>
+                  </div>
+
+                  {availSlotsLoading ? (
+                    <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm font-semibold text-slate-600 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/70 [.dark_&]:text-slate-200">
+                      Carico gli slot...
+                    </div>
+                  ) : availDayIds.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/50 [.dark_&]:text-slate-300">
+                      Nessuna disponibilità pubblicata.
+                    </div>
+                  ) : selectedAvailDayId ? (
+                    selectedAvailSlots.length > 0 ? (
+                      <div className="max-h-[420px] overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 pr-1 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/70">
+                        <div
+                          className="relative"
+                          style={{ height: availGridMeta.gridHeight }}
+                        >
+                          <div className="absolute inset-y-0 left-0 w-12 pr-2 text-right text-[11px] font-semibold text-slate-400 [.dark_&]:text-slate-500">
+                            {Array.from(
+                              { length: availGridMeta.totalHours },
+                              (_, idx) => {
+                                const hour = availGridMeta.startHour + idx;
+                                return (
+                                  <div
+                                    key={hour}
+                                    className="relative"
+                                    style={{ height: AVAIL_HOUR_HEIGHT }}
+                                  >
+                                    <span className="absolute -top-2 right-2">
+                                      {formatHourLabel(hour)}
+                                    </span>
+                                  </div>
+                                );
+                              }
+                            )}
+                          </div>
+                          <div className="ml-12 h-full relative">
+                            {Array.from(
+                              { length: availGridMeta.totalHours + 1 },
+                              (_, idx) => (
+                                <div
+                                  key={idx}
+                                  className="absolute left-0 right-0 border-t border-slate-200/70 [.dark_&]:border-slate-700/60"
+                                  style={{ top: idx * AVAIL_HOUR_HEIGHT }}
+                                />
+                              )
+                            )}
+                            {selectedAvailSlots.map((slot) => {
+                              const top =
+                                ((slot.startMinutes -
+                                  availGridMeta.startHour * 60) /
+                                  60) *
+                                AVAIL_HOUR_HEIGHT;
+                              const height = Math.max(
+                                24,
+                                (slot.durationMin / 60) * AVAIL_HOUR_HEIGHT
+                              );
+                              const endMinutes =
+                                slot.startMinutes + slot.durationMin;
+                              const timeRange = `${formatMinutesToTime(
+                                slot.startMinutes
+                              )} - ${formatMinutesToTime(endMinutes)}`;
+                              return (
+                                <div
+                                  key={slot.id}
+                                  className="absolute left-1 right-2 rounded-xl border border-blue-200/80 bg-gradient-to-r from-blue-500/15 to-sky-400/20 p-2 text-blue-900 shadow-sm [.dark_&]:border-sky-400/30 [.dark_&]:from-sky-500/15 [.dark_&]:to-blue-500/20 [.dark_&]:text-sky-100"
+                                  style={{ top, height }}
+                                >
+                                  <div className="text-[11px] font-semibold">
+                                    {timeRange}
+                                  </div>
+                                  <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-blue-700/80 [.dark_&]:text-sky-200/80">
+                                    Disponibile
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/50 [.dark_&]:text-slate-300">
+                        Nessuna disponibilità per questo giorno.
+                      </div>
+                    )
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/50 [.dark_&]:text-slate-300">
+                      Seleziona una data per vedere gli slot disponibili.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleGenerateAvailability}
-                disabled={availSaving}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white shadow hover:brightness-110 disabled:opacity-60"
-              >
-                {availSaving ? "Generazione..." : "Aggiungi disponibilità"}
-              </button>
+
+            <div className="mt-2 rounded-xl border border-amber-200 [.dark_&]:border-amber-500/40 bg-amber-50 [.dark_&]:bg-amber-500/10 p-3">
+              <p className="text-xs font-bold text-amber-700 [.dark_&]:text-amber-200">
+                Rimuovi disponibilità specifiche
+              </p>
+              <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+                <label className="text-[11px] font-semibold text-amber-800 [.dark_&]:text-amber-100">
+                  Dal
+                  <input
+                    type="date"
+                    value={availDeleteFrom}
+                    onChange={(e) => setAvailDeleteFrom(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-amber-500 focus:outline-none [.dark_&]:border-amber-500/40 [.dark_&]:bg-slate-900 [.dark_&]:text-white"
+                  />
+                </label>
+                <label className="text-[11px] font-semibold text-amber-800 [.dark_&]:text-amber-100">
+                  Al
+                  <input
+                    type="date"
+                    value={availDeleteTo}
+                    onChange={(e) => setAvailDeleteTo(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-amber-500 focus:outline-none [.dark_&]:border-amber-500/40 [.dark_&]:bg-slate-900 [.dark_&]:text-white"
+                  />
+                </label>
+                <label className="text-[11px] font-semibold text-amber-800 [.dark_&]:text-amber-100">
+                  Dalle
+                  <input
+                    type="time"
+                    value={availDeleteStart}
+                    onChange={(e) => setAvailDeleteStart(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-amber-500 focus:outline-none [.dark_&]:border-amber-500/40 [.dark_&]:bg-slate-900 [.dark_&]:text-white"
+                  />
+                </label>
+                <label className="text-[11px] font-semibold text-amber-800 [.dark_&]:text-amber-100">
+                  Alle
+                  <input
+                    type="time"
+                    value={availDeleteEnd}
+                    onChange={(e) => setAvailDeleteEnd(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-amber-500 focus:outline-none [.dark_&]:border-amber-500/40 [.dark_&]:bg-slate-900 [.dark_&]:text-white"
+                  />
+                </label>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map(
+                  (d, idx) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() =>
+                        setAvailDeleteDays((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(idx)) next.delete(idx);
+                          else next.add(idx);
+                          return next;
+                        })
+                      }
+                      className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
+                        availDeleteDays.has(idx)
+                          ? "border-amber-500 bg-amber-100 text-amber-800 [.dark_&]:border-amber-400 [.dark_&]:bg-amber-500/20 [.dark_&]:text-amber-50"
+                          : "border-amber-200 bg-white text-amber-700 hover:border-amber-400 hover:bg-amber-50 [.dark_&]:border-amber-500/30 [.dark_&]:bg-slate-900 [.dark_&]:text-amber-100 [.dark_&]:hover:bg-amber-500/10"
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  )
+                )}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setAvailDeleteMsg(null);
+                    try {
+                      const token = await getAuth().currentUser?.getIdToken();
+                      if (!token) throw new Error("Token non disponibile");
+                      const res = await fetch("/api/admin/availability", {
+                        method: "DELETE",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                          dateFrom: availDeleteFrom,
+                          dateTo: availDeleteTo,
+                          timeStart: availDeleteStart,
+                          timeEnd: availDeleteEnd,
+                          daysOfWeek: Array.from(availDeleteDays.values()),
+                        }),
+                      });
+                      const data = await res.json().catch(() => ({}));
+                      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+                      setAvailDeleteMsg(`Rimosse ${data?.deleted ?? 0} disponibilità`);
+                      await fetchAvailabilitySlots();
+                    } catch (err: any) {
+                      setAvailDeleteMsg(err?.message || "Errore rimozione");
+                    }
+                  }}
+                  className="ml-auto rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-semibold text-amber-900 shadow hover:brightness-110"
+                >
+                  Rimuovi queste disponibilità
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -2058,6 +2720,11 @@ export default function AccountPage() {
                     <p className="text-[11px] font-semibold text-slate-500 [.dark_&]:text-slate-300">
                       Telefono studente: {selectedScheduleStudent.phone}
                     </p>
+                  ) : null}
+                  {scheduleWillBeUnpaid ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800 [.dark_&]:border-amber-500/40 [.dark_&]:bg-amber-500/10 [.dark_&]:text-amber-100">
+                      Questa lezione rientra tra le ore non pagate.
+                    </div>
                   ) : null}
                   <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
                     <input
@@ -3294,11 +3961,102 @@ type ExamItem = {
   grade_id?: string | null;
 };
 
-function ymd(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+function ymd(d: Date | string | number | null | undefined): string {
+  if (!d) return "";
+  const date = d instanceof Date ? d : new Date(d);
+  if (Number.isNaN(date.getTime())) return "";
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function capitalize(value: string) {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function parseYmdDate(value?: string | null) {
+  if (!value) return null;
+  const [y, m, d] = value.split("-").map((v) => parseInt(v, 10));
+  if (!y || !m || !d) return null;
+  const date = new Date(y, m - 1, d);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
+function getBookingKey(bk: any) {
+  return String(bk?.id ?? bk?.slotId ?? bk?.startsAt ?? "");
+}
+
+function getBookingStartMs(bk: any) {
+  const startsAt = bk?.startsAt;
+  if (!startsAt) return null;
+  const d = new Date(startsAt);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.getTime();
+}
+
+function getStudentRemainingMinutes(student: TutorStudent) {
+  const rawRemaining = Number(student.remainingPaid);
+  if (Number.isFinite(rawRemaining)) {
+    return Math.max(0, Math.round(rawRemaining * 60));
+  }
+  const hoursPaid = Number(student.hoursPaid ?? 0);
+  const hoursConsumed = Number(student.hoursConsumed ?? 0);
+  if (!Number.isFinite(hoursPaid) || !Number.isFinite(hoursConsumed)) {
+    return 0;
+  }
+  return Math.max(0, Math.round((hoursPaid - hoursConsumed) * 60));
+}
+
+function stripUnpaidNote(note?: string | null) {
+  if (!note) return null;
+  const cleaned = note
+    .replace(/\s*·?\s*Ora non pagata\s*/gi, " ")
+    .trim();
+  return cleaned || null;
+}
+
+function formatHourLabel(hour: number) {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function formatMinutesToTime(minutes: number) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+type AvailabilityCalendarDay = {
+  id: string;
+  dayNumber: number;
+  inCurrentMonth: boolean;
+};
+
+function buildAvailabilityCalendar(
+  monthStart: Date,
+  weeks = 6
+): AvailabilityCalendarDay[] {
+  const firstDay = new Date(monthStart);
+  firstDay.setDate(1);
+  const startWeekday = (firstDay.getDay() + 6) % 7; // Monday=0
+  const gridStart = new Date(firstDay);
+  gridStart.setDate(1 - startWeekday);
+
+  const days: AvailabilityCalendarDay[] = [];
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + i);
+    const id = ymd(d);
+    if (!id) continue;
+    days.push({
+      id,
+      dayNumber: d.getDate(),
+      inCurrentMonth: d.getMonth() === monthStart.getMonth(),
+    });
+  }
+  return days;
 }
 
 function toInputTime(iso?: string | null) {

@@ -141,3 +141,118 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err?.message || "Errore disponibilità" }, { status: 500 });
   }
 }
+
+export async function GET(request: NextRequest) {
+  const db = supabaseServer();
+  if (!db) return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
+  const { error: authError, tutorId: viewerTutorId, isAdmin } = await resolveViewer(request, db);
+  if (authError) return authError;
+  try {
+    const { searchParams } = new URL(request.url);
+    const targetTutorId = (isAdmin ? searchParams.get("tutorId") : null) || viewerTutorId;
+    if (!targetTutorId) return NextResponse.json({ error: "Tutor non trovato" }, { status: 404 });
+
+    const limit = Math.min(600, Number(searchParams.get("limit") || 400));
+    const fromIso = new Date().toISOString();
+    const toIso = new Date(Date.now() + 90 * 86400000).toISOString(); // 90 giorni
+
+    const { data, error } = await db
+      .from("call_slots")
+      .select("id, starts_at, duration_min, status, call_type_id")
+      .eq("tutor_id", targetTutorId)
+      .eq("status", "available")
+      .gte("starts_at", fromIso)
+      .lt("starts_at", toIso)
+      .order("starts_at", { ascending: true })
+      .limit(limit);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({ slots: data || [], tutorId: targetTutorId });
+  } catch (err: any) {
+    console.error("[admin/availability] get unexpected", err);
+    return NextResponse.json({ error: err?.message || "Errore recupero disponibilità" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const db = supabaseServer();
+  if (!db) return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
+  const { error: authError, tutorId: viewerTutorId, isAdmin } = await resolveViewer(request, db);
+  if (authError) return authError;
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    const targetTutorId = (isAdmin ? body.tutorId : null) || viewerTutorId;
+    if (!targetTutorId) return NextResponse.json({ error: "Tutor non trovato" }, { status: 404 });
+
+    const resetAll = Boolean(body.resetAll);
+    const dateFrom = resetAll ? new Date() : parseDate(body.dateFrom);
+    const dateTo = resetAll
+      ? new Date(Date.now() + 180 * 86400000)
+      : parseDate(body.dateTo) || parseDate(body.dateFrom);
+    if (!dateFrom || !dateTo) {
+      return NextResponse.json({ error: "Intervallo date non valido" }, { status: 400 });
+    }
+    if (dateTo.getTime() < dateFrom.getTime()) {
+      return NextResponse.json({ error: "Data fine precedente alla data inizio" }, { status: 400 });
+    }
+    const dayDiff = Math.round((dateTo.getTime() - dateFrom.getTime()) / 86400000);
+    if (dayDiff > 365) {
+      return NextResponse.json({ error: "Intervallo troppo ampio" }, { status: 400 });
+    }
+
+    const daysOfWeek: number[] = Array.isArray(body.daysOfWeek)
+      ? body.daysOfWeek.map((n: any) => Number(n)).filter((n: any) => Number.isInteger(n) && n >= 0 && n <= 6)
+      : [];
+    const hasDayFilter = daysOfWeek.length > 0;
+    const timeStart = String(body.timeStart || "").trim();
+    const timeEnd = String(body.timeEnd || "").trim();
+    const hasTimeWindow = Boolean(timeStart && timeEnd);
+    const toMinutes = (t: string) => {
+      const [h, m] = t.split(":").map((x) => Number(x));
+      if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+      return h * 60 + m;
+    };
+    const minStart = hasTimeWindow ? toMinutes(timeStart) : null;
+    const minEnd = hasTimeWindow ? toMinutes(timeEnd) : null;
+    if (hasTimeWindow && (minStart == null || minEnd == null || minEnd <= minStart)) {
+      return NextResponse.json({ error: "Finestra oraria non valida" }, { status: 400 });
+    }
+
+    const fromIso = dateFrom.toISOString();
+    const toIso = new Date(dateTo.getTime() + 86400000).toISOString(); // includi giorno finale
+    const { data: slots, error } = await db
+      .from("call_slots")
+      .select("id, starts_at, duration_min, status")
+      .eq("tutor_id", targetTutorId)
+      .eq("status", "available")
+      .gte("starts_at", fromIso)
+      .lt("starts_at", toIso)
+      .limit(2000);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const idsToDelete = (slots || []).filter((slot: any) => {
+      const d = new Date(slot.starts_at);
+      if (Number.isNaN(d.getTime())) return false;
+      const dow = (d.getDay() + 6) % 7; // Monday=0
+      if (hasDayFilter && !daysOfWeek.includes(dow)) return false;
+      if (hasTimeWindow) {
+        const mins = d.getHours() * 60 + d.getMinutes();
+        if (mins < (minStart as number) || mins >= (minEnd as number)) return false;
+      }
+      return true;
+    });
+
+    if (!idsToDelete.length) {
+      return NextResponse.json({ ok: true, deleted: 0 });
+    }
+
+    const { error: delErr } = await db.from("call_slots").delete().in("id", idsToDelete.map((s) => s.id));
+    if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
+
+    return NextResponse.json({ ok: true, deleted: idsToDelete.length });
+  } catch (err: any) {
+    console.error("[admin/availability] delete unexpected", err);
+    return NextResponse.json({ error: err?.message || "Errore rimozione disponibilità" }, { status: 500 });
+  }
+}

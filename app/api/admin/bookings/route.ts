@@ -617,6 +617,7 @@ export async function POST(request: NextRequest) {
     const durationMinutes = forceRipetizione ? DEFAULT_DURATION_MIN : body.durationMin;
 
     const callType = await fetchCallType(db, callTypeSlug);
+    const allowUnpaid = Boolean(body.allowUnpaid);
     const tutor = viewer?.isAdmin
       ? await fetchDefaultTutor(db, body.tutorId)
       : await fetchTutorById(db, viewer?.tutorId || "");
@@ -632,7 +633,7 @@ export async function POST(request: NextRequest) {
       callType,
       tutor,
       durationMin: durationMinutes,
-      requireRemaining: true,
+      requireRemaining: !allowUnpaid,
       studentId: body.studentId || null,
     });
 
@@ -700,6 +701,7 @@ export async function PATCH(request: NextRequest) {
     const callTypeSlug = forceRipetizione ? DEFAULT_CALL_TYPE : (body.callTypeSlug || existing.callType || "onboarding");
     const forcedDuration = forceRipetizione ? DEFAULT_DURATION_MIN : (body.durationMin || existing.durationMin);
     const callType = await fetchCallType(db, String(callTypeSlug));
+    const allowUnpaid = Boolean(body.allowUnpaid);
     const tutor = viewer?.isAdmin
       ? await fetchDefaultTutor(db, body.tutorId || existing.tutorId)
       : await fetchTutorById(db, viewer?.tutorId || existing.tutorId || "");
@@ -713,7 +715,7 @@ export async function PATCH(request: NextRequest) {
       tutor,
       durationMin: forcedDuration,
       allowSlotId: existing.slotId || null,
-      requireRemaining: true,
+      requireRemaining: !allowUnpaid,
       studentId: body.studentId || null,
     });
 
