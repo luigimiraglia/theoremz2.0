@@ -24,7 +24,7 @@ type Lead = {
   instagramHandle: string | null;
   whatsappPhone: string | null;
   note: string | null;
-  channel: "instagram" | "whatsapp" | "unknown";
+  channel: "instagram" | "whatsapp" | "unknown" | "black";
   status: "active" | "completed" | "dropped";
   currentStep: number;
   nextFollowUpAt: string | null;
@@ -127,6 +127,7 @@ export default function LeadsAdminPage() {
   const [creating, setCreating] = useState(false);
   const [advancingId, setAdvancingId] = useState<string | null>(null);
   const [restartingId, setRestartingId] = useState<string | null>(null);
+  const [droppingId, setDroppingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
@@ -139,6 +140,7 @@ export default function LeadsAdminPage() {
   const [allOpen, setAllOpen] = useState(false);
   const [allLeads, setAllLeads] = useState<Lead[]>([]);
   const [loadingAll, setLoadingAll] = useState(false);
+  const [quickQuery, setQuickQuery] = useState("");
   const [preferWebWhatsApp, setPreferWebWhatsApp] = useState(false);
   const dayStart = useMemo(() => startOfDay(selectedDate), [selectedDate]);
   const dayEnd = useMemo(() => addDays(dayStart, 1), [dayStart]);
@@ -177,12 +179,13 @@ export default function LeadsAdminPage() {
     }
   }, [hasAccess, selectedDate, showCompleted]);
 
-  useEffect(() => {
-    if (hasAccess) fetchLeads();
-  }, [hasAccess, fetchLeads]);
-
   const applyLeadUpdate = useCallback(
     (lead: Lead) => {
+      if (lead.channel === "black") {
+        // Non mostrare i lead Black nella vista classica
+        setAllLeads((prev) => prev.filter((l) => l.id !== lead.id));
+        return;
+      }
       setData((prev) => {
         if (!prev) return prev;
         const removeFrom = (arr: Lead[]) => arr.filter((l) => l.id !== lead.id);
@@ -238,7 +241,11 @@ export default function LeadsAdminPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-      setAllLeads(Array.isArray(json.all) ? json.all : []);
+      setAllLeads(
+        Array.isArray(json.all)
+          ? json.all.filter((l: Lead) => l.channel !== "black")
+          : []
+      );
       setAllOpen(true);
     } catch (err: any) {
       setError(err?.message || "Errore caricamento elenco completo");
@@ -351,6 +358,34 @@ export default function LeadsAdminPage() {
     [fetchLeads, applyLeadUpdate]
   );
 
+  const handleDrop = useCallback(
+    async (id: string) => {
+      setDroppingId(id);
+      setError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/leads", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ id, action: "snooze_monthly" }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+        if (json?.lead) {
+          applyLeadUpdate(json.lead);
+        } else {
+          await fetchLeads();
+        }
+      } catch (err: any) {
+        setError(err?.message || "Errore scarto lead");
+      } finally {
+        setDroppingId(null);
+      }
+    },
+    [fetchLeads, applyLeadUpdate]
+  );
+
   const dayDue = useMemo(() => {
     const list = data?.due || [];
     return list.map((lead) => {
@@ -359,6 +394,40 @@ export default function LeadsAdminPage() {
       return { ...lead, dueAt, isOverdue };
     });
   }, [data?.due, dayStart]);
+
+  useEffect(() => {
+    if (hasAccess) fetchLeads();
+    if (hasAccess) fetchAllLeads();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasAccess]);
+
+  useEffect(() => {
+    const centerQuick = document.getElementById("leads-quick-actions");
+    if (centerQuick) centerQuick.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
+  const quickResults = useMemo(() => {
+    const q = quickQuery.trim().toLowerCase();
+    if (!q) return [];
+    const digits = q.replace(/\D/g, "");
+    return allLeads
+      .filter((lead) => lead.channel !== "black")
+      .filter((lead) => {
+        const text = [
+          lead.name,
+          lead.instagramHandle,
+          lead.whatsappPhone,
+          lead.note,
+          lead.status,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        const numbers = (lead.whatsappPhone || "").replace(/\D/g, "");
+        return text.includes(q) || (digits && numbers.includes(digits));
+      })
+      .slice(0, 10);
+  }, [allLeads, quickQuery]);
 
   if (authLoading) {
     return (
@@ -433,6 +502,130 @@ export default function LeadsAdminPage() {
           <div className="flex items-center gap-2 rounded-lg bg-rose-50 px-4 py-2 text-sm text-rose-700">
             <AlertTriangle size={18} />
             {error}
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        id="leads-quick-actions"
+        className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm max-w-4xl mx-auto"
+      >
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Azioni rapide lead
+            </p>
+            <p className="text-sm text-slate-600">
+              Cerca per numero/handle e usa subito Contattato, WhatsApp, Ha risposto o Scarta.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+            <input
+              type="text"
+              value={quickQuery}
+              onChange={(e) => setQuickQuery(e.target.value)}
+              placeholder="Cerca numero, handle o nome"
+              className="w-full min-w-[260px] md:w-72 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
+            />
+            <button
+              type="button"
+              onClick={fetchAllLeads}
+              disabled={loadingAll}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:border-slate-300 disabled:opacity-50"
+            >
+              {loadingAll ? <Loader2 size={14} className="animate-spin" /> : <ListFilter size={14} />}
+              Aggiorna elenco
+            </button>
+          </div>
+        </div>
+        {quickQuery ? (
+          <div className="mt-3 max-h-64 space-y-2 overflow-auto">
+            {quickResults.length ? (
+              quickResults.map((lead) => {
+                const whatsappLink = buildWhatsAppLink(lead.whatsappPhone, preferWebWhatsApp);
+                const isBusy =
+                  advancingId === lead.id || restartingId === lead.id || droppingId === lead.id;
+                return (
+                  <div
+                    key={lead.id}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {lead.name || lead.instagramHandle || lead.whatsappPhone || "Lead"}
+                        </p>
+                        <p className="text-xs text-slate-600">
+                          {lead.whatsappPhone || "Telefono n/d"}
+                          {lead.instagramHandle ? ` · @${lead.instagramHandle}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                        <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold">
+                          {lead.status}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold">
+                          {formatDate(lead.nextFollowUpAt)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => handleAdvance(lead.id)}
+                        disabled={isBusy}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+                      >
+                        {advancingId === lead.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <CheckCircle2 size={14} />
+                        )}
+                        Contattato
+                      </button>
+                      {whatsappLink ? (
+                        <a
+                          href={whatsappLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
+                        >
+                          <Phone size={14} />
+                          Apri WhatsApp
+                        </a>
+                      ) : null}
+                      <button
+                        onClick={() => handleRestart(lead.id)}
+                        disabled={isBusy}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:border-indigo-300 disabled:opacity-60"
+                      >
+                        {restartingId === lead.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <RefreshCcw size={14} />
+                        )}
+                        Ha risposto
+                      </button>
+                          <button
+                            onClick={() => handleDrop(lead.id)}
+                            disabled={isBusy}
+                            className="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-700 hover:border-amber-300 disabled:opacity-60"
+                            title="Rimanda di 30 giorni"
+                          >
+                            {droppingId === lead.id ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              "Rimanda 30d"
+                            )}
+                          </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-2 text-sm text-slate-500">
+                Nessun lead trovato.
+              </div>
+            )}
           </div>
         ) : null}
       </div>

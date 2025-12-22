@@ -164,18 +164,21 @@ export async function PATCH(request: Request) {
   const id = String(body.id || "").trim();
   const displayName = String(body.displayName || "").trim();
   const fullName = String(body.fullName || "").trim();
-  const email = String(body.email || "").trim().toLowerCase();
-  const phone = String(body.phone || "").trim();
-  const notes = String(body.notes || body.bio || "").trim();
+  const emailRaw = body.email;
+  const phoneRaw = body.phone;
+  const notesRaw = body.notes ?? body.bio;
+  const email = emailRaw !== undefined ? String(emailRaw || "").trim().toLowerCase() : undefined;
+  const phone = phoneRaw !== undefined ? String(phoneRaw || "").trim() : undefined;
+  const notes = notesRaw !== undefined ? String(notesRaw || "").trim() : undefined;
   const hoursDueRaw = body.hoursDue ?? body.hours_due;
   if (!id) return NextResponse.json({ error: "ID mancante" }, { status: 400 });
 
   const patch: Record<string, any> = {};
   if (displayName) patch.display_name = displayName;
   if (fullName) patch.full_name = fullName;
-  if (email) patch.email = email;
-  patch.phone = phone || null;
-  patch.notes = notes || null;
+  if (email !== undefined) patch.email = email || null;
+  if (phone !== undefined) patch.phone = phone || null;
+  if (notes !== undefined) patch.notes = notes || null;
   if (hoursDueRaw !== undefined && hoursDueRaw !== null && hoursDueRaw !== "") {
     const hoursDue = Number(hoursDueRaw);
     if (!Number.isFinite(hoursDue)) {

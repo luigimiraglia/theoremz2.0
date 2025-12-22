@@ -140,3 +140,63 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: err?.message || "Errore scheda studente" }, { status: 500 });
   }
 }
+
+export async function PATCH(request: NextRequest) {
+  const db = supabaseServer();
+  if (!db) return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
+
+  const header = request.headers.get("authorization") || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  let viewerEmail: string | null = null;
+  try {
+    const decoded = await adminAuth.verifyIdToken(token);
+    viewerEmail = decoded.email?.toLowerCase() || null;
+  } catch {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const studentId = typeof body.studentId === "string" ? body.studentId.trim() : "";
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (!studentId) return NextResponse.json({ error: "studentId mancante" }, { status: 400 });
+  if (!name) return NextResponse.json({ error: "name mancante" }, { status: 400 });
+
+  try {
+    const { data: student, error } = await db
+      .from("black_students")
+      .select("id, preferred_name, student_email, parent_email, student_phone, parent_phone, videolesson_tutor_id, tutor_assignments(tutor_id)")
+      .eq("id", studentId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!student) return NextResponse.json({ error: "Studente non trovato" }, { status: 404 });
+
+    const assignmentTutorId = Array.isArray((student as any)?.tutor_assignments)
+      ? (student as any).tutor_assignments[0]?.tutor_id ?? null
+      : (student as any)?.tutor_assignments?.tutor_id ?? null;
+    const isAdmin = isAdminEmail(viewerEmail);
+
+    if (
+      !isAdmin &&
+      viewerEmail &&
+      student.videolesson_tutor_id &&
+      student.videolesson_tutor_id !== (await resolveTutorId(viewerEmail, db)) &&
+      assignmentTutorId !== (await resolveTutorId(viewerEmail, db))
+    ) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+
+    const { error: updErr, data: updated } = await db
+      .from("black_students")
+      .update({ preferred_name: name, updated_at: new Date().toISOString() })
+      .eq("id", studentId)
+      .select("id, preferred_name")
+      .maybeSingle();
+    if (updErr) throw updErr;
+    return NextResponse.json({ student: updated });
+  } catch (err: any) {
+    console.error("[tutor/black-student] update error", err);
+    return NextResponse.json({ error: err?.message || "Errore aggiornamento nome" }, { status: 500 });
+  }
+}

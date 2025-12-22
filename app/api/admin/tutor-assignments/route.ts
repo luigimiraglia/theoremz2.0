@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 import { adminAuth } from "@/lib/firebaseAdmin";
@@ -118,9 +119,29 @@ export async function POST(request: NextRequest) {
       student = data;
     }
 
-    if (!student && linkedProfile?.id && studentEmail) {
+    if (!student && (studentEmail || studentPhone)) {
+      let profileId = linkedProfile?.id || null;
+      if (!profileId) {
+        const fallbackEmail =
+          studentEmailRaw ||
+          studentEmail ||
+          (studentPhone ? `${studentPhone}@autogen.tz` : `autogen-${Date.now()}@autogen.tz`);
+        const profilePayload = {
+          id: randomUUID(),
+          email: fallbackEmail.toLowerCase(),
+          full_name: studentName || fallbackEmail.split("@")[0],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        const { error: profileErr } = await db.from("profiles").insert(profilePayload);
+        if (profileErr) {
+          return NextResponse.json({ error: profileErr.message }, { status: 500 });
+        }
+        profileId = profilePayload.id;
+      }
+
       const insertPayload: Record<string, any> = {
-        user_id: linkedProfile.id,
+        user_id: profileId,
         student_email: studentEmailRaw || studentEmail || null,
         parent_email: studentEmailRaw || studentEmail || null,
         student_phone: studentPhone || null,
@@ -128,7 +149,9 @@ export async function POST(request: NextRequest) {
         preferred_name: studentName || null,
         status: "active",
         start_date: new Date().toISOString().slice(0, 10),
+        updated_at: new Date().toISOString(),
       };
+
       const { data: created, error: createErr } = await db
         .from("black_students")
         .insert(insertPayload)

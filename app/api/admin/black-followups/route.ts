@@ -428,7 +428,7 @@ export async function PATCH(request: NextRequest) {
       note: existing.note || null,
       instagram_handle: null,
       whatsapp_phone: phone,
-      channel: "whatsapp",
+      channel: "black",
       status: "active",
       current_step: 0,
       last_contacted_at: now.toISOString(),

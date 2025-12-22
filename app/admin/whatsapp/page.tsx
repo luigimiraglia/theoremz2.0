@@ -155,13 +155,15 @@ function TutorRow({
   const [hoursSaving, setHoursSaving] = useState(false);
   const totalAmountDue = useMemo(() => {
     const list = tutor.students || [];
-    return list.reduce((sum, s) => {
+    const computed = list.reduce((sum, s) => {
       const rate = Number(s.hourlyRate ?? 0);
       const consumed = Number(s.hoursConsumed ?? 0);
       if (!Number.isFinite(rate) || !Number.isFinite(consumed)) return sum;
       return sum + rate * consumed;
     }, 0);
-  }, [tutor.students]);
+    if (tutor.hoursDue === 0) return 0;
+    return computed;
+  }, [tutor.students, tutor.hoursDue]);
 
   useEffect(() => {
     setHoursDraft(tutor.hoursDue != null ? String(tutor.hoursDue) : "");

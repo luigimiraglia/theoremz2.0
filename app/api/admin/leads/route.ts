@@ -3,6 +3,7 @@ import { supabaseServer } from "@/lib/supabase";
 
 const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
 const FOLLOWUP_STEPS_DAYS = [1, 2, 7, 30];
+const LAST_STEP_INDEX = FOLLOWUP_STEPS_DAYS.length - 1;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,13 +67,19 @@ function normalizePhone(raw?: string | null) {
 
 function mapLead(row: any) {
   if (!row) return null;
+  const channel =
+    row.channel && ["instagram", "whatsapp", "black", "unknown"].includes(row.channel)
+      ? row.channel
+      : row.instagram_handle
+        ? "instagram"
+        : "whatsapp";
   return {
     id: row.id as string,
     name: row.full_name || null,
     instagramHandle: row.instagram_handle || null,
     whatsappPhone: row.whatsapp_phone || null,
     note: row.note || null,
-    channel: row.channel || (row.instagram_handle ? "instagram" : "whatsapp"),
+    channel,
     status: row.status || "active",
     currentStep: typeof row.current_step === "number" ? row.current_step : 0,
     nextFollowUpAt: row.next_follow_up_at || null,
@@ -114,7 +121,13 @@ export async function GET(request: NextRequest) {
       console.error("[admin/leads] all fetch error", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    return NextResponse.json({ all: Array.isArray(data) ? data.map(mapLead) : [] });
+    return NextResponse.json({
+      all: Array.isArray(data)
+        ? data
+            .map(mapLead)
+            .filter((l) => l && l.channel !== "black")
+        : [],
+    });
   }
 
   const [
@@ -161,11 +174,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: completedErr.message }, { status: 500 });
   }
 
+  const filterVisible = (arr: any[] | null | undefined) =>
+    (arr || []).map(mapLead).filter((l) => l && l.channel !== "black");
+
   return NextResponse.json({
     date: dayStart.toISOString(),
-    due: Array.isArray(dueRows) ? dueRows.map(mapLead) : [],
-    upcoming: Array.isArray(upcomingRows) ? upcomingRows.map(mapLead) : [],
-    completed: Array.isArray(completedRows) ? completedRows.map(mapLead) : [],
+    due: filterVisible(dueRows),
+    upcoming: filterVisible(upcomingRows),
+    completed: includeCompleted ? filterVisible(completedRows) : [],
   });
 }
 
@@ -246,11 +262,14 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "already_completed" }, { status: 400 });
     }
     const now = new Date();
-    const nextStep = Math.min(
-      Number(existing.current_step ?? 0) + 1,
-      FOLLOWUP_STEPS_DAYS.length
-    );
-    const nextFollowUp = computeNextFollowUp(nextStep, now);
+    const currentStep = Number(existing.current_step ?? 0);
+    const isMonthly = currentStep >= LAST_STEP_INDEX;
+    const nextStep = isMonthly
+      ? LAST_STEP_INDEX
+      : Math.min(currentStep + 1, FOLLOWUP_STEPS_DAYS.length);
+    const nextFollowUp = isMonthly
+      ? addDays(now, FOLLOWUP_STEPS_DAYS[LAST_STEP_INDEX])
+      : computeNextFollowUp(nextStep, now);
     const updatePayload: Record<string, any> = {
       current_step: nextStep,
       last_contacted_at: now.toISOString(),
@@ -269,6 +288,42 @@ export async function PATCH(request: NextRequest) {
       .maybeSingle();
     if (error) {
       console.error("[admin/leads] advance update error", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ lead: mapLead(data) });
+  }
+
+  if (action === "snooze_monthly") {
+    const { data: existing, error: fetchErr } = await db
+      .from("manual_leads")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (fetchErr) {
+      console.error("[admin/leads] snooze fetch error", fetchErr);
+      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+    }
+    if (!existing) {
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+    const now = new Date();
+    const nextFollowUp = addDays(now, FOLLOWUP_STEPS_DAYS[LAST_STEP_INDEX]);
+    const updatePayload: Record<string, any> = {
+      current_step: LAST_STEP_INDEX,
+      status: "active",
+      last_contacted_at: now.toISOString(),
+      next_follow_up_at: nextFollowUp.toISOString(),
+      completed_at: null,
+      updated_at: now.toISOString(),
+    };
+    const { data, error } = await db
+      .from("manual_leads")
+      .update(updatePayload)
+      .eq("id", id)
+      .select("*")
+      .maybeSingle();
+    if (error) {
+      console.error("[admin/leads] snooze update error", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     return NextResponse.json({ lead: mapLead(data) });
@@ -295,6 +350,8 @@ export async function PATCH(request: NextRequest) {
       last_contacted_at: now.toISOString(),
       next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : null,
       completed_at: null,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
     };
     const { data, error } = await db
       .from("manual_leads")

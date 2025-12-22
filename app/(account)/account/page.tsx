@@ -16,6 +16,7 @@ import {
   CalendarClock,
   ArrowRight,
   Loader2,
+  Pencil,
 } from "lucide-react";
 import NewsletterSettings from "@/components/NewsletterSettings";
 import TempAccessInfo from "@/components/TempAccessInfo";
@@ -368,6 +369,9 @@ export default function AccountPage() {
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [cancelBookingId, setCancelBookingId] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [renamingStudentId, setRenamingStudentId] = useState<string | null>(
+    null
+  );
 
   const loadTutorBookings = useCallback(async () => {
     if (!user?.email) {
