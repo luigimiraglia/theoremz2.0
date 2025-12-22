@@ -600,6 +600,11 @@ export default function AccountPage() {
       ),
     [tutorStudents]
   );
+  const tutorHoursDue = useMemo(() => {
+    if (!isTutor) return null;
+    const n = Number(tutorData?.hoursDue);
+    return Number.isFinite(n) ? n : null;
+  }, [isTutor, tutorData?.hoursDue]);
   const tutorAmountDue = useMemo(
     () =>
       tutorStudents.reduce((acc, s) => {
@@ -615,11 +620,6 @@ export default function AccountPage() {
     if (tutorHoursDue === 0) return 0;
     return tutorAmountDue;
   }, [isTutor, tutorHoursDue, tutorAmountDue]);
-  const tutorHoursDue = useMemo(() => {
-    if (!isTutor) return null;
-    const n = Number(tutorData?.hoursDue);
-    return Number.isFinite(n) ? n : null;
-  }, [isTutor, tutorData?.hoursDue]);
   const tutorGrouped = useMemo(() => {
     if (!isTutor || !tutorData) return [];
     const sorted = [...(tutorData.bookings || [])].sort((a, b) => {
