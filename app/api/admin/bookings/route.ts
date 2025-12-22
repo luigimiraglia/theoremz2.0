@@ -481,7 +481,7 @@ export async function GET(request: NextRequest) {
               db
                 .from("black_students")
                 .select(
-                  "id, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id)"
+                  "id, student_email, parent_email, student_phone, parent_phone, whatsapp_group_link, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id)"
                 )
                 .eq("videolesson_tutor_id", effectiveTutorId || "")
                 .order("start_date", { ascending: true })
@@ -489,7 +489,7 @@ export async function GET(request: NextRequest) {
               db
                 .from("tutor_assignments")
                 .select(
-                  "student_id, hourly_rate, consumed_baseline, black_students!inner(id, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))"
+                  "student_id, hourly_rate, consumed_baseline, black_students!inner(id, student_email, parent_email, student_phone, parent_phone, whatsapp_group_link, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))"
                 )
                 .eq("tutor_id", effectiveTutorId || "")
                 .limit(300),
@@ -540,6 +540,7 @@ export async function GET(request: NextRequest) {
                 name: displayName,
                 email: (s?.student_email as string | null) || (s?.parent_email as string | null) || null,
                 phone: (s?.student_phone as string | null) || (s?.parent_phone as string | null) || null,
+                whatsappGroupLink: (s?.whatsapp_group_link as string | null) || null,
                 hoursPaid,
                 hoursConsumed,
                 hourlyRate,

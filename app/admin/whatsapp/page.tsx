@@ -691,6 +691,7 @@ export default function WhatsAppAdmin() {
       name: string;
       email?: string | null;
       phone?: string | null;
+      whatsappGroupLink?: string | null;
       tutorId?: string | null;
       tutorName?: string | null;
       remainingPaid?: number;
@@ -710,6 +711,7 @@ export default function WhatsAppAdmin() {
         name: string;
         email: string;
         phone: string;
+        whatsappGroupLink: string;
         tutorId: string;
         hoursPaid?: string;
         hoursConsumed?: string;
@@ -804,7 +806,7 @@ export default function WhatsAppAdmin() {
   );
 
   const handleEditStudent = useCallback(
-    (student: { id: string; name?: string | null; email?: string | null; phone?: string | null; tutorId?: string | null }) => {
+    (student: { id: string; name?: string | null; email?: string | null; phone?: string | null; whatsappGroupLink?: string | null; tutorId?: string | null }) => {
       setStudentError(null);
       setEditingStudentId(student.id);
       setStudentDrafts((prev) => ({
@@ -813,6 +815,7 @@ export default function WhatsAppAdmin() {
           name: student.name || "",
           email: student.email || "",
           phone: student.phone || "",
+          whatsappGroupLink: student.whatsappGroupLink || "",
           tutorId: student.tutorId || tutorList[0]?.id || "",
           hoursPaid: students.find((s) => s.id === student.id)?.hoursPaid != null ? String(students.find((s) => s.id === student.id)?.hoursPaid) : "",
           hoursConsumed:
@@ -857,6 +860,7 @@ export default function WhatsAppAdmin() {
           setStudentsLoading(false);
           return;
         }
+        const whatsappGroupLink = (draft.whatsappGroupLink || "").trim();
         const res = await fetch("/api/admin/students", {
           method: "PATCH",
           headers,
@@ -865,6 +869,7 @@ export default function WhatsAppAdmin() {
             name: draft.name,
             email: draft.email,
             phone: draft.phone,
+            whatsappGroupLink,
             tutorId: draft.tutorId || undefined,
             hoursPaid,
             hoursConsumed,
@@ -2666,6 +2671,17 @@ export default function WhatsAppAdmin() {
                                 }))
                               }
                               placeholder="Telefono"
+                              className="rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white placeholder:text-slate-500"
+                            />
+                            <input
+                              value={studentDrafts[s.id]?.whatsappGroupLink || ""}
+                              onChange={(e) =>
+                                setStudentDrafts((prev) => ({
+                                  ...prev,
+                                  [s.id]: { ...(prev[s.id] || {}), whatsappGroupLink: e.target.value },
+                                }))
+                              }
+                              placeholder="Link gruppo WhatsApp"
                               className="rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white placeholder:text-slate-500"
                             />
                             <select

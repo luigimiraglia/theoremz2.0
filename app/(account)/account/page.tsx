@@ -44,6 +44,7 @@ type TutorStudent = {
   name: string;
   email?: string | null;
   phone?: string | null;
+  whatsappGroupLink?: string | null;
   hoursPaid?: number;
   hoursConsumed?: number;
   remainingPaid?: number;
@@ -603,6 +604,10 @@ export default function AccountPage() {
                     s?.email || s?.student_email || s?.parent_email || null,
                   phone:
                     s?.phone || s?.student_phone || s?.parent_phone || null,
+                  whatsappGroupLink:
+                    s?.whatsappGroupLink ||
+                    s?.whatsapp_group_link ||
+                    null,
                   hoursPaid,
                   hoursConsumed,
                   consumedBaseline,
@@ -1610,11 +1615,13 @@ export default function AccountPage() {
                     Nessuno studente assegnato al momento.
                   </div>
                 ) : null}
-                {tutorStudents.map((s) => (
-                  <div
-                    key={s.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/60"
-                  >
+                {tutorStudents.map((s) => {
+                  const whatsappLink = normalizeWhatsAppGroupLink(s.whatsappGroupLink);
+                  return (
+                    <div
+                      key={s.id}
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/60"
+                    >
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-0.5">
                         <p className="text-sm font-semibold text-slate-900 [.dark_&]:text-white">
@@ -1654,6 +1661,16 @@ export default function AccountPage() {
                       >
                         Programma
                       </button>
+                      {whatsappLink ? (
+                        <a
+                          href={whatsappLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-3 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 [.dark_&]:border-emerald-500/40 [.dark_&]:text-emerald-200 [.dark_&]:hover:bg-emerald-500/10"
+                        >
+                          WhatsApp
+                        </a>
+                      ) : null}
                       {s.isBlack ? (
                         <button
                           type="button"
@@ -1681,8 +1698,9 @@ export default function AccountPage() {
                         </button>
                       ) : null}
                     </div>
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -4014,6 +4032,20 @@ function getStudentRemainingMinutes(student: TutorStudent) {
     return 0;
   }
   return Math.max(0, Math.round((hoursPaid - hoursConsumed) * 60));
+}
+
+function normalizeWhatsAppGroupLink(link?: string | null) {
+  if (!link) return null;
+  const trimmed = String(link).trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (
+    trimmed.startsWith("chat.whatsapp.com/") ||
+    trimmed.startsWith("whatsapp.com/invite/")
+  ) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
 }
 
 function stripUnpaidNote(note?: string | null) {

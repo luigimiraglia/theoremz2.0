@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
         parent_email,
         student_phone,
         parent_phone,
+        whatsapp_group_link,
         hours_paid,
         hours_consumed,
         status,
@@ -80,6 +81,7 @@ export async function GET(request: NextRequest) {
           "Studente",
         email: s?.student_email || s?.parent_email || null,
         phone: s?.student_phone || s?.parent_phone || null,
+        whatsappGroupLink: s?.whatsapp_group_link || null,
         tutorId: tutor?.id || s?.videolesson_tutor_id || assignment?.tutorId || null,
         tutorName: tutor?.display_name || tutor?.full_name || tutor?.email || null,
         hoursPaid,
@@ -158,6 +160,7 @@ export async function PATCH(request: NextRequest) {
     const name = (body.name || body.preferredName || "").trim();
     const email = (body.email || body.studentEmail || body.parentEmail || "").trim().toLowerCase();
     const phone = (body.phone || body.studentPhone || body.parentPhone || "").trim();
+    const whatsappGroupLinkRaw = body.whatsappGroupLink ?? body.whatsapp_group_link;
     const tutorId = body.tutorId ? String(body.tutorId).trim() : null;
     const hoursPaidRaw = body.hoursPaid;
     const hoursConsumedRaw = body.hoursConsumed;
@@ -174,6 +177,10 @@ export async function PATCH(request: NextRequest) {
     if (phone) {
       updates.student_phone = phone;
       updates.parent_phone = phone;
+    }
+    if (whatsappGroupLinkRaw !== undefined) {
+      const cleaned = String(whatsappGroupLinkRaw || "").trim();
+      updates.whatsapp_group_link = cleaned ? cleaned : null;
     }
     if (tutorId) updates.videolesson_tutor_id = tutorId;
     if (hoursPaidRaw !== undefined) {
@@ -234,6 +241,7 @@ export async function PATCH(request: NextRequest) {
         parent_email,
         student_phone,
         parent_phone,
+        whatsapp_group_link,
         hours_paid,
         hours_consumed,
         status,
@@ -283,6 +291,7 @@ export async function PATCH(request: NextRequest) {
           "Studente",
         email: (updated as any)?.student_email || (updated as any)?.parent_email || null,
         phone: (updated as any)?.student_phone || (updated as any)?.parent_phone || null,
+        whatsappGroupLink: (updated as any)?.whatsapp_group_link || null,
         tutorId: tutor?.id || (updated as any)?.videolesson_tutor_id || null,
         tutorName: tutor?.display_name || tutor?.full_name || tutor?.email || null,
         hoursPaid,
