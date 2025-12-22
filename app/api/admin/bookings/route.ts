@@ -714,7 +714,7 @@ export async function PATCH(request: NextRequest) {
       durationMin: forcedDuration,
       allowSlotId: existing.slotId || null,
       requireRemaining: true,
-      studentId: body.studentId || existing.studentId || null,
+      studentId: body.studentId || null,
     });
 
     const updates: Record<string, any> = {
