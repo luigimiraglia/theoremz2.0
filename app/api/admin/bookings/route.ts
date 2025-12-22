@@ -617,7 +617,15 @@ export async function POST(request: NextRequest) {
     const durationMinutes = forceRipetizione ? DEFAULT_DURATION_MIN : body.durationMin;
 
     const callType = await fetchCallType(db, callTypeSlug);
-    const allowUnpaid = Boolean(body.allowUnpaid);
+    const allowUnpaid =
+      body.allowUnpaid === undefined
+        ? true
+        : !(
+            body.allowUnpaid === false ||
+            body.allowUnpaid === "false" ||
+            body.allowUnpaid === 0 ||
+            body.allowUnpaid === "0"
+          );
     const tutor = viewer?.isAdmin
       ? await fetchDefaultTutor(db, body.tutorId)
       : await fetchTutorById(db, viewer?.tutorId || "");
@@ -701,7 +709,15 @@ export async function PATCH(request: NextRequest) {
     const callTypeSlug = forceRipetizione ? DEFAULT_CALL_TYPE : (body.callTypeSlug || existing.callType || "onboarding");
     const forcedDuration = forceRipetizione ? DEFAULT_DURATION_MIN : (body.durationMin || existing.durationMin);
     const callType = await fetchCallType(db, String(callTypeSlug));
-    const allowUnpaid = Boolean(body.allowUnpaid);
+    const allowUnpaid =
+      body.allowUnpaid === undefined
+        ? true
+        : !(
+            body.allowUnpaid === false ||
+            body.allowUnpaid === "false" ||
+            body.allowUnpaid === 0 ||
+            body.allowUnpaid === "0"
+          );
     const tutor = viewer?.isAdmin
       ? await fetchDefaultTutor(db, body.tutorId || existing.tutorId)
       : await fetchTutorById(db, viewer?.tutorId || existing.tutorId || "");

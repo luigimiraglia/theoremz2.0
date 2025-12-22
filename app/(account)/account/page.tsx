@@ -1874,6 +1874,11 @@ export default function AccountPage() {
                               {note}
                             </div>
                           ) : null}
+                          {isUnpaid ? (
+                            <div className="text-[11px] font-semibold text-amber-700 [.dark_&]:text-amber-200">
+                              Ore insufficienti: lezione non pagata.
+                            </div>
+                          ) : null}
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <span
@@ -2723,7 +2728,8 @@ export default function AccountPage() {
                   ) : null}
                   {scheduleWillBeUnpaid ? (
                     <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800 [.dark_&]:border-amber-500/40 [.dark_&]:bg-amber-500/10 [.dark_&]:text-amber-100">
-                      Questa lezione rientra tra le ore non pagate.
+                      Ore insufficienti: questa lezione sarà segnata come non
+                      pagata.
                     </div>
                   ) : null}
                   <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
