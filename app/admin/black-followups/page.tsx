@@ -83,6 +83,13 @@ function formatDay(iso?: string | null) {
   return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
 }
 
+function toDateInputValue(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function startOfDay(value: string) {
   return new Date(`${value}T00:00:00`);
 }
@@ -109,7 +116,7 @@ function addDays(date: Date, days: number) {
 export default function BlackFollowupsPage() {
   const { user, loading: authLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState(() =>
-    new Date().toISOString().slice(0, 10)
+    toDateInputValue(new Date())
   );
   const [data, setData] = useState<ResponseData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -172,13 +179,6 @@ export default function BlackFollowupsPage() {
         upcoming: Array.isArray(json.upcoming) ? json.upcoming : [],
         completed: Array.isArray(json.completed) ? json.completed : [],
       });
-      const seed: Record<string, string> = {};
-      [...(json.due || []), ...(json.upcoming || [])].forEach((c: any) => {
-        if (c?.id && c?.nextFollowUpAt) {
-          seed[c.id] = new Date(c.nextFollowUpAt).toISOString().slice(0, 10);
-        }
-      });
-      setNextDateDraft((prev) => ({ ...seed, ...prev }));
     } catch (err: any) {
       setError(err?.message || "Errore caricamento contatti");
     } finally {
@@ -235,12 +235,11 @@ export default function BlackFollowupsPage() {
       const remaining = prev.filter((c) => c.id !== contact.id);
       return [contact, ...remaining];
     });
-    setNextDateDraft((prev) => ({
-      ...prev,
-      [contact.id]: contact.nextFollowUpAt
-        ? new Date(contact.nextFollowUpAt).toISOString().slice(0, 10)
-        : "",
-    }));
+    setNextDateDraft((prev) => {
+      const next = { ...prev };
+      delete next[contact.id];
+      return next;
+    });
   }, [selectedDate]);
 
   const handleCreate = useCallback(
@@ -436,7 +435,7 @@ export default function BlackFollowupsPage() {
     return list.map((c) => {
       const dueAt = c.nextFollowUpAt ? new Date(c.nextFollowUpAt) : null;
       const isOverdue = dueAt ? dueAt.getTime() < startOfDay(selectedDate).getTime() : false;
-      return { ...c, dueAt, isOverdue, nextDateDraft: dueAt ? dueAt.toISOString().slice(0, 10) : "" };
+      return { ...c, dueAt, isOverdue };
     });
   }, [data?.due, selectedDate]);
 
@@ -821,11 +820,7 @@ export default function BlackFollowupsPage() {
             <div className="space-y-3">
               {dayDue.map((contact) => {
                 const whatsappLink = buildWhatsAppLink(contact.whatsappPhone, preferWebWhatsApp);
-                const dateDraft =
-                  nextDateDraft[contact.id] ||
-                  (contact.nextFollowUpAt
-                    ? new Date(contact.nextFollowUpAt).toISOString().slice(0, 10)
-                    : "");
+                const dateDraft = nextDateDraft[contact.id] || "";
                 const cardLink = buildCardLink(contact);
                 return (
                   <div
@@ -912,10 +907,12 @@ export default function BlackFollowupsPage() {
                             }
                             className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
                           />
-                          <span className="text-[11px] text-slate-500">Default +3 giorni</span>
+                          <span className="text-[11px] text-slate-500">Vuoto = +3 giorni</span>
                         </div>
                         <button
-                          onClick={() => handleRestartLeadCycle(contact.id, dateDraft || undefined)}
+                          onClick={() =>
+                            handleRestartLeadCycle(contact.id, dateDraft || undefined)
+                          }
                           disabled={restartingId === contact.id}
                           className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 shadow hover:border-indigo-300 disabled:opacity-60"
                         >
@@ -927,7 +924,9 @@ export default function BlackFollowupsPage() {
                           Ha risposto (restart lead)
                         </button>
                         <button
-                          onClick={() => handleAdvance(contact.id, dateDraft || undefined)}
+                          onClick={() =>
+                            handleAdvance(contact.id, dateDraft || undefined)
+                          }
                           disabled={advancingId === contact.id}
                           className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
                         >
@@ -1076,11 +1075,7 @@ export default function BlackFollowupsPage() {
               {quickResults.length ? (
                 quickResults.map((contact) => {
                   const whatsappLink = buildWhatsAppLink(contact.whatsappPhone, preferWebWhatsApp);
-                  const dateDraft =
-                    nextDateDraft[contact.id] ||
-                    (contact.nextFollowUpAt
-                      ? new Date(contact.nextFollowUpAt).toISOString().slice(0, 10)
-                      : "");
+                  const dateDraft = nextDateDraft[contact.id] || "";
                   return (
                     <div
                       key={contact.id}
@@ -1132,7 +1127,7 @@ export default function BlackFollowupsPage() {
                             const val = e.target.value;
                             if (!val) return;
                             const next = addDays(new Date(), Number(val));
-                            const iso = next.toISOString().slice(0, 10);
+                            const iso = toDateInputValue(next);
                             setNextDateDraft((prev) => ({ ...prev, [contact.id]: iso }));
                           }}
                           className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
