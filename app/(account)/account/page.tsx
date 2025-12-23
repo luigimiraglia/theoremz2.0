@@ -1180,18 +1180,34 @@ export default function AccountPage() {
       if (endTotal <= startTotal) {
         throw new Error("Finestra oraria non valida");
       }
-      const blocks: Array<{ date: string; startTime: string; endTime: string }> = [];
+      const blocks: Array<{ startMs: number; endMs: number }> = [];
       const cursor = new Date(startDate);
       cursor.setHours(0, 0, 0, 0);
       while (cursor.getTime() <= endDate.getTime()) {
         const dow = (cursor.getDay() + 6) % 7;
         if (daysOfWeek.has(dow)) {
-          const dateKey = ymd(cursor);
-          if (dateKey) {
+          const start = new Date(
+            cursor.getFullYear(),
+            cursor.getMonth(),
+            cursor.getDate(),
+            startH,
+            startM,
+            0,
+            0
+          );
+          const end = new Date(
+            cursor.getFullYear(),
+            cursor.getMonth(),
+            cursor.getDate(),
+            endH,
+            endM,
+            0,
+            0
+          );
+          if (end.getTime() > start.getTime()) {
             blocks.push({
-              date: dateKey,
-              startTime: availStart,
-              endTime: availEnd,
+              startMs: start.getTime(),
+              endMs: end.getTime(),
             });
           }
         }
@@ -1207,10 +1223,7 @@ export default function AccountPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          blocks,
-          tzOffsetMinutes: new Date().getTimezoneOffset(),
-        }),
+        body: JSON.stringify({ blocks }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);

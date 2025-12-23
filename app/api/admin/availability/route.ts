@@ -125,7 +125,10 @@ export async function POST(request: NextRequest) {
       for (const block of blocksInput) {
         let startMs = NaN;
         let endMs = NaN;
-        if (block?.startsAt && block?.endsAt) {
+        if (block?.startMs != null && block?.endMs != null) {
+          startMs = Number(block.startMs);
+          endMs = Number(block.endMs);
+        } else if (block?.startsAt && block?.endsAt) {
           startMs = new Date(block.startsAt).getTime();
           endMs = new Date(block.endsAt).getTime();
         } else if (block?.date && block?.startTime && block?.endTime) {
