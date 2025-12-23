@@ -58,6 +58,47 @@ function parseDate(input?: string | null) {
   return d;
 }
 
+function pad2(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function toUtcMs(
+  dateKey: string,
+  hour: number,
+  minute: number,
+  tzOffsetMinutes?: number | null,
+) {
+  const [y, m, d] = dateKey.split("-").map((v) => Number(v));
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  const baseUtc = Date.UTC(y, m - 1, d, hour, minute);
+  const offset =
+    typeof tzOffsetMinutes === "number" && Number.isFinite(tzOffsetMinutes)
+      ? tzOffsetMinutes
+      : 0;
+  return baseUtc + offset * 60000;
+}
+
+function dayKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function mergeIntervals(list: Array<{ startMs: number; endMs: number }>) {
+  const sorted = list
+    .filter((i) => Number.isFinite(i.startMs) && Number.isFinite(i.endMs) && i.endMs > i.startMs)
+    .sort((a, b) => a.startMs - b.startMs);
+  const merged: Array<{ startMs: number; endMs: number }> = [];
+  sorted.forEach((item) => {
+    const last = merged[merged.length - 1];
+    if (!last || item.startMs > last.endMs) {
+      merged.push({ startMs: item.startMs, endMs: item.endMs });
+      return;
+    }
+    last.endMs = Math.max(last.endMs, item.endMs);
+  });
+  return merged;
+}
+
+
 export async function POST(request: NextRequest) {
   const db = supabaseServer();
   if (!db) return NextResponse.json({ error: "Supabase non configurato" }, { status: 500 });
@@ -69,73 +110,166 @@ export async function POST(request: NextRequest) {
     const targetTutorId = (isAdmin ? body.tutorId : null) || viewerTutorId;
     if (!targetTutorId) return NextResponse.json({ error: "Tutor non trovato" }, { status: 404 });
 
-    const dateFrom = parseDate(body.dateFrom);
-    const dateTo = parseDate(body.dateTo);
-    if (!dateFrom || !dateTo) return NextResponse.json({ error: "Intervallo date non valido" }, { status: 400 });
-    if (dateTo.getTime() < dateFrom.getTime()) {
-      return NextResponse.json({ error: "Data fine precedente alla data inizio" }, { status: 400 });
-    }
-    const dayDiff = Math.round((dateTo.getTime() - dateFrom.getTime()) / 86400000);
-    if (dayDiff > 120) {
-      return NextResponse.json({ error: "Intervallo troppo ampio (max 120 giorni)" }, { status: 400 });
-    }
+    const blocksInput = Array.isArray(body.blocks) ? body.blocks : null;
+    const newBlocksByDay = new Map<string, Array<{ startMs: number; endMs: number }>>();
+    let rangeStart: Date | null = null;
+    let rangeEnd: Date | null = null;
 
-    const daysOfWeek: number[] = Array.isArray(body.daysOfWeek)
-      ? body.daysOfWeek.map((n: any) => Number(n)).filter((n: any) => Number.isInteger(n) && n >= 0 && n <= 6)
-      : [];
-    if (!daysOfWeek.length) return NextResponse.json({ error: "Seleziona almeno un giorno della settimana" }, { status: 400 });
-
-    const timeStart = String(body.timeStart || "09:00");
-    const timeEnd = String(body.timeEnd || "18:00");
-    const slotMinutes = Math.max(10, Math.min(240, Number(body.slotMinutes) || 30));
-
-    const callTypeSlug = String(body.callTypeSlug || "").trim() || "videolezione";
-    const { data: callType, error: callTypeErr } = await db
-      .from("call_types")
-      .select("id, slug, active, duration_min")
-      .eq("slug", callTypeSlug)
-      .maybeSingle();
-    if (callTypeErr) return NextResponse.json({ error: callTypeErr.message }, { status: 500 });
-    if (!callType || callType.active === false) {
-      return NextResponse.json({ error: "Tipo di call non valido" }, { status: 400 });
-    }
-
-    const payload: any[] = [];
-    const cursor = new Date(dateFrom);
-    while (cursor.getTime() <= dateTo.getTime()) {
-      const dow = (cursor.getDay() + 6) % 7; // convert Sunday=6
-      if (daysOfWeek.includes(dow)) {
-        const base = cursor.toISOString().slice(0, 10); // yyyy-mm-dd
-        const [startH, startM] = timeStart.split(":").map((x: string) => Number(x));
-        const [endH, endM] = timeEnd.split(":").map((x: string) => Number(x));
-        const startMs = new Date(`${base}T${String(startH).padStart(2, "0")}:${String(startM).padStart(2, "0")}:00`).getTime();
-        const endMs = new Date(`${base}T${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}:00`).getTime();
-        for (let ts = startMs; ts + slotMinutes * 60000 <= endMs; ts += slotMinutes * 60000) {
-          const startsAt = new Date(ts).toISOString();
-          payload.push({
-            tutor_id: targetTutorId,
-            call_type_id: callType.id,
-            starts_at: startsAt,
-            duration_min: slotMinutes,
-            status: "available",
-          });
-          if (payload.length >= 500) break;
+    if (blocksInput && blocksInput.length > 0) {
+      const tzOffsetMinutes =
+        typeof body.tzOffsetMinutes === "number" && Number.isFinite(body.tzOffsetMinutes)
+          ? Number(body.tzOffsetMinutes)
+          : null;
+      let minStart = Number.POSITIVE_INFINITY;
+      let maxEnd = 0;
+      for (const block of blocksInput) {
+        let startMs = NaN;
+        let endMs = NaN;
+        if (block?.startsAt && block?.endsAt) {
+          startMs = new Date(block.startsAt).getTime();
+          endMs = new Date(block.endsAt).getTime();
+        } else if (block?.date && block?.startTime && block?.endTime) {
+          const dateKey = String(block.date);
+          const [startH, startM] = String(block.startTime)
+            .split(":")
+            .map((v) => Number(v));
+          const [endH, endM] = String(block.endTime)
+            .split(":")
+            .map((v) => Number(v));
+          const startUtc = toUtcMs(dateKey, startH, startM, tzOffsetMinutes);
+          const endUtc = toUtcMs(dateKey, endH, endM, tzOffsetMinutes);
+          startMs = startUtc ?? NaN;
+          endMs = endUtc ?? NaN;
         }
+        if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+          return NextResponse.json({ error: "Blocco disponibilità non valido" }, { status: 400 });
+        }
+        const startKey = dayKey(new Date(startMs));
+        const endKey = dayKey(new Date(endMs - 1));
+        if (startKey !== endKey) {
+          return NextResponse.json({ error: "Blocchi su più giorni non supportati" }, { status: 400 });
+        }
+        const list = newBlocksByDay.get(startKey) || [];
+        list.push({ startMs, endMs });
+        newBlocksByDay.set(startKey, list);
+        minStart = Math.min(minStart, startMs);
+        maxEnd = Math.max(maxEnd, endMs);
       }
-      cursor.setDate(cursor.getDate() + 1);
-      if (payload.length >= 500) break;
+      rangeStart = new Date(minStart);
+      rangeStart.setHours(0, 0, 0, 0);
+      rangeEnd = new Date(maxEnd);
+      rangeEnd.setDate(rangeEnd.getDate() + 1);
+      rangeEnd.setHours(0, 0, 0, 0);
+    } else {
+      const dateFrom = parseDate(body.dateFrom);
+      const dateTo = parseDate(body.dateTo);
+      if (!dateFrom || !dateTo) return NextResponse.json({ error: "Intervallo date non valido" }, { status: 400 });
+      if (dateTo.getTime() < dateFrom.getTime()) {
+        return NextResponse.json({ error: "Data fine precedente alla data inizio" }, { status: 400 });
+      }
+      const dayDiff = Math.round((dateTo.getTime() - dateFrom.getTime()) / 86400000);
+      if (dayDiff > 120) {
+        return NextResponse.json({ error: "Intervallo troppo ampio (max 120 giorni)" }, { status: 400 });
+      }
+
+      const daysOfWeek: number[] = Array.isArray(body.daysOfWeek)
+        ? body.daysOfWeek.map((n: any) => Number(n)).filter((n: any) => Number.isInteger(n) && n >= 0 && n <= 6)
+        : [];
+      if (!daysOfWeek.length) return NextResponse.json({ error: "Seleziona almeno un giorno della settimana" }, { status: 400 });
+
+      const timeStart = String(body.timeStart || "09:00");
+      const timeEnd = String(body.timeEnd || "18:00");
+      const [startH, startM] = timeStart.split(":").map((x: string) => Number(x));
+      const [endH, endM] = timeEnd.split(":").map((x: string) => Number(x));
+      if (!Number.isFinite(startH) || !Number.isFinite(startM) || !Number.isFinite(endH) || !Number.isFinite(endM)) {
+        return NextResponse.json({ error: "Finestra oraria non valida" }, { status: 400 });
+      }
+      const tzOffsetMinutes =
+        typeof body.tzOffsetMinutes === "number" && Number.isFinite(body.tzOffsetMinutes)
+          ? Number(body.tzOffsetMinutes)
+          : null;
+
+      const cursor = new Date(dateFrom);
+      while (cursor.getTime() <= dateTo.getTime()) {
+        const dow = (cursor.getDay() + 6) % 7; // convert Sunday=6
+        if (daysOfWeek.includes(dow)) {
+          const base = cursor.toISOString().slice(0, 10);
+          const startMs = toUtcMs(base, startH, startM, tzOffsetMinutes);
+          const endMs = toUtcMs(base, endH, endM, tzOffsetMinutes);
+          if (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs) {
+            const key = dayKey(new Date(startMs));
+            const list = newBlocksByDay.get(key) || [];
+            list.push({ startMs: startMs as number, endMs: endMs as number });
+            newBlocksByDay.set(key, list);
+          }
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      if (!newBlocksByDay.size) {
+        return NextResponse.json({ error: "Nessuna disponibilità generata" }, { status: 400 });
+      }
+
+      rangeStart = new Date(dateFrom);
+      rangeStart.setHours(0, 0, 0, 0);
+      rangeEnd = new Date(dateTo);
+      rangeEnd.setDate(rangeEnd.getDate() + 1);
+      rangeEnd.setHours(0, 0, 0, 0);
     }
 
-    if (!payload.length) {
-      return NextResponse.json({ error: "Nessuno slot generato" }, { status: 400 });
+    const { data: existingBlocks, error: existingErr } = await db
+      .from("tutor_availability_blocks")
+      .select("id, starts_at, ends_at")
+      .eq("tutor_id", targetTutorId)
+      .lt("starts_at", (rangeEnd as Date).toISOString())
+      .gt("ends_at", (rangeStart as Date).toISOString());
+    if (existingErr) return NextResponse.json({ error: existingErr.message }, { status: 500 });
+
+    const existingByDay = new Map<string, Array<{ id: string; startMs: number; endMs: number }>>();
+    (existingBlocks || []).forEach((block: any) => {
+      const startMs = new Date(block.starts_at).getTime();
+      const endMs = new Date(block.ends_at).getTime();
+      if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return;
+      const key = dayKey(new Date(startMs));
+      const list = existingByDay.get(key) || [];
+      list.push({ id: block.id as string, startMs, endMs });
+      existingByDay.set(key, list);
+    });
+
+    const idsToDelete: string[] = [];
+    const inserts: Array<{ tutor_id: string; starts_at: string; ends_at: string }> = [];
+
+    for (const [key, newBlocks] of newBlocksByDay.entries()) {
+      const existing = existingByDay.get(key) || [];
+      const intervals = [
+        ...existing.map((b) => ({ startMs: b.startMs, endMs: b.endMs })),
+        ...newBlocks,
+      ];
+      const merged = mergeIntervals(intervals);
+      if (existing.length) idsToDelete.push(...existing.map((b) => b.id));
+      merged.forEach((block) => {
+        inserts.push({
+          tutor_id: targetTutorId,
+          starts_at: new Date(block.startMs).toISOString(),
+          ends_at: new Date(block.endMs).toISOString(),
+        });
+      });
+    }
+
+    if (idsToDelete.length) {
+      const { error: delErr } = await db
+        .from("tutor_availability_blocks")
+        .delete()
+        .in("id", idsToDelete);
+      if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
     }
 
     const { error: insertErr } = await db
-      .from("call_slots")
-      .upsert(payload, { onConflict: "tutor_id,starts_at" });
+      .from("tutor_availability_blocks")
+      .insert(inserts);
     if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
 
-    return NextResponse.json({ ok: true, slots: payload.length, tutorId: targetTutorId });
+    return NextResponse.json({ ok: true, slots: inserts.length, tutorId: targetTutorId });
   } catch (err: any) {
     console.error("[admin/availability] unexpected", err);
     return NextResponse.json({ error: err?.message || "Errore disponibilità" }, { status: 500 });
@@ -157,17 +291,31 @@ export async function GET(request: NextRequest) {
     const toIso = new Date(Date.now() + 90 * 86400000).toISOString(); // 90 giorni
 
     const { data, error } = await db
-      .from("call_slots")
-      .select("id, starts_at, duration_min, status, call_type_id")
+      .from("tutor_availability_blocks")
+      .select("id, starts_at, ends_at")
       .eq("tutor_id", targetTutorId)
-      .eq("status", "available")
       .gte("starts_at", fromIso)
       .lt("starts_at", toIso)
       .order("starts_at", { ascending: true })
       .limit(limit);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    return NextResponse.json({ slots: data || [], tutorId: targetTutorId });
+    const slots = (data || []).map((row: any) => {
+      const startMs = new Date(row.starts_at).getTime();
+      const endMs = new Date(row.ends_at).getTime();
+      const durationMin =
+        Number.isFinite(startMs) && Number.isFinite(endMs)
+          ? Math.max(1, Math.round((endMs - startMs) / 60000))
+          : 60;
+      return {
+        id: row.id,
+        starts_at: row.starts_at,
+        ends_at: row.ends_at,
+        duration_min: durationMin,
+      };
+    });
+
+    return NextResponse.json({ slots, tutorId: targetTutorId });
   } catch (err: any) {
     console.error("[admin/availability] get unexpected", err);
     return NextResponse.json({ error: err?.message || "Errore recupero disponibilità" }, { status: 500 });
@@ -207,6 +355,10 @@ export async function DELETE(request: NextRequest) {
     const hasDayFilter = daysOfWeek.length > 0;
     const timeStart = String(body.timeStart || "").trim();
     const timeEnd = String(body.timeEnd || "").trim();
+    const tzOffsetMinutes =
+      typeof body.tzOffsetMinutes === "number" && Number.isFinite(body.tzOffsetMinutes)
+        ? Number(body.tzOffsetMinutes)
+        : null;
     const hasTimeWindow = Boolean(timeStart && timeEnd);
     const toMinutes = (t: string) => {
       const [h, m] = t.split(":").map((x) => Number(x));
@@ -219,38 +371,125 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Finestra oraria non valida" }, { status: 400 });
     }
 
-    const fromIso = dateFrom.toISOString();
-    const toIso = new Date(dateTo.getTime() + 86400000).toISOString(); // includi giorno finale
-    const { data: slots, error } = await db
-      .from("call_slots")
-      .select("id, starts_at, duration_min, status")
+    const fromRange = new Date(dateFrom);
+    fromRange.setHours(0, 0, 0, 0);
+    const toRange = new Date(dateTo);
+    toRange.setDate(toRange.getDate() + 1);
+    toRange.setHours(0, 0, 0, 0);
+
+    const { data: blocks, error } = await db
+      .from("tutor_availability_blocks")
+      .select("id, starts_at, ends_at")
       .eq("tutor_id", targetTutorId)
-      .eq("status", "available")
-      .gte("starts_at", fromIso)
-      .lt("starts_at", toIso)
+      .lt("starts_at", toRange.toISOString())
+      .gt("ends_at", fromRange.toISOString())
       .limit(2000);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    const idsToDelete = (slots || []).filter((slot: any) => {
-      const d = new Date(slot.starts_at);
-      if (Number.isNaN(d.getTime())) return false;
-      const dow = (d.getDay() + 6) % 7; // Monday=0
-      if (hasDayFilter && !daysOfWeek.includes(dow)) return false;
-      if (hasTimeWindow) {
-        const mins = d.getHours() * 60 + d.getMinutes();
-        if (mins < (minStart as number) || mins >= (minEnd as number)) return false;
+    const windowsByDay = new Map<string, { startMs: number; endMs: number }>();
+    const cursor = new Date(fromRange);
+    while (cursor.getTime() < toRange.getTime()) {
+      const dow = (cursor.getDay() + 6) % 7;
+      if (!hasDayFilter || daysOfWeek.includes(dow)) {
+        const base = cursor.toISOString().slice(0, 10);
+        const nextBase = new Date(cursor.getTime() + 86400000).toISOString().slice(0, 10);
+        let windowStartMs = toUtcMs(base, 0, 0, tzOffsetMinutes);
+        let windowEndMs = toUtcMs(nextBase, 0, 0, tzOffsetMinutes);
+        if (hasTimeWindow) {
+          const [hStart, mStart] = timeStart.split(":").map((x) => Number(x));
+          const [hEnd, mEnd] = timeEnd.split(":").map((x) => Number(x));
+          windowStartMs = toUtcMs(base, hStart, mStart, tzOffsetMinutes);
+          windowEndMs = toUtcMs(base, hEnd, mEnd, tzOffsetMinutes);
+        }
+        if (
+          Number.isFinite(windowStartMs) &&
+          Number.isFinite(windowEndMs) &&
+          (windowEndMs as number) > (windowStartMs as number)
+        ) {
+          windowsByDay.set(dayKey(new Date(windowStartMs as number)), {
+            startMs: windowStartMs as number,
+            endMs: windowEndMs as number,
+          });
+        }
       }
-      return true;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const idsToDelete: string[] = [];
+    const updates: Array<{ id: string; starts_at: string; ends_at: string }> = [];
+    const inserts: Array<{ tutor_id: string; starts_at: string; ends_at: string }> = [];
+
+    (blocks || []).forEach((block: any) => {
+      const startMs = new Date(block.starts_at).getTime();
+      const endMs = new Date(block.ends_at).getTime();
+      if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return;
+      const key = dayKey(new Date(startMs));
+      const window = windowsByDay.get(key);
+      if (!window) return;
+      const winStart = window.startMs;
+      const winEnd = window.endMs;
+      if (winEnd <= startMs || winStart >= endMs) return;
+
+      if (winStart <= startMs && winEnd >= endMs) {
+        idsToDelete.push(block.id as string);
+        return;
+      }
+
+      if (winStart <= startMs && winEnd < endMs) {
+        updates.push({
+          id: block.id as string,
+          starts_at: new Date(winEnd).toISOString(),
+          ends_at: new Date(endMs).toISOString(),
+        });
+        return;
+      }
+
+      if (winStart > startMs && winEnd >= endMs) {
+        updates.push({
+          id: block.id as string,
+          starts_at: new Date(startMs).toISOString(),
+          ends_at: new Date(winStart).toISOString(),
+        });
+        return;
+      }
+
+      if (winStart > startMs && winEnd < endMs) {
+        updates.push({
+          id: block.id as string,
+          starts_at: new Date(startMs).toISOString(),
+          ends_at: new Date(winStart).toISOString(),
+        });
+        inserts.push({
+          tutor_id: targetTutorId,
+          starts_at: new Date(winEnd).toISOString(),
+          ends_at: new Date(endMs).toISOString(),
+        });
+      }
     });
 
-    if (!idsToDelete.length) {
+    if (!idsToDelete.length && !updates.length && !inserts.length) {
       return NextResponse.json({ ok: true, deleted: 0 });
     }
 
-    const { error: delErr } = await db.from("call_slots").delete().in("id", idsToDelete.map((s) => s.id));
-    if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
+    if (idsToDelete.length) {
+      const { error: delErr } = await db.from("tutor_availability_blocks").delete().in("id", idsToDelete);
+      if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
+    }
 
-    return NextResponse.json({ ok: true, deleted: idsToDelete.length });
+    for (const upd of updates) {
+      const { error: updErr } = await db
+        .from("tutor_availability_blocks")
+        .update({ starts_at: upd.starts_at, ends_at: upd.ends_at, updated_at: new Date().toISOString() })
+        .eq("id", upd.id);
+      if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
+    }
+
+    if (inserts.length) {
+      const { error: insErr } = await db.from("tutor_availability_blocks").insert(inserts);
+      if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, deleted: idsToDelete.length + updates.length });
   } catch (err: any) {
     console.error("[admin/availability] delete unexpected", err);
     return NextResponse.json({ error: err?.message || "Errore rimozione disponibilità" }, { status: 500 });

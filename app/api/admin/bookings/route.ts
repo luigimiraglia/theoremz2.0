@@ -238,119 +238,87 @@ async function ensureBookableSlot(
       throw new Error("Ore insufficienti");
     }
   }
-  const { data: existing, error } = await db
+
+  const { data: booked, error: bookedErr } = await db
     .from("call_slots")
-    .select("id, status, call_type_id, tutor_id, starts_at, duration_min")
+    .select("id, starts_at, ends_at")
     .eq("tutor_id", opts.tutor.id)
-    .gte("starts_at", opts.startsAtIso)
-    .lt("starts_at", endIso);
-  if (error) throw new Error(error.message);
-
-  let slot: SlotRow | null =
-    existing?.find((s: any) => s.starts_at === opts.startsAtIso) || null;
-  if (!slot) {
-    const { data: created, error: createErr } = await db
-      .from("call_slots")
-      .upsert(
-        {
-          tutor_id: opts.tutor.id,
-          call_type_id: opts.callType.id,
-          starts_at: opts.startsAtIso,
-          duration_min: duration,
-          status: "available",
-        },
-        { onConflict: "tutor_id,starts_at", ignoreDuplicates: true },
-      )
-      .select("id, status, starts_at, duration_min")
-      .limit(1);
-    if (createErr) throw new Error(createErr.message);
-    slot = (created && created[0]) as SlotRow;
-  }
-
-  if (!slot) {
-    const { data: fallback, error: fallbackErr } = await db
-      .from("call_slots")
-      .select("id, status, call_type_id, tutor_id, starts_at, duration_min")
-      .eq("tutor_id", opts.tutor.id)
-      .eq("starts_at", opts.startsAtIso)
-      .maybeSingle();
-    if (fallbackErr) throw new Error(fallbackErr.message);
-    slot = (fallback as SlotRow | null) || null;
-  }
-
-  if (!slot) {
-    throw new Error("Impossibile recuperare lo slot richiesto");
-  }
-
-  const normalizedExisting: Required<SlotRow>[] = (existing || []).map((s) => ({
-    id: s.id,
-    status: s.status || "available",
-    starts_at: s.starts_at,
-    duration_min: s.duration_min,
-    call_type_id: (s as any).call_type_id,
-    tutor_id: (s as any).tutor_id,
-  }));
-
-  let overlapSlots = normalizedExisting.filter((s) => {
-    const ts = new Date(s.starts_at).getTime();
-    const start = new Date(opts.startsAtIso).getTime();
-    return ts >= start && ts < endMs;
-  });
-  if (slot && !overlapSlots.find((s) => s.id === slot?.id)) {
-    overlapSlots = [...overlapSlots, slot as Required<SlotRow>];
-  }
-
-  if (overlapSlots.some((s) => s.status === "booked" && s.id !== opts.allowSlotId)) {
+    .eq("status", "booked")
+    .lt("starts_at", endIso)
+    .gt("ends_at", opts.startsAtIso);
+  if (bookedErr) throw new Error(bookedErr.message);
+  const bookedConflict = (booked || []).find((s: any) => s.id !== opts.allowSlotId);
+  if (bookedConflict) {
     throw new Error("Slot già prenotato");
   }
 
-  if (slot.id === opts.allowSlotId) {
+  if (Number.isFinite(startMs) && startMs >= Date.now()) {
+    const { data: cover, error: coverErr } = await db
+      .from("tutor_availability_blocks")
+      .select("id")
+      .eq("tutor_id", opts.tutor.id)
+      .lte("starts_at", opts.startsAtIso)
+      .gte("ends_at", endIso)
+      .limit(1);
+    if (coverErr) throw new Error(coverErr.message);
+    if (!cover || cover.length === 0) {
+      const { data: anyBlocks, error: anyErr } = await db
+        .from("tutor_availability_blocks")
+        .select("id")
+        .eq("tutor_id", opts.tutor.id)
+        .limit(1);
+      if (anyErr) throw new Error(anyErr.message);
+      if (anyBlocks && anyBlocks.length > 0) {
+        throw new Error("Fuori disponibilità");
+      }
+    }
+  }
+
+  const { data: existingSlot, error: slotErr } = await db
+    .from("call_slots")
+    .select("id, status, starts_at, duration_min")
+    .eq("tutor_id", opts.tutor.id)
+    .eq("starts_at", opts.startsAtIso)
+    .maybeSingle();
+  if (slotErr) throw new Error(slotErr.message);
+
+  const payload = {
+    status: "booked",
+    call_type_id: opts.callType.id,
+    duration_min: duration,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (existingSlot) {
+    if (existingSlot.status === "booked" && existingSlot.id !== opts.allowSlotId) {
+      throw new Error("Slot già prenotato");
+    }
     const { data: updated, error: updErr } = await db
       .from("call_slots")
-      .update({
-        call_type_id: opts.callType.id,
-        duration_min: duration,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", slot.id)
+      .update(payload)
+      .eq("id", existingSlot.id)
       .select("id, status, starts_at, duration_min")
       .limit(1);
     if (updErr) throw new Error(updErr.message);
     return (updated && updated[0]) as SlotRow;
   }
 
-  const { data: locked, error: lockErr } = await db
+  const { data: created, error: createErr } = await db
     .from("call_slots")
-    .update({
-      status: "booked",
+    .insert({
+      tutor_id: opts.tutor.id,
       call_type_id: opts.callType.id,
+      starts_at: opts.startsAtIso,
       duration_min: duration,
-      updated_at: new Date().toISOString(),
+      status: "booked",
     })
-    .eq("id", slot.id)
-    .eq("status", "available")
     .select("id, status, starts_at, duration_min")
     .limit(1);
-  if (lockErr) throw new Error(lockErr.message);
-  if (!locked || !locked[0]) throw new Error("Slot non disponibile");
-  const lockedSlot = locked[0] as SlotRow;
-
-  // blocca anche gli slot sovrapposti ancora disponibili
-  const overlapIds = overlapSlots.map((s) => s.id).filter(Boolean);
-  if (overlapIds.length) {
-    await db
-      .from("call_slots")
-      .update({
-        status: "booked",
-        call_type_id: opts.callType.id,
-        duration_min: duration,
-        updated_at: new Date().toISOString(),
-      })
-      .in("id", overlapIds)
-      .eq("status", "available");
+  if (createErr) throw new Error(createErr.message);
+  if (!created || !created[0]) {
+    throw new Error("Impossibile recuperare lo slot richiesto");
   }
-
-  return lockedSlot;
+  return created[0] as SlotRow;
 }
 
 async function releaseSlot(db: ReturnType<typeof supabaseServer>, slotId?: string | null) {

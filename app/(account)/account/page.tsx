@@ -36,7 +36,9 @@ const DEFAULT_CALL_TYPE = "ripetizione";
 const DEFAULT_DURATION_MIN = 60;
 const AVAIL_DEFAULT_START_HOUR = 8;
 const AVAIL_DEFAULT_END_HOUR = 20;
-const AVAIL_HOUR_HEIGHT = 56;
+const AVAIL_MAX_GRID_HEIGHT = 360;
+const AVAIL_MAX_HOUR_HEIGHT = 48;
+const AVAIL_MIN_HOUR_HEIGHT = 12;
 const WEEKDAYS_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"] as const;
 
 type TutorStudent = {
@@ -397,6 +399,7 @@ export default function AccountPage() {
         label: string;
         startMinutes: number;
         durationMin: number;
+        endMinutes: number;
       }>
     >();
     availSlots.forEach((slot) => {
@@ -413,6 +416,9 @@ export default function AccountPage() {
           ? durationRaw
           : DEFAULT_DURATION_MIN;
       const startMinutes = slotDate.getHours() * 60 + slotDate.getMinutes();
+      const rawEndMinutes = startMinutes + durationMin;
+      const endMinutes = Math.min(24 * 60, Math.max(startMinutes, rawEndMinutes));
+      const clampedDuration = Math.max(1, endMinutes - startMinutes);
       const label = slotDate.toLocaleTimeString("it-IT", {
         hour: "2-digit",
         minute: "2-digit",
@@ -422,7 +428,13 @@ export default function AccountPage() {
           ? String(slot.id)
           : `${key}-${label}-${durationMin}`;
       const list = map.get(key) || [];
-      list.push({ id, label, startMinutes, durationMin });
+      list.push({
+        id,
+        label,
+        startMinutes,
+        durationMin: clampedDuration,
+        endMinutes,
+      });
       map.set(key, list);
     });
     for (const [key, list] of map.entries()) {
@@ -451,26 +463,26 @@ export default function AccountPage() {
         : AVAIL_DEFAULT_START_HOUR * 60;
     const latest =
       selectedAvailSlots.length > 0
-        ? Math.max(
-            ...selectedAvailSlots.map(
-              (s) => s.startMinutes + s.durationMin
-            )
-          )
+        ? Math.max(...selectedAvailSlots.map((s) => s.endMinutes))
         : AVAIL_DEFAULT_END_HOUR * 60;
-    const startHour = Math.min(
-      AVAIL_DEFAULT_START_HOUR,
-      Math.floor(earliest / 60)
-    );
-    const endHour = Math.max(
-      AVAIL_DEFAULT_END_HOUR,
-      Math.ceil(latest / 60)
-    );
+    const startHour = selectedAvailSlots.length
+      ? Math.max(0, Math.floor(earliest / 60) - 1)
+      : AVAIL_DEFAULT_START_HOUR;
+    const endHour = selectedAvailSlots.length
+      ? Math.min(24, Math.ceil(latest / 60) + 1)
+      : AVAIL_DEFAULT_END_HOUR;
     const totalHours = Math.max(1, endHour - startHour);
+    const rawHourHeight = Math.floor(AVAIL_MAX_GRID_HEIGHT / totalHours);
+    const hourHeight = Math.min(
+      AVAIL_MAX_HOUR_HEIGHT,
+      Math.max(AVAIL_MIN_HOUR_HEIGHT, rawHourHeight)
+    );
     return {
       startHour,
       endHour,
       totalHours,
-      gridHeight: totalHours * AVAIL_HOUR_HEIGHT,
+      hourHeight,
+      gridHeight: totalHours * hourHeight,
     };
   }, [selectedAvailSlots]);
   const selectedAvailLabel = useMemo(() => {
@@ -1144,9 +1156,51 @@ export default function AccountPage() {
     try {
       const token = await getAuth().currentUser?.getIdToken();
       if (!token) throw new Error("Token non disponibile");
-      const daysOfWeek = Array.from(availDays.values());
-      const defaultCallType = DEFAULT_CALL_TYPE;
-      const defaultSlot = DEFAULT_DURATION_MIN;
+      const daysOfWeek = new Set(availDays.values());
+      const startDate = parseYmdDate(availFrom);
+      const endDate = parseYmdDate(availTo);
+      if (!startDate || !endDate) {
+        throw new Error("Intervallo date non valido");
+      }
+      if (endDate.getTime() < startDate.getTime()) {
+        throw new Error("Data fine precedente alla data inizio");
+      }
+      const [startH, startM] = availStart.split(":").map((v) => Number(v));
+      const [endH, endM] = availEnd.split(":").map((v) => Number(v));
+      if (
+        !Number.isFinite(startH) ||
+        !Number.isFinite(startM) ||
+        !Number.isFinite(endH) ||
+        !Number.isFinite(endM)
+      ) {
+        throw new Error("Finestra oraria non valida");
+      }
+      const startTotal = startH * 60 + startM;
+      const endTotal = endH * 60 + endM;
+      if (endTotal <= startTotal) {
+        throw new Error("Finestra oraria non valida");
+      }
+      const blocks: Array<{ date: string; startTime: string; endTime: string }> = [];
+      const cursor = new Date(startDate);
+      cursor.setHours(0, 0, 0, 0);
+      while (cursor.getTime() <= endDate.getTime()) {
+        const dow = (cursor.getDay() + 6) % 7;
+        if (daysOfWeek.has(dow)) {
+          const dateKey = ymd(cursor);
+          if (dateKey) {
+            blocks.push({
+              date: dateKey,
+              startTime: availStart,
+              endTime: availEnd,
+            });
+          }
+        }
+        cursor.setDate(cursor.getDate() + 1);
+        cursor.setHours(0, 0, 0, 0);
+      }
+      if (!blocks.length) {
+        throw new Error("Nessuna disponibilità generata");
+      }
       const res = await fetch("/api/admin/availability", {
         method: "POST",
         headers: {
@@ -1154,13 +1208,8 @@ export default function AccountPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          dateFrom: availFrom,
-          dateTo: availTo,
-          timeStart: availStart,
-          timeEnd: availEnd,
-          slotMinutes: defaultSlot,
-          daysOfWeek,
-          callTypeSlug: defaultCallType,
+          blocks,
+          tzOffsetMinutes: new Date().getTimezoneOffset(),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -1713,7 +1762,7 @@ export default function AccountPage() {
                     Calendario
                   </p>
                   <p className="text-xs font-semibold text-slate-500 [.dark_&]:text-slate-400">
-                    Clicca un giorno per vedere gli slot.
+                    Clicca un giorno per vedere i blocchi.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1801,7 +1850,7 @@ export default function AccountPage() {
                         </span>
                         {hasBookings ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200">
-                            {count} slot
+                            {count} blocchi
                           </span>
                         ) : (
                           <span className="text-[10px] font-semibold text-slate-400 [.dark_&]:text-slate-600">
@@ -1955,7 +2004,7 @@ export default function AccountPage() {
                 ) : null}
                 {tutorLoading ? (
                   <div className="text-sm font-semibold text-slate-600 [.dark_&]:text-slate-300">
-                    Caricamento slot...
+                    Caricamento blocchi...
                   </div>
                 ) : null}
               </div>
@@ -2113,7 +2162,7 @@ export default function AccountPage() {
                   Calendario disponibilità
                 </p>
                 <span className="text-[11px] text-slate-500 [.dark_&]:text-slate-300">
-                  {availSlotsLoading ? "Carico..." : `${availSlots.length} slot`}
+                  {availSlotsLoading ? "Carico..." : `${availSlots.length} blocchi`}
                 </span>
               </div>
               <div className="mt-3 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
@@ -2216,7 +2265,7 @@ export default function AccountPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500 [.dark_&]:text-slate-300">
-                        Slot del giorno
+                        Blocchi del giorno
                       </p>
                       <p className="text-sm font-semibold text-slate-900 [.dark_&]:text-white">
                         {selectedAvailLabel || "Seleziona una data."}
@@ -2225,13 +2274,13 @@ export default function AccountPage() {
                     <span className="text-[11px] text-slate-500 [.dark_&]:text-slate-300">
                       {availSlotsLoading
                         ? "Carico..."
-                        : `${selectedAvailSlots.length} slot`}
+                        : `${selectedAvailSlots.length} blocchi`}
                     </span>
                   </div>
 
                   {availSlotsLoading ? (
                     <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm font-semibold text-slate-600 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/70 [.dark_&]:text-slate-200">
-                      Carico gli slot...
+                      Carico i blocchi...
                     </div>
                   ) : availDayIds.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/50 [.dark_&]:text-slate-300">
@@ -2239,7 +2288,7 @@ export default function AccountPage() {
                     </div>
                   ) : selectedAvailDayId ? (
                     selectedAvailSlots.length > 0 ? (
-                      <div className="max-h-[420px] overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 pr-1 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/70">
+                      <div className="max-h-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white p-3 pr-1 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/70">
                         <div
                           className="relative"
                           style={{ height: availGridMeta.gridHeight }}
@@ -2253,7 +2302,7 @@ export default function AccountPage() {
                                   <div
                                     key={hour}
                                     className="relative"
-                                    style={{ height: AVAIL_HOUR_HEIGHT }}
+                                    style={{ height: availGridMeta.hourHeight }}
                                   >
                                     <span className="absolute -top-2 right-2">
                                       {formatHourLabel(hour)}
@@ -2270,7 +2319,7 @@ export default function AccountPage() {
                                 <div
                                   key={idx}
                                   className="absolute left-0 right-0 border-t border-slate-200/70 [.dark_&]:border-slate-700/60"
-                                  style={{ top: idx * AVAIL_HOUR_HEIGHT }}
+                                  style={{ top: idx * availGridMeta.hourHeight }}
                                 />
                               )
                             )}
@@ -2279,13 +2328,13 @@ export default function AccountPage() {
                                 ((slot.startMinutes -
                                   availGridMeta.startHour * 60) /
                                   60) *
-                                AVAIL_HOUR_HEIGHT;
+                                availGridMeta.hourHeight;
                               const height = Math.max(
                                 24,
-                                (slot.durationMin / 60) * AVAIL_HOUR_HEIGHT
+                                (slot.durationMin / 60) *
+                                  availGridMeta.hourHeight
                               );
-                              const endMinutes =
-                                slot.startMinutes + slot.durationMin;
+                              const endMinutes = slot.endMinutes;
                               const timeRange = `${formatMinutesToTime(
                                 slot.startMinutes
                               )} - ${formatMinutesToTime(endMinutes)}`;
@@ -2314,7 +2363,7 @@ export default function AccountPage() {
                     )
                   ) : (
                     <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500 [.dark_&]:border-slate-800 [.dark_&]:bg-slate-900/50 [.dark_&]:text-slate-300">
-                      Seleziona una data per vedere gli slot disponibili.
+                      Seleziona una data per vedere i blocchi disponibili.
                     </div>
                   )}
                 </div>
@@ -2394,20 +2443,21 @@ export default function AccountPage() {
                     try {
                       const token = await getAuth().currentUser?.getIdToken();
                       if (!token) throw new Error("Token non disponibile");
-                      const res = await fetch("/api/admin/availability", {
-                        method: "DELETE",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({
-                          dateFrom: availDeleteFrom,
-                          dateTo: availDeleteTo,
-                          timeStart: availDeleteStart,
-                          timeEnd: availDeleteEnd,
-                          daysOfWeek: Array.from(availDeleteDays.values()),
-                        }),
-                      });
+                    const res = await fetch("/api/admin/availability", {
+                      method: "DELETE",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({
+                        dateFrom: availDeleteFrom,
+                        dateTo: availDeleteTo,
+                        timeStart: availDeleteStart,
+                        timeEnd: availDeleteEnd,
+                        daysOfWeek: Array.from(availDeleteDays.values()),
+                        tzOffsetMinutes: new Date().getTimezoneOffset(),
+                      }),
+                    });
                       const data = await res.json().catch(() => ({}));
                       if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
                       setAvailDeleteMsg(`Rimosse ${data?.deleted ?? 0} disponibilità`);
@@ -4061,8 +4111,10 @@ function formatHourLabel(hour: number) {
 }
 
 function formatMinutesToTime(minutes: number) {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
+  const safe = Math.max(0, Math.round(minutes));
+  const capped = Math.min(24 * 60, safe);
+  const h = Math.floor(capped / 60);
+  const m = capped % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
