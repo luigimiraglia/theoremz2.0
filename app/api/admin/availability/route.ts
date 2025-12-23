@@ -196,10 +196,10 @@ export async function POST(request: NextRequest) {
           const base = cursor.toISOString().slice(0, 10);
           const startMs = toUtcMs(base, startH, startM, tzOffsetMinutes);
           const endMs = toUtcMs(base, endH, endM, tzOffsetMinutes);
-          if (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs) {
+          if (startMs != null && endMs != null && endMs > startMs) {
             const key = dayKey(new Date(startMs));
             const list = newBlocksByDay.get(key) || [];
-            list.push({ startMs: startMs as number, endMs: endMs as number });
+            list.push({ startMs, endMs });
             newBlocksByDay.set(key, list);
           }
         }
@@ -401,14 +401,10 @@ export async function DELETE(request: NextRequest) {
           windowStartMs = toUtcMs(base, hStart, mStart, tzOffsetMinutes);
           windowEndMs = toUtcMs(base, hEnd, mEnd, tzOffsetMinutes);
         }
-        if (
-          Number.isFinite(windowStartMs) &&
-          Number.isFinite(windowEndMs) &&
-          (windowEndMs as number) > (windowStartMs as number)
-        ) {
-          windowsByDay.set(dayKey(new Date(windowStartMs as number)), {
-            startMs: windowStartMs as number,
-            endMs: windowEndMs as number,
+        if (windowStartMs != null && windowEndMs != null && windowEndMs > windowStartMs) {
+          windowsByDay.set(dayKey(new Date(windowStartMs)), {
+            startMs: windowStartMs,
+            endMs: windowEndMs,
           });
         }
       }
