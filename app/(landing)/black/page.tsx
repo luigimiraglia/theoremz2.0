@@ -23,12 +23,15 @@ import CountdownTimer from "@/components/CountdownTimer";
 const TITLE =
   "Theoremz Black — Mentoring didattico, esercizi illimitati e videolezioni";
 const DESC =
-  "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Offerta di Natale: 7 giorni di prova gratuita + 2 mesi al 50% fino al 25 dicembre. Piani da 12€/mese. Soddisfatti o rimborsati.";
+  "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Offerta di Natale Black: 7 giorni di prova gratuita + 2 mesi al 50% fino al 6 gennaio a mezzanotte. Piani da 12€/mese. Soddisfatti o rimborsati.";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
 const CANONICAL = `${SITE}/black`;
-const HOLIDAY_DEADLINE = "25 dicembre";
-const CURRENT_YEAR = new Date().getFullYear();
-const HOLIDAY_DEADLINE_ISO = `${CURRENT_YEAR}-12-25T23:59:59`;
+const HOLIDAY_DEADLINE = "6 gennaio a mezzanotte";
+const NOW = new Date();
+const CURRENT_YEAR = NOW.getFullYear();
+const HOLIDAY_CUTOFF = new Date(CURRENT_YEAR, 0, 6, 23, 59, 59);
+const HOLIDAY_YEAR = NOW > HOLIDAY_CUTOFF ? CURRENT_YEAR + 1 : CURRENT_YEAR;
+const HOLIDAY_DEADLINE_ISO = `${HOLIDAY_YEAR}-01-06T23:59:59`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -269,7 +272,7 @@ export default function BlackPage() {
                   href="#pricing"
                   className="group relative inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[16px] font-extrabold text-white transition-all duration-300 bg-gradient-to-r from-[#b91c1c] via-[#dc2626] to-[#7f1d1d] shadow-[0_18px_44px_-18px_rgba(185,28,28,0.9)] hover:shadow-[0_20px_52px_-18px_rgba(185,28,28,1)]"
                 >
-                  Scopri l&apos;offerta di Natale
+                  Scopri l&apos;offerta di Natale Black
                   <svg
                     className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
                     viewBox="0 0 24 24"
@@ -466,7 +469,7 @@ export default function BlackPage() {
         >
           <div className="flex flex-col items-center gap-4 text-white drop-shadow-[0_10px_26px_rgba(0,0,0,0.28)]">
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-1.5 text-[12px] font-black uppercase tracking-[0.32em] text-red-700 shadow-sm">
-              🎄 Offerta di Natale
+              🎄 Offerta di Natale Black
             </div>
             <div className="text-[18px] font-extrabold uppercase tracking-[0.18em] text-amber-100">
               Solo fino al {HOLIDAY_DEADLINE}

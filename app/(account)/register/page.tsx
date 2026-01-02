@@ -106,7 +106,10 @@ export default function Register() {
     }
     try {
       setLoading(true);
-      await sendPasswordResetEmail(auth, email.trim());
+      await sendPasswordResetEmail(auth, email.trim().toLowerCase(), {
+        url: `${window.location.origin}/reset-password`,
+        handleCodeInApp: true,
+      });
       setInfo("Email inviata: controlla la posta per reimpostare la password.");
     } catch (err: any) {
       setError(err?.message || "Non riesco a inviare l'email di reset.");

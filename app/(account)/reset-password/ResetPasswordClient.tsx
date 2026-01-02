@@ -12,13 +12,26 @@ import {
 export default function ResetPasswordClient() {
   const search = useSearchParams();
   const router = useRouter();
-  const oobCode = search?.get("oobCode") ?? null;
-  const mode = search?.get("mode") ?? null; // "resetPassword" nei link Firebase
+  const rawOobCode = search?.get("oobCode") ?? null;
+  const rawMode = search?.get("mode") ?? null; // "resetPassword" nei link Firebase
+  const continueUrl = search?.get("continueUrl") ?? null;
+  const { oobCode, mode } = useMemo(() => {
+    let nextOob = rawOobCode;
+    let nextMode = rawMode;
+    if ((!nextOob || !nextMode) && continueUrl) {
+      try {
+        const parsed = new URL(continueUrl);
+        if (!nextOob) nextOob = parsed.searchParams.get("oobCode");
+        if (!nextMode) nextMode = parsed.searchParams.get("mode");
+      } catch {
+        // ignore invalid continueUrl
+      }
+    }
+    const normalized = nextOob ? nextOob.replace(/ /g, "+") : null;
+    return { oobCode: normalized, mode: nextMode };
+  }, [rawOobCode, rawMode, continueUrl]);
 
-  const showConfirm = useMemo(
-    () => !!oobCode && mode === "resetPassword",
-    [oobCode, mode]
-  );
+  const showConfirm = useMemo(() => !!oobCode, [oobCode]);
 
   return (
     <main className="mx-auto max-w-md p-6">
