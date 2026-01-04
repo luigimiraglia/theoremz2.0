@@ -65,6 +65,41 @@ function normalizePhone(raw?: string | null) {
   return `+${digits}`;
 }
 
+function collectPhones(rows: any[]) {
+  const phones: string[] = [];
+  rows.forEach((row) => {
+    const normalized = normalizePhone(row?.whatsapp_phone);
+    if (normalized) phones.push(normalized);
+  });
+  return phones;
+}
+
+async function getBlackPhoneSet(
+  db: ReturnType<typeof supabaseServer>,
+  phones: string[]
+) {
+  const unique = Array.from(new Set(phones)).filter(Boolean);
+  if (!unique.length) return new Set<string>();
+  const found = new Set<string>();
+  const chunkSize = 100;
+  for (let i = 0; i < unique.length; i += chunkSize) {
+    const chunk = unique.slice(i, i + chunkSize);
+    const { data, error } = await db
+      .from("black_followups")
+      .select("whatsapp_phone")
+      .in("whatsapp_phone", chunk);
+    if (error) {
+      console.error("[admin/leads] black followups lookup error", error);
+      continue;
+    }
+    (data || []).forEach((row: any) => {
+      const normalized = normalizePhone(row?.whatsapp_phone);
+      if (normalized) found.add(normalized);
+    });
+  }
+  return found;
+}
+
 function mapLead(row: any) {
   if (!row) return null;
   const channel =
@@ -121,12 +156,14 @@ export async function GET(request: NextRequest) {
       console.error("[admin/leads] all fetch error", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+    const allRows = Array.isArray(data) ? data : [];
+    const blackPhones = await getBlackPhoneSet(db, collectPhones(allRows));
+    const filtered = allRows.filter((row) => {
+      const normalized = normalizePhone(row?.whatsapp_phone);
+      return !normalized || !blackPhones.has(normalized);
+    });
     return NextResponse.json({
-      all: Array.isArray(data)
-        ? data
-            .map(mapLead)
-            .filter((l) => l && l.channel !== "black")
-        : [],
+      all: filtered.map(mapLead).filter((l) => l && l.channel !== "black"),
     });
   }
 
@@ -174,8 +211,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: completedErr.message }, { status: 500 });
   }
 
+  const allRows = [
+    ...(dueRows || []),
+    ...(upcomingRows || []),
+    ...(completedRows || []),
+  ];
+  const blackPhones = await getBlackPhoneSet(db, collectPhones(allRows));
   const filterVisible = (arr: any[] | null | undefined) =>
-    (arr || []).map(mapLead).filter((l) => l && l.channel !== "black");
+    (arr || [])
+      .filter((row) => {
+        const normalized = normalizePhone(row?.whatsapp_phone);
+        return !normalized || !blackPhones.has(normalized);
+      })
+      .map(mapLead)
+      .filter((l) => l && l.channel !== "black");
 
   return NextResponse.json({
     date: dayStart.toISOString(),

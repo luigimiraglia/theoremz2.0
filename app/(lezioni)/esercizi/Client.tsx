@@ -102,7 +102,7 @@ export default function EserciziClient({
     (async () => {
       try {
         const qs = encodeURIComponent(visibleNeeding.join(","));
-        const res = await fetch(`/api/exercises-batch?ids=${qs}`, { cache: "no-store" });
+        const res = await fetch(`/api/exercises-batch?ids=${qs}`);
         const json = await res.json();
         if (!json.ok) throw new Error(json.error || "Errore");
         const byId: Record<string, any> = {};
@@ -130,7 +130,7 @@ export default function EserciziClient({
     }
     try {
       setLoading(true);
-      const res = await fetch(`/api/exercises-list?offset=${offset}&limit=${LIMIT}`, { cache: "no-store" });
+      const res = await fetch(`/api/exercises-list?offset=${offset}&limit=${LIMIT}`);
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "Errore Sanity");
       const mapped: ExerciseDoc[] = (json.items || []).map((d: any) => ({

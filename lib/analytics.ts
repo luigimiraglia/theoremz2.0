@@ -33,22 +33,61 @@ function getUserId(): string | null {
   return null;
 }
 
+const ANALYTICS_BATCH_SIZE = 8;
+const ANALYTICS_FLUSH_MS = 2000;
+const analyticsQueue: any[] = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleFlush() {
+  if (flushTimer || typeof window === "undefined") return;
+  flushTimer = window.setTimeout(() => {
+    flushTimer = null;
+    flushQueue();
+  }, ANALYTICS_FLUSH_MS);
+}
+
+function flushQueue() {
+  if (typeof window === "undefined") return;
+  if (!analyticsQueue.length) return;
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+
+  const batch = analyticsQueue.splice(0, analyticsQueue.length);
+  const payload =
+    batch.length === 1 ? JSON.stringify(batch[0]) : JSON.stringify(batch);
+  const url = "/api/analytics";
+
+  if (typeof navigator !== "undefined" && "sendBeacon" in navigator) {
+    const blob = new Blob([payload], { type: "application/json" });
+    const ok = navigator.sendBeacon(url, blob);
+    if (ok) return;
+  }
+
+  fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    keepalive: true,
+  }).catch(() => {});
+}
+
 // Invia evento al nostro sistema analytics interno
 async function sendToAnalytics(eventData: any) {
-  try {
-    await fetch("/api/analytics", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(eventData),
-    });
-  } catch (error) {
-    console.error("Errore invio analytics:", error);
+  if (typeof window === "undefined") return;
+  analyticsQueue.push(eventData);
+  if (analyticsQueue.length >= ANALYTICS_BATCH_SIZE) {
+    flushQueue();
+  } else {
+    scheduleFlush();
   }
 }
 
 // Traccia pageview
 export function pageview(path: string) {
   try {
+    if (typeof window === "undefined") return;
     const eventData = {
       event: "page_view",
       page: path,
@@ -70,6 +109,7 @@ export function pageview(path: string) {
 // Traccia evento generico
 export function track(event: string, params?: Record<string, any>) {
   try {
+    if (typeof window === "undefined") return;
     const eventData = {
       event,
       page: window.location.pathname,
@@ -88,6 +128,7 @@ export function track(event: string, params?: Record<string, any>) {
 // Traccia conversione
 export function trackConversion(type: string, value?: string, params?: Record<string, any>) {
   try {
+    if (typeof window === "undefined") return;
     const eventData = {
       event: "conversion",
       page: window.location.pathname,
@@ -110,6 +151,7 @@ export function trackConversion(type: string, value?: string, params?: Record<st
 // Identifica utente loggato
 export function identify(userId: string | null | undefined) {
   try {
+    if (typeof window === "undefined") return;
     if (!userId) return;
     
     // Salva user ID per sessioni future
@@ -126,6 +168,7 @@ export function identify(userId: string | null | undefined) {
 // Traccia inizio sessione
 export function startSession() {
   try {
+    if (typeof window === "undefined") return;
     const sessionData = {
       event: "session_start",
       page: window.location.pathname,
@@ -162,4 +205,12 @@ if (typeof window !== "undefined") {
   });
   
   observer.observe(document.body, { childList: true, subtree: true });
+
+  const flushOnHide = () => flushQueue();
+  window.addEventListener("pagehide", flushOnHide);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      flushOnHide();
+    }
+  });
 }

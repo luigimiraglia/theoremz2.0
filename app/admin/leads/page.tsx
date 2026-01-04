@@ -128,7 +128,12 @@ export default function LeadsAdminPage() {
   const [advancingId, setAdvancingId] = useState<string | null>(null);
   const [restartingId, setRestartingId] = useState<string | null>(null);
   const [droppingId, setDroppingId] = useState<string | null>(null);
+  const [pausingId, setPausingId] = useState<string | null>(null);
+  const [resumingId, setResumingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
+  const [phoneDrafts, setPhoneDrafts] = useState<Record<string, string>>({});
+  const [savingPhoneId, setSavingPhoneId] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     instagram: "",
@@ -199,11 +204,13 @@ export default function LeadsAdminPage() {
 
         if (lead.status === "completed") {
           completed = [lead, ...completed];
-        } else if (isDue) {
-          due = [lead, ...due];
-        } else {
-          upcoming = [lead, ...upcoming];
-        }
+      } else if (lead.status === "dropped") {
+        // Restano solo in archivio
+      } else if (isDue) {
+        due = [lead, ...due];
+      } else {
+        upcoming = [lead, ...upcoming];
+      }
 
         return { ...prev, due, upcoming, completed };
       });
@@ -386,6 +393,113 @@ export default function LeadsAdminPage() {
     [fetchLeads, applyLeadUpdate]
   );
 
+  const handlePause = useCallback(
+    async (id: string) => {
+      setPausingId(id);
+      setError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/leads", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ id, status: "dropped" }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+        if (json?.lead) {
+          applyLeadUpdate(json.lead);
+        } else {
+          await fetchLeads();
+          await fetchAllLeads();
+        }
+      } catch (err: any) {
+        setError(err?.message || "Errore aggiornamento stato");
+      } finally {
+        setPausingId(null);
+      }
+    },
+    [applyLeadUpdate, fetchAllLeads, fetchLeads]
+  );
+
+  const handleResume = useCallback(
+    async (id: string) => {
+      setResumingId(id);
+      setError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/leads", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ id, status: "active" }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+        if (json?.lead) {
+          applyLeadUpdate(json.lead);
+        } else {
+          await fetchLeads();
+          await fetchAllLeads();
+        }
+      } catch (err: any) {
+        setError(err?.message || "Errore aggiornamento stato");
+      } finally {
+        setResumingId(null);
+      }
+    },
+    [applyLeadUpdate, fetchAllLeads, fetchLeads]
+  );
+
+  const startPhoneEdit = useCallback((lead: Lead) => {
+    setEditingPhoneId(lead.id);
+    setPhoneDrafts((prev) => ({
+      ...prev,
+      [lead.id]: lead.whatsappPhone || "",
+    }));
+  }, []);
+
+  const cancelPhoneEdit = useCallback((id: string) => {
+    setEditingPhoneId((prev) => (prev === id ? null : prev));
+    setPhoneDrafts((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  const handlePhoneSave = useCallback(
+    async (lead: Lead) => {
+      const draft = (phoneDrafts[lead.id] ?? "").trim();
+      setSavingPhoneId(lead.id);
+      setError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/leads", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ id: lead.id, whatsapp: draft || null }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+        if (json?.lead) {
+          applyLeadUpdate(json.lead);
+        } else {
+          await fetchLeads();
+          await fetchAllLeads();
+        }
+        cancelPhoneEdit(lead.id);
+      } catch (err: any) {
+        setError(err?.message || "Errore aggiornamento telefono");
+      } finally {
+        setSavingPhoneId(null);
+      }
+    },
+    [applyLeadUpdate, cancelPhoneEdit, fetchAllLeads, fetchLeads, phoneDrafts]
+  );
+
   const dayDue = useMemo(() => {
     const list = data?.due || [];
     return list.map((lead) => {
@@ -516,7 +630,7 @@ export default function LeadsAdminPage() {
               Azioni rapide lead
             </p>
             <p className="text-sm text-slate-600">
-              Cerca per numero/handle e usa subito Contattato, WhatsApp, Ha risposto o Scarta.
+              Cerca per numero/handle e usa subito Contattato, WhatsApp, Ha risposto o In pausa.
             </p>
           </div>
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
@@ -543,8 +657,21 @@ export default function LeadsAdminPage() {
             {quickResults.length ? (
               quickResults.map((lead) => {
                 const whatsappLink = buildWhatsAppLink(lead.whatsappPhone, preferWebWhatsApp);
+                const isPaused = lead.status === "dropped";
+                const isPausing = pausingId === lead.id;
+                const isResuming = resumingId === lead.id;
                 const isBusy =
-                  advancingId === lead.id || restartingId === lead.id || droppingId === lead.id;
+                  advancingId === lead.id ||
+                  restartingId === lead.id ||
+                  droppingId === lead.id ||
+                  isPausing ||
+                  isResuming;
+                const statusLabel =
+                  lead.status === "completed"
+                    ? "Completato"
+                    : lead.status === "dropped"
+                      ? "In pausa"
+                      : "Attivo";
                 return (
                   <div
                     key={lead.id}
@@ -562,7 +689,7 @@ export default function LeadsAdminPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                         <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold">
-                          {lead.status}
+                          {statusLabel}
                         </span>
                         <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold">
                           {formatDate(lead.nextFollowUpAt)}
@@ -570,18 +697,20 @@ export default function LeadsAdminPage() {
                       </div>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={() => handleAdvance(lead.id)}
-                        disabled={isBusy}
-                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
-                      >
-                        {advancingId === lead.id ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <CheckCircle2 size={14} />
-                        )}
-                        Contattato
-                      </button>
+                      {!isPaused ? (
+                        <button
+                          onClick={() => handleAdvance(lead.id)}
+                          disabled={isBusy}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+                        >
+                          {advancingId === lead.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <CheckCircle2 size={14} />
+                          )}
+                          Contattato
+                        </button>
+                      ) : null}
                       {whatsappLink ? (
                         <a
                           href={whatsappLink}
@@ -593,30 +722,61 @@ export default function LeadsAdminPage() {
                           Apri WhatsApp
                         </a>
                       ) : null}
-                      <button
-                        onClick={() => handleRestart(lead.id)}
-                        disabled={isBusy}
-                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:border-indigo-300 disabled:opacity-60"
-                      >
-                        {restartingId === lead.id ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <RefreshCcw size={14} />
-                        )}
-                        Ha risposto
-                      </button>
-                          <button
-                            onClick={() => handleDrop(lead.id)}
-                            disabled={isBusy}
-                            className="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-700 hover:border-amber-300 disabled:opacity-60"
-                            title="Rimanda di 30 giorni"
-                          >
-                            {droppingId === lead.id ? (
-                              <Loader2 size={12} className="animate-spin" />
-                            ) : (
-                              "Rimanda 30d"
-                            )}
-                          </button>
+                      {!isPaused ? (
+                        <button
+                          onClick={() => handleRestart(lead.id)}
+                          disabled={isBusy}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:border-indigo-300 disabled:opacity-60"
+                        >
+                          {restartingId === lead.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <RefreshCcw size={14} />
+                          )}
+                          Ha risposto
+                        </button>
+                      ) : null}
+                      {isPaused ? (
+                        <button
+                          onClick={() => handleResume(lead.id)}
+                          disabled={isBusy}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-60"
+                        >
+                          {isResuming ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <RefreshCcw size={14} />
+                          )}
+                          Riattiva
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handlePause(lead.id)}
+                          disabled={isBusy}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:border-amber-300 disabled:opacity-60"
+                        >
+                          {isPausing ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <AlertTriangle size={14} />
+                          )}
+                          In pausa
+                        </button>
+                      )}
+                      {!isPaused ? (
+                        <button
+                          onClick={() => handleDrop(lead.id)}
+                          disabled={isBusy}
+                          className="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-700 hover:border-amber-300 disabled:opacity-60"
+                          title="Rimanda di 30 giorni"
+                        >
+                          {droppingId === lead.id ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            "Rimanda 30d"
+                          )}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -814,6 +974,10 @@ export default function LeadsAdminPage() {
                   ? `https://instagram.com/${lead.instagramHandle.replace(/^@/, "")}`
                   : null;
                 const whatsappLink = buildWhatsAppLink(lead.whatsappPhone, preferWebWhatsApp);
+                const isEditingPhone = editingPhoneId === lead.id;
+                const phoneDraft = phoneDrafts[lead.id] ?? lead.whatsappPhone ?? "";
+                const isSavingPhone = savingPhoneId === lead.id;
+                const isPausing = pausingId === lead.id;
                 return (
                   <div
                     key={lead.id}
@@ -848,7 +1012,68 @@ export default function LeadsAdminPage() {
                                 <span>@{lead.instagramHandle}</span>
                               )
                             ) : null}
-                            {lead.whatsappPhone ? <span>{lead.whatsappPhone}</span> : null}
+                            {isEditingPhone ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <input
+                                  type="text"
+                                  inputMode="tel"
+                                  value={phoneDraft}
+                                  onChange={(e) =>
+                                    setPhoneDrafts((prev) => ({
+                                      ...prev,
+                                      [lead.id]: e.target.value,
+                                    }))
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      handlePhoneSave(lead);
+                                    }
+                                    if (e.key === "Escape") {
+                                      e.preventDefault();
+                                      cancelPhoneEdit(lead.id);
+                                    }
+                                  }}
+                                  placeholder="+39..."
+                                  className="min-w-[160px] rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-800 outline-none transition focus:border-slate-400"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handlePhoneSave(lead)}
+                                  disabled={isSavingPhone}
+                                  className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                                >
+                                  {isSavingPhone ? (
+                                    <Loader2 size={12} className="animate-spin" />
+                                  ) : (
+                                    "Salva"
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => cancelPhoneEdit(lead.id)}
+                                  disabled={isSavingPhone}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:border-slate-300 disabled:opacity-60"
+                                >
+                                  Annulla
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                {lead.whatsappPhone ? (
+                                  <span>{lead.whatsappPhone}</span>
+                                ) : (
+                                  <span className="text-slate-400">Telefono n/d</span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => startPhoneEdit(lead)}
+                                  className="text-[11px] font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
+                                >
+                                  Modifica telefono
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                         {lead.note ? (
@@ -916,6 +1141,18 @@ export default function LeadsAdminPage() {
                             <CheckCircle2 size={16} />
                           )}
                           Contattato
+                        </button>
+                        <button
+                          onClick={() => handlePause(lead.id)}
+                          disabled={isPausing}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 hover:border-amber-300 disabled:opacity-60"
+                        >
+                          {isPausing ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <AlertTriangle size={16} />
+                          )}
+                          Metti in pausa
                         </button>
                         <p className="text-[11px] leading-tight text-slate-500">
                           Avanza al prossimo follow-up automatico.
@@ -1041,8 +1278,14 @@ export default function LeadsAdminPage() {
                       lead.status === "completed"
                         ? "Completato"
                         : lead.status === "dropped"
-                          ? "Perso"
+                          ? "In pausa"
                           : "Attivo";
+                    const isEditingPhone = editingPhoneId === lead.id;
+                    const phoneDraft = phoneDrafts[lead.id] ?? lead.whatsappPhone ?? "";
+                    const isSavingPhone = savingPhoneId === lead.id;
+                    const isPaused = lead.status === "dropped";
+                    const isPausing = pausingId === lead.id;
+                    const isResuming = resumingId === lead.id;
                     return (
                       <div
                         key={lead.id}
@@ -1074,7 +1317,68 @@ export default function LeadsAdminPage() {
                                   <span>@{lead.instagramHandle}</span>
                                 )
                               ) : null}
-                              {lead.whatsappPhone ? <span>{lead.whatsappPhone}</span> : null}
+                              {isEditingPhone ? (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <input
+                                    type="text"
+                                    inputMode="tel"
+                                    value={phoneDraft}
+                                    onChange={(e) =>
+                                      setPhoneDrafts((prev) => ({
+                                        ...prev,
+                                        [lead.id]: e.target.value,
+                                      }))
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        handlePhoneSave(lead);
+                                      }
+                                      if (e.key === "Escape") {
+                                        e.preventDefault();
+                                        cancelPhoneEdit(lead.id);
+                                      }
+                                    }}
+                                    placeholder="+39..."
+                                    className="min-w-[160px] rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-800 outline-none transition focus:border-slate-400"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePhoneSave(lead)}
+                                    disabled={isSavingPhone}
+                                    className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                                  >
+                                    {isSavingPhone ? (
+                                      <Loader2 size={12} className="animate-spin" />
+                                    ) : (
+                                      "Salva"
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => cancelPhoneEdit(lead.id)}
+                                    disabled={isSavingPhone}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:border-slate-300 disabled:opacity-60"
+                                  >
+                                    Annulla
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  {lead.whatsappPhone ? (
+                                    <span>{lead.whatsappPhone}</span>
+                                  ) : (
+                                    <span className="text-slate-400">Telefono n/d</span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => startPhoneEdit(lead)}
+                                    className="text-[11px] font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
+                                  >
+                                    Modifica telefono
+                                  </button>
+                                </>
+                              )}
                             </div>
                             {lead.note ? (
                               <p className="text-sm text-slate-700">
@@ -1123,18 +1427,47 @@ export default function LeadsAdminPage() {
                                 Instagram
                               </a>
                             ) : null}
-                            <button
-                              onClick={() => handleAdvance(lead.id)}
-                              disabled={advancingId === lead.id}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
-                            >
-                              {advancingId === lead.id ? (
-                                <Loader2 size={16} className="animate-spin" />
-                              ) : (
-                                <CheckCircle2 size={16} />
-                              )}
-                              Contattato
-                            </button>
+                            {!isPaused ? (
+                              <button
+                                onClick={() => handleAdvance(lead.id)}
+                                disabled={advancingId === lead.id}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+                              >
+                                {advancingId === lead.id ? (
+                                  <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                  <CheckCircle2 size={16} />
+                                )}
+                                Contattato
+                              </button>
+                            ) : null}
+                            {isPaused ? (
+                              <button
+                                onClick={() => handleResume(lead.id)}
+                                disabled={isResuming}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-60"
+                              >
+                                {isResuming ? (
+                                  <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                  <RefreshCcw size={16} />
+                                )}
+                                Riattiva
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handlePause(lead.id)}
+                                disabled={isPausing}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 hover:border-amber-300 disabled:opacity-60"
+                              >
+                                {isPausing ? (
+                                  <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                  <AlertTriangle size={16} />
+                                )}
+                                In pausa
+                              </button>
+                            )}
                             <p className="text-[11px] leading-tight text-slate-500">
                               Segna il contatto e riparte il timer del follow-up.
                             </p>

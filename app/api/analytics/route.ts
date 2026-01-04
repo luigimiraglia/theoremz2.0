@@ -1,125 +1,176 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyticsDB } from "@/lib/analyticsDB";
 
-// Funzione per aggiornare statistiche giornaliere
-async function updateDailyStatsCounter(date: string, field: string) {
-  try {
-    // Ottieni statistiche esistenti per la data
-    const statsArray = await analyticsDB.getDailyStats(date) as any[];
-    let stats = statsArray && statsArray.length > 0 ? statsArray[0] : null;
-    
-    if (!stats) {
-      // Crea nuove statistiche per oggi se non esistono
-      stats = {
-        date: date,
-        unique_visitors: 0,
-        total_pageviews: 0,
-        new_sessions: 0,
-        quiz_parent_clicks: 0,
-        quiz_student_clicks: 0,
-        black_page_visits: 0,
-        popup_clicks: 0,
-        conversions: 0,
-      };
+type AnalyticsEventPayload = {
+  event?: string;
+  page?: string;
+  sessionId?: string;
+  userId?: string;
+  anonId?: string;
+  params?: Record<string, any> | string | null;
+};
+
+const DAILY_STATS_ENABLED = process.env.ANALYTICS_DAILY_STATS === "1";
+
+function normalizeParams(raw: AnalyticsEventPayload["params"]) {
+  if (!raw) return {};
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
     }
-    
-    // Incrementa il campo specifico
-    if (field in stats && typeof stats[field] === 'number') {
-      stats[field]++;
-    }
-    
-    // Aggiorna le statistiche nel database
-    // Note: Non abbiamo updateDailyStats nella nuova versione, 
-    // quindi per ora saltiamo questo aggiornamento
-    console.log(`[Analytics] Would update daily stats for ${date}, field ${field}`);
-    
-  } catch (error) {
-    console.error("Errore aggiornamento statistiche giornaliere:", error);
   }
+  if (typeof raw === "object") return raw as Record<string, any>;
+  return {};
+}
+
+async function updateDailyStatsCounter(date: string, field: string, increment = 1) {
+  if (!DAILY_STATS_ENABLED) return;
+  await analyticsDB.updateDailyStats(date, field, increment);
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { event, page, sessionId, userId, anonId, params } = body;
-
-    if (!event || typeof event !== "string") {
+    const events = Array.isArray(body) ? body : [body];
+    if (!events.length) {
       return NextResponse.json({ error: "Event name required" }, { status: 400 });
     }
 
-    const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+    const ip =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const userAgent = request.headers.get("user-agent") || "";
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-    // Inserisci evento nel database
-    await analyticsDB.insertEvent(
-      event,
-      page || "",
-      userId || null,
-      sessionId || null,
-      anonId || null,
-      JSON.stringify(params || {}),
-      userAgent,
-      ip
-    );
+    const eventRows: any[] = [];
+    const sessionRows = new Map<string, any>();
+    const conversionRows: any[] = [];
+    const dailyCounts: Record<string, number> = {};
 
-    // Gestisci eventi speciali
-    switch (event) {
-      case "page_view":
-        await updateDailyStatsCounter(today, "total_pageviews");
-        break;
-        
-      case "session_start":
-        // Crea o aggiorna sessione
-        if (sessionId) {
-          try {
-            await analyticsDB.insertSession(
-              sessionId,
-              userId || null,
-              userAgent,
-              ip,
-              params?.referrer || "",
-              params?.landing_page || page || ""
-            );
-            await updateDailyStatsCounter(today, "new_sessions");
-          } catch {
-            // Sessione già esiste, ignora errore
+    const bump = (field: string, inc = 1) => {
+      dailyCounts[field] = (dailyCounts[field] || 0) + inc;
+    };
+
+    for (const raw of events) {
+      const payload = raw as AnalyticsEventPayload;
+      const eventName = payload?.event;
+      if (typeof eventName !== "string" || !eventName.trim()) continue;
+
+      const page = typeof payload.page === "string" ? payload.page : "";
+      const sessionId =
+        typeof payload.sessionId === "string" && payload.sessionId.trim()
+          ? payload.sessionId
+          : null;
+      const userId =
+        typeof payload.userId === "string" && payload.userId.trim()
+          ? payload.userId
+          : null;
+      const params = normalizeParams(payload.params);
+
+      eventRows.push({
+        event_type: eventName,
+        page_url: page,
+        user_id: userId,
+        session_id: sessionId,
+        event_data: params,
+        user_agent: userAgent,
+        ip_address: ip,
+      });
+
+      switch (eventName) {
+        case "page_view":
+          bump("total_pageviews");
+          break;
+        case "session_start":
+          if (sessionId) {
+            sessionRows.set(sessionId, {
+              id: sessionId,
+              user_id: userId,
+              user_agent: userAgent,
+              ip_address: ip,
+              referrer: params?.referrer || "",
+              landing_page: params?.landing_page || page || "",
+            });
+            bump("new_sessions");
           }
-        }
-        break;
-        
-      case "conversion":
-        const conversionType = params?.conversion_type;
-        if (conversionType) {
-          // Inserisci conversione
-          await analyticsDB.insertConversion(
-            conversionType,
-            sessionId || null,
-            userId || null,
-            anonId || null,
-            params?.conversion_value || "",
-            page || ""
-          );
-          
-          // Aggiorna contatori specifici
-          switch (conversionType) {
-            case "quiz_parent_click":
-              await updateDailyStatsCounter(today, "quiz_parent_clicks");
-              break;
-            case "quiz_student_click":
-              await updateDailyStatsCounter(today, "quiz_student_clicks");
-              break;
-            case "black_page_visit":
-              await updateDailyStatsCounter(today, "black_page_visits");
-              break;
-            case "popup_click":
-              await updateDailyStatsCounter(today, "popup_clicks");
-              break;
-            default:
-              await updateDailyStatsCounter(today, "conversions");
+          break;
+        case "conversion": {
+          const conversionType = params?.conversion_type;
+          if (typeof conversionType === "string" && conversionType) {
+            const rawValue = params?.conversion_value;
+            const numericValue =
+              rawValue === null || rawValue === undefined || rawValue === ""
+                ? null
+                : Number(String(rawValue).replace(",", "."));
+            conversionRows.push({
+              conversion_type: conversionType,
+              session_id: sessionId,
+              user_id: userId,
+              conversion_value: Number.isFinite(numericValue)
+                ? numericValue
+                : null,
+              conversion_data: page ? { page_url: page } : null,
+            });
+
+            switch (conversionType) {
+              case "quiz_parent_click":
+                bump("quiz_parent_clicks");
+                break;
+              case "quiz_student_click":
+                bump("quiz_student_clicks");
+                break;
+              case "black_page_visit":
+                bump("black_page_visits");
+                break;
+              case "popup_click":
+                bump("popup_clicks");
+                break;
+              default:
+                bump("conversions");
+            }
           }
+          break;
         }
-        break;
+        default:
+          break;
+      }
+    }
+
+    if (!eventRows.length) {
+      return NextResponse.json({ error: "Event name required" }, { status: 400 });
+    }
+
+    const { error: eventsError } = await analyticsDB.supabase
+      .from("events")
+      .insert(eventRows);
+    if (eventsError) throw eventsError;
+
+    if (sessionRows.size > 0) {
+      const { error: sessionsError } = await analyticsDB.supabase
+        .from("sessions")
+        .upsert(Array.from(sessionRows.values()), { onConflict: "id" });
+      if (sessionsError) {
+        console.error("[analytics] session upsert failed", sessionsError);
+      }
+    }
+
+    if (conversionRows.length > 0) {
+      const { error: conversionsError } = await analyticsDB.supabase
+        .from("conversions")
+        .insert(conversionRows);
+      if (conversionsError) {
+        console.error("[analytics] conversion insert failed", conversionsError);
+      }
+    }
+
+    if (DAILY_STATS_ENABLED) {
+      for (const [field, inc] of Object.entries(dailyCounts)) {
+        await updateDailyStatsCounter(today, field, inc);
+      }
     }
 
     return NextResponse.json({ success: true });

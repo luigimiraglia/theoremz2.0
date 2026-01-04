@@ -53,8 +53,17 @@ async function verifyDatabaseSchema(): Promise<void> {
   console.log('[Analytics DB] Database verification completed')
 }
 
-// Inizializza database
-verifyDatabaseSchema();
+// Inizializza database solo quando richiesto (evita overhead in produzione)
+const shouldVerifySchema =
+  process.env.NODE_ENV === "development" ||
+  process.env.ANALYTICS_DB_VERIFY === "1";
+const globalScope = globalThis as typeof globalThis & {
+  __analyticsSchemaVerified?: boolean;
+};
+if (shouldVerifySchema && !globalScope.__analyticsSchemaVerified) {
+  globalScope.__analyticsSchemaVerified = true;
+  void verifyDatabaseSchema();
+}
 
 // Funzioni di utilità per PostgreSQL
 export const analyticsDB = {

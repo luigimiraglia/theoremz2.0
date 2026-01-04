@@ -52,8 +52,7 @@ export default function LessonExercises({
     }      // Se tutto ok, carica gli esercizi
       setError(null);
       const res = await fetch(
-        `/api/exercises?lessonId=${encodeURIComponent(lessonId)}`,
-        { cache: "no-store" }
+        `/api/exercises?lessonId=${encodeURIComponent(lessonId)}`
       );
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "Errore Sanity");
