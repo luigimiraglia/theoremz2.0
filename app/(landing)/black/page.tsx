@@ -500,7 +500,7 @@ export default function BlackPage() {
               "essential-monthly": (
                 <div className=" flex flex-col items-center leading-tight text-center gap-2">
                   <span className=" inline-flex items-center justify-center rounded-full border border-emerald-200 bg-gradient-to-r from-green-500 to-cyan-400 px-3 py-1.5 text-[20px] sm:text-[22px] font-black text-white">
-                    7 giorni di prova
+                    2 mesi al -50%
                   </span>
                   <span className="mt-1 -mb-2 text-[14px] sm:text-[15px] font-bold text-slate-600">
                     poi{" "}
