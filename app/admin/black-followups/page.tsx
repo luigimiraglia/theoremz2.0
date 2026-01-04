@@ -42,6 +42,7 @@ type BlackStudent = {
   parent_phone?: string | null;
   year_class?: string | null;
   track?: string | null;
+  hasActiveFollowup?: boolean | null;
 };
 
 type ResponseData = {
@@ -51,8 +52,19 @@ type ResponseData = {
   completed: Contact[];
 };
 
+type ScheduleDraft = {
+  date: string;
+  time: string;
+  callType: "onboarding" | "check-percorso";
+  note: string;
+};
+
 const allowedEmail = "luigi.miraglia006@gmail.com";
 const whatsappPrefixes = ["+39", "+41", "+44", "+34", "+33", "+49", "+43"];
+const callTypeOptions: Array<{ value: ScheduleDraft["callType"]; label: string }> = [
+  { value: "onboarding", label: "Onboarding" },
+  { value: "check-percorso", label: "Check-in" },
+];
 
 async function buildHeaders() {
   const headers: Record<string, string> = {};
@@ -88,6 +100,13 @@ function toDateInputValue(date: Date) {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function localPartsToIso(date: string, time: string) {
+  if (!date || !time) return null;
+  const d = new Date(`${date}T${time}:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
 }
 
 function startOfDay(value: string) {
@@ -138,6 +157,17 @@ export default function BlackFollowupsPage() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [preferWebWhatsApp, setPreferWebWhatsApp] = useState(false);
   const [nextDateDraft, setNextDateDraft] = useState<Record<string, string>>({});
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [nameDrafts, setNameDrafts] = useState<Record<string, string>>({});
+  const [savingNameId, setSavingNameId] = useState<string | null>(null);
+  const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
+  const [phoneDrafts, setPhoneDrafts] = useState<Record<string, string>>({});
+  const [savingPhoneId, setSavingPhoneId] = useState<string | null>(null);
+  const [scheduleOpenId, setScheduleOpenId] = useState<string | null>(null);
+  const [scheduleDrafts, setScheduleDrafts] = useState<Record<string, ScheduleDraft>>({});
+  const [schedulingId, setSchedulingId] = useState<string | null>(null);
+  const [pausingId, setPausingId] = useState<string | null>(null);
+  const [resumingId, setResumingId] = useState<string | null>(null);
   const [importingNext, setImportingNext] = useState(false);
   const [studentQuery, setStudentQuery] = useState("");
   const [studentResults, setStudentResults] = useState<BlackStudent[]>([]);
@@ -224,6 +254,8 @@ export default function BlackFollowupsPage() {
 
       if (contact.status === "completed") {
         completed = [contact, ...completed];
+      } else if (contact.status === "dropped") {
+        // Restano solo in archivio
       } else if (isDue) {
         due = [contact, ...due];
       } else {
@@ -241,6 +273,215 @@ export default function BlackFollowupsPage() {
       return next;
     });
   }, [selectedDate]);
+
+  const buildDefaultScheduleDraft = useCallback((): ScheduleDraft => ({
+    date: selectedDate || toDateInputValue(new Date()),
+    time: "10:00",
+    callType: "onboarding",
+    note: "",
+  }), [selectedDate]);
+
+  const toggleSchedule = useCallback(
+    (contactId: string) => {
+      setScheduleOpenId((prev) => (prev === contactId ? null : contactId));
+      setScheduleDrafts((prev) => {
+        if (prev[contactId]) return prev;
+        return { ...prev, [contactId]: buildDefaultScheduleDraft() };
+      });
+    },
+    [buildDefaultScheduleDraft]
+  );
+
+  const updateScheduleDraft = useCallback(
+    (contactId: string, patch: Partial<ScheduleDraft>) => {
+      setScheduleDrafts((prev) => {
+        const base = prev[contactId] || buildDefaultScheduleDraft();
+        return { ...prev, [contactId]: { ...base, ...patch } };
+      });
+    },
+    [buildDefaultScheduleDraft]
+  );
+
+  const handleScheduleSave = useCallback(
+    async (contact: Contact) => {
+      const draft = scheduleDrafts[contact.id] || buildDefaultScheduleDraft();
+      if (!draft.date || !draft.time) {
+        setError("Seleziona data e orario");
+        return;
+      }
+      const startsAtIso = localPartsToIso(draft.date, draft.time);
+      if (!startsAtIso) {
+        setError("Data/ora non valida");
+        return;
+      }
+      setSchedulingId(contact.id);
+      setError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const fullName =
+          contact.name ||
+          contact.student?.preferred_name ||
+          contact.student?.student_name ||
+          "Senza nome";
+        const email =
+          contact.student?.student_email ||
+          contact.student?.parent_email ||
+          "noreply@theoremz.com";
+        const note = draft.note.trim() || null;
+        const res = await fetch("/api/admin/bookings", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            startsAt: startsAtIso,
+            callTypeSlug: draft.callType,
+            fullName,
+            email,
+            note,
+            studentId: contact.studentId || contact.student?.id || null,
+            allowUnpaid: true,
+          }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          const details = [json?.error, json?.details, json?.code].filter(Boolean).join(" · ");
+          throw new Error(details || `HTTP ${res.status}`);
+        }
+        setScheduleOpenId((prev) => (prev === contact.id ? null : prev));
+        setScheduleDrafts((prev) => {
+          const next = { ...prev };
+          delete next[contact.id];
+          return next;
+        });
+      } catch (err: any) {
+        setError(err?.message || "Errore creazione booking");
+      } finally {
+        setSchedulingId(null);
+      }
+    },
+    [buildDefaultScheduleDraft, scheduleDrafts]
+  );
+
+  const startNameEdit = useCallback((contact: Contact) => {
+    setEditingNameId(contact.id);
+    setNameDrafts((prev) => ({
+      ...prev,
+      [contact.id]: contact.name || "",
+    }));
+  }, []);
+
+  const cancelNameEdit = useCallback((id: string) => {
+    setEditingNameId((prev) => (prev === id ? null : prev));
+    setNameDrafts((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  const handleNameSave = useCallback(
+    async (contact: Contact) => {
+      const draft = nameDrafts[contact.id] ?? "";
+      const trimmed = draft.trim();
+      if (!trimmed) {
+        setError("Inserisci un nome valido");
+        return;
+      }
+      const nextName = trimmed;
+      if ((contact.name || null) === nextName) {
+        cancelNameEdit(contact.id);
+        return;
+      }
+      setSavingNameId(contact.id);
+      setError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/black-followups", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ id: contact.id, name: nextName }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          const details = [json?.error, json?.details, json?.code].filter(Boolean).join(" · ");
+          throw new Error(details || `HTTP ${res.status}`);
+        }
+        if (json?.contact) {
+          applyContactUpdate(json.contact);
+        } else {
+          await fetchContacts();
+          await fetchAllContacts();
+        }
+        cancelNameEdit(contact.id);
+      } catch (err: any) {
+        setError(err?.message || "Errore aggiornamento nome");
+      } finally {
+        setSavingNameId(null);
+      }
+    },
+    [applyContactUpdate, cancelNameEdit, fetchAllContacts, fetchContacts, nameDrafts]
+  );
+
+  const startPhoneEdit = useCallback((contact: Contact) => {
+    setEditingPhoneId(contact.id);
+    setPhoneDrafts((prev) => ({
+      ...prev,
+      [contact.id]: contact.whatsappPhone || "",
+    }));
+  }, []);
+
+  const cancelPhoneEdit = useCallback((id: string) => {
+    setEditingPhoneId((prev) => (prev === id ? null : prev));
+    setPhoneDrafts((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  const handlePhoneSave = useCallback(
+    async (contact: Contact) => {
+      const draft = phoneDrafts[contact.id] ?? "";
+      const trimmed = draft.trim();
+      if (!trimmed) {
+        setError("Inserisci un numero WhatsApp valido");
+        return;
+      }
+      if ((contact.whatsappPhone || null) === trimmed) {
+        cancelPhoneEdit(contact.id);
+        return;
+      }
+      setSavingPhoneId(contact.id);
+      setError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/black-followups", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ id: contact.id, whatsappPhone: trimmed }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          const details = [json?.error, json?.details, json?.code].filter(Boolean).join(" · ");
+          throw new Error(details || `HTTP ${res.status}`);
+        }
+        if (json?.contact) {
+          applyContactUpdate(json.contact);
+        } else {
+          await fetchContacts();
+          await fetchAllContacts();
+        }
+        cancelPhoneEdit(contact.id);
+      } catch (err: any) {
+        setError(err?.message || "Errore aggiornamento numero");
+      } finally {
+        setSavingPhoneId(null);
+      }
+    },
+    [applyContactUpdate, cancelPhoneEdit, fetchAllContacts, fetchContacts, phoneDrafts]
+  );
 
   const handleCreate = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
@@ -347,6 +588,70 @@ export default function BlackFollowupsPage() {
     [applyContactUpdate, fetchContacts]
   );
 
+  const handlePause = useCallback(
+    async (id: string) => {
+      setPausingId(id);
+      setError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/black-followups", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ id, status: "dropped" }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          const details = [json?.error, json?.details, json?.code].filter(Boolean).join(" · ");
+          throw new Error(details || `HTTP ${res.status}`);
+        }
+        if (json?.contact) {
+          applyContactUpdate(json.contact);
+        } else {
+          await fetchContacts();
+          await fetchAllContacts();
+        }
+      } catch (err: any) {
+        setError(err?.message || "Errore aggiornamento stato");
+      } finally {
+        setPausingId(null);
+      }
+    },
+    [applyContactUpdate, fetchAllContacts, fetchContacts]
+  );
+
+  const handleResume = useCallback(
+    async (id: string) => {
+      setResumingId(id);
+      setError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/black-followups", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ id, status: "active" }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          const details = [json?.error, json?.details, json?.code].filter(Boolean).join(" · ");
+          throw new Error(details || `HTTP ${res.status}`);
+        }
+        if (json?.contact) {
+          applyContactUpdate(json.contact);
+        } else {
+          await fetchContacts();
+          await fetchAllContacts();
+        }
+      } catch (err: any) {
+        setError(err?.message || "Errore aggiornamento stato");
+      } finally {
+        setResumingId(null);
+      }
+    },
+    [applyContactUpdate, fetchAllContacts, fetchContacts]
+  );
+
   const handleImportNext = useCallback(async () => {
     setImportingNext(true);
     setError(null);
@@ -404,6 +709,10 @@ export default function BlackFollowupsPage() {
   }, [studentQuery]);
 
   const applyStudentSelection = useCallback((student: BlackStudent) => {
+    if (student.hasActiveFollowup) {
+      setError("Studente già collegato a un follow-up attivo");
+      return;
+    }
     setSelectedStudent(student);
     const phoneRaw = student.student_phone || student.parent_phone || "";
     const digits = phoneRaw.replace(/[^\d]/g, "");
@@ -632,31 +941,45 @@ export default function BlackFollowupsPage() {
               </div>
               {studentResults.length > 0 ? (
                 <div className="mt-3 space-y-2">
-                  {studentResults.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => applyStudentSelection(s)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:border-emerald-300"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">
-                            {s.preferred_name || s.student_name || "Studente"}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {s.student_email || s.parent_email || "Email n/d"}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {s.student_phone || s.parent_phone || "Telefono n/d"}
-                          </p>
+                  {studentResults.map((s) => {
+                    const isLinked = Boolean(s.hasActiveFollowup);
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => applyStudentSelection(s)}
+                        className={`w-full rounded-lg border px-3 py-2 text-left transition ${
+                          isLinked
+                            ? "border-rose-200 bg-rose-50/60 hover:border-rose-300"
+                            : "border-slate-200 bg-white hover:border-emerald-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">
+                              {s.preferred_name || s.student_name || "Studente"}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {s.student_email || s.parent_email || "Email n/d"}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {s.student_phone || s.parent_phone || "Telefono n/d"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[11px] text-slate-500">
+                              {s.year_class || "classe?"} · {s.track || "track?"}
+                            </p>
+                            {isLinked ? (
+                              <span className="mt-1 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
+                                Già collegato
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
-                        <p className="text-[11px] text-slate-500">
-                          {s.year_class || "classe?"} · {s.track || "track?"}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               ) : null}
               {selectedStudent ? (
@@ -822,6 +1145,15 @@ export default function BlackFollowupsPage() {
                 const whatsappLink = buildWhatsAppLink(contact.whatsappPhone, preferWebWhatsApp);
                 const dateDraft = nextDateDraft[contact.id] || "";
                 const cardLink = buildCardLink(contact);
+                const isEditingName = editingNameId === contact.id;
+                const nameDraft = nameDrafts[contact.id] ?? contact.name ?? "";
+                const isSavingName = savingNameId === contact.id;
+                const isEditingPhone = editingPhoneId === contact.id;
+                const phoneDraft = phoneDrafts[contact.id] ?? contact.whatsappPhone ?? "";
+                const isSavingPhone = savingPhoneId === contact.id;
+                const isScheduleOpen = scheduleOpenId === contact.id;
+                const scheduleDraft = scheduleDrafts[contact.id] || buildDefaultScheduleDraft();
+                const isScheduling = schedulingId === contact.id;
                 return (
                   <div
                     key={contact.id}
@@ -840,9 +1172,65 @@ export default function BlackFollowupsPage() {
                           ) : null}
                         </div>
                         <div>
-                          <p className="text-base font-semibold text-slate-900">
-                            {contact.name || "Contatto senza nome"}
-                          </p>
+                          {isEditingName ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <input
+                                type="text"
+                                value={nameDraft}
+                                onChange={(e) =>
+                                  setNameDrafts((prev) => ({
+                                    ...prev,
+                                    [contact.id]: e.target.value,
+                                  }))
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleNameSave(contact);
+                                  }
+                                  if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    cancelNameEdit(contact.id);
+                                  }
+                                }}
+                                placeholder="Nome e cognome"
+                                className="min-w-[200px] rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleNameSave(contact)}
+                                disabled={isSavingName}
+                                className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                              >
+                                {isSavingName ? (
+                                  <Loader2 size={12} className="animate-spin" />
+                                ) : (
+                                  "Salva"
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => cancelNameEdit(contact.id)}
+                                disabled={isSavingName}
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 disabled:opacity-60"
+                              >
+                                Annulla
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-base font-semibold text-slate-900">
+                                {contact.name || "Contatto senza nome"}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => startNameEdit(contact)}
+                                className="text-xs font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
+                              >
+                                Modifica nome
+                              </button>
+                            </div>
+                          )}
                           {contact.student ? (
                             <p className="text-xs text-slate-600">
                               {contact.student.preferred_name || contact.student.student_name || "Studente"} ·{" "}
@@ -851,7 +1239,64 @@ export default function BlackFollowupsPage() {
                             </p>
                           ) : null}
                           <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-                            {contact.whatsappPhone ? <span>{contact.whatsappPhone}</span> : null}
+                            {isEditingPhone ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <input
+                                  type="text"
+                                  inputMode="tel"
+                                  value={phoneDraft}
+                                  onChange={(e) =>
+                                    setPhoneDrafts((prev) => ({
+                                      ...prev,
+                                      [contact.id]: e.target.value,
+                                    }))
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      handlePhoneSave(contact);
+                                    }
+                                    if (e.key === "Escape") {
+                                      e.preventDefault();
+                                      cancelPhoneEdit(contact.id);
+                                    }
+                                  }}
+                                  placeholder="+39..."
+                                  className="min-w-[180px] rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handlePhoneSave(contact)}
+                                  disabled={isSavingPhone}
+                                  className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                                >
+                                  {isSavingPhone ? (
+                                    <Loader2 size={12} className="animate-spin" />
+                                  ) : (
+                                    "Salva"
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => cancelPhoneEdit(contact.id)}
+                                  disabled={isSavingPhone}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 disabled:opacity-60"
+                                >
+                                  Annulla
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                {contact.whatsappPhone ? <span>{contact.whatsappPhone}</span> : null}
+                                <button
+                                  type="button"
+                                  onClick={() => startPhoneEdit(contact)}
+                                  className="text-xs font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
+                                >
+                                  Modifica telefono
+                                </button>
+                              </>
+                            )}
                             {whatsappLink ? (
                               <a
                                 href={whatsappLink}
@@ -940,6 +1385,89 @@ export default function BlackFollowupsPage() {
                         <p className="text-[11px] leading-tight text-slate-500">
                           Segna il contatto e programma la prossima data (se vuota: +3 giorni).
                         </p>
+                        <button
+                          onClick={() => handlePause(contact.id)}
+                          disabled={pausingId === contact.id}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 shadow hover:border-amber-300 disabled:opacity-60"
+                        >
+                          {pausingId === contact.id ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <AlertTriangle size={16} />
+                          )}
+                          Metti in pausa
+                        </button>
+                        <button
+                          onClick={() => toggleSchedule(contact.id)}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-slate-300"
+                        >
+                          {isScheduleOpen ? "Chiudi pianificazione" : "Programma check-in / onboarding"}
+                        </button>
+                        {isScheduleOpen ? (
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+                            <div className="flex flex-wrap gap-2">
+                              <select
+                                value={scheduleDraft.callType}
+                                onChange={(e) =>
+                                  updateScheduleDraft(contact.id, {
+                                    callType: e.target.value as ScheduleDraft["callType"],
+                                  })
+                                }
+                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                              >
+                                {callTypeOptions.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                type="date"
+                                value={scheduleDraft.date}
+                                onChange={(e) =>
+                                  updateScheduleDraft(contact.id, { date: e.target.value })
+                                }
+                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                              />
+                              <input
+                                type="time"
+                                value={scheduleDraft.time}
+                                onChange={(e) =>
+                                  updateScheduleDraft(contact.id, { time: e.target.value })
+                                }
+                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                              />
+                            </div>
+                            <input
+                              type="text"
+                              value={scheduleDraft.note}
+                              onChange={(e) =>
+                                updateScheduleDraft(contact.id, { note: e.target.value })
+                              }
+                              placeholder="Nota (opzionale)"
+                              className="mt-2 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                            />
+                            <div className="mt-2 flex items-center gap-2">
+                              <button
+                                onClick={() => handleScheduleSave(contact)}
+                                disabled={isScheduling}
+                                className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                              >
+                                {isScheduling ? (
+                                  <Loader2 size={12} className="animate-spin" />
+                                ) : (
+                                  "Salva"
+                                )}
+                              </button>
+                              <button
+                                onClick={() => setScheduleOpenId(null)}
+                                className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300"
+                              >
+                                Annulla
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -1059,7 +1587,7 @@ export default function BlackFollowupsPage() {
                 Azioni rapide
               </p>
               <p className="text-sm text-slate-600">
-                Cerca per numero/email e clicca subito: Contattato, Apri WhatsApp, Ha risposto.
+                Cerca per numero/email e clicca subito: Contattato, Apri WhatsApp, Ha risposto, In pausa.
               </p>
             </div>
             <input
@@ -1076,6 +1604,9 @@ export default function BlackFollowupsPage() {
                 quickResults.map((contact) => {
                   const whatsappLink = buildWhatsAppLink(contact.whatsappPhone, preferWebWhatsApp);
                   const dateDraft = nextDateDraft[contact.id] || "";
+                  const isPaused = contact.status === "dropped";
+                  const isPausing = pausingId === contact.id;
+                  const isResuming = resumingId === contact.id;
                   return (
                     <div
                       key={contact.id}
@@ -1100,7 +1631,7 @@ export default function BlackFollowupsPage() {
                             {contact.status === "completed"
                               ? "Completato"
                               : contact.status === "dropped"
-                                ? "Dropped"
+                                ? "In pausa"
                                 : "Attivo"}
                           </span>
                           <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold">
@@ -1140,18 +1671,20 @@ export default function BlackFollowupsPage() {
                         </select>
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <button
-                          onClick={() => handleAdvance(contact.id, dateDraft || undefined)}
-                          disabled={advancingId === contact.id}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
-                        >
-                          {advancingId === contact.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <CheckCircle2 size={14} />
-                          )}
-                          Contattato
-                        </button>
+                        {!isPaused ? (
+                          <button
+                            onClick={() => handleAdvance(contact.id, dateDraft || undefined)}
+                            disabled={advancingId === contact.id}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+                          >
+                            {advancingId === contact.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <CheckCircle2 size={14} />
+                            )}
+                            Contattato
+                          </button>
+                        ) : null}
                         {whatsappLink ? (
                           <a
                             href={whatsappLink}
@@ -1163,18 +1696,47 @@ export default function BlackFollowupsPage() {
                             Apri WhatsApp
                           </a>
                         ) : null}
-                        <button
-                          onClick={() => handleRestartLeadCycle(contact.id, dateDraft || undefined)}
-                          disabled={restartingId === contact.id}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:border-indigo-300 disabled:opacity-60"
-                        >
-                          {restartingId === contact.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <RefreshCcw size={14} />
-                          )}
-                          Ha risposto
-                        </button>
+                        {!isPaused ? (
+                          <button
+                            onClick={() => handleRestartLeadCycle(contact.id, dateDraft || undefined)}
+                            disabled={restartingId === contact.id}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:border-indigo-300 disabled:opacity-60"
+                          >
+                            {restartingId === contact.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <RefreshCcw size={14} />
+                            )}
+                            Ha risposto
+                          </button>
+                        ) : null}
+                        {isPaused ? (
+                          <button
+                            onClick={() => handleResume(contact.id)}
+                            disabled={isResuming}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-60"
+                          >
+                            {isResuming ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <RefreshCcw size={14} />
+                            )}
+                            Riattiva
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handlePause(contact.id)}
+                            disabled={isPausing}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:border-amber-300 disabled:opacity-60"
+                          >
+                            {isPausing ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <AlertTriangle size={14} />
+                            )}
+                            In pausa
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1240,6 +1802,15 @@ export default function BlackFollowupsPage() {
                   : contact.status === "dropped"
                   ? "bg-slate-100 text-slate-600"
                   : "bg-indigo-100 text-indigo-700";
+              const isEditingName = editingNameId === contact.id;
+              const nameDraft = nameDrafts[contact.id] ?? contact.name ?? "";
+              const isSavingName = savingNameId === contact.id;
+              const isEditingPhone = editingPhoneId === contact.id;
+              const phoneDraft = phoneDrafts[contact.id] ?? contact.whatsappPhone ?? "";
+              const isSavingPhone = savingPhoneId === contact.id;
+              const isPaused = contact.status === "dropped";
+              const isPausing = pausingId === contact.id;
+              const isResuming = resumingId === contact.id;
               return (
                 <div
                   key={contact.id}
@@ -1251,12 +1822,68 @@ export default function BlackFollowupsPage() {
                         {contact.status === "completed"
                           ? "Completato"
                           : contact.status === "dropped"
-                          ? "Dropped"
+                          ? "In pausa"
                           : "Attivo"}
                       </span>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {contact.name || contact.whatsappPhone || "Contatto"}
-                      </p>
+                      {isEditingName ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            type="text"
+                            value={nameDraft}
+                            onChange={(e) =>
+                              setNameDrafts((prev) => ({
+                                ...prev,
+                                [contact.id]: e.target.value,
+                              }))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleNameSave(contact);
+                              }
+                              if (e.key === "Escape") {
+                                e.preventDefault();
+                                cancelNameEdit(contact.id);
+                              }
+                            }}
+                            placeholder="Nome e cognome"
+                            className="min-w-[180px] rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-800 outline-none transition focus:border-slate-400"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleNameSave(contact)}
+                            disabled={isSavingName}
+                            className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                          >
+                            {isSavingName ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              "Salva"
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => cancelNameEdit(contact.id)}
+                            disabled={isSavingName}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:border-slate-300 disabled:opacity-60"
+                          >
+                            Annulla
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {contact.name || contact.whatsappPhone || "Contatto"}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => startNameEdit(contact)}
+                            className="text-[11px] font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
+                          >
+                            Modifica nome
+                          </button>
+                        </>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 text-xs font-semibold text-slate-600">
                       <Clock3 size={14} />
@@ -1274,12 +1901,69 @@ export default function BlackFollowupsPage() {
                     <p className="mt-2 text-sm text-slate-700">{contact.note}</p>
                   ) : null}
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                    {contact.whatsappPhone ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-semibold text-slate-800">
-                        <Phone size={14} />
-                        {contact.whatsappPhone}
-                      </span>
-                    ) : null}
+                    {isEditingPhone ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="text"
+                          inputMode="tel"
+                          value={phoneDraft}
+                          onChange={(e) =>
+                            setPhoneDrafts((prev) => ({
+                              ...prev,
+                              [contact.id]: e.target.value,
+                            }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handlePhoneSave(contact);
+                            }
+                            if (e.key === "Escape") {
+                              e.preventDefault();
+                              cancelPhoneEdit(contact.id);
+                            }
+                          }}
+                          placeholder="+39..."
+                          className="min-w-[180px] rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none transition focus:border-slate-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handlePhoneSave(contact)}
+                          disabled={isSavingPhone}
+                          className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                        >
+                          {isSavingPhone ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            "Salva"
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => cancelPhoneEdit(contact.id)}
+                          disabled={isSavingPhone}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:border-slate-300 disabled:opacity-60"
+                        >
+                          Annulla
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {contact.whatsappPhone ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-semibold text-slate-800">
+                            <Phone size={14} />
+                            {contact.whatsappPhone}
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => startPhoneEdit(contact)}
+                          className="text-[11px] font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
+                        >
+                          Modifica telefono
+                        </button>
+                      </>
+                    )}
                     {whatsappLink ? (
                       <a
                         href={whatsappLink}
@@ -1302,6 +1986,35 @@ export default function BlackFollowupsPage() {
                         <ExternalLink size={12} />
                       </a>
                     ) : null}
+                    {isPaused ? (
+                      <button
+                        type="button"
+                        onClick={() => handleResume(contact.id)}
+                        disabled={isResuming}
+                        className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-60"
+                      >
+                        {isResuming ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <RefreshCcw size={12} />
+                        )}
+                        Riattiva
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handlePause(contact.id)}
+                        disabled={isPausing}
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-semibold text-amber-700 hover:border-amber-300 disabled:opacity-60"
+                      >
+                        {isPausing ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <AlertTriangle size={12} />
+                        )}
+                        In pausa
+                      </button>
+                    )}
                   </div>
                 </div>
               );

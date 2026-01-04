@@ -1043,6 +1043,21 @@ export default function WhatsAppAdmin() {
     return m;
   }, [bookings]);
 
+  const upcomingBookings = useMemo(() => {
+    const now = Date.now();
+    return bookings.filter((b) => {
+      if (!b?.startsAt) return false;
+      const startMs = new Date(b.startsAt).getTime();
+      if (!Number.isFinite(startMs)) return false;
+      if (startMs >= now) return true;
+      const duration = Number(b.durationMin);
+      if (Number.isFinite(duration) && duration > 0) {
+        return startMs + duration * 60000 >= now;
+      }
+      return false;
+    });
+  }, [bookings]);
+
   const handleProfileUpdate = useCallback(
     async (phoneTail: string, updates: Record<string, any>) => {
       try {
@@ -2332,7 +2347,7 @@ export default function WhatsAppAdmin() {
                   </div>
                 )}
                 <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
-                  {bookings
+                  {upcomingBookings
                     .slice()
                     .sort((a, b) => (a.startsAt > b.startsAt ? 1 : -1))
                     .map((b, idx) => (
@@ -2415,7 +2430,7 @@ export default function WhatsAppAdmin() {
                         </div>
                       </div>
                     ))}
-                  {!bookings.length && !loadingBookings && (
+                  {!upcomingBookings.length && !loadingBookings && (
                     <div className="text-sm text-slate-500">Nessuna prenotazione trovata.</div>
                   )}
                 </div>

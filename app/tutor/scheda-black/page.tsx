@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { getAuth } from "firebase/auth";
@@ -28,6 +28,17 @@ type StudentDetail = {
   isBlack?: boolean;
 };
 
+type SpeechRecognitionInstance = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((event: any) => void) | null;
+  onerror: ((event: any) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
 export default function TutorBlackCardPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -36,6 +47,9 @@ export default function TutorBlackCardPage() {
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [dictating, setDictating] = useState(false);
+  const [dictationError, setDictationError] = useState<string | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const [meta, setMeta] = useState({
     name: "",
     goal: "",
@@ -92,6 +106,74 @@ export default function TutorBlackCardPage() {
       active = false;
     };
   }, [searchParams, user?.email]);
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!editing && dictating) {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      setDictating(false);
+    }
+  }, [editing, dictating]);
+
+  const startDictation = () => {
+    setDictationError(null);
+    if (typeof window === "undefined") {
+      setDictationError("Dettatura non disponibile");
+      return;
+    }
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setDictationError("Dettatura non supportata dal browser");
+      return;
+    }
+    if (dictating) return;
+    const recognition: SpeechRecognitionInstance = new SpeechRecognition();
+    recognition.lang = "it-IT";
+    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.onresult = (event: any) => {
+      const results = event?.results;
+      if (!results) return;
+      let transcript = "";
+      for (let i = event.resultIndex || 0; i < results.length; i += 1) {
+        const result = results[i];
+        if (!result || !result[0]) continue;
+        transcript += `${result[0].transcript}`;
+      }
+      const nextText = transcript.trim();
+      if (!nextText) return;
+      setMeta((prev) => {
+        const prefix = prev.aiNotes ? `${prev.aiNotes.trimEnd()} ` : "";
+        return { ...prev, aiNotes: `${prefix}${nextText}` };
+      });
+    };
+    recognition.onerror = (event: any) => {
+      setDictationError(event?.error ? `Dettatura: ${event.error}` : "Errore dettatura");
+      setDictating(false);
+    };
+    recognition.onend = () => {
+      setDictating(false);
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+    setDictating(true);
+  };
+
+  const stopDictation = () => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setDictating(false);
+  };
 
   const handleSave = async () => {
     if (!student?.id) return;
@@ -278,15 +360,32 @@ export default function TutorBlackCardPage() {
                   />
                 </div>
                 <div className="space-y-1 md:col-span-2">
-                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-300">
-                    Note insegnante
-                  </label>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-300">
+                      Descrizione scheda
+                    </label>
+                    <button
+                      type="button"
+                      onClick={dictating ? stopDictation : startDictation}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    >
+                      {dictating ? "Stop dettatura" : "Detta"}
+                    </button>
+                  </div>
                   <textarea
                     value={meta.aiNotes}
                     onChange={(e) => setMeta((prev) => ({ ...prev, aiNotes: e.target.value }))}
                     className="w-full min-h-[120px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                    placeholder="Note insegnante"
+                    placeholder="Descrizione per la scheda Black"
                   />
+                  {dictationError ? (
+                    <p className="text-xs text-rose-600 dark:text-rose-300">{dictationError}</p>
+                  ) : null}
+                  {dictating ? (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Sto ascoltando… parla e la descrizione viene aggiunta.
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -313,7 +412,7 @@ export default function TutorBlackCardPage() {
                 <Field label="Data prossima verifica" value={formatDate(student.nextAssessmentDate)} />
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Note insegnante</p>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Descrizione scheda</p>
                 <p className="whitespace-pre-wrap">{student.aiDescription || "—"}</p>
               </div>
             </>

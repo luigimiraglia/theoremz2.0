@@ -8,6 +8,7 @@ const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
 const DEFAULT_TUTOR_EMAIL = "luigi.miraglia006@gmail.com";
 const DEFAULT_CALL_TYPE = "ripetizione";
 const DEFAULT_DURATION_MIN = 60;
+const BLACK_CALENDAR_CALL_TYPES = new Set(["onboarding", "check-percorso"]);
 
 type CallTypeRow = { id: string; slug: string; name: string; duration_min: number };
 type TutorRow = { id: string; display_name?: string | null; email?: string | null };
@@ -211,6 +212,7 @@ async function ensureBookableSlot(
     allowSlotId?: string | null;
     requireRemaining?: boolean;
     studentId?: string | null;
+    ignoreAvailability?: boolean;
   },
 ) {
   const duration =
@@ -252,7 +254,7 @@ async function ensureBookableSlot(
     throw new Error("Slot già prenotato");
   }
 
-  if (Number.isFinite(startMs) && startMs >= Date.now()) {
+  if (!opts.ignoreAvailability && Number.isFinite(startMs) && startMs >= Date.now()) {
     const { data: cover, error: coverErr } = await db
       .from("tutor_availability_blocks")
       .select("id")
@@ -583,9 +585,13 @@ export async function POST(request: NextRequest) {
 
     const forceRipetizione = !(viewer?.isAdmin);
     const callTypeSlug = forceRipetizione ? DEFAULT_CALL_TYPE : String(body.callTypeSlug || "onboarding");
+    const normalizedCallTypeSlug = callTypeSlug.toLowerCase();
     const durationMinutes = forceRipetizione ? DEFAULT_DURATION_MIN : body.durationMin;
 
-    const callType = await fetchCallType(db, callTypeSlug);
+    const isBlackCalendarCall = Boolean(
+      viewer?.isAdmin && BLACK_CALENDAR_CALL_TYPES.has(normalizedCallTypeSlug)
+    );
+    const callType = await fetchCallType(db, normalizedCallTypeSlug);
     const allowUnpaid =
       body.allowUnpaid === undefined
         ? true
@@ -596,7 +602,7 @@ export async function POST(request: NextRequest) {
             body.allowUnpaid === "0"
           );
     const tutor = viewer?.isAdmin
-      ? await fetchDefaultTutor(db, body.tutorId)
+      ? await fetchDefaultTutor(db, isBlackCalendarCall ? null : body.tutorId)
       : await fetchTutorById(db, viewer?.tutorId || "");
     const status =
       body.status === "cancelled"
@@ -612,6 +618,7 @@ export async function POST(request: NextRequest) {
       durationMin: durationMinutes,
       requireRemaining: !allowUnpaid,
       studentId: body.studentId || null,
+      ignoreAvailability: isBlackCalendarCall,
     });
 
     const payload = {
@@ -676,8 +683,12 @@ export async function PATCH(request: NextRequest) {
 
     const forceRipetizione = !(viewer?.isAdmin);
     const callTypeSlug = forceRipetizione ? DEFAULT_CALL_TYPE : (body.callTypeSlug || existing.callType || "onboarding");
+    const normalizedCallTypeSlug = String(callTypeSlug).toLowerCase();
     const forcedDuration = forceRipetizione ? DEFAULT_DURATION_MIN : (body.durationMin || existing.durationMin);
-    const callType = await fetchCallType(db, String(callTypeSlug));
+    const isBlackCalendarCall = Boolean(
+      viewer?.isAdmin && BLACK_CALENDAR_CALL_TYPES.has(normalizedCallTypeSlug)
+    );
+    const callType = await fetchCallType(db, normalizedCallTypeSlug);
     const allowUnpaid =
       body.allowUnpaid === undefined
         ? true
@@ -688,7 +699,7 @@ export async function PATCH(request: NextRequest) {
             body.allowUnpaid === "0"
           );
     const tutor = viewer?.isAdmin
-      ? await fetchDefaultTutor(db, body.tutorId || existing.tutorId)
+      ? await fetchDefaultTutor(db, isBlackCalendarCall ? null : (body.tutorId || existing.tutorId))
       : await fetchTutorById(db, viewer?.tutorId || existing.tutorId || "");
 
     const startsAtIso = normalizeIso(body.startsAt || existing.startsAt);
@@ -702,6 +713,7 @@ export async function PATCH(request: NextRequest) {
       allowSlotId: existing.slotId || null,
       requireRemaining: !allowUnpaid,
       studentId: body.studentId || null,
+      ignoreAvailability: isBlackCalendarCall,
     });
 
     const updates: Record<string, any> = {

@@ -59,8 +59,56 @@ function normalizePhone(raw?: string | null) {
   return `+${digits}`;
 }
 
-const studentSelect =
-  "black_students(id, preferred_name, student_name, student_email, parent_email, student_phone, parent_phone, year_class, track)";
+type PostgrestErrorLike = {
+  message?: string | null;
+  details?: string | null;
+  code?: string | null;
+};
+
+function extractMissingColumn(error?: PostgrestErrorLike | null) {
+  const raw = `${error?.message || ""} ${error?.details || ""}`.trim();
+  if (!raw) return null;
+  const match =
+    raw.match(/column "?([a-zA-Z0-9_.]+)"?/i) ||
+    raw.match(/'([^']+)' column/i);
+  const col = match?.[1];
+  if (!col) return null;
+  return col.includes(".") ? col.split(".").pop() || null : col;
+}
+
+async function updateBlackStudentSafe(
+  db: ReturnType<typeof supabaseServer>,
+  studentId: string,
+  patch: Record<string, any>,
+  fallbackName?: string | null,
+) {
+  let current = { ...patch };
+  const missingCols = new Set<string>();
+  let attempts = 0;
+
+  while (Object.keys(current).length && attempts < 6) {
+    const { error } = await db
+      .from("black_students")
+      .update(current)
+      .eq("id", studentId);
+    if (!error) return null;
+    const missing = extractMissingColumn(error);
+    if (missing && !missingCols.has(missing)) {
+      missingCols.add(missing);
+      delete current[missing];
+      if (missing === "preferred_name") {
+        delete current.preferred_name_updated_at;
+        if (fallbackName && !("student_name" in current)) {
+          current.student_name = fallbackName;
+        }
+      }
+      attempts += 1;
+      continue;
+    }
+    return error;
+  }
+  return null;
+}
 
 function mapRow(row: any) {
   if (!row) return null;
@@ -171,7 +219,27 @@ export async function GET(request: NextRequest) {
         )
         .limit(15);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ students: Array.isArray(data) ? data : [] });
+    const students = Array.isArray(data) ? data : [];
+    const studentIds = students.map((s: any) => s?.id).filter(Boolean);
+    let activeIds = new Set<string>();
+    if (studentIds.length) {
+      const { data: activeRows, error: activeErr } = await db
+        .from("black_followups")
+        .select("student_id")
+        .eq("status", "active")
+        .in("student_id", studentIds);
+      if (activeErr) return NextResponse.json({ error: activeErr.message }, { status: 500 });
+      activeIds = new Set(
+        (activeRows || [])
+          .map((row: any) => row?.student_id)
+          .filter(Boolean),
+      );
+    }
+    const enriched = students.map((s: any) => ({
+      ...s,
+      hasActiveFollowup: Boolean(s?.id && activeIds.has(s.id)),
+    }));
+    return NextResponse.json({ students: enriched });
   }
 
   if (fetchAll) {
@@ -319,6 +387,21 @@ export async function POST(request: NextRequest) {
   let whatsappPhone = normalizePhone(body.whatsapp || body.whatsappPhone || body.phone);
   const studentId = typeof body.studentId === "string" ? body.studentId.trim() : null;
   let student: any = null;
+  if (studentId) {
+    const { data: activeRows, error: activeErr } = await db
+      .from("black_followups")
+      .select("id")
+      .eq("student_id", studentId)
+      .eq("status", "active")
+      .limit(1);
+    if (activeErr) return NextResponse.json({ error: activeErr.message }, { status: 500 });
+    if (activeRows && activeRows.length > 0) {
+      return NextResponse.json(
+        { error: "Studente già collegato a un follow-up attivo" },
+        { status: 409 },
+      );
+    }
+  }
 
   if (!whatsappPhone && studentId) {
     const { data, error: studErr } = await db
@@ -519,16 +602,30 @@ export async function PATCH(request: NextRequest) {
   }
 
   const patch: Record<string, any> = {};
-  if (body.name !== undefined) {
+  const wantsNameUpdate = body.name !== undefined;
+  const wantsPhoneUpdate =
+    body.whatsapp !== undefined || body.whatsappPhone !== undefined || body.phone !== undefined;
+  let nextName: string | null = null;
+  let normalizedPhone: string | null | undefined;
+
+  if (wantsNameUpdate) {
     const name = typeof body.name === "string" ? body.name.trim() : "";
-    patch.full_name = name || null;
+    if (!name) {
+      return NextResponse.json({ error: "Nome non valido" }, { status: 400 });
+    }
+    nextName = name;
+    patch.full_name = nextName;
   }
   if (body.note !== undefined) {
     const note = typeof body.note === "string" ? body.note.trim() : "";
     patch.note = note || null;
   }
-  if (body.whatsapp !== undefined || body.whatsappPhone !== undefined || body.phone !== undefined) {
-    patch.whatsapp_phone = normalizePhone(body.whatsapp || body.whatsappPhone || body.phone);
+  if (wantsPhoneUpdate) {
+    normalizedPhone = normalizePhone(body.whatsapp || body.whatsappPhone || body.phone);
+    if (!normalizedPhone) {
+      return NextResponse.json({ error: "missing_whatsapp" }, { status: 400 });
+    }
+    patch.whatsapp_phone = normalizedPhone;
   }
   if (body.nextFollowUpAt !== undefined) {
     const parsed = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
@@ -545,13 +642,46 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "nothing_to_update" }, { status: 400 });
   }
 
+  if (wantsNameUpdate || wantsPhoneUpdate) {
+    const { data: existing, error: fetchErr } = await db
+      .from("black_followups")
+      .select("student_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+    const studentId = existing?.student_id || null;
+    if (studentId) {
+      const studentPatch: Record<string, any> = {};
+      const updatedAt = new Date().toISOString();
+      if (wantsNameUpdate && nextName) {
+        studentPatch.preferred_name = nextName;
+        studentPatch.preferred_name_updated_at = updatedAt;
+      }
+      if (wantsPhoneUpdate) {
+        studentPatch.student_phone = normalizedPhone;
+        studentPatch.parent_phone = normalizedPhone;
+      }
+      if (Object.keys(studentPatch).length) {
+        studentPatch.updated_at = updatedAt;
+        const studentErr = await updateBlackStudentSafe(db, studentId, studentPatch, nextName);
+        if (studentErr) {
+          return NextResponse.json(
+            { error: studentErr.message, details: studentErr.details, code: studentErr.code },
+            { status: 500 }
+          );
+        }
+      }
+    }
+  }
+
   const { data, error } = await db
     .from("black_followups")
     .update(patch)
     .eq("id", id)
-    .select(`*, ${studentSelect}`)
+    .select("*")
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ contact: mapRow(data) });
+  const [withStudent] = await attachStudents(db, data ? [data] : []);
+  return NextResponse.json({ contact: mapRow(withStudent) });
 }
