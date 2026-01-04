@@ -234,10 +234,17 @@ export default function PrenotaPage() {
     setBookingSuccess(null);
   }, [selectedDayId, selectedSlotStartMs]);
 
-  const minDay = availableDayIds[0] || null;
-  const maxDay = availableDayIds[availableDayIds.length - 1] || null;
-  const minMonth = minDay ? new Date(parseYmdDate(minDay) || new Date()) : null;
-  const maxMonth = maxDay ? new Date(parseYmdDate(maxDay) || new Date()) : null;
+  const minMonth = useMemo(() => {
+    const minDay = availableDayIds[0];
+    if (!minDay) return null;
+    return new Date(parseYmdDate(minDay) || new Date());
+  }, [availableDayIds]);
+
+  const maxMonth = useMemo(() => {
+    const maxDay = availableDayIds[availableDayIds.length - 1];
+    if (!maxDay) return null;
+    return new Date(parseYmdDate(maxDay) || new Date());
+  }, [availableDayIds]);
 
   const canGoPrev = useMemo(() => {
     if (!minMonth) return true;

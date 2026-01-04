@@ -58,10 +58,6 @@ function parseDate(input?: string | null) {
   return d;
 }
 
-function pad2(value: number) {
-  return String(value).padStart(2, "0");
-}
-
 function toUtcMs(
   dateKey: string,
   hour: number,

@@ -31,7 +31,10 @@ export default function ResetPasswordClient() {
     return { oobCode: normalized, mode: nextMode };
   }, [rawOobCode, rawMode, continueUrl]);
 
-  const showConfirm = useMemo(() => !!oobCode, [oobCode]);
+  const showConfirm = useMemo(
+    () => !!oobCode && (!mode || mode === "resetPassword"),
+    [oobCode, mode]
+  );
 
   return (
     <main className="mx-auto max-w-md p-6">

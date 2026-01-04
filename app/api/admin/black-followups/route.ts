@@ -82,7 +82,7 @@ async function updateBlackStudentSafe(
   patch: Record<string, any>,
   fallbackName?: string | null,
 ) {
-  let current = { ...patch };
+  const current = { ...patch };
   const missingCols = new Set<string>();
   let attempts = 0;
 
