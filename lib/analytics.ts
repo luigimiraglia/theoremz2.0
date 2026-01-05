@@ -36,7 +36,7 @@ function getUserId(): string | null {
 const ANALYTICS_BATCH_SIZE = 8;
 const ANALYTICS_FLUSH_MS = 2000;
 const analyticsQueue: any[] = [];
-let flushTimer: ReturnType<typeof window.setTimeout> | null = null;
+let flushTimer: number | null = null;
 
 function scheduleFlush() {
   if (flushTimer || typeof window === "undefined") return;
@@ -49,8 +49,8 @@ function scheduleFlush() {
 function flushQueue() {
   if (typeof window === "undefined") return;
   if (!analyticsQueue.length) return;
-  if (flushTimer) {
-    clearTimeout(flushTimer);
+  if (flushTimer !== null) {
+    window.clearTimeout(flushTimer);
     flushTimer = null;
   }
 
