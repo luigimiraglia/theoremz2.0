@@ -15,7 +15,8 @@ export function middleware(request: NextRequest) {
   const allowMic =
     request.nextUrl.pathname.startsWith('/interrogazione') ||
     request.nextUrl.pathname.startsWith('/api/interrogazione') ||
-    request.nextUrl.pathname.startsWith('/compiti');
+    request.nextUrl.pathname.startsWith('/compiti') ||
+    request.nextUrl.pathname.startsWith('/tutor/scheda-black');
   response.headers.set('Permissions-Policy', `camera=(), microphone=(${allowMic ? 'self' : ''}), geolocation=()`)
 
   // Add caching headers for static assets

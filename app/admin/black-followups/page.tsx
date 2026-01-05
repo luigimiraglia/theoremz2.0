@@ -234,7 +234,7 @@ export default function BlackFollowupsPage() {
           note: row.note ?? null,
           status: row.status ?? null,
         }))
-        .filter((row) => {
+        .filter((row: Booking) => {
           const callType = typeof row.callType === "string" ? row.callType : "";
           return BLACK_CALL_TYPES.has(callType);
         });
