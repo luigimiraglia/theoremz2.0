@@ -32,6 +32,17 @@ type Contact = {
   updatedAt: string | null;
 };
 
+type Booking = {
+  id: string;
+  startsAt: string;
+  durationMin: number | null;
+  callType: string | null;
+  callTypeName: string | null;
+  fullName: string;
+  note: string | null;
+  status?: string | null;
+};
+
 type BlackStudent = {
   id: string;
   preferred_name?: string | null;
@@ -65,6 +76,7 @@ const callTypeOptions: Array<{ value: ScheduleDraft["callType"]; label: string }
   { value: "onboarding", label: "Onboarding" },
   { value: "check-percorso", label: "Check-in" },
 ];
+const BLACK_CALL_TYPES = new Set(["onboarding", "check-percorso"]);
 
 async function buildHeaders() {
   const headers: Record<string, string> = {};
@@ -93,6 +105,13 @@ function formatDay(iso?: string | null) {
   if (!iso) return "—";
   const d = new Date(iso);
   return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+}
+
+function formatCallTypeLabel(booking: Booking) {
+  if (booking.callTypeName) return booking.callTypeName;
+  if (booking.callType === "check-percorso") return "Check-in";
+  if (booking.callType === "onboarding") return "Onboarding";
+  return "Chiamata";
 }
 
 function toDateInputValue(date: Date) {
@@ -174,6 +193,9 @@ export default function BlackFollowupsPage() {
   const [searching, setSearching] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<BlackStudent | null>(null);
   const [quickQuery, setQuickQuery] = useState("");
+  const [blackBookings, setBlackBookings] = useState<Booking[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   const hasAccess = useMemo(
     () => Boolean(user?.email && user.email.toLowerCase() === allowedEmail),
@@ -186,6 +208,43 @@ export default function BlackFollowupsPage() {
     const isMobile = /android|iphone|ipad|ipod/.test(ua);
     setPreferWebWhatsApp(!isMobile);
   }, []);
+
+  const fetchBlackBookings = useCallback(async () => {
+    if (!hasAccess) return;
+    setLoadingBookings(true);
+    setBookingError(null);
+    try {
+      const headers = await buildHeaders();
+      const res = await fetch("/api/admin/bookings", {
+        headers,
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      const rows = Array.isArray(json.bookings) ? json.bookings : [];
+      const normalized: Booking[] = rows
+        .filter((row: any) => row && row.id)
+        .map((row: any) => ({
+          id: row.id,
+          startsAt: row.startsAt,
+          durationMin: row.durationMin ?? null,
+          callType: row.callType ?? null,
+          callTypeName: row.callTypeName ?? null,
+          fullName: row.fullName || "",
+          note: row.note ?? null,
+          status: row.status ?? null,
+        }))
+        .filter((row) => {
+          const callType = typeof row.callType === "string" ? row.callType : "";
+          return BLACK_CALL_TYPES.has(callType);
+        });
+      setBlackBookings(normalized);
+    } catch (err: any) {
+      setBookingError(err?.message || "Errore appuntamenti");
+    } finally {
+      setLoadingBookings(false);
+    }
+  }, [hasAccess]);
 
   const fetchContacts = useCallback(async () => {
     if (!hasAccess) return;
@@ -240,6 +299,10 @@ export default function BlackFollowupsPage() {
     if (hasAccess) fetchAllContacts();
   }, [hasAccess, fetchContacts, fetchAllContacts]);
 
+  useEffect(() => {
+    if (hasAccess) fetchBlackBookings();
+  }, [hasAccess, fetchBlackBookings]);
+
   const applyContactUpdate = useCallback((contact: Contact) => {
     setData((prev) => {
       if (!prev) return prev;
@@ -274,19 +337,42 @@ export default function BlackFollowupsPage() {
     });
   }, [selectedDate]);
 
-  const buildDefaultScheduleDraft = useCallback((): ScheduleDraft => ({
-    date: selectedDate || toDateInputValue(new Date()),
-    time: "10:00",
-    callType: "onboarding",
-    note: "",
-  }), [selectedDate]);
+  const buildDefaultScheduleDraft = useCallback(
+    (overrides?: Partial<ScheduleDraft>): ScheduleDraft => ({
+      date: selectedDate || toDateInputValue(new Date()),
+      time: "10:00",
+      callType: "onboarding",
+      note: "",
+      ...overrides,
+    }),
+    [selectedDate]
+  );
 
   const toggleSchedule = useCallback(
-    (contactId: string) => {
-      setScheduleOpenId((prev) => (prev === contactId ? null : contactId));
-      setScheduleDrafts((prev) => {
-        if (prev[contactId]) return prev;
-        return { ...prev, [contactId]: buildDefaultScheduleDraft() };
+    (contactId: string, callType?: ScheduleDraft["callType"]) => {
+      setScheduleOpenId((prev) => {
+        const isOpening = prev !== contactId;
+        if (isOpening) {
+          setScheduleDrafts((drafts) => {
+            const existing = drafts[contactId];
+            if (existing) {
+              if (callType && existing.callType !== callType) {
+                return {
+                  ...drafts,
+                  [contactId]: { ...existing, callType },
+                };
+              }
+              return drafts;
+            }
+            return {
+              ...drafts,
+              [contactId]: buildDefaultScheduleDraft(
+                callType ? { callType } : undefined
+              ),
+            };
+          });
+        }
+        return isOpening ? contactId : null;
       });
     },
     [buildDefaultScheduleDraft]
@@ -353,13 +439,14 @@ export default function BlackFollowupsPage() {
           delete next[contact.id];
           return next;
         });
+        void fetchBlackBookings();
       } catch (err: any) {
         setError(err?.message || "Errore creazione booking");
       } finally {
         setSchedulingId(null);
       }
     },
-    [buildDefaultScheduleDraft, scheduleDrafts]
+    [buildDefaultScheduleDraft, fetchBlackBookings, scheduleDrafts]
   );
 
   const startNameEdit = useCallback((contact: Contact) => {
@@ -685,6 +772,31 @@ export default function BlackFollowupsPage() {
     }
   }, [applyContactUpdate, fetchContacts]);
 
+  const upcomingBlackBookings = useMemo(() => {
+    const now = Date.now();
+    return blackBookings
+      .filter((booking) => {
+        const callType = typeof booking.callType === "string" ? booking.callType : "";
+        if (!BLACK_CALL_TYPES.has(callType)) return false;
+        if (booking.status === "cancelled") return false;
+        if (!booking.startsAt) return false;
+        const startMs = new Date(booking.startsAt).getTime();
+        if (!Number.isFinite(startMs)) return false;
+        if (startMs >= now) return true;
+        const duration = Number(booking.durationMin);
+        if (Number.isFinite(duration) && duration > 0) {
+          return startMs + duration * 60000 >= now;
+        }
+        return false;
+      })
+      .sort((a, b) => {
+        const aMs = new Date(a.startsAt).getTime();
+        const bMs = new Date(b.startsAt).getTime();
+        return aMs - bMs;
+      })
+      .slice(0, 5);
+  }, [blackBookings]);
+
   const fetchStudents = useCallback(async () => {
     if (!studentQuery.trim()) {
       setStudentResults([]);
@@ -872,7 +984,10 @@ export default function BlackFollowupsPage() {
               Importa prossimo Black
             </button>
             <button
-              onClick={fetchContacts}
+              onClick={() => {
+                fetchContacts();
+                fetchBlackBookings();
+              }}
               disabled={loading}
               className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
             >
@@ -1123,6 +1238,41 @@ export default function BlackFollowupsPage() {
               />
               Mostra anche i completati
             </label>
+          </div>
+
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+              <span>Prossimi appuntamenti Black</span>
+              {loadingBookings ? <Loader2 size={12} className="animate-spin" /> : null}
+            </div>
+            {bookingError ? (
+              <p className="mt-2 text-xs text-rose-600">{bookingError}</p>
+            ) : upcomingBlackBookings.length ? (
+              <div className="mt-2 space-y-2">
+                {upcomingBlackBookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-900">
+                        {booking.fullName || "Studente"}
+                      </span>
+                      <span className="text-[11px] font-semibold text-slate-500">
+                        {formatDate(booking.startsAt)}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[11px] font-semibold text-slate-600">
+                      {formatCallTypeLabel(booking)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-slate-500">
+                Nessun appuntamento programmato.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -1811,6 +1961,11 @@ export default function BlackFollowupsPage() {
               const isPaused = contact.status === "dropped";
               const isPausing = pausingId === contact.id;
               const isResuming = resumingId === contact.id;
+              const isScheduleOpen = scheduleOpenId === contact.id;
+              const scheduleDraft =
+                scheduleDrafts[contact.id] ||
+                buildDefaultScheduleDraft({ callType: "check-percorso" });
+              const isScheduling = schedulingId === contact.id;
               return (
                 <div
                   key={contact.id}
@@ -1986,6 +2141,13 @@ export default function BlackFollowupsPage() {
                         <ExternalLink size={12} />
                       </a>
                     ) : null}
+                    <button
+                      type="button"
+                      onClick={() => toggleSchedule(contact.id, "check-percorso")}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 font-semibold text-slate-700 hover:border-slate-300"
+                    >
+                      {isScheduleOpen ? "Chiudi check-in" : "Programma check-in"}
+                    </button>
                     {isPaused ? (
                       <button
                         type="button"
@@ -2016,6 +2178,71 @@ export default function BlackFollowupsPage() {
                       </button>
                     )}
                   </div>
+                  {isScheduleOpen ? (
+                    <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+                      <div className="flex flex-wrap gap-2">
+                        <select
+                          value={scheduleDraft.callType}
+                          onChange={(e) =>
+                            updateScheduleDraft(contact.id, {
+                              callType: e.target.value as ScheduleDraft["callType"],
+                            })
+                          }
+                          className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                        >
+                          {callTypeOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="date"
+                          value={scheduleDraft.date}
+                          onChange={(e) =>
+                            updateScheduleDraft(contact.id, { date: e.target.value })
+                          }
+                          className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                        />
+                        <input
+                          type="time"
+                          value={scheduleDraft.time}
+                          onChange={(e) =>
+                            updateScheduleDraft(contact.id, { time: e.target.value })
+                          }
+                          className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={scheduleDraft.note}
+                        onChange={(e) =>
+                          updateScheduleDraft(contact.id, { note: e.target.value })
+                        }
+                        placeholder="Nota (opzionale)"
+                        className="mt-2 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                      />
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          onClick={() => handleScheduleSave(contact)}
+                          disabled={isScheduling}
+                          className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                        >
+                          {isScheduling ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            "Salva"
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setScheduleOpenId(null)}
+                          className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300"
+                        >
+                          Annulla
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               );
             })

@@ -528,8 +528,8 @@ function buildBlackTemplate(isParent: boolean) {
       "",
       "Con Theoremz Black tuo figlio ha tutto questo già organizzato: lezioni, esercizi e feedback ogni settimana con un metodo costruito per farlo andare più veloce.",
       "",
-      "Se vuoi iniziare oggi, puoi attivarlo qui: theoremz.com/black",
-      "Ti arriva subito l'accesso completo e il piano personalizzato.",
+      "Prima di dirti se Black è la soluzione giusta, ti faccio una domanda veloce:",
+      "qual è l’argomento che ti fa perdere più punti nelle verifiche?",
     ].join("\n");
   }
 
@@ -548,8 +548,8 @@ function buildBlackTemplate(isParent: boolean) {
     "",
     "Con Theoremz Black hai tutto questo già organizzato: lezioni, esercizi e feedback ogni settimana, con un metodo costruito per farti andare più veloce.",
     "",
-    "Se vuoi iniziare oggi, puoi attivarlo qui: theoremz.com/black",
-    "Ti arriva subito l'accesso completo e il piano personalizzato.",
+    "Prima di dirti se Black è la soluzione giusta, ti faccio una domanda veloce:",
+    "qual è l’argomento che ti fa perdere più punti nelle verifiche?",
   ].join("\n");
 }
 
@@ -570,8 +570,8 @@ function buildMentorTemplate(isParent: boolean) {
       "",
       "Il programma Mentor è pensato per chi vuole risultati visibili e un metodo personale, non standard.",
       "",
-      "Puoi attivare subito il percorso qui: theoremz.com/mentor",
-      "Dopo l'attivazione ti scrivo io per programmare la prima lezione e il piano di studio.",
+      "Prima di dirti se Black è la soluzione giusta, ti faccio una domanda veloce:",
+      "qual è l’argomento che ti fa perdere più punti nelle verifiche?",
     ].join("\n");
   }
 
@@ -590,8 +590,8 @@ function buildMentorTemplate(isParent: boolean) {
     "",
     "Il programma Mentor è pensato per chi vuole risultati visibili e un metodo personale, non standard.",
     "",
-    "Puoi attivare subito il tuo percorso qui: theoremz.com/mentor",
-    "Dopo l'attivazione ti scrivo io per programmare la prima lezione e il piano di studio.",
+    "Prima di dirti se Black è la soluzione giusta, ti faccio una domanda veloce:",
+    "qual è l’argomento che ti fa perdere più punti nelle verifiche?",
   ].join("\n");
 }
 
