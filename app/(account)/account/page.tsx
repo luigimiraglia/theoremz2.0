@@ -693,6 +693,16 @@ export default function AccountPage() {
     return null;
   }, [nextBooking, weeklyCheck]);
 
+  const nextLessonReminder = useMemo(() => {
+    if (nextBooking?.hasBooking && nextBooking.startsAt) {
+      return {
+        label: formatDateTimeLabel(nextBooking.startsAt),
+        type: nextBooking.callTypeName || nextBooking.callType || null,
+      };
+    }
+    return null;
+  }, [nextBooking]);
+
   const handleSaveUsername = async () => {
     const clean = username.trim().toLowerCase();
     if (!/^[a-z0-9_]{3,20}$/.test(clean)) {
@@ -2540,9 +2550,14 @@ export default function AccountPage() {
                     20 minuti con il tuo tutor per allineare obiettivi e dubbi.
                   </p>
                 </div>
-                {isCheckingWeeklyCall ? (
+                {isCheckingWeeklyCall || nextBookingLoading ? (
                   <div className="text-sm font-semibold text-white/80">
-                    Controllo slot...
+                    Controllo prenotazioni...
+                  </div>
+                ) : nextLessonReminder ? (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white">
+                    <CalendarClock className="h-4 w-4" aria-hidden />
+                    Prossima lezione: {nextLessonReminder.label}
                   </div>
                 ) : weeklyCheck?.hasBooking ? (
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white">

@@ -99,6 +99,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const planLabelLower = (planLabel || "").toLowerCase();
   const isBlackFullPlan =
     planLabelLower.includes("black") && !planLabelLower.includes("essential");
+  const planKind = detectPlanKind(planName, productId);
+  const isBlackPlan = planKind === "essential" || planKind.startsWith("black-");
 
   const persona = (metadata.persona || metadata.profile || metadata.role || "").toLowerCase();
   const isParent = persona.includes("parent") || persona.includes("genitore");
@@ -180,6 +182,20 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       studentUserId: syncResult.userId,
       status: "synced",
     });
+  }
+
+  if (isBlackPlan) {
+    try {
+      await ensureBlackLeadFromActivation({
+        phone,
+        name,
+        email,
+        studentId: syncResult.studentId || null,
+        planLabel,
+      });
+    } catch (error) {
+      console.error("[stripe-webhook] ensure black lead failed", error);
+    }
   }
 
   await sendWelcomeEmail({
@@ -1314,6 +1330,111 @@ function normalizeWhatsAppNumber(raw?: string | null) {
     digits = `39${digits}`;
   }
   return digits;
+}
+
+function normalizeLeadPhone(raw?: string | null) {
+  const digits = normalizeWhatsAppNumber(raw);
+  return digits ? `+${digits}` : null;
+}
+
+async function ensureBlackLeadFromActivation({
+  phone,
+  name,
+  email,
+  studentId,
+  planLabel,
+}: {
+  phone: string | null;
+  name: string | null;
+  email: string | null;
+  studentId: string | null;
+  planLabel: string | null;
+}) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return;
+  }
+  const db = supabaseServer();
+  if (!db) return;
+
+  const nowIso = new Date().toISOString();
+  let leadName = name?.trim() || null;
+  let leadPhone = normalizeLeadPhone(phone);
+  let leadEmail = email?.trim() || null;
+
+  if (studentId && (!leadName || !leadPhone || !leadEmail)) {
+    const { data: student, error } = await db
+      .from("black_students")
+      .select("preferred_name, student_name, student_email, parent_email, student_phone, parent_phone")
+      .eq("id", studentId)
+      .maybeSingle();
+    if (!error && student) {
+      if (!leadName) {
+        leadName = student.preferred_name || student.student_name || null;
+      }
+      if (!leadPhone) {
+        leadPhone = normalizeLeadPhone(student.student_phone || student.parent_phone || null);
+      }
+      if (!leadEmail) {
+        leadEmail = student.student_email || student.parent_email || null;
+      }
+    }
+  }
+
+  if (!leadPhone) {
+    console.warn("[stripe-webhook] missing phone for black lead, skipping");
+    return;
+  }
+
+  let existing: any = null;
+  if (studentId) {
+    const { data } = await db
+      .from("black_followups")
+      .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
+      .eq("student_id", studentId)
+      .maybeSingle();
+    existing = data || null;
+  }
+  if (!existing) {
+    const { data } = await db
+      .from("black_followups")
+      .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
+      .eq("whatsapp_phone", leadPhone)
+      .maybeSingle();
+    existing = data || null;
+  }
+
+  const noteParts = [
+    "Attivazione Black",
+    planLabel ? `Piano: ${planLabel}` : null,
+    leadEmail ? `Email: ${leadEmail}` : null,
+  ].filter(Boolean);
+  const note = noteParts.length ? noteParts.join(" · ") : null;
+
+  if (existing?.id) {
+    const patch: Record<string, any> = { updated_at: nowIso };
+    if (leadName && !existing.full_name) patch.full_name = leadName;
+    if (leadPhone && !existing.whatsapp_phone) patch.whatsapp_phone = leadPhone;
+    if (studentId && !existing.student_id) patch.student_id = studentId;
+    if (note && !existing.note) patch.note = note;
+    if (existing.status !== "active") patch.status = "active";
+    if (!existing.next_follow_up_at) patch.next_follow_up_at = nowIso;
+    if (Object.keys(patch).length > 1) {
+      await db.from("black_followups").update(patch).eq("id", existing.id);
+    }
+    return;
+  }
+
+  const insertPayload = {
+    full_name: leadName,
+    whatsapp_phone: leadPhone,
+    note,
+    student_id: studentId,
+    status: "active",
+    next_follow_up_at: nowIso,
+    created_at: nowIso,
+    updated_at: nowIso,
+  };
+  await db.from("black_followups").insert(insertPayload);
 }
 
 function formatAmount(amount: number, currency?: string | null) {

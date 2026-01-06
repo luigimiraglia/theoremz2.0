@@ -528,7 +528,7 @@ function buildBlackTemplate(isParent: boolean) {
       "",
       "Con Theoremz Black tuo figlio ha tutto questo già organizzato: lezioni, esercizi e feedback ogni settimana con un metodo costruito per farlo andare più veloce.",
       "",
-      "Prima di dirti se Black è la soluzione giusta, ti faccio una domanda veloce:",
+      "Prima di dirti se Mentor è la soluzione giusta, ti faccio una domanda veloce:",
       "qual è l’argomento che ti fa perdere più punti nelle verifiche?",
     ].join("\n");
   }
@@ -548,7 +548,7 @@ function buildBlackTemplate(isParent: boolean) {
     "",
     "Con Theoremz Black hai tutto questo già organizzato: lezioni, esercizi e feedback ogni settimana, con un metodo costruito per farti andare più veloce.",
     "",
-    "Prima di dirti se Black è la soluzione giusta, ti faccio una domanda veloce:",
+    "Prima di dirti se Mentor è la soluzione giusta, ti faccio una domanda veloce:",
     "qual è l’argomento che ti fa perdere più punti nelle verifiche?",
   ].join("\n");
 }
