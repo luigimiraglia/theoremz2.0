@@ -697,7 +697,7 @@ export default function AccountPage() {
     if (nextBooking?.hasBooking && nextBooking.startsAt) {
       return {
         label: formatDateTimeLabel(nextBooking.startsAt),
-        type: nextBooking.callTypeName || nextBooking.callType || null,
+        type: nextBooking.callTypeName || null,
       };
     }
     return null;
