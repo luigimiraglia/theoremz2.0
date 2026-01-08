@@ -508,18 +508,14 @@ export default function BlackPage() {
             priceContentByToggleId={{
               "essential-monthly": (
                 <div className="flex flex-col items-center leading-tight text-center gap-2">
-                  <span className="text-[46px] sm:text-[46px] font-black bg-gradient-to-r from-emerald-700 via-emerald-500 to-cyan-500 bg-clip-text text-transparent drop-shadow-[0_14px_34px_-12px_rgba(16,185,129,0.65)]">
+                  <span className="text-[46px] sm:text-[46px] font-black bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_14px_34px_-12px_rgba(14,165,233,0.6)]">
                     12€/mese
-                  </span>
-                  <span className="text-[14px] sm:text-[15px] font-bold text-slate-600">
-                    Fatturazione mensile
                   </span>
                 </div>
               ),
             }}
             priceGradientByToggleId={{
-              "essential-monthly":
-                "from-emerald-700 via-emerald-500 to-cyan-500",
+              "essential-monthly": "from-blue-600 via-cyan-500 to-blue-600",
             }}
             toggleOptions={[
               {
@@ -580,7 +576,7 @@ export default function BlackPage() {
                   <span className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-gradient-to-r from-rose-500 to-pink-500 px-3 py-1.5 text-[20px] sm:text-[22px] font-black text-white">
                     7 giorni di prova
                   </span>
-                  <span className="text-[46px] sm:text-[46px] font-black bg-gradient-to-r from-emerald-700 via-emerald-500 to-green-600 bg-clip-text text-transparent drop-shadow-[0_14px_34px_-12px_rgba(5,150,105,0.7)]">
+                  <span className="text-[46px] sm:text-[46px] font-black bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_14px_34px_-12px_rgba(14,165,233,0.6)]">
                     26€/mese
                   </span>
                   <span className="text-[14px] sm:text-[15px] font-bold text-slate-600">
@@ -590,7 +586,7 @@ export default function BlackPage() {
               ),
             }}
             priceGradientByToggleId={{
-              "black-monthly": "from-emerald-700 via-emerald-500 to-green-600",
+              "black-monthly": "from-blue-600 via-cyan-500 to-blue-600",
             }}
             toggleOptions={[
               {
