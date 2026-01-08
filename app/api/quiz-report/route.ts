@@ -386,21 +386,39 @@ async function logQuizLead({
   responses: QuizResponse[];
   submittedAtIso: string;
 }) {
-  const doc = {
+  const phoneNormalized = normalizePhone(phone);
+  const phoneLookupCandidates = buildPhoneLookupCandidates(phone, phoneNormalized);
+  const nowMs = Date.now();
+  const baseDoc = {
     quiz,
     quizLabel,
     phone,
+    phoneNormalized,
     planName: plan.name ?? null,
     planDescription: plan.description ?? null,
     planHighlight: plan.highlight ?? null,
     planPitch,
     responses,
     submittedAt: submittedAtIso,
-    createdAt: Date.now(),
+    updatedAt: nowMs,
     source: "quiz-report",
   };
 
-  await adminDb.collection("quiz_leads").add(doc);
+  const existingRef = await findExistingQuizLead({
+    quiz,
+    phone,
+    phoneNormalized,
+    candidates: phoneLookupCandidates,
+  });
+
+  if (existingRef) {
+    await existingRef.set(baseDoc, { merge: true });
+  } else {
+    await adminDb.collection("quiz_leads").add({
+      ...baseDoc,
+      createdAt: nowMs,
+    });
+  }
 
   // Inserisci/aggiorna anche nella tabella manual_leads (Supabase) per il follow-up automatico
   if (quiz === "start-studente") {
@@ -415,13 +433,82 @@ async function logQuizLead({
 const FOLLOWUP_STEPS_DAYS = [1, 2, 7, 30];
 
 function normalizePhone(raw?: string | null) {
-  if (!raw) return null;
-  const compact = raw.replace(/\s+/g, "").trim();
-  const digits = compact.replace(/\D/g, "");
+  const digits = normalizePhoneDigits(raw);
   if (!digits) return null;
-  if (compact.startsWith("+")) return `+${digits}`;
-  if (digits.startsWith("00") && digits.length > 2) return `+${digits.slice(2)}`;
+  if (!digits.startsWith("39") && digits.length === 10) {
+    return `+39${digits}`;
+  }
   return `+${digits}`;
+}
+
+function normalizePhoneDigits(raw?: string | null) {
+  if (!raw) return null;
+  let digits = raw.replace(/\D+/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.startsWith("0") && digits.length >= 10) {
+    digits = digits.replace(/^0+/, "");
+  }
+  return digits || null;
+}
+
+function buildPhoneLookupCandidates(raw: string, normalized: string | null) {
+  const digits = normalizePhoneDigits(raw);
+  if (!digits) {
+    return normalized ? [normalized] : [];
+  }
+  const candidates = new Set<string>();
+  candidates.add(`+${digits}`);
+  if (!digits.startsWith("39") && digits.length === 10) {
+    candidates.add(`+39${digits}`);
+  }
+  if (digits.startsWith("39") && digits.length > 10) {
+    candidates.add(`+${digits.slice(2)}`);
+  }
+  if (normalized) candidates.add(normalized);
+  return Array.from(candidates);
+}
+
+async function findExistingQuizLead({
+  quiz,
+  phone,
+  phoneNormalized,
+  candidates,
+}: {
+  quiz: QuizKind;
+  phone: string;
+  phoneNormalized: string | null;
+  candidates: string[];
+}) {
+  const collection = adminDb.collection("quiz_leads");
+  if (phoneNormalized) {
+    const byNormalized = await collection
+      .where("phoneNormalized", "==", phoneNormalized)
+      .where("quiz", "==", quiz)
+      .limit(1)
+      .get();
+    if (!byNormalized.empty) return byNormalized.docs[0].ref;
+  }
+
+  if (phone) {
+    const byRaw = await collection
+      .where("phone", "==", phone)
+      .where("quiz", "==", quiz)
+      .limit(1)
+      .get();
+    if (!byRaw.empty) return byRaw.docs[0].ref;
+  }
+
+  for (const candidate of candidates) {
+    const byCandidate = await collection
+      .where("phone", "==", candidate)
+      .where("quiz", "==", quiz)
+      .limit(1)
+      .get();
+    if (!byCandidate.empty) return byCandidate.docs[0].ref;
+  }
+
+  return null;
 }
 
 function addDays(base: Date, days: number) {
@@ -450,6 +537,7 @@ async function upsertManualLeadFromQuiz({
   }
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) return;
+  const phoneCandidates = buildPhoneLookupCandidates(phone, normalizedPhone);
 
   const db = supabaseServer();
   const now = new Date();
@@ -461,8 +549,8 @@ async function upsertManualLeadFromQuiz({
   // Se esiste già, riattiva e resetta il follow-up
   const { data: existing, error: fetchErr } = await db
     .from("manual_leads")
-    .select("id, status")
-    .eq("whatsapp_phone", normalizedPhone)
+    .select("id, status, whatsapp_phone")
+    .in("whatsapp_phone", phoneCandidates.length ? phoneCandidates : [normalizedPhone])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

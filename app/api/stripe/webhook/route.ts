@@ -8,6 +8,7 @@ import {
   recordStripeSignup,
   linkStripeSignupToStudent,
   mapPlan,
+  customerToDetails,
 } from "@/lib/black/subscriptionSync";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
@@ -62,6 +63,10 @@ export async function POST(req: Request) {
   try {
     if (event.type === "checkout.session.completed") {
       await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+    } else if (event.type === "customer.subscription.updated") {
+      await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+    } else if (event.type === "customer.subscription.deleted") {
+      await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
     }
   } catch (error) {
     console.error("stripe webhook handler error", error);
@@ -227,6 +232,107 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       planLabel,
     });
   }
+}
+
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  await handleSubscriptionEvent(subscription, "customer.subscription.updated");
+}
+
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  await handleSubscriptionEvent(subscription, "customer.subscription.deleted");
+}
+
+async function handleSubscriptionEvent(
+  subscription: Stripe.Subscription,
+  source: string,
+) {
+  if (!stripe) return;
+  const hydrated = await resolveStripeSubscription(stripe, subscription);
+  if (!hydrated) return;
+
+  const stripeCustomer = await resolveStripeCustomer(stripe, hydrated.customer);
+  const metadata = (hydrated.metadata || {}) as Stripe.Metadata;
+  const price = hydrated.items?.data?.[0]?.price || null;
+  const planName =
+    (metadata.planName as string) ||
+    (price?.nickname as string) ||
+    (typeof price?.product === "object" && price.product
+      ? (price.product as Stripe.Product).name
+      : undefined) ||
+    price?.lookup_key ||
+    "Theoremz Black";
+  const planLabel = mapPlan(price, planName) || planName;
+  const productId =
+    typeof price?.product === "object"
+      ? (price.product as Stripe.Product).id
+      : (price?.product as string | undefined);
+  const planKind = detectPlanKind(planName, productId);
+  const isBlackPlan = planKind === "essential" || planKind.startsWith("black-");
+  if (!isBlackPlan) return;
+
+  let syncResult: Awaited<ReturnType<typeof syncBlackSubscriptionRecord>> | null = null;
+  try {
+    syncResult = await syncBlackSubscriptionRecord({
+      source,
+      planName,
+      subscription: hydrated,
+      stripeCustomer,
+      metadata,
+      customerDetails: customerToDetails(stripeCustomer || null),
+      lineItem: undefined,
+    });
+  } catch (error) {
+    console.error("[stripe-webhook] subscription sync failed", error);
+  }
+
+  if (!shouldCreateCancellationLead(hydrated)) return;
+
+  const phone =
+    stripeCustomer?.phone ||
+    (metadata.phone as string) ||
+    (metadata.whatsapp as string) ||
+    null;
+  const email =
+    stripeCustomer?.email ||
+    (metadata.email as string) ||
+    (metadata.student_email as string) ||
+    (metadata.parent_email as string) ||
+    null;
+  const name =
+    stripeCustomer?.name ||
+    (metadata.student_name as string) ||
+    (metadata.parent_name as string) ||
+    (metadata.name as string) ||
+    null;
+
+  try {
+    await ensureBlackLeadFromCancellation({
+      phone,
+      name,
+      email,
+      studentId: syncResult?.status === "synced" ? syncResult.studentId : null,
+      planLabel,
+      status: hydrated.status || null,
+      cancelAtPeriodEnd: Boolean(hydrated.cancel_at_period_end),
+      canceledAt: secondsToIso(hydrated.canceled_at),
+      currentPeriodEnd: secondsToIso(hydrated.current_period_end),
+      cancelReason: (hydrated as any)?.cancellation_details?.reason || null,
+    });
+  } catch (error) {
+    console.error("[stripe-webhook] ensure churn lead failed", error);
+  }
+}
+
+function shouldCreateCancellationLead(subscription: Stripe.Subscription) {
+  if (subscription.cancel_at_period_end) return true;
+  const status = subscription.status || null;
+  if (!status) return false;
+  return status === "canceled" || status === "incomplete_expired" || status === "paused";
+}
+
+function secondsToIso(value?: number | null) {
+  if (!value) return null;
+  return new Date(value * 1000).toISOString();
 }
 
 async function logSubscription({
@@ -1421,6 +1527,130 @@ async function ensureBlackLeadFromActivation({
     if (Object.keys(patch).length > 1) {
       await db.from("black_followups").update(patch).eq("id", existing.id);
     }
+    return;
+  }
+
+  const insertPayload = {
+    full_name: leadName,
+    whatsapp_phone: leadPhone,
+    note,
+    student_id: studentId,
+    status: "active",
+    next_follow_up_at: nowIso,
+    created_at: nowIso,
+    updated_at: nowIso,
+  };
+  await db.from("black_followups").insert(insertPayload);
+}
+
+async function ensureBlackLeadFromCancellation({
+  phone,
+  name,
+  email,
+  studentId,
+  planLabel,
+  status,
+  cancelAtPeriodEnd,
+  canceledAt,
+  currentPeriodEnd,
+  cancelReason,
+}: {
+  phone: string | null;
+  name: string | null;
+  email: string | null;
+  studentId: string | null;
+  planLabel: string | null;
+  status: string | null;
+  cancelAtPeriodEnd: boolean;
+  canceledAt: string | null;
+  currentPeriodEnd: string | null;
+  cancelReason: string | null;
+}) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return;
+  }
+  const db = supabaseServer();
+  if (!db) return;
+
+  const nowIso = new Date().toISOString();
+  let leadName = name?.trim() || null;
+  let leadPhone = normalizeLeadPhone(phone);
+  let leadEmail = email?.trim() || null;
+
+  if (studentId && (!leadName || !leadPhone || !leadEmail)) {
+    const { data: student, error } = await db
+      .from("black_students")
+      .select("preferred_name, student_name, student_email, parent_email, student_phone, parent_phone")
+      .eq("id", studentId)
+      .maybeSingle();
+    if (!error && student) {
+      if (!leadName) {
+        leadName = student.preferred_name || student.student_name || null;
+      }
+      if (!leadPhone) {
+        leadPhone = normalizeLeadPhone(student.student_phone || student.parent_phone || null);
+      }
+      if (!leadEmail) {
+        leadEmail = student.student_email || student.parent_email || null;
+      }
+    }
+  }
+
+  if (!leadPhone) {
+    console.warn("[stripe-webhook] missing phone for churn lead, skipping");
+    return;
+  }
+
+  let existing: any = null;
+  if (studentId) {
+    const { data } = await db
+      .from("black_followups")
+      .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
+      .eq("student_id", studentId)
+      .maybeSingle();
+    existing = data || null;
+  }
+  if (!existing) {
+    const { data } = await db
+      .from("black_followups")
+      .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
+      .eq("whatsapp_phone", leadPhone)
+      .maybeSingle();
+    existing = data || null;
+  }
+
+  const noteParts = [
+    "Disdetta abbonamento",
+    planLabel ? `Piano: ${planLabel}` : null,
+    status ? `Status: ${status}` : null,
+    cancelReason ? `Motivo: ${cancelReason}` : null,
+    canceledAt ? `Disdetta: ${canceledAt.slice(0, 10)}` : null,
+    cancelAtPeriodEnd && currentPeriodEnd
+      ? `Fine periodo: ${currentPeriodEnd.slice(0, 10)}`
+      : null,
+    leadEmail ? `Email: ${leadEmail}` : null,
+  ].filter(Boolean);
+  const note = noteParts.length ? noteParts.join(" · ") : null;
+
+  if (existing?.id) {
+    const patch: Record<string, any> = {
+      updated_at: nowIso,
+      status: "active",
+      next_follow_up_at: nowIso,
+    };
+    if (leadName && !existing.full_name) patch.full_name = leadName;
+    if (leadPhone && !existing.whatsapp_phone) patch.whatsapp_phone = leadPhone;
+    if (studentId && !existing.student_id) patch.student_id = studentId;
+    if (note) {
+      if (existing.note) {
+        if (!String(existing.note).includes("Disdetta abbonamento")) {
+          patch.note = `${existing.note} · ${note}`.slice(0, 500);
+        }
+      } else {
+        patch.note = note;
+      }
+    }
+    await db.from("black_followups").update(patch).eq("id", existing.id);
     return;
   }
 

@@ -59,6 +59,9 @@ function normalizePhone(raw?: string | null) {
   return `+${digits}`;
 }
 
+const ACTIVE_SUB_STATUSES = ["active", "trialing", "past_due", "unpaid"];
+const ACTIVE_SUB_STATUS_FILTER = `(${ACTIVE_SUB_STATUSES.map((s) => `"${s}"`).join(",")})`;
+
 type PostgrestErrorLike = {
   message?: string | null;
   details?: string | null;
@@ -137,6 +140,25 @@ function mapRow(row: any) {
           track: student.track,
         }
       : null,
+  };
+}
+
+function mapChurnedStudent(row: any, activeFollowups: Set<string>) {
+  if (!row) return null;
+  const phone = normalizePhone(row.student_phone || row.parent_phone);
+  return {
+    id: row.id as string,
+    name: row.preferred_name || row.student_name || null,
+    studentEmail: row.student_email || null,
+    parentEmail: row.parent_email || null,
+    whatsappPhone: phone,
+    yearClass: row.year_class || null,
+    track: row.track || null,
+    status: row.status || null,
+    lastContactedAt: row.last_contacted_at || null,
+    startDate: row.start_date || null,
+    updatedAt: row.updated_at || null,
+    hasActiveFollowup: Boolean(row.id && activeFollowups.has(row.id)),
   };
 }
 
@@ -359,11 +381,49 @@ export async function GET(request: NextRequest) {
       attachStudents(db, Array.isArray(completedRows) ? completedRows : []),
     ]);
 
+    let churned: any[] = [];
+    try {
+      const { data: churnedRows, error: churnedErr } = await db
+        .from("black_students")
+        .select(
+          "id, preferred_name, student_name, student_email, parent_email, student_phone, parent_phone, year_class, track, last_contacted_at, start_date, status, updated_at",
+        )
+        .not("status", "in", ACTIVE_SUB_STATUS_FILTER)
+        .not("status", "is", null)
+        .order("updated_at", { ascending: false });
+      if (churnedErr) {
+        throw churnedErr;
+      }
+      const churnedIds = (churnedRows || []).map((row: any) => row?.id).filter(Boolean);
+      let activeFollowups = new Set<string>();
+      if (churnedIds.length) {
+        const { data: activeRows, error: activeErr } = await db
+          .from("black_followups")
+          .select("student_id")
+          .eq("status", "active")
+          .in("student_id", churnedIds);
+        if (activeErr) {
+          throw activeErr;
+        }
+        activeFollowups = new Set(
+          (activeRows || [])
+            .map((row: any) => row?.student_id)
+            .filter(Boolean),
+        );
+      }
+      churned = (churnedRows || [])
+        .map((row: any) => mapChurnedStudent(row, activeFollowups))
+        .filter(Boolean);
+    } catch (error) {
+      console.error("[admin/black-followups] churned fetch error", error);
+    }
+
     return NextResponse.json({
       date: dayStart.toISOString(),
       due: dueWithStudents.map(mapRow),
       upcoming: upcomingWithStudents.map(mapRow),
       completed: completedWithStudents.map(mapRow),
+      churned,
     });
   } catch (err: any) {
     console.error("[admin/black-followups] GET error", err);

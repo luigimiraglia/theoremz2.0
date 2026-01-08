@@ -56,11 +56,27 @@ type BlackStudent = {
   hasActiveFollowup?: boolean | null;
 };
 
+type ChurnedStudent = {
+  id: string;
+  name: string | null;
+  studentEmail: string | null;
+  parentEmail: string | null;
+  whatsappPhone: string | null;
+  yearClass: string | null;
+  track: string | null;
+  status: string | null;
+  lastContactedAt: string | null;
+  startDate: string | null;
+  updatedAt: string | null;
+  hasActiveFollowup: boolean;
+};
+
 type ResponseData = {
   date: string;
   due: Contact[];
   upcoming: Contact[];
   completed: Contact[];
+  churned: ChurnedStudent[];
 };
 
 type ScheduleDraft = {
@@ -112,6 +128,21 @@ function formatCallTypeLabel(booking: Booking) {
   if (booking.callType === "check-percorso") return "Check-in";
   if (booking.callType === "onboarding") return "Onboarding";
   return "Chiamata";
+}
+
+function formatSubscriptionStatus(status?: string | null) {
+  const normalized = (status || "").toLowerCase();
+  if (!normalized) return "Disattivo";
+  const labels: Record<string, string> = {
+    canceled: "Disattivato",
+    cancelled: "Disattivato",
+    incomplete: "Incompleto",
+    incomplete_expired: "Scaduto",
+    paused: "In pausa",
+    past_due: "Pagamento in ritardo",
+    unpaid: "Non pagato",
+  };
+  return labels[normalized] || normalized;
 }
 
 function toDateInputValue(date: Date) {
@@ -188,6 +219,7 @@ export default function BlackFollowupsPage() {
   const [pausingId, setPausingId] = useState<string | null>(null);
   const [resumingId, setResumingId] = useState<string | null>(null);
   const [importingNext, setImportingNext] = useState(false);
+  const [addingChurnedId, setAddingChurnedId] = useState<string | null>(null);
   const [studentQuery, setStudentQuery] = useState("");
   const [studentResults, setStudentResults] = useState<BlackStudent[]>([]);
   const [searching, setSearching] = useState(false);
@@ -267,6 +299,7 @@ export default function BlackFollowupsPage() {
         due: Array.isArray(json.due) ? json.due : [],
         upcoming: Array.isArray(json.upcoming) ? json.upcoming : [],
         completed: Array.isArray(json.completed) ? json.completed : [],
+        churned: Array.isArray(json.churned) ? json.churned : [],
       });
     } catch (err: any) {
       setError(err?.message || "Errore caricamento contatti");
@@ -772,6 +805,48 @@ export default function BlackFollowupsPage() {
     }
   }, [applyContactUpdate, fetchContacts]);
 
+  const handleAddChurned = useCallback(
+    async (student: ChurnedStudent) => {
+      if (!student?.id) return;
+      setAddingChurnedId(student.id);
+      setError(null);
+      try {
+        const headers = await buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const res = await fetch("/api/admin/black-followups", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            studentId: student.id,
+            note: "Disdetta abbonamento",
+          }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          const details = [json?.error, json?.details, json?.code].filter(Boolean).join(" · ");
+          throw new Error(details || `HTTP ${res.status}`);
+        }
+        if (json?.contact) {
+          applyContactUpdate(json.contact);
+          setData((prev) => {
+            if (!prev) return prev;
+            const churned = (prev.churned || []).map((item) =>
+              item.id === student.id ? { ...item, hasActiveFollowup: true } : item,
+            );
+            return { ...prev, churned };
+          });
+        } else {
+          await fetchContacts();
+        }
+      } catch (err: any) {
+        setError(err?.message || "Errore creazione follow-up");
+      } finally {
+        setAddingChurnedId(null);
+      }
+    },
+    [applyContactUpdate, fetchContacts],
+  );
+
   const upcomingBlackBookings = useMemo(() => {
     const now = Date.now();
     return blackBookings
@@ -859,6 +934,11 @@ export default function BlackFollowupsPage() {
       return { ...c, dueAt, isOverdue };
     });
   }, [data?.due, selectedDate]);
+
+  const churnedStudents = useMemo(
+    () => (Array.isArray(data?.churned) ? data?.churned : []),
+    [data?.churned],
+  );
 
   const filteredAllContacts = useMemo(() => {
     const statusRank = (status?: string | null) => {
@@ -1628,6 +1708,98 @@ export default function BlackFollowupsPage() {
         </div>
 
         <div className="space-y-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Abbonamenti disattivati
+              </h3>
+              <span className="text-xs font-semibold text-slate-500">
+                {churnedStudents.length}
+              </span>
+            </div>
+            {churnedStudents.length ? (
+              <div className="space-y-2">
+                {churnedStudents.map((student) => {
+                  const whatsappLink = buildWhatsAppLink(
+                    student.whatsappPhone,
+                    preferWebWhatsApp,
+                  );
+                  const statusLabel = formatSubscriptionStatus(student.status);
+                  const isLinked = student.hasActiveFollowup;
+                  const isAdding = addingChurnedId === student.id;
+                  return (
+                    <div
+                      key={student.id}
+                      className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {student.name || student.whatsappPhone || "Studente"}
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            {student.studentEmail ||
+                              student.parentEmail ||
+                              "email n/d"}
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            {student.yearClass || "classe?"} · {student.track || "track?"}
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                          {statusLabel}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                        <span>{student.whatsappPhone || "Telefono n/d"}</span>
+                        {whatsappLink ? (
+                          <a
+                            href={whatsappLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-slate-700 underline decoration-slate-300 underline-offset-4"
+                          >
+                            Apri chat
+                            <ArrowRight size={12} />
+                          </a>
+                        ) : null}
+                        {student.updatedAt ? (
+                          <span className="text-[11px] text-slate-400">
+                            aggiornato {formatDate(student.updatedAt)}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleAddChurned(student)}
+                          disabled={isLinked || isAdding || !student.whatsappPhone}
+                          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 disabled:opacity-60"
+                        >
+                          {isAdding ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            <Plus size={12} />
+                          )}
+                          Aggiungi follow-up
+                        </button>
+                        {isLinked ? (
+                          <span className="text-[11px] font-semibold text-emerald-600">
+                            Già in follow-up
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">
+                Nessuna disdetta recente.
+              </p>
+            )}
+          </div>
+
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-900">Prossimi follow-up</h3>
