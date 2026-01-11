@@ -40,6 +40,7 @@ const AVAIL_MAX_GRID_HEIGHT = 360;
 const AVAIL_MAX_HOUR_HEIGHT = 48;
 const AVAIL_MIN_HOUR_HEIGHT = 12;
 const WEEKDAYS_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"] as const;
+const WEEKLY_CALL_BOOKING_CUTOFF_MS = new Date("2024-11-15T00:00:00+01:00").getTime();
 
 type TutorStudent = {
   id: string;
@@ -210,6 +211,11 @@ export default function AccountPage() {
     }
     return `${days}g`;
   }, [daysSubscribed]);
+
+  const canBookWeeklyCall = useMemo(() => {
+    if (!subscriptionStartMs) return false;
+    return subscriptionStartMs >= WEEKLY_CALL_BOOKING_CUTOFF_MS;
+  }, [subscriptionStartMs]);
 
   const subscriptionStartDate = useMemo(() => {
     if (!subscriptionSince) return null;
@@ -2565,13 +2571,19 @@ export default function AccountPage() {
                     Prossima call: {formatDateTimeLabel(weeklyCheck.startsAt)}
                   </div>
                 ) : weeklyCheck ? (
-                  <Link
-                    href="/black-check-percorso-call"
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-400 px-4 py-2 text-sm font-extrabold text-slate-900 shadow-lg shadow-blue-500/30 transition hover:bg-blue-300"
-                  >
-                    Prenota la call settimanale
-                    <ArrowRight className="h-4 w-4" aria-hidden />
-                  </Link>
+                  canBookWeeklyCall ? (
+                    <Link
+                      href="/black-check-percorso-call"
+                      className="inline-flex items-center gap-2 rounded-lg bg-blue-400 px-4 py-2 text-sm font-extrabold text-slate-900 shadow-lg shadow-blue-500/30 transition hover:bg-blue-300"
+                    >
+                      Prenota la call settimanale
+                      <ArrowRight className="h-4 w-4" aria-hidden />
+                    </Link>
+                  ) : (
+                    <div className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-semibold text-white/80">
+                      Prenotazione call non disponibile dal tuo account.
+                    </div>
+                  )
                 ) : (
                   <div className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-semibold text-white/80">
                     Impossibile verificare le prenotazioni, riprova più tardi.
@@ -2581,8 +2593,10 @@ export default function AccountPage() {
               {weeklyCheckError && (
                 <p className="mt-2 text-xs text-amber-200">
                   Non riesco a verificare le prenotazioni di questa settimana (
-                  {weeklyCheckError}). Se non hai già fissato la call, puoi
-                  aprire la pagina di prenotazione.
+                  {weeklyCheckError}).{" "}
+                  {canBookWeeklyCall
+                    ? "Se non hai già fissato la call, puoi aprire la pagina di prenotazione."
+                    : "Se ti serve una call, contatta il supporto su WhatsApp."}
                 </p>
               )}
             </section>
