@@ -163,8 +163,26 @@ function localPartsToIso(date: string, time: string) {
   return d.toISOString();
 }
 
+function isEmailContact(value?: string | null) {
+  if (!value) return false;
+  return value.includes("@");
+}
+
+function buildGmailLink(email: string, subject?: string, body?: string) {
+  const trimmed = email.trim();
+  if (!trimmed) return null;
+  const params = new URLSearchParams();
+  params.set("view", "cm");
+  params.set("fs", "1");
+  params.set("to", trimmed);
+  if (subject) params.set("su", subject);
+  if (body) params.set("body", body);
+  return `https://mail.google.com/mail/?${params.toString()}`;
+}
+
 function buildWhatsAppLink(phone?: string | null, preferWeb?: boolean) {
   if (!phone) return null;
+  if (isEmailContact(phone)) return buildGmailLink(phone);
   const digits = phone.replace(/[^\d]/g, "");
   if (!digits) return null;
   if (preferWeb) return `https://web.whatsapp.com/send?phone=${digits}`;
