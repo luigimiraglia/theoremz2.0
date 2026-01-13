@@ -12,6 +12,7 @@ import React, {
 import type { User as FirebaseUser } from "firebase/auth";
 import { identify, track } from "@/lib/analytics";
 import { hasTempAccess, getTempAccessInfo } from "@/lib/temp-access";
+import { formatRomeYmd } from "@/lib/rome-time";
 
 /* =========================
    Tipi
@@ -259,7 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const todayKey = sessionId ? `access:${sessionId}` : `access:${user.uid}`;
-        const today = new Date().toISOString().slice(0, 10);
+        const today = formatRomeYmd();
         if (typeof window !== "undefined") {
           const last = window.sessionStorage.getItem(todayKey);
           if (last === today) return;
@@ -300,7 +301,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user?.uid || isSubscribed !== true) return;
     runWhenIdle(async () => {
       try {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = formatRomeYmd();
         const sessionId =
           typeof window !== "undefined"
             ? sessionStorage.getItem("tz_session_id")

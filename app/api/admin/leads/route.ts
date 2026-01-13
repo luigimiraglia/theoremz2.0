@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
+import { getRomeDayRange } from "@/lib/rome-time";
 
 const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
 const FOLLOWUP_STEPS_DAYS = [1, 2, 7, 30];
@@ -31,10 +32,6 @@ async function requireAdmin(request: NextRequest) {
     console.error("[admin/leads] auth error", error);
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-}
-
-function startOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 function addDays(base: Date, days: number) {
@@ -141,10 +138,7 @@ export async function GET(request: NextRequest) {
   const limit = Math.max(1, Math.min(500, limitRaw));
   const fetchAll = searchParams.get("all") === "1";
 
-  const parsedDay = dateParam ? new Date(dateParam) : new Date();
-  const referenceDay = Number.isNaN(parsedDay.getTime()) ? new Date() : parsedDay;
-  const dayStart = startOfDay(referenceDay);
-  const dayEnd = addDays(dayStart, 1);
+  const { start: dayStart, end: dayEnd } = getRomeDayRange(dateParam);
 
   if (fetchAll) {
     const { data, error } = await db

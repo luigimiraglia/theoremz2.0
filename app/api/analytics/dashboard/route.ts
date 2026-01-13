@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebaseAdmin";
 import { analyticsDB } from "@/lib/analyticsDB";
+import { addRomeDays, formatRomeYmd, romeDateToUtc } from "@/lib/rome-time";
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,12 +41,10 @@ export async function GET(request: NextRequest) {
     const days = daysParam ? parseInt(daysParam) : 7;
 
     // Date range
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - days);
-
-    const startDateStr = startDate.toISOString().split("T")[0];
-    const endDateStr = endDate.toISOString().split("T")[0];
+    const endDateStr = formatRomeYmd();
+    const startDateStr = addRomeDays(endDateStr, -days);
+    const rangeStart = romeDateToUtc(startDateStr);
+    const rangeEnd = romeDateToUtc(addRomeDays(endDateStr, 1));
 
     console.log(`[Analytics API] Date range: ${startDateStr} to ${endDateStr}`);
 
@@ -68,8 +67,8 @@ export async function GET(request: NextRequest) {
     const { data: events, error: eventsError } = await analyticsDB.supabase
       .from('events')
       .select('*')
-      .gte('created_at', startDateStr)
-      .lte('created_at', endDateStr + ' 23:59:59')
+      .gte('created_at', rangeStart.toISOString())
+      .lt('created_at', rangeEnd.toISOString())
       .order('created_at', { ascending: false });
 
     if (eventsError) {
@@ -186,11 +185,10 @@ export async function GET(request: NextRequest) {
       funnelEntries: number;
     }> = {};
     const dateRange = [];
-    for (let d = new Date(startDateStr); d <= new Date(endDateStr); d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0];
-      dateRange.push(dateStr);
-      dailyData[dateStr] = {
-        date: dateStr,
+    for (let cursor = startDateStr; cursor <= endDateStr; cursor = addRomeDays(cursor, 1)) {
+      dateRange.push(cursor);
+      dailyData[cursor] = {
+        date: cursor,
         visits: 0,
         blackVisits: 0,
         mentorVisits: 0,
@@ -201,7 +199,7 @@ export async function GET(request: NextRequest) {
 
     // Popola dati giornalieri
     uniquePageViews.forEach(event => {
-      const date = new Date(event.created_at).toISOString().split('T')[0];
+      const date = formatRomeYmd(new Date(event.created_at));
       if (dailyData[date]) {
         dailyData[date].visits++;
         if (event.page_url?.includes('/black')) {
@@ -217,7 +215,7 @@ export async function GET(request: NextRequest) {
     });
 
     buyClickEvents.forEach(event => {
-      const date = new Date(event.created_at).toISOString().split('T')[0];
+      const date = formatRomeYmd(new Date(event.created_at));
       if (dailyData[date]) {
         dailyData[date].buyClicks++;
       }

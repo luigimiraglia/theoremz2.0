@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
+import { formatRomeYmd, getRomeDayRange } from "@/lib/rome-time";
 
 type Contact = {
   id: string;
@@ -151,10 +152,7 @@ function isChurnFollowup(contact: Contact) {
 }
 
 function toDateInputValue(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return formatRomeYmd(date);
 }
 
 function localPartsToIso(date: string, time: string) {
@@ -162,10 +160,6 @@ function localPartsToIso(date: string, time: string) {
   const d = new Date(`${date}T${time}:00`);
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString();
-}
-
-function startOfDay(value: string) {
-  return new Date(`${value}T00:00:00`);
 }
 
 function buildWhatsAppLink(phone?: string | null, preferWeb?: boolean) {
@@ -191,6 +185,10 @@ export default function BlackFollowupsPage() {
   const { user, loading: authLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState(() =>
     toDateInputValue(new Date())
+  );
+  const { start: dayStart, end: dayEnd } = useMemo(
+    () => getRomeDayRange(selectedDate),
+    [selectedDate]
   );
   const [data, setData] = useState<ResponseData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -350,8 +348,7 @@ export default function BlackFollowupsPage() {
       let completed = removeFrom(prev.completed);
 
       const nextAt = contact.nextFollowUpAt ? new Date(contact.nextFollowUpAt) : null;
-      const dayStart = startOfDay(selectedDate);
-      const isDue = contact.status === "active" && nextAt && nextAt.getTime() <= addDays(dayStart, 1).getTime();
+      const isDue = contact.status === "active" && nextAt && nextAt.getTime() <= dayEnd.getTime();
 
       if (contact.status === "completed") {
         completed = [contact, ...completed];
@@ -373,7 +370,7 @@ export default function BlackFollowupsPage() {
       delete next[contact.id];
       return next;
     });
-  }, [selectedDate]);
+  }, [dayEnd]);
 
   const buildDefaultScheduleDraft = useCallback(
     (overrides?: Partial<ScheduleDraft>): ScheduleDraft => ({
@@ -935,10 +932,10 @@ export default function BlackFollowupsPage() {
     const list = data?.due || [];
     return list.map((c) => {
       const dueAt = c.nextFollowUpAt ? new Date(c.nextFollowUpAt) : null;
-      const isOverdue = dueAt ? dueAt.getTime() < startOfDay(selectedDate).getTime() : false;
+      const isOverdue = dueAt ? dueAt.getTime() < dayStart.getTime() : false;
       return { ...c, dueAt, isOverdue };
     });
-  }, [data?.due, selectedDate]);
+  }, [data?.due, dayStart]);
 
   const dueActive = useMemo(
     () => dayDue.filter((contact) => !isChurnFollowup(contact)),

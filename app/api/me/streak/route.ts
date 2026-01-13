@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { formatRomeYmd, romeDateToUtc } from "@/lib/rome-time";
 
 async function getUid(req: Request) {
   const h = req.headers.get("authorization") || "";
@@ -14,13 +15,11 @@ async function getUid(req: Request) {
 }
 
 function isoDay(d = new Date()) {
-  const z = new Date(d);
-  z.setHours(0, 0, 0, 0);
-  return z.toISOString().slice(0, 10);
+  return formatRomeYmd(d);
 }
 function daysBetweenISO(a: string, b: string) {
-  const da = new Date(a + "T00:00:00Z").getTime();
-  const db = new Date(b + "T00:00:00Z").getTime();
+  const da = romeDateToUtc(a).getTime();
+  const db = romeDateToUtc(b).getTime();
   return Math.round((db - da) / 86400000);
 }
 
@@ -57,4 +56,3 @@ export async function POST(req: Request) {
   const data = doc.data() as any;
   return NextResponse.json({ ok: true, lastDate: data.lastDate, count: data.count });
 }
-

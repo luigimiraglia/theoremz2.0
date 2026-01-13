@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { syncBlackGrade } from "@/lib/black/gradeSync";
+import { getRomeTodayYmd } from "@/lib/rome-time";
 
 async function getUid(req: Request) {
   const h = req.headers.get("authorization") || "";
@@ -47,7 +48,7 @@ export async function POST(
     return NextResponse.json({ error: "missing_date" }, { status: 400 });
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getRomeTodayYmd();
   if (date > today) {
     return NextResponse.json(
       { error: "future_exam", detail: "Puoi registrare voti solo per verifiche passate." },

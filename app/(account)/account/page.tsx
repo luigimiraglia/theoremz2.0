@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
+import { formatRomeYmd, romeDateToUtc } from "@/lib/rome-time";
 import { getAuth } from "firebase/auth";
 import {
   PlayCircle,
@@ -3087,7 +3088,7 @@ function formatTutorDayLabel(input?: string | null) {
   if (!input) return { key: "n.d.", label: "Data non disponibile" };
   const d = new Date(input);
   if (Number.isNaN(d.getTime())) return { key: input, label: input };
-  const key = d.toISOString().slice(0, 10);
+  const key = formatRomeYmd(d);
   const label = d.toLocaleDateString("it-IT", {
     weekday: "long",
     day: "numeric",
@@ -3302,13 +3303,11 @@ function ProfileSection(props: {
 /* ────────────────────── Gamification & Grades ────────────────────── */
 
 function isoDay(d = new Date()) {
-  const z = new Date(d);
-  z.setHours(0, 0, 0, 0);
-  return z.toISOString().slice(0, 10);
+  return formatRomeYmd(d);
 }
 function daysBetweenISO(a: string, b: string) {
-  const da = new Date(a + "T00:00:00Z").getTime();
-  const db = new Date(b + "T00:00:00Z").getTime();
+  const da = romeDateToUtc(a).getTime();
+  const db = romeDateToUtc(b).getTime();
   return Math.round((db - da) / 86400000);
 }
 
@@ -4081,10 +4080,7 @@ function ymd(d: Date | string | number | null | undefined): string {
   if (!d) return "";
   const date = d instanceof Date ? d : new Date(d);
   if (Number.isNaN(date.getTime())) return "";
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return formatRomeYmd(date);
 }
 
 function capitalize(value: string) {

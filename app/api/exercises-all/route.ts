@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { client as base } from "@/sanity/lib/client";
 import { groq } from "next-sanity";
 
-export const revalidate = 3600; // Cache per 1 ora
+export const dynamic = "force-dynamic";
+const CACHE_SECONDS = 3600; // Cache CDN per 1 ora
 
 const QUERY = groq`
 *[_type=="exercise"]{
@@ -25,7 +26,14 @@ export async function GET() {
 
   try {
     const items = await client.fetch(QUERY, {});
-    return NextResponse.json({ ok: true, items });
+    return NextResponse.json(
+      { ok: true, items },
+      {
+        headers: {
+          "Cache-Control": `public, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=86400`,
+        },
+      }
+    );
   } catch (e: unknown) {
     let errorMessage: string;
 

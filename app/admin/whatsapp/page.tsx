@@ -5,6 +5,7 @@ import clsx from "clsx";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { ArrowRight, ListFilter, MessageCircle } from "lucide-react";
+import { addRomeDays, formatRomeYmd } from "@/lib/rome-time";
 
 type Booking = {
   id: string;
@@ -724,7 +725,7 @@ export default function WhatsAppAdmin() {
     fullName: "",
     email: "",
     note: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: formatRomeYmd(),
     time: "10:00",
     callTypeSlug: "onboarding",
     tutorId: "",
@@ -1312,8 +1313,7 @@ export default function WhatsAppAdmin() {
 
   const openBookingEditor = (booking?: Booking | null) => {
     const { date, time } = isoToLocalParts(booking?.startsAt);
-    const fallbackDate =
-      date || new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const fallbackDate = date || addRomeDays(formatRomeYmd(), 1);
     const fallbackTime = time || "10:00";
     const callTypeSlug =
       booking?.callType ||

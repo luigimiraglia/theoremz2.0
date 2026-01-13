@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
+import { getRomeDayRange } from "@/lib/rome-time";
 
 const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
 const DEFAULT_OFFSET_DAYS = 3;
@@ -31,10 +32,6 @@ async function requireAdmin(request: NextRequest) {
     console.error("[admin/black-followups] auth error", error);
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-}
-
-function startOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 function addDays(base: Date, days: number) {
@@ -210,16 +207,13 @@ export async function GET(request: NextRequest) {
     }
 
     const db = supabaseServer();
-  const { searchParams } = new URL(request.url);
-  const dateParam = searchParams.get("date");
-  const includeCompleted = searchParams.get("includeCompleted") === "1";
-  const lookup = (searchParams.get("lookup") || "").trim();
-  const fetchNext = searchParams.get("next") === "1";
-  const fetchAll = searchParams.get("all") === "1";
-  const referenceDay = dateParam ? new Date(dateParam) : new Date();
-  const day = Number.isNaN(referenceDay.getTime()) ? new Date() : referenceDay;
-  const dayStart = startOfDay(day);
-  const dayEnd = addDays(dayStart, 1);
+    const { searchParams } = new URL(request.url);
+    const dateParam = searchParams.get("date");
+    const includeCompleted = searchParams.get("includeCompleted") === "1";
+    const lookup = (searchParams.get("lookup") || "").trim();
+    const fetchNext = searchParams.get("next") === "1";
+    const fetchAll = searchParams.get("all") === "1";
+    const { start: dayStart, end: dayEnd } = getRomeDayRange(dateParam);
 
     if (lookup) {
       const safeLookup = lookup.replace(/[^\w@\.\+\-\s]/g, "").trim();

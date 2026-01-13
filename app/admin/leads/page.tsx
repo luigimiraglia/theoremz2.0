@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import Link from "next/link";
+import { formatRomeYmd, getRomeDayRange } from "@/lib/rome-time";
 
 type Lead = {
   id: string;
@@ -82,16 +83,6 @@ function buildWhatsAppLink(phone?: string | null, preferWeb?: boolean) {
   return `https://wa.me/${digits}`;
 }
 
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function startOfDay(value: string) {
-  return new Date(`${value}T00:00:00`);
-}
-
 function LeadBadge({ channel }: { channel: Lead["channel"] }) {
   if (channel === "instagram") {
     return (
@@ -120,7 +111,7 @@ function LeadBadge({ channel }: { channel: Lead["channel"] }) {
 export default function LeadsAdminPage() {
   const { user, loading: authLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState(() =>
-    new Date().toISOString().slice(0, 10)
+    formatRomeYmd()
   );
   const [data, setData] = useState<LeadsResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -147,8 +138,10 @@ export default function LeadsAdminPage() {
   const [loadingAll, setLoadingAll] = useState(false);
   const [quickQuery, setQuickQuery] = useState("");
   const [preferWebWhatsApp, setPreferWebWhatsApp] = useState(false);
-  const dayStart = useMemo(() => startOfDay(selectedDate), [selectedDate]);
-  const dayEnd = useMemo(() => addDays(dayStart, 1), [dayStart]);
+  const { start: dayStart, end: dayEnd } = useMemo(
+    () => getRomeDayRange(selectedDate),
+    [selectedDate]
+  );
 
   const hasAccess = useMemo(
     () => Boolean(user?.email && user.email.toLowerCase() === allowedEmail),
