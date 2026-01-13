@@ -1443,6 +1443,33 @@ function normalizeLeadPhone(raw?: string | null) {
   return digits ? `+${digits}` : null;
 }
 
+async function findBlackStudentByEmail(
+  db: ReturnType<typeof supabaseServer>,
+  email?: string | null,
+) {
+  const normalized = (email || "").trim().toLowerCase();
+  if (!normalized) return null;
+  const columns =
+    "id, preferred_name, student_name, student_email, parent_email, student_phone, parent_phone";
+  const { data: studentMatches, error: studentErr } = await db
+    .from("black_students")
+    .select(columns)
+    .ilike("student_email", normalized)
+    .limit(1);
+  if (!studentErr && Array.isArray(studentMatches) && studentMatches[0]) {
+    return studentMatches[0];
+  }
+  const { data: parentMatches, error: parentErr } = await db
+    .from("black_students")
+    .select(columns)
+    .ilike("parent_email", normalized)
+    .limit(1);
+  if (!parentErr && Array.isArray(parentMatches) && parentMatches[0]) {
+    return parentMatches[0];
+  }
+  return null;
+}
+
 async function ensureBlackLeadFromActivation({
   phone,
   name,
@@ -1463,15 +1490,16 @@ async function ensureBlackLeadFromActivation({
   if (!db) return;
 
   const nowIso = new Date().toISOString();
+  let leadStudentId = studentId;
   let leadName = name?.trim() || null;
   let leadPhone = normalizeLeadPhone(phone);
   let leadEmail = email?.trim() || null;
 
-  if (studentId && (!leadName || !leadPhone || !leadEmail)) {
+  if (leadStudentId && (!leadName || !leadPhone || !leadEmail)) {
     const { data: student, error } = await db
       .from("black_students")
       .select("preferred_name, student_name, student_email, parent_email, student_phone, parent_phone")
-      .eq("id", studentId)
+      .eq("id", leadStudentId)
       .maybeSingle();
     if (!error && student) {
       if (!leadName) {
@@ -1486,17 +1514,32 @@ async function ensureBlackLeadFromActivation({
     }
   }
 
+  if ((!leadStudentId || !leadPhone || !leadName) && leadEmail) {
+    const student = await findBlackStudentByEmail(db, leadEmail);
+    if (student) {
+      leadStudentId = leadStudentId || student.id || null;
+      if (!leadName) {
+        leadName = student.preferred_name || student.student_name || null;
+      }
+      if (!leadPhone) {
+        leadPhone = normalizeLeadPhone(
+          student.student_phone || student.parent_phone || null,
+        );
+      }
+    }
+  }
+
   if (!leadPhone) {
     console.warn("[stripe-webhook] missing phone for black lead, skipping");
     return;
   }
 
   let existing: any = null;
-  if (studentId) {
+  if (leadStudentId) {
     const { data } = await db
       .from("black_followups")
       .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
-      .eq("student_id", studentId)
+      .eq("student_id", leadStudentId)
       .maybeSingle();
     existing = data || null;
   }
@@ -1520,7 +1563,7 @@ async function ensureBlackLeadFromActivation({
     const patch: Record<string, any> = { updated_at: nowIso };
     if (leadName && !existing.full_name) patch.full_name = leadName;
     if (leadPhone && !existing.whatsapp_phone) patch.whatsapp_phone = leadPhone;
-    if (studentId && !existing.student_id) patch.student_id = studentId;
+    if (leadStudentId && !existing.student_id) patch.student_id = leadStudentId;
     if (note && !existing.note) patch.note = note;
     if (existing.status !== "active") patch.status = "active";
     if (!existing.next_follow_up_at) patch.next_follow_up_at = nowIso;
@@ -1534,7 +1577,7 @@ async function ensureBlackLeadFromActivation({
     full_name: leadName,
     whatsapp_phone: leadPhone,
     note,
-    student_id: studentId,
+    student_id: leadStudentId,
     status: "active",
     next_follow_up_at: nowIso,
     created_at: nowIso,
@@ -1573,15 +1616,16 @@ async function ensureBlackLeadFromCancellation({
   if (!db) return;
 
   const nowIso = new Date().toISOString();
+  let leadStudentId = studentId;
   let leadName = name?.trim() || null;
   let leadPhone = normalizeLeadPhone(phone);
   let leadEmail = email?.trim() || null;
 
-  if (studentId && (!leadName || !leadPhone || !leadEmail)) {
+  if (leadStudentId && (!leadName || !leadPhone || !leadEmail)) {
     const { data: student, error } = await db
       .from("black_students")
       .select("preferred_name, student_name, student_email, parent_email, student_phone, parent_phone")
-      .eq("id", studentId)
+      .eq("id", leadStudentId)
       .maybeSingle();
     if (!error && student) {
       if (!leadName) {
@@ -1596,17 +1640,32 @@ async function ensureBlackLeadFromCancellation({
     }
   }
 
+  if ((!leadStudentId || !leadPhone || !leadName) && leadEmail) {
+    const student = await findBlackStudentByEmail(db, leadEmail);
+    if (student) {
+      leadStudentId = leadStudentId || student.id || null;
+      if (!leadName) {
+        leadName = student.preferred_name || student.student_name || null;
+      }
+      if (!leadPhone) {
+        leadPhone = normalizeLeadPhone(
+          student.student_phone || student.parent_phone || null,
+        );
+      }
+    }
+  }
+
   if (!leadPhone) {
     console.warn("[stripe-webhook] missing phone for churn lead, skipping");
     return;
   }
 
   let existing: any = null;
-  if (studentId) {
+  if (leadStudentId) {
     const { data } = await db
       .from("black_followups")
       .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
-      .eq("student_id", studentId)
+      .eq("student_id", leadStudentId)
       .maybeSingle();
     existing = data || null;
   }
@@ -1640,7 +1699,7 @@ async function ensureBlackLeadFromCancellation({
     };
     if (leadName && !existing.full_name) patch.full_name = leadName;
     if (leadPhone && !existing.whatsapp_phone) patch.whatsapp_phone = leadPhone;
-    if (studentId && !existing.student_id) patch.student_id = studentId;
+    if (leadStudentId && !existing.student_id) patch.student_id = leadStudentId;
     if (note) {
       if (existing.note) {
         if (!String(existing.note).includes("Disdetta abbonamento")) {
@@ -1658,7 +1717,7 @@ async function ensureBlackLeadFromCancellation({
     full_name: leadName,
     whatsapp_phone: leadPhone,
     note,
-    student_id: studentId,
+    student_id: leadStudentId,
     status: "active",
     next_follow_up_at: nowIso,
     created_at: nowIso,
