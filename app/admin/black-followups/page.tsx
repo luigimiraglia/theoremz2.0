@@ -8,6 +8,7 @@ import {
   ArrowRight,
   ListFilter,
   Loader2,
+  Mail,
   MessageCircle,
   Phone,
   Plus,
