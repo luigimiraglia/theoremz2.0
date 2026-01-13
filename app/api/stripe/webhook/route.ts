@@ -1455,6 +1455,12 @@ function normalizeLeadPhone(raw?: string | null) {
   return digits ? `+${digits}` : null;
 }
 
+function normalizeEmail(raw?: string | null) {
+  const email = String(raw || "").trim().toLowerCase();
+  if (!email || !email.includes("@")) return null;
+  return email;
+}
+
 async function findBlackStudentByEmail(
   db: ReturnType<typeof supabaseServer>,
   email?: string | null,
@@ -1630,10 +1636,10 @@ async function ensureBlackLeadFromCancellation({
   const nowIso = new Date().toISOString();
   let leadStudentId = studentId;
   let leadName = name?.trim() || null;
-  let leadPhone = normalizeLeadPhone(phone);
+  let leadContact = normalizeLeadPhone(phone) || normalizeEmail(email);
   let leadEmail = email?.trim() || null;
 
-  if (leadStudentId && (!leadName || !leadPhone || !leadEmail)) {
+  if (leadStudentId && (!leadName || !leadContact || !leadEmail)) {
     const { data: student, error } = await db
       .from("black_students")
       .select("preferred_name, student_name, student_email, parent_email, student_phone, parent_phone")
@@ -1643,8 +1649,10 @@ async function ensureBlackLeadFromCancellation({
       if (!leadName) {
         leadName = student.preferred_name || student.student_name || null;
       }
-      if (!leadPhone) {
-        leadPhone = normalizeLeadPhone(student.student_phone || student.parent_phone || null);
+      if (!leadContact) {
+        leadContact =
+          normalizeLeadPhone(student.student_phone || student.parent_phone || null) ||
+          normalizeEmail(student.student_email || student.parent_email || leadEmail);
       }
       if (!leadEmail) {
         leadEmail = student.student_email || student.parent_email || null;
@@ -1652,23 +1660,23 @@ async function ensureBlackLeadFromCancellation({
     }
   }
 
-  if ((!leadStudentId || !leadPhone || !leadName) && leadEmail) {
+  if ((!leadStudentId || !leadContact || !leadName) && leadEmail) {
     const student = await findBlackStudentByEmail(db, leadEmail);
     if (student) {
       leadStudentId = leadStudentId || student.id || null;
       if (!leadName) {
         leadName = student.preferred_name || student.student_name || null;
       }
-      if (!leadPhone) {
-        leadPhone = normalizeLeadPhone(
-          student.student_phone || student.parent_phone || null,
-        );
+      if (!leadContact) {
+        leadContact =
+          normalizeLeadPhone(student.student_phone || student.parent_phone || null) ||
+          normalizeEmail(student.student_email || student.parent_email || leadEmail);
       }
     }
   }
 
-  if (!leadPhone) {
-    console.warn("[stripe-webhook] missing phone for churn lead, skipping");
+  if (!leadContact) {
+    console.warn("[stripe-webhook] missing contact for churn lead, skipping");
     return;
   }
 
@@ -1685,7 +1693,17 @@ async function ensureBlackLeadFromCancellation({
     const { data } = await db
       .from("black_followups")
       .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
-      .eq("whatsapp_phone", leadPhone)
+      .eq("whatsapp_phone", leadContact)
+      .maybeSingle();
+    existing = data || null;
+  }
+  if (!existing && leadEmail) {
+    const { data } = await db
+      .from("black_followups")
+      .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
+      .ilike("note", `%${leadEmail}%`)
+      .order("updated_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     existing = data || null;
   }
@@ -1710,7 +1728,7 @@ async function ensureBlackLeadFromCancellation({
       next_follow_up_at: nowIso,
     };
     if (leadName && !existing.full_name) patch.full_name = leadName;
-    if (leadPhone && !existing.whatsapp_phone) patch.whatsapp_phone = leadPhone;
+    if (leadContact && !existing.whatsapp_phone) patch.whatsapp_phone = leadContact;
     if (leadStudentId && !existing.student_id) patch.student_id = leadStudentId;
     if (note) {
       if (existing.note) {
@@ -1727,7 +1745,7 @@ async function ensureBlackLeadFromCancellation({
 
   const insertPayload = {
     full_name: leadName,
-    whatsapp_phone: leadPhone,
+    whatsapp_phone: leadContact,
     note,
     student_id: leadStudentId,
     status: "active",

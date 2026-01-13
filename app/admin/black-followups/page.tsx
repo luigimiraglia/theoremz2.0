@@ -567,7 +567,7 @@ export default function BlackFollowupsPage() {
       const draft = phoneDrafts[contact.id] ?? "";
       const trimmed = draft.trim();
       if (!trimmed) {
-        setError("Inserisci un numero WhatsApp valido");
+        setError("Inserisci un contatto valido");
         return;
       }
       if ((contact.whatsappPhone || null) === trimmed) {
@@ -810,6 +810,12 @@ export default function BlackFollowupsPage() {
   const handleAddChurned = useCallback(
     async (student: ChurnedStudent) => {
       if (!student?.id) return;
+      const contactValue =
+        student.whatsappPhone || student.studentEmail || student.parentEmail || null;
+      if (!contactValue) {
+        setError("Nessun contatto disponibile per questa disdetta");
+        return;
+      }
       setAddingChurnedId(student.id);
       setError(null);
       try {
@@ -821,6 +827,7 @@ export default function BlackFollowupsPage() {
           body: JSON.stringify({
             studentId: student.id,
             note: "Disdetta abbonamento",
+            whatsappPhone: contactValue,
           }),
         });
         const json = await res.json().catch(() => null);
@@ -1046,6 +1053,7 @@ export default function BlackFollowupsPage() {
 
   const renderDueCard = (contact: Contact & { isOverdue?: boolean }) => {
     const whatsappLink = buildWhatsAppLink(contact.whatsappPhone, preferWebWhatsApp);
+    const isEmail = isEmailContact(contact.whatsappPhone);
     const dateDraft = nextDateDraft[contact.id] || "";
     const cardLink = buildCardLink(contact);
     const isEditingName = editingNameId === contact.id;
@@ -1053,6 +1061,7 @@ export default function BlackFollowupsPage() {
     const isSavingName = savingNameId === contact.id;
     const isEditingPhone = editingPhoneId === contact.id;
     const phoneDraft = phoneDrafts[contact.id] ?? contact.whatsappPhone ?? "";
+    const isEditingEmail = isEmailContact(phoneDraft || contact.whatsappPhone);
     const isSavingPhone = savingPhoneId === contact.id;
     const isScheduleOpen = scheduleOpenId === contact.id;
     const scheduleDraft = scheduleDrafts[contact.id] || buildDefaultScheduleDraft();
@@ -1152,7 +1161,7 @@ export default function BlackFollowupsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="text"
-                      inputMode="tel"
+                      inputMode={isEditingEmail ? "email" : "tel"}
                       value={phoneDraft}
                       onChange={(e) =>
                         setPhoneDrafts((prev) => ({
@@ -1170,7 +1179,7 @@ export default function BlackFollowupsPage() {
                           cancelPhoneEdit(contact.id);
                         }
                       }}
-                      placeholder="+39..."
+                      placeholder={isEditingEmail ? "email@dominio.it" : "+39..."}
                       className="min-w-[180px] rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
                     />
                     <button
@@ -1202,7 +1211,7 @@ export default function BlackFollowupsPage() {
                       onClick={() => startPhoneEdit(contact)}
                       className="text-xs font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
                     >
-                      Modifica telefono
+                      {isEmail ? "Modifica contatto" : "Modifica telefono"}
                     </button>
                   </>
                 )}
@@ -1213,8 +1222,8 @@ export default function BlackFollowupsPage() {
                     rel="noreferrer"
                     className="inline-flex items-center gap-1 text-slate-900 underline decoration-slate-300 underline-offset-4"
                   >
-                    Apri chat
-                    <ArrowRight size={14} />
+                    {isEmail ? "Apri Gmail" : "Apri chat"}
+                    {isEmail ? <Mail size={14} /> : <ArrowRight size={14} />}
                   </a>
                 ) : null}
                 {cardLink ? (
@@ -1772,8 +1781,11 @@ export default function BlackFollowupsPage() {
             {churnedStudents.length ? (
               <div className="space-y-2">
                 {churnedStudents.map((student) => {
+                  const contactValue =
+                    student.whatsappPhone || student.studentEmail || student.parentEmail || null;
+                  const isEmail = isEmailContact(contactValue);
                   const whatsappLink = buildWhatsAppLink(
-                    student.whatsappPhone,
+                    contactValue,
                     preferWebWhatsApp,
                   );
                   const statusLabel = formatSubscriptionStatus(student.status);
@@ -1803,7 +1815,7 @@ export default function BlackFollowupsPage() {
                         </span>
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                        <span>{student.whatsappPhone || "Telefono n/d"}</span>
+                        <span>{contactValue || "Contatto n/d"}</span>
                         {whatsappLink ? (
                           <a
                             href={whatsappLink}
@@ -1811,8 +1823,8 @@ export default function BlackFollowupsPage() {
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 text-slate-700 underline decoration-slate-300 underline-offset-4"
                           >
-                            Apri chat
-                            <ArrowRight size={12} />
+                            {isEmail ? "Apri Gmail" : "Apri chat"}
+                            {isEmail ? <Mail size={12} /> : <ArrowRight size={12} />}
                           </a>
                         ) : null}
                         {student.updatedAt ? (
@@ -1825,7 +1837,7 @@ export default function BlackFollowupsPage() {
                         <button
                           type="button"
                           onClick={() => handleAddChurned(student)}
-                          disabled={isLinked || isAdding || !student.whatsappPhone}
+                          disabled={isLinked || isAdding || !contactValue}
                           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 disabled:opacity-60"
                         >
                           {isAdding ? (
@@ -2020,7 +2032,7 @@ export default function BlackFollowupsPage() {
                 Azioni rapide
               </p>
               <p className="text-sm text-slate-600">
-                Cerca per numero/email e clicca subito: Contattato, Apri WhatsApp, Ha risposto, In pausa.
+                Cerca per numero/email e clicca subito: Contattato, Apri WhatsApp/Gmail, Ha risposto, In pausa.
               </p>
             </div>
             <input
@@ -2036,6 +2048,7 @@ export default function BlackFollowupsPage() {
               {quickResults.length ? (
                 quickResults.map((contact) => {
                   const whatsappLink = buildWhatsAppLink(contact.whatsappPhone, preferWebWhatsApp);
+                  const isEmail = isEmailContact(contact.whatsappPhone);
                   const dateDraft = nextDateDraft[contact.id] || "";
                   const isPaused = contact.status === "dropped";
                   const isPausing = pausingId === contact.id;
@@ -2125,8 +2138,8 @@ export default function BlackFollowupsPage() {
                             rel="noreferrer"
                             className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
                           >
-                            <Phone size={14} />
-                            Apri WhatsApp
+                            {isEmail ? <Mail size={14} /> : <Phone size={14} />}
+                            {isEmail ? "Apri Gmail" : "Apri WhatsApp"}
                           </a>
                         ) : null}
                         {!isPaused ? (
@@ -2228,6 +2241,7 @@ export default function BlackFollowupsPage() {
           ) : filteredAllContacts.length ? (
             filteredAllContacts.map((contact) => {
               const whatsappLink = buildWhatsAppLink(contact.whatsappPhone, preferWebWhatsApp);
+              const isEmail = isEmailContact(contact.whatsappPhone);
               const cardLink = buildCardLink(contact);
               const statusTone =
                 contact.status === "completed"
@@ -2240,6 +2254,7 @@ export default function BlackFollowupsPage() {
               const isSavingName = savingNameId === contact.id;
               const isEditingPhone = editingPhoneId === contact.id;
               const phoneDraft = phoneDrafts[contact.id] ?? contact.whatsappPhone ?? "";
+              const isEditingEmail = isEmailContact(phoneDraft || contact.whatsappPhone);
               const isSavingPhone = savingPhoneId === contact.id;
               const isPaused = contact.status === "dropped";
               const isPausing = pausingId === contact.id;
@@ -2343,7 +2358,7 @@ export default function BlackFollowupsPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <input
                           type="text"
-                          inputMode="tel"
+                          inputMode={isEditingEmail ? "email" : "tel"}
                           value={phoneDraft}
                           onChange={(e) =>
                             setPhoneDrafts((prev) => ({
@@ -2361,7 +2376,7 @@ export default function BlackFollowupsPage() {
                               cancelPhoneEdit(contact.id);
                             }
                           }}
-                          placeholder="+39..."
+                          placeholder={isEditingEmail ? "email@dominio.it" : "+39..."}
                           className="min-w-[180px] rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none transition focus:border-slate-400"
                         />
                         <button
@@ -2389,7 +2404,7 @@ export default function BlackFollowupsPage() {
                       <>
                         {contact.whatsappPhone ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-semibold text-slate-800">
-                            <Phone size={14} />
+                            {isEmail ? <Mail size={14} /> : <Phone size={14} />}
                             {contact.whatsappPhone}
                           </span>
                         ) : null}
@@ -2398,7 +2413,7 @@ export default function BlackFollowupsPage() {
                           onClick={() => startPhoneEdit(contact)}
                           className="text-[11px] font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
                         >
-                          Modifica telefono
+                          {isEmail ? "Modifica contatto" : "Modifica telefono"}
                         </button>
                       </>
                     )}
@@ -2409,8 +2424,8 @@ export default function BlackFollowupsPage() {
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4"
                       >
-                        Apri chat
-                        <ArrowRight size={12} />
+                        {isEmail ? "Apri Gmail" : "Apri chat"}
+                        {isEmail ? <Mail size={12} /> : <ArrowRight size={12} />}
                       </a>
                     ) : null}
                     {cardLink ? (

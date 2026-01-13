@@ -90,6 +90,18 @@ function normalizeLeadPhone(raw?: string | null) {
   return digits ? `+${digits}` : null;
 }
 
+function normalizeEmail(raw?: string | null) {
+  const email = String(raw || "").trim().toLowerCase();
+  if (!email || !email.includes("@")) return null;
+  return email;
+}
+
+function normalizeLeadContact(phoneRaw?: string | null, emailRaw?: string | null) {
+  const phone = normalizeLeadPhone(phoneRaw);
+  if (phone) return phone;
+  return normalizeEmail(emailRaw);
+}
+
 function secondsToIso(value?: number | null) {
   if (!value) return null;
   return new Date(value * 1000).toISOString();
@@ -189,10 +201,12 @@ async function findChurnFollowup(
   db: ReturnType<typeof supabaseServer>,
   {
     studentId,
-    phone,
+    contact,
+    email,
   }: {
     studentId?: string | null;
-    phone?: string | null;
+    contact?: string | null;
+    email?: string | null;
   },
 ) {
   const columns =
@@ -208,12 +222,23 @@ async function findChurnFollowup(
     if (error) throw error;
     if (Array.isArray(data) && data[0]) return data[0];
   }
-  if (phone) {
+  if (contact) {
     const { data, error } = await db
       .from("black_followups")
       .select(columns)
-      .eq("whatsapp_phone", phone)
+      .eq("whatsapp_phone", contact)
       .ilike("note", `%${CHURN_NOTE_MATCH}%`)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    if (Array.isArray(data) && data[0]) return data[0];
+  }
+  if (email) {
+    const pattern = `%${email}%`;
+    const { data, error } = await db
+      .from("black_followups")
+      .select(columns)
+      .ilike("note", pattern)
       .order("updated_at", { ascending: false })
       .limit(1);
     if (error) throw error;
@@ -399,9 +424,12 @@ async function handle(req: Request) {
         student?.preferred_name ||
         student?.student_name ||
         null;
-      const leadPhone =
+      const leadContact =
         group.phone ||
-        normalizeLeadPhone(student?.student_phone || student?.parent_phone || null);
+        normalizeLeadContact(
+          student?.student_phone || student?.parent_phone || null,
+          student?.student_email || student?.parent_email || group.email || null,
+        );
 
       const note = shouldChurn && group.churnSource
         ? buildCancellationNote({
@@ -419,7 +447,8 @@ async function handle(req: Request) {
       try {
         existing = await findChurnFollowup(db, {
           studentId: leadStudentId,
-          phone: leadPhone,
+          contact: leadContact,
+          email: group.email,
         });
       } catch (error) {
         stats.errors += 1;
@@ -445,8 +474,8 @@ async function handle(req: Request) {
             patch.student_id = leadStudentId;
             changed = true;
           }
-          if ((!existing.whatsapp_phone || existing.whatsapp_phone === "") && leadPhone) {
-            patch.whatsapp_phone = leadPhone;
+          if ((!existing.whatsapp_phone || existing.whatsapp_phone === "") && leadContact) {
+            patch.whatsapp_phone = leadContact;
             changed = true;
           }
           if (note) {
@@ -465,13 +494,13 @@ async function handle(req: Request) {
             stats.updated += 1;
           }
         } else {
-          if (!leadPhone) {
+          if (!leadContact) {
             stats.skippedNoPhone += 1;
             continue;
           }
           const payload = {
             full_name: leadName,
-            whatsapp_phone: leadPhone,
+            whatsapp_phone: leadContact,
             note,
             student_id: leadStudentId,
             status: "active",

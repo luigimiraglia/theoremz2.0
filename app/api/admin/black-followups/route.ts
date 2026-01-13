@@ -46,9 +46,15 @@ function computeLeadNextFollowUp(stepIndex: number, from: Date) {
   return addDays(from, offset);
 }
 
+function isEmailContact(value?: string | null) {
+  return Boolean(value && value.includes("@"));
+}
+
 function normalizePhone(raw?: string | null) {
   if (!raw) return null;
-  const compact = raw.replace(/\s+/g, "").trim();
+  const compact = String(raw).replace(/\s+/g, "").trim();
+  if (!compact) return null;
+  if (isEmailContact(compact)) return compact.toLowerCase();
   const digits = compact.replace(/\D/g, "");
   if (!digits) return null;
   if (compact.startsWith("+")) return `+${digits}`;
@@ -436,7 +442,7 @@ export async function POST(request: NextRequest) {
   const db = supabaseServer();
   const body = await request.json().catch(() => ({}));
   const name = typeof body.name === "string" ? body.name.trim() : null;
-  const note = typeof body.note === "string" ? body.note.trim() : null;
+  let note = typeof body.note === "string" ? body.note.trim() : null;
   const nextRaw = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
   let whatsappPhone = normalizePhone(body.whatsapp || body.whatsappPhone || body.phone);
   const studentId = typeof body.studentId === "string" ? body.studentId.trim() : null;
@@ -466,6 +472,9 @@ export async function POST(request: NextRequest) {
     if (studErr) return NextResponse.json({ error: studErr.message }, { status: 500 });
     student = data;
     whatsappPhone = normalizePhone(student?.student_phone || student?.parent_phone);
+    if (!whatsappPhone) {
+      whatsappPhone = normalizePhone(student?.student_email || student?.parent_email);
+    }
     if (!name && student) {
       const fallbackName = student.preferred_name || student.student_name || null;
       if (fallbackName) (body as any).name = fallbackName;
@@ -486,12 +495,47 @@ export async function POST(request: NextRequest) {
   }
 
   const nextFollowUpAt = nextRaw && !Number.isNaN(nextRaw.getTime()) ? nextRaw : new Date();
+  const isEmail = isEmailContact(whatsappPhone);
+  if (isEmail && whatsappPhone && !String(note || "").includes(whatsappPhone)) {
+    note = note ? `${note} | Email: ${whatsappPhone}`.slice(0, 500) : `Email: ${whatsappPhone}`;
+  }
+
+  const { data: existingByContact } = await db
+    .from("black_followups")
+    .select("*")
+    .eq("whatsapp_phone", whatsappPhone)
+    .maybeSingle();
+  if (existingByContact?.id) {
+    if (studentId && existingByContact.student_id && existingByContact.student_id !== studentId) {
+      return NextResponse.json(
+        { error: "Contatto già collegato a un altro studente" },
+        { status: 409 },
+      );
+    }
+    const patch: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+      status: "active",
+      next_follow_up_at: nextFollowUpAt.toISOString(),
+    };
+    if (name && !existingByContact.full_name) patch.full_name = name;
+    if (studentId && !existingByContact.student_id) patch.student_id = studentId;
+    if (note && !existingByContact.note) patch.note = note;
+    const { data, error } = await db
+      .from("black_followups")
+      .update(patch)
+      .eq("id", existingByContact.id)
+      .select("*")
+      .maybeSingle();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const [withStudent] = await attachStudents(db, data ? [data] : []);
+    return NextResponse.json({ contact: mapRow(withStudent) });
+  }
 
   // Se l'admin sovrascrive nome/telefono mentre collega lo studente, aggiorna anche la scheda Black
   if (studentId) {
     const studentPatch: Record<string, any> = {};
     if (name) studentPatch.preferred_name = name;
-    if (whatsappPhone) studentPatch.student_phone = whatsappPhone;
+    if (whatsappPhone && !isEmail) studentPatch.student_phone = whatsappPhone;
     if (Object.keys(studentPatch).length) {
       studentPatch.updated_at = new Date().toISOString();
       const { error: updateErr } = await db
@@ -705,16 +749,17 @@ export async function PATCH(request: NextRequest) {
     if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
     const studentId = existing?.student_id || null;
     if (studentId) {
-      const studentPatch: Record<string, any> = {};
-      const updatedAt = new Date().toISOString();
-      if (wantsNameUpdate && nextName) {
-        studentPatch.preferred_name = nextName;
-        studentPatch.preferred_name_updated_at = updatedAt;
-      }
-      if (wantsPhoneUpdate) {
-        studentPatch.student_phone = normalizedPhone;
-        studentPatch.parent_phone = normalizedPhone;
-      }
+    const studentPatch: Record<string, any> = {};
+    const updatedAt = new Date().toISOString();
+    const isEmail = normalizedPhone ? isEmailContact(normalizedPhone) : false;
+    if (wantsNameUpdate && nextName) {
+      studentPatch.preferred_name = nextName;
+      studentPatch.preferred_name_updated_at = updatedAt;
+    }
+    if (wantsPhoneUpdate && !isEmail) {
+      studentPatch.student_phone = normalizedPhone;
+      studentPatch.parent_phone = normalizedPhone;
+    }
       if (Object.keys(studentPatch).length) {
         studentPatch.updated_at = updatedAt;
         const studentErr = await updateBlackStudentSafe(db, studentId, studentPatch, nextName);

@@ -67,6 +67,18 @@ function normalizeLeadPhone(raw) {
   return digits ? `+${digits}` : null;
 }
 
+function normalizeEmail(raw) {
+  const email = String(raw || "").trim().toLowerCase();
+  if (!email || !email.includes("@")) return null;
+  return email;
+}
+
+function normalizeLeadContact(phoneRaw, emailRaw) {
+  const phone = normalizeLeadPhone(phoneRaw);
+  if (phone) return phone;
+  return normalizeEmail(emailRaw);
+}
+
 function secondsToIso(value) {
   if (!value) return null;
   return new Date(value * 1000).toISOString();
@@ -120,7 +132,7 @@ async function findBlackStudentByEmail(email) {
   return null;
 }
 
-async function findExistingFollowup(studentId, leadPhone) {
+async function findExistingFollowup(studentId, leadContact, leadEmail) {
   if (studentId) {
     const { data } = await supabase
       .from("black_followups")
@@ -129,11 +141,22 @@ async function findExistingFollowup(studentId, leadPhone) {
       .maybeSingle();
     if (data?.id) return data;
   }
-  if (leadPhone) {
+  if (leadContact) {
     const { data } = await supabase
       .from("black_followups")
       .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
-      .eq("whatsapp_phone", leadPhone)
+      .eq("whatsapp_phone", leadContact)
+      .maybeSingle();
+    if (data?.id) return data;
+  }
+  if (leadEmail) {
+    const pattern = `%${leadEmail}%`;
+    const { data } = await supabase
+      .from("black_followups")
+      .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
+      .ilike("note", pattern)
+      .order("updated_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (data?.id) return data;
   }
@@ -165,7 +188,7 @@ function buildCancellationNote({
 
 async function upsertCancellationLead({
   leadName,
-  leadPhone,
+  leadContact,
   leadEmail,
   leadStudentId,
   note,
@@ -174,7 +197,7 @@ async function upsertCancellationLead({
   verbose,
 }) {
   const nowIso = new Date().toISOString();
-  const existing = await findExistingFollowup(leadStudentId, leadPhone);
+  const existing = await findExistingFollowup(leadStudentId, leadContact, leadEmail);
   if (existing) {
     const patch = { updated_at: nowIso };
     if (reactivate) {
@@ -182,7 +205,7 @@ async function upsertCancellationLead({
       patch.next_follow_up_at = nowIso;
     }
     if (leadName && !existing.full_name) patch.full_name = leadName;
-    if (leadPhone && !existing.whatsapp_phone) patch.whatsapp_phone = leadPhone;
+    if (leadContact && !existing.whatsapp_phone) patch.whatsapp_phone = leadContact;
     if (leadStudentId && !existing.student_id) patch.student_id = leadStudentId;
     if (note) {
       if (existing.note) {
@@ -205,16 +228,16 @@ async function upsertCancellationLead({
       if (error) throw error;
     }
     if (verbose) {
-      console.log(`[update] ${existing.id} ${leadEmail || leadPhone || ""}`);
+      console.log(`[update] ${existing.id} ${leadEmail || leadContact || ""}`);
     }
     return { status: "updated" };
   }
 
-  if (!leadPhone) return { status: "missing_phone" };
+  if (!leadContact) return { status: "missing_phone" };
 
   const insertPayload = {
     full_name: leadName,
-    whatsapp_phone: leadPhone,
+    whatsapp_phone: leadContact,
     note,
     student_id: leadStudentId,
     status: "active",
@@ -227,7 +250,7 @@ async function upsertCancellationLead({
     if (error) throw error;
   }
   if (verbose) {
-    console.log(`[insert] ${leadEmail || leadPhone || ""}`);
+    console.log(`[insert] ${leadEmail || leadContact || ""}`);
   }
   return { status: "inserted" };
 }
@@ -317,26 +340,30 @@ async function main() {
         metadata.parent_name ||
         metadata.name ||
         null;
-      let leadPhone =
-        normalizeLeadPhone(customer?.phone || metadata.phone || metadata.whatsapp || null);
+      let leadContact =
+        normalizeLeadContact(
+          customer?.phone || metadata.phone || metadata.whatsapp || null,
+          leadEmail
+        );
       let leadStudentId = null;
 
-      if ((leadEmail && (!leadPhone || !leadName)) || leadEmail) {
+      if ((leadEmail && (!leadContact || !leadName)) || leadEmail) {
         const student = await findBlackStudentByEmail(leadEmail);
         if (student) {
           leadStudentId = student.id || null;
           if (!leadName) {
             leadName = student.preferred_name || student.student_name || null;
           }
-          if (!leadPhone) {
-            leadPhone = normalizeLeadPhone(
+          if (!leadContact) {
+            leadContact = normalizeLeadContact(
               student.student_phone || student.parent_phone || null,
+              student.student_email || student.parent_email || leadEmail || null,
             );
           }
         }
       }
 
-      const dedupeKey = leadStudentId || leadPhone || sub.id;
+      const dedupeKey = leadStudentId || leadContact || sub.id;
       if (seen.has(dedupeKey)) continue;
       seen.add(dedupeKey);
 
@@ -355,7 +382,7 @@ async function main() {
       try {
         const result = await upsertCancellationLead({
           leadName,
-          leadPhone,
+          leadContact,
           leadEmail,
           leadStudentId,
           note,
