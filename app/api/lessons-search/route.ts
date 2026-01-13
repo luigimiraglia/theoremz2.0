@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { client } from "@/sanity/lib/client";
 
+export const revalidate = 3600; // Cache per 1 ora
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -14,11 +16,7 @@ export async function GET(req: Request) {
       : `*[_type=="lesson"]{ _id, title, "slug": slug.current } | order(title asc)[0...20]`;
 
     const q = qRaw ? `${qRaw}*` : undefined;
-    const items = await client.fetch(
-      QUERY,
-      q ? { q } : {},
-      { cache: "no-store" }
-    );
+    const items = await client.fetch(QUERY, q ? { q } : {});
 
     const rows = (items || []).filter((x: any) => x && x._id && x.slug);
     return NextResponse.json({
@@ -29,4 +27,3 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
 }
-

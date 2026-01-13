@@ -28,11 +28,7 @@ export async function GET(req: Request) {
   });
 
   try {
-    const items = await client.fetch(
-      QUERY,
-      { lessonId },
-      { cache: "no-store" }
-    );
+    const items = await client.fetch(QUERY, { lessonId });
     return NextResponse.json({ ok: true, items });
   } catch (e: unknown) {
     let errorMessage: string;

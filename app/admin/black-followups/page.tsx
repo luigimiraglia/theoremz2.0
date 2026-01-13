@@ -93,6 +93,7 @@ const callTypeOptions: Array<{ value: ScheduleDraft["callType"]; label: string }
   { value: "check-percorso", label: "Check-in" },
 ];
 const BLACK_CALL_TYPES = new Set(["onboarding", "check-percorso"]);
+const CHURN_NOTE_MARKER = "disdetta abbonamento";
 
 async function buildHeaders() {
   const headers: Record<string, string> = {};
@@ -143,6 +144,10 @@ function formatSubscriptionStatus(status?: string | null) {
     unpaid: "Non pagato",
   };
   return labels[normalized] || normalized;
+}
+
+function isChurnFollowup(contact: Contact) {
+  return (contact.note || "").toLowerCase().includes(CHURN_NOTE_MARKER);
 }
 
 function toDateInputValue(date: Date) {
@@ -935,6 +940,23 @@ export default function BlackFollowupsPage() {
     });
   }, [data?.due, selectedDate]);
 
+  const dueActive = useMemo(
+    () => dayDue.filter((contact) => !isChurnFollowup(contact)),
+    [dayDue],
+  );
+  const dueChurn = useMemo(
+    () => dayDue.filter((contact) => isChurnFollowup(contact)),
+    [dayDue],
+  );
+  const upcomingActive = useMemo(
+    () => (data?.upcoming || []).filter((contact) => !isChurnFollowup(contact)),
+    [data?.upcoming],
+  );
+  const upcomingChurn = useMemo(
+    () => (data?.upcoming || []).filter((contact) => isChurnFollowup(contact)),
+    [data?.upcoming],
+  );
+
   const churnedStudents = useMemo(
     () => (Array.isArray(data?.churned) ? data?.churned : []),
     [data?.churned],
@@ -1024,6 +1046,345 @@ export default function BlackFollowupsPage() {
       </div>
     );
   }
+
+  const renderDueCard = (contact: Contact & { isOverdue?: boolean }) => {
+    const whatsappLink = buildWhatsAppLink(contact.whatsappPhone, preferWebWhatsApp);
+    const dateDraft = nextDateDraft[contact.id] || "";
+    const cardLink = buildCardLink(contact);
+    const isEditingName = editingNameId === contact.id;
+    const nameDraft = nameDrafts[contact.id] ?? contact.name ?? "";
+    const isSavingName = savingNameId === contact.id;
+    const isEditingPhone = editingPhoneId === contact.id;
+    const phoneDraft = phoneDrafts[contact.id] ?? contact.whatsappPhone ?? "";
+    const isSavingPhone = savingPhoneId === contact.id;
+    const isScheduleOpen = scheduleOpenId === contact.id;
+    const scheduleDraft = scheduleDrafts[contact.id] || buildDefaultScheduleDraft();
+    const isScheduling = schedulingId === contact.id;
+    const churnLead = isChurnFollowup(contact);
+    return (
+      <div
+        key={contact.id}
+        className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                Black
+              </span>
+              {churnLead ? (
+                <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-rose-700">
+                  Disdetta
+                </span>
+              ) : null}
+              {contact.isOverdue ? (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                  In ritardo
+                </span>
+              ) : null}
+            </div>
+            <div>
+              {isEditingName ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={nameDraft}
+                    onChange={(e) =>
+                      setNameDrafts((prev) => ({
+                        ...prev,
+                        [contact.id]: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleNameSave(contact);
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        cancelNameEdit(contact.id);
+                      }
+                    }}
+                    placeholder="Nome e cognome"
+                    className="min-w-[200px] rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleNameSave(contact)}
+                    disabled={isSavingName}
+                    className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                  >
+                    {isSavingName ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      "Salva"
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cancelNameEdit(contact.id)}
+                    disabled={isSavingName}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 disabled:opacity-60"
+                  >
+                    Annulla
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-base font-semibold text-slate-900">
+                    {contact.name || "Contatto senza nome"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => startNameEdit(contact)}
+                    className="text-xs font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
+                  >
+                    Modifica nome
+                  </button>
+                </div>
+              )}
+              {contact.student ? (
+                <p className="text-xs text-slate-600">
+                  {contact.student.preferred_name || contact.student.student_name || "Studente"} ·{" "}
+                  {contact.student.student_email || contact.student.parent_email || "email n/d"} ·{" "}
+                  {contact.student.year_class || "classe?"} · {contact.student.track || "track?"}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                {isEditingPhone ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      inputMode="tel"
+                      value={phoneDraft}
+                      onChange={(e) =>
+                        setPhoneDrafts((prev) => ({
+                          ...prev,
+                          [contact.id]: e.target.value,
+                        }))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handlePhoneSave(contact);
+                        }
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          cancelPhoneEdit(contact.id);
+                        }
+                      }}
+                      placeholder="+39..."
+                      className="min-w-[180px] rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handlePhoneSave(contact)}
+                      disabled={isSavingPhone}
+                      className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                    >
+                      {isSavingPhone ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        "Salva"
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cancelPhoneEdit(contact.id)}
+                      disabled={isSavingPhone}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 disabled:opacity-60"
+                    >
+                      Annulla
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {contact.whatsappPhone ? <span>{contact.whatsappPhone}</span> : null}
+                    <button
+                      type="button"
+                      onClick={() => startPhoneEdit(contact)}
+                      className="text-xs font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
+                    >
+                      Modifica telefono
+                    </button>
+                  </>
+                )}
+                {whatsappLink ? (
+                  <a
+                    href={whatsappLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-slate-900 underline decoration-slate-300 underline-offset-4"
+                  >
+                    Apri chat
+                    <ArrowRight size={14} />
+                  </a>
+                ) : null}
+                {cardLink ? (
+                  <a
+                    href={cardLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-slate-900 underline decoration-slate-300 underline-offset-4"
+                  >
+                    Scheda Black
+                    <ExternalLink size={14} />
+                  </a>
+                ) : null}
+              </div>
+            </div>
+            {contact.note ? (
+              <p className="text-sm text-slate-700">
+                <span className="font-semibold text-slate-900">Nota:</span>{" "}
+                {contact.note}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
+                <Clock3 size={14} />
+                {contact.isOverdue
+                  ? `doveva essere il ${formatDate(contact.nextFollowUpAt)}`
+                  : `oggi / ${formatDate(contact.nextFollowUpAt)}`}
+              </span>
+              <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
+                Inserito {formatDate(contact.createdAt)}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-col items-stretch gap-2">
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <input
+                type="date"
+                value={dateDraft}
+                onChange={(e) =>
+                  setNextDateDraft((prev) => ({
+                    ...prev,
+                    [contact.id]: e.target.value,
+                  }))
+                }
+                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
+              />
+              <span className="text-[11px] text-slate-500">Vuoto = +3 giorni</span>
+            </div>
+            <button
+              onClick={() =>
+                handleRestartLeadCycle(contact.id, dateDraft || undefined)
+              }
+              disabled={restartingId === contact.id}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 shadow hover:border-indigo-300 disabled:opacity-60"
+            >
+              {restartingId === contact.id ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <RefreshCcw size={16} />
+              )}
+              Ha risposto (restart lead)
+            </button>
+            <button
+              onClick={() =>
+                handleAdvance(contact.id, dateDraft || undefined)
+              }
+              disabled={advancingId === contact.id}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+            >
+              {advancingId === contact.id ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <CheckCircle2 size={16} />
+              )}
+              Contattato
+            </button>
+            <p className="text-[11px] leading-tight text-slate-500">
+              Segna il contatto e programma la prossima data (se vuota: +3 giorni).
+            </p>
+            <button
+              onClick={() => handlePause(contact.id)}
+              disabled={pausingId === contact.id}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 shadow hover:border-amber-300 disabled:opacity-60"
+            >
+              {pausingId === contact.id ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <AlertTriangle size={16} />
+              )}
+              Metti in pausa
+            </button>
+            <button
+              onClick={() => toggleSchedule(contact.id)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-slate-300"
+            >
+              {isScheduleOpen ? "Chiudi pianificazione" : "Programma check-in / onboarding"}
+            </button>
+            {isScheduleOpen ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={scheduleDraft.callType}
+                    onChange={(e) =>
+                      updateScheduleDraft(contact.id, {
+                        callType: e.target.value as ScheduleDraft["callType"],
+                      })
+                    }
+                    className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                  >
+                    {callTypeOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="date"
+                    value={scheduleDraft.date}
+                    onChange={(e) =>
+                      updateScheduleDraft(contact.id, { date: e.target.value })
+                    }
+                    className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                  />
+                  <input
+                    type="time"
+                    value={scheduleDraft.time}
+                    onChange={(e) =>
+                      updateScheduleDraft(contact.id, { time: e.target.value })
+                    }
+                    className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                  />
+                </div>
+                <input
+                  type="text"
+                  value={scheduleDraft.note}
+                  onChange={(e) =>
+                    updateScheduleDraft(contact.id, { note: e.target.value })
+                  }
+                  placeholder="Nota (opzionale)"
+                  className="mt-2 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
+                />
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    onClick={() => handleScheduleSave(contact)}
+                    disabled={isScheduling}
+                    className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                  >
+                    {isScheduling ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      "Salva"
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setScheduleOpenId(null)}
+                    className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300"
+                  >
+                    Annulla
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -1301,6 +1662,11 @@ export default function BlackFollowupsPage() {
                 {dayDue.length}
                 <span className="text-xs font-semibold text-white/60"> contatti</span>
               </p>
+              {dueChurn.length ? (
+                <p className="mt-1 text-[11px] font-semibold text-white/70">
+                  di cui disdette: {dueChurn.length}
+                </p>
+              ) : null}
             </div>
             <div className="rounded-lg border border-slate-200 px-3 py-3">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Prossimi</p>
@@ -1308,6 +1674,11 @@ export default function BlackFollowupsPage() {
                 {data?.upcoming?.length || 0}
                 <span className="text-xs font-semibold text-slate-500"> in coda</span>
               </p>
+              {upcomingChurn.length ? (
+                <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                  disdette: {upcomingChurn.length}
+                </p>
+              ) : null}
             </div>
             <label className="col-span-2 flex items-center gap-2 text-sm text-slate-600">
               <input
@@ -1371,338 +1742,22 @@ export default function BlackFollowupsPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {dayDue.map((contact) => {
-                const whatsappLink = buildWhatsAppLink(contact.whatsappPhone, preferWebWhatsApp);
-                const dateDraft = nextDateDraft[contact.id] || "";
-                const cardLink = buildCardLink(contact);
-                const isEditingName = editingNameId === contact.id;
-                const nameDraft = nameDrafts[contact.id] ?? contact.name ?? "";
-                const isSavingName = savingNameId === contact.id;
-                const isEditingPhone = editingPhoneId === contact.id;
-                const phoneDraft = phoneDrafts[contact.id] ?? contact.whatsappPhone ?? "";
-                const isSavingPhone = savingPhoneId === contact.id;
-                const isScheduleOpen = scheduleOpenId === contact.id;
-                const scheduleDraft = scheduleDrafts[contact.id] || buildDefaultScheduleDraft();
-                const isScheduling = schedulingId === contact.id;
-                return (
-                  <div
-                    key={contact.id}
-                    className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                            Black
-                          </span>
-                          {contact.isOverdue ? (
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
-                              In ritardo
-                            </span>
-                          ) : null}
-                        </div>
-                        <div>
-                          {isEditingName ? (
-                            <div className="flex flex-wrap items-center gap-2">
-                              <input
-                                type="text"
-                                value={nameDraft}
-                                onChange={(e) =>
-                                  setNameDrafts((prev) => ({
-                                    ...prev,
-                                    [contact.id]: e.target.value,
-                                  }))
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    handleNameSave(contact);
-                                  }
-                                  if (e.key === "Escape") {
-                                    e.preventDefault();
-                                    cancelNameEdit(contact.id);
-                                  }
-                                }}
-                                placeholder="Nome e cognome"
-                                className="min-w-[200px] rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleNameSave(contact)}
-                                disabled={isSavingName}
-                                className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
-                              >
-                                {isSavingName ? (
-                                  <Loader2 size={12} className="animate-spin" />
-                                ) : (
-                                  "Salva"
-                                )}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => cancelNameEdit(contact.id)}
-                                disabled={isSavingName}
-                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 disabled:opacity-60"
-                              >
-                                Annulla
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-base font-semibold text-slate-900">
-                                {contact.name || "Contatto senza nome"}
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() => startNameEdit(contact)}
-                                className="text-xs font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
-                              >
-                                Modifica nome
-                              </button>
-                            </div>
-                          )}
-                          {contact.student ? (
-                            <p className="text-xs text-slate-600">
-                              {contact.student.preferred_name || contact.student.student_name || "Studente"} ·{" "}
-                              {contact.student.student_email || contact.student.parent_email || "email n/d"} ·{" "}
-                              {contact.student.year_class || "classe?"} · {contact.student.track || "track?"}
-                            </p>
-                          ) : null}
-                          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-                            {isEditingPhone ? (
-                              <div className="flex flex-wrap items-center gap-2">
-                                <input
-                                  type="text"
-                                  inputMode="tel"
-                                  value={phoneDraft}
-                                  onChange={(e) =>
-                                    setPhoneDrafts((prev) => ({
-                                      ...prev,
-                                      [contact.id]: e.target.value,
-                                    }))
-                                  }
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      handlePhoneSave(contact);
-                                    }
-                                    if (e.key === "Escape") {
-                                      e.preventDefault();
-                                      cancelPhoneEdit(contact.id);
-                                    }
-                                  }}
-                                  placeholder="+39..."
-                                  className="min-w-[180px] rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handlePhoneSave(contact)}
-                                  disabled={isSavingPhone}
-                                  className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
-                                >
-                                  {isSavingPhone ? (
-                                    <Loader2 size={12} className="animate-spin" />
-                                  ) : (
-                                    "Salva"
-                                  )}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => cancelPhoneEdit(contact.id)}
-                                  disabled={isSavingPhone}
-                                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 disabled:opacity-60"
-                                >
-                                  Annulla
-                                </button>
-                              </div>
-                            ) : (
-                              <>
-                                {contact.whatsappPhone ? <span>{contact.whatsappPhone}</span> : null}
-                                <button
-                                  type="button"
-                                  onClick={() => startPhoneEdit(contact)}
-                                  className="text-xs font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-700"
-                                >
-                                  Modifica telefono
-                                </button>
-                              </>
-                            )}
-                            {whatsappLink ? (
-                              <a
-                                href={whatsappLink}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-slate-900 underline decoration-slate-300 underline-offset-4"
-                              >
-                                Apri chat
-                                <ArrowRight size={14} />
-                              </a>
-                            ) : null}
-                            {cardLink ? (
-                              <a
-                                href={cardLink}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-slate-900 underline decoration-slate-300 underline-offset-4"
-                              >
-                                Scheda Black
-                                <ExternalLink size={14} />
-                              </a>
-                            ) : null}
-                          </div>
-                        </div>
-                        {contact.note ? (
-                          <p className="text-sm text-slate-700">
-                            <span className="font-semibold text-slate-900">Nota:</span>{" "}
-                            {contact.note}
-                          </p>
-                        ) : null}
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
-                            <Clock3 size={14} />
-                            {contact.isOverdue
-                              ? `doveva essere il ${formatDate(contact.nextFollowUpAt)}`
-                              : `oggi / ${formatDate(contact.nextFollowUpAt)}`}
-                          </span>
-                          <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
-                            Inserito {formatDate(contact.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-stretch gap-2">
-                        <div className="flex items-center gap-2 text-xs text-slate-600">
-                          <input
-                            type="date"
-                            value={dateDraft}
-                            onChange={(e) =>
-                              setNextDateDraft((prev) => ({
-                                ...prev,
-                                [contact.id]: e.target.value,
-                              }))
-                            }
-                            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
-                          />
-                          <span className="text-[11px] text-slate-500">Vuoto = +3 giorni</span>
-                        </div>
-                        <button
-                          onClick={() =>
-                            handleRestartLeadCycle(contact.id, dateDraft || undefined)
-                          }
-                          disabled={restartingId === contact.id}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 shadow hover:border-indigo-300 disabled:opacity-60"
-                        >
-                          {restartingId === contact.id ? (
-                            <Loader2 size={16} className="animate-spin" />
-                          ) : (
-                            <RefreshCcw size={16} />
-                          )}
-                          Ha risposto (restart lead)
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleAdvance(contact.id, dateDraft || undefined)
-                          }
-                          disabled={advancingId === contact.id}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
-                        >
-                          {advancingId === contact.id ? (
-                            <Loader2 size={16} className="animate-spin" />
-                          ) : (
-                            <CheckCircle2 size={16} />
-                          )}
-                          Contattato
-                        </button>
-                        <p className="text-[11px] leading-tight text-slate-500">
-                          Segna il contatto e programma la prossima data (se vuota: +3 giorni).
-                        </p>
-                        <button
-                          onClick={() => handlePause(contact.id)}
-                          disabled={pausingId === contact.id}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 shadow hover:border-amber-300 disabled:opacity-60"
-                        >
-                          {pausingId === contact.id ? (
-                            <Loader2 size={16} className="animate-spin" />
-                          ) : (
-                            <AlertTriangle size={16} />
-                          )}
-                          Metti in pausa
-                        </button>
-                        <button
-                          onClick={() => toggleSchedule(contact.id)}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-slate-300"
-                        >
-                          {isScheduleOpen ? "Chiudi pianificazione" : "Programma check-in / onboarding"}
-                        </button>
-                        {isScheduleOpen ? (
-                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
-                            <div className="flex flex-wrap gap-2">
-                              <select
-                                value={scheduleDraft.callType}
-                                onChange={(e) =>
-                                  updateScheduleDraft(contact.id, {
-                                    callType: e.target.value as ScheduleDraft["callType"],
-                                  })
-                                }
-                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
-                              >
-                                {callTypeOptions.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </option>
-                                ))}
-                              </select>
-                              <input
-                                type="date"
-                                value={scheduleDraft.date}
-                                onChange={(e) =>
-                                  updateScheduleDraft(contact.id, { date: e.target.value })
-                                }
-                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
-                              />
-                              <input
-                                type="time"
-                                value={scheduleDraft.time}
-                                onChange={(e) =>
-                                  updateScheduleDraft(contact.id, { time: e.target.value })
-                                }
-                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
-                              />
-                            </div>
-                            <input
-                              type="text"
-                              value={scheduleDraft.note}
-                              onChange={(e) =>
-                                updateScheduleDraft(contact.id, { note: e.target.value })
-                              }
-                              placeholder="Nota (opzionale)"
-                              className="mt-2 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 outline-none"
-                            />
-                            <div className="mt-2 flex items-center gap-2">
-                              <button
-                                onClick={() => handleScheduleSave(contact)}
-                                disabled={isScheduling}
-                                className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
-                              >
-                                {isScheduling ? (
-                                  <Loader2 size={12} className="animate-spin" />
-                                ) : (
-                                  "Salva"
-                                )}
-                              </button>
-                              <button
-                                onClick={() => setScheduleOpenId(null)}
-                                className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300"
-                              >
-                                Annulla
-                              </button>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {dueActive.length ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Black attivi
+                  </p>
+                  {dueActive.map(renderDueCard)}
+                </div>
+              ) : null}
+              {dueChurn.length ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-600">
+                    Disdette
+                  </p>
+                  {dueChurn.map(renderDueCard)}
+                </div>
+              ) : null}
             </div>
           )}
         </div>
@@ -1806,52 +1861,111 @@ export default function BlackFollowupsPage() {
               <Clock3 size={16} className="text-slate-400" />
             </div>
             {data?.upcoming?.length ? (
-              <div className="space-y-2">
-                {data.upcoming.slice(0, 8).map((contact) => {
-                  const nextAt = contact.nextFollowUpAt ? new Date(contact.nextFollowUpAt) : null;
-                  const cardLink = buildCardLink(contact);
-                  return (
-                    <div
-                      key={contact.id}
-                      className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
-                    >
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700">
-                            Black
-                          </span>
-                          <span className="font-semibold text-slate-900">
-                            {contact.name || contact.whatsappPhone || "Contatto"}
-                          </span>
+              <div className="space-y-4">
+                {upcomingActive.length ? (
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Attivi
+                    </p>
+                    {upcomingActive.slice(0, 8).map((contact) => {
+                      const nextAt = contact.nextFollowUpAt ? new Date(contact.nextFollowUpAt) : null;
+                      const cardLink = buildCardLink(contact);
+                      return (
+                        <div
+                          key={contact.id}
+                          className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
+                        >
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+                                Black
+                              </span>
+                              <span className="font-semibold text-slate-900">
+                                {contact.name || contact.whatsappPhone || "Contatto"}
+                              </span>
+                            </div>
+                            <span className="text-xs font-semibold text-slate-500">
+                              {nextAt ? nextAt.toLocaleDateString("it-IT") : "—"}
+                            </span>
+                          </div>
+                          {contact.student ? (
+                            <p className="text-[11px] text-slate-600 mt-1">
+                              {contact.student.preferred_name || contact.student.student_name || "Studente"} ·{" "}
+                              {contact.student.student_email || contact.student.parent_email || "email n/d"}
+                            </p>
+                          ) : null}
+                          <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                            <Clock3 size={14} />
+                            Prossimo follow-up
+                            {cardLink ? (
+                              <a
+                                href={cardLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-slate-700 underline decoration-slate-300 underline-offset-4"
+                              >
+                                Scheda
+                                <ExternalLink size={12} />
+                              </a>
+                            ) : null}
+                          </div>
                         </div>
-                        <span className="text-xs font-semibold text-slate-500">
-                          {nextAt ? nextAt.toLocaleDateString("it-IT") : "—"}
-                        </span>
-                      </div>
-                      {contact.student ? (
-                        <p className="text-[11px] text-slate-600 mt-1">
-                          {contact.student.preferred_name || contact.student.student_name || "Studente"} ·{" "}
-                          {contact.student.student_email || contact.student.parent_email || "email n/d"}
-                        </p>
-                      ) : null}
-                      <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                        <Clock3 size={14} />
-                        Prossimo follow-up
-                        {cardLink ? (
-                          <a
-                            href={cardLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-slate-700 underline decoration-slate-300 underline-offset-4"
-                          >
-                            Scheda
-                            <ExternalLink size={12} />
-                          </a>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                ) : null}
+                {upcomingChurn.length ? (
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-rose-600">
+                      Disdette
+                    </p>
+                    {upcomingChurn.slice(0, 8).map((contact) => {
+                      const nextAt = contact.nextFollowUpAt ? new Date(contact.nextFollowUpAt) : null;
+                      const cardLink = buildCardLink(contact);
+                      return (
+                        <div
+                          key={contact.id}
+                          className="rounded-lg border border-slate-100 bg-rose-50 px-3 py-2"
+                        >
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-1 text-[11px] font-semibold text-rose-700">
+                                Disdetta
+                              </span>
+                              <span className="font-semibold text-slate-900">
+                                {contact.name || contact.whatsappPhone || "Contatto"}
+                              </span>
+                            </div>
+                            <span className="text-xs font-semibold text-slate-500">
+                              {nextAt ? nextAt.toLocaleDateString("it-IT") : "—"}
+                            </span>
+                          </div>
+                          {contact.student ? (
+                            <p className="text-[11px] text-slate-600 mt-1">
+                              {contact.student.preferred_name || contact.student.student_name || "Studente"} ·{" "}
+                              {contact.student.student_email || contact.student.parent_email || "email n/d"}
+                            </p>
+                          ) : null}
+                          <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                            <Clock3 size={14} />
+                            Prossimo follow-up
+                            {cardLink ? (
+                              <a
+                                href={cardLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-slate-700 underline decoration-slate-300 underline-offset-4"
+                              >
+                                Scheda
+                                <ExternalLink size={12} />
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             ) : (
               <p className="text-sm text-slate-500">Nessun follow-up programmato.</p>

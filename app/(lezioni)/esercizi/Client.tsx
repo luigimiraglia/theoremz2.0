@@ -89,11 +89,22 @@ export default function EserciziClient({
 
   // Fetch full details (testo/soluzione/passaggi) for currently visible cards missing them
   const visibleNeeding = useMemo(
-    () =>
-      visible
-        .filter((e) => !(e.testo && e.testo.length) && !(e.soluzione && e.soluzione.length) && !(e.passaggi && e.passaggi.length))
-        .map((e) => e._id),
+    () => {
+      const ids = visible
+        .filter(
+          (e) =>
+            !(e.testo && e.testo.length) &&
+            !(e.soluzione && e.soluzione.length) &&
+            !(e.passaggi && e.passaggi.length)
+        )
+        .map((e) => e._id);
+      return Array.from(new Set(ids)).sort();
+    },
     [visible]
+  );
+  const visibleNeedingKey = useMemo(
+    () => visibleNeeding.join(","),
+    [visibleNeeding]
   );
 
   useEffect(() => {
@@ -101,7 +112,7 @@ export default function EserciziClient({
     let cancelled = false;
     (async () => {
       try {
-        const qs = encodeURIComponent(visibleNeeding.join(","));
+        const qs = encodeURIComponent(visibleNeedingKey);
         const res = await fetch(`/api/exercises-batch?ids=${qs}`);
         const json = await res.json();
         if (!json.ok) throw new Error(json.error || "Errore");
@@ -117,7 +128,7 @@ export default function EserciziClient({
     return () => {
       cancelled = true;
     };
-  }, [visibleNeeding.join(",")]);
+  }, [visibleNeedingKey, visibleNeeding.length]);
 
   async function loadMore() {
     if (filtered.length > all.length && visible.length < all.length) {

@@ -24,7 +24,7 @@ export async function GET() {
   });
 
   try {
-    const items = await client.fetch(QUERY, {}, { cache: "no-store" });
+    const items = await client.fetch(QUERY, {});
     return NextResponse.json({ ok: true, items });
   } catch (e: unknown) {
     let errorMessage: string;

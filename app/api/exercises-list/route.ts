@@ -30,15 +30,10 @@ export async function GET(req: Request) {
   const client = base.withConfig({ useCdn: true });
 
   try {
-    const items = await client.fetch<any[]>(
-      QUERY,
-      { offset, end },
-      { cache: "no-store" }
-    );
+    const items = await client.fetch<any[]>(QUERY, { offset, end });
     return NextResponse.json({ ok: true, items, offset, limit });
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ ok: false, error: errorMessage }, { status: 500 });
   }
 }
-

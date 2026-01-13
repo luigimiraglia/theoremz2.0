@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 
   const client = base.withConfig({ useCdn: true });
   try {
-    const items = await client.fetch<any[]>(QUERY, { ids }, { cache: "no-store" });
+    const items = await client.fetch<any[]>(QUERY, { ids });
     return NextResponse.json({ ok: true, items });
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
