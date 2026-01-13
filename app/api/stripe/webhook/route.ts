@@ -315,7 +315,7 @@ async function handleSubscriptionEvent(
       status: hydrated.status || null,
       cancelAtPeriodEnd: Boolean(hydrated.cancel_at_period_end),
       canceledAt: secondsToIso(hydrated.canceled_at),
-      currentPeriodEnd: secondsToIso(hydrated.current_period_end),
+      currentPeriodEnd: secondsToIso(getSubscriptionCurrentPeriodEnd(hydrated)),
       cancelReason: (hydrated as any)?.cancellation_details?.reason || null,
     });
   } catch (error) {
@@ -333,6 +333,18 @@ function shouldCreateCancellationLead(subscription: Stripe.Subscription) {
 function secondsToIso(value?: number | null) {
   if (!value) return null;
   return new Date(value * 1000).toISOString();
+}
+
+function getSubscriptionCurrentPeriodEnd(subscription: Stripe.Subscription) {
+  const legacy = subscription as Stripe.Subscription & { current_period_end?: number | null };
+  if (typeof legacy.current_period_end === "number") {
+    return legacy.current_period_end;
+  }
+  const firstItem = subscription.items?.data?.[0];
+  if (firstItem && typeof firstItem.current_period_end === "number") {
+    return firstItem.current_period_end;
+  }
+  return null;
 }
 
 async function logSubscription({
