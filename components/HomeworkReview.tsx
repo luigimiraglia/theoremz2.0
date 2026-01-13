@@ -81,9 +81,15 @@ export default function HomeworkReview() {
     setError(null);
     setResult(null);
     try {
+      const { getAuth } = await import("firebase/auth");
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("missing_token");
       const res = await fetch("/api/compiti", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ images, notes }),
       });
       const data = await res.json();

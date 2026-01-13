@@ -1,23 +1,13 @@
 import { groq } from "next-sanity";
 import type { Metadata } from "next";
 import { sanityFetch } from "@/lib/sanityFetch";
-import ExerciseCard from "@/components/ExerciseCard";
-import type { PortableTextBlock } from "sanity";
 import Link from "next/link";
+import ExercisesLessonClient from "./ExercisesLessonClient";
 
 export const revalidate = 1800; // 30 min
 
 type LessonRow = { _id: string; title: string; slug: { current: string } };
-type ExerciseRow = {
-  _id: string;
-  titolo: string;
-  testo?: PortableTextBlock[];
-  soluzione?: PortableTextBlock[];
-  passaggi?: PortableTextBlock[];
-};
-
 const LESSON_BY_SLUG = groq`*[_type=="lesson" && slug.current==$slug][0]{ _id, title, slug }`;
-const EX_BY_LESSON = groq`*[_type=="exercise" && references($lessonId)]{ _id, titolo, testo, soluzione, passaggi } | order(titolo asc)`;
 
 export async function generateStaticParams() {
   // raccogli i lesson slug che compaiono in almeno un esercizio
@@ -78,28 +68,6 @@ export async function generateMetadata({
   };
 }
 
-function JsonLd({ data }: { data: unknown }) {
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
-    />
-  );
-}
-
-// Convert a subset of PortableText blocks to plain text
-function ptToPlain(blocks: PortableTextBlock[] | undefined, max = 800) {
-  if (!blocks) return "";
-  const out: string[] = [];
-  for (const b of blocks) {
-    if ((b as any)._type === "block" && Array.isArray((b as any).children)) {
-      out.push(((b as any).children || []).map((c: any) => c.text || "").join(""));
-    }
-    if (out.join(" ").length > max) break;
-  }
-  return out.join(" ").replace(/\s+/g, " ").trim();
-}
-
 export default async function EserciziPerLezione({
   params,
 }: {
@@ -118,40 +86,8 @@ export default async function EserciziPerLezione({
     );
   }
 
-  const items = await sanityFetch<ExerciseRow[]>(EX_BY_LESSON, {
-    lessonId: lesson._id,
-  });
-
-  const SITE = "https://theoremz.com";
-
-  // JSON-LD PracticeProblem per i primi esercizi
-  const practiceJsonLd = {
-    "@context": "https://schema.org",
-    "@graph": (items || []).slice(0, 3).map((ex) => ({
-      "@type": "PracticeProblem",
-      name: ex.titolo,
-      isAccessibleForFree: true,
-      eduQuestionType: "Esercizio svolto",
-      isPartOf: {
-        "@type": "LearningResource",
-        name: lesson.title,
-        url: `${SITE}/${lesson.slug.current}`,
-      },
-      hasPart: {
-        "@type": "Question",
-        name: ex.titolo,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: ptToPlain(ex.soluzione || ex.passaggi || ex.testo, 800),
-        },
-      },
-    })),
-  };
-
   return (
     <main className="max-w-6xl mx-auto px-4 pt-2 sm:pt-4 pb-10">
-      <JsonLd data={practiceJsonLd} />
-
       <nav aria-label="breadcrumb" className="text-sm text-slate-600 mb-2">
         <Link href="/">Home</Link> ·{" "}
         <a href={`/${lesson.slug.current}`}>{lesson.title}</a> ·
@@ -178,27 +114,11 @@ export default async function EserciziPerLezione({
         </Link>
       </div>
 
-      {!items?.length ? (
-        <p className="mt-6 text-slate-500">
-          Nessun esercizio disponibile per questa lezione.
-        </p>
-      ) : (
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-5">
-          {items.map((ex) => (
-            <ExerciseCard
-              key={ex._id}
-              ex={{
-                _id: ex._id,
-                titolo: ex.titolo,
-                testo: ex.testo,
-                soluzione: ex.soluzione,
-                passaggi: ex.passaggi,
-                lesson: { title: lesson.title, slug: lesson.slug.current },
-              }}
-            />
-          ))}
-        </div>
-      )}
+      <ExercisesLessonClient
+        lessonId={lesson._id}
+        lessonTitle={lesson.title}
+        lessonSlug={lesson.slug.current}
+      />
 
       {/* Canonical gestito da generateMetadata */}
     </main>

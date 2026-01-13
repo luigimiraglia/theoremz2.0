@@ -104,12 +104,19 @@ export default function RisolutoreUpload() {
         setError("Carica una foto dell'esercizio");
         return;
       }
+      if (!(await requireSub())) return;
       setError(null);
       setSolution(null);
       setState("processing");
+      const { getAuth } = await import("firebase/auth");
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("missing_token");
       const res = await fetch("/api/risolutore", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ prompt, image: imageData }),
       });
       if (!res.ok) {

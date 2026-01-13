@@ -7,11 +7,17 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const QUERY = groq`
-*[_type=="exercise" && references($lessonId)]{
-  _id, titolo, testo, soluzione, passaggi,
-  "lessonTitle": lezioniCollegate[0]->title,
-  "lessonSlug":  lezioniCollegate[0]->slug.current
-} | order(titolo asc)
+  *[_type == "lesson" && _id == $lessonId][0] {
+    _id,
+    title,
+    slug,
+    formule[] {
+      title,
+      formula,
+      explanation,
+      difficulty
+    }
+  }
 `;
 
 export async function GET(req: Request) {
@@ -21,7 +27,7 @@ export async function GET(req: Request) {
   const lessonId = new URL(req.url).searchParams.get("lessonId");
   if (!lessonId) {
     return NextResponse.json(
-      { ok: false, error: "Missing lessonId" },
+      { ok: false, error: "missing_lesson_id" },
       { status: 400 }
     );
   }
@@ -33,22 +39,21 @@ export async function GET(req: Request) {
   });
 
   try {
-    const items = await client.fetch(QUERY, { lessonId });
+    const lesson = await client.fetch(QUERY, { lessonId });
+    if (!lesson) {
+      return NextResponse.json(
+        { ok: false, error: "lesson_not_found" },
+        { status: 404 }
+      );
+    }
     return NextResponse.json(
-      { ok: true, items },
+      { ok: true, lesson },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } }
     );
-  } catch (e: unknown) {
-    let errorMessage: string;
-
-    if (e instanceof Error) {
-      errorMessage = e.message;
-    } else {
-      errorMessage = String(e);
-    }
-
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
-      { ok: false, error: errorMessage },
+      { ok: false, error: message },
       { status: 500 }
     );
   }

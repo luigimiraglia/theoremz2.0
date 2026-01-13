@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { client as base } from "@/sanity/lib/client";
 import { groq } from "next-sanity";
+import { requirePremium } from "@/lib/premium-access";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const CACHE_SECONDS = 3600; // Cache CDN per 1 ora
 
 const QUERY = groq`
 *[_type=="exercise"]{
@@ -17,7 +18,10 @@ const QUERY = groq`
 } | order(lessonTitle asc, titolo asc)
 `;
 
-export async function GET() {
+export async function GET(req: Request) {
+  const auth = await requirePremium(req);
+  if (!("user" in auth)) return auth;
+
   const client = base.withConfig({
     token: process.env.SANITY_TOKEN, // server-only
     apiVersion: "2025-07-23",
@@ -30,7 +34,7 @@ export async function GET() {
       { ok: true, items },
       {
         headers: {
-          "Cache-Control": `public, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=86400`,
+          "Cache-Control": "private, no-store, max-age=0",
         },
       }
     );

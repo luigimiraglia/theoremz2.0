@@ -460,10 +460,21 @@ const computeSubscription = async (emailNullable: string | null) => {
         } catch {}
       }
 
+      const [{ getAuth }] = await Promise.all([import("firebase/auth")]);
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) {
+        setIsSubscribed(false);
+        setSubscriptionInfo({ isSubscribed: false, source: "stripe" });
+        return;
+      }
+
       // Fallback Stripe (endpoint App Router)
       const resp = await fetch("/api/stripe/subscription-status-by-email", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ email }),
         cache: "no-store",
         keepalive: false,

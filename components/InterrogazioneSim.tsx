@@ -62,11 +62,24 @@ export default function InterrogazioneSim({ prefilledTopic }: { prefilledTopic?:
     }
   };
 
+  const getToken = async () => {
+    const { getAuth } = await import("firebase/auth");
+    return await getAuth().currentUser?.getIdToken();
+  };
+
   const fetchNextQuestion = async (hist: QA[]) => {
     try {
+      const token = await getToken();
+      if (!token) {
+        setShowPopup(true);
+        return null;
+      }
       const res = await fetch("/api/interrogazione", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ topic, history: hist }),
       });
       const data = await res.json();
@@ -92,9 +105,17 @@ export default function InterrogazioneSim({ prefilledTopic }: { prefilledTopic?:
     const reached = newHist.length >= targetQuestions;
     if (reached) {
       try {
+        const token = await getToken();
+        if (!token) {
+          setShowPopup(true);
+          throw new Error("missing_token");
+        }
         const res = await fetch("/api/interrogazione", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ topic, history: newHist, done: true }),
         });
         const data = await res.json();
@@ -170,9 +191,17 @@ export default function InterrogazioneSim({ prefilledTopic }: { prefilledTopic?:
     const blob = new Blob(chunksRef.current, { type: "audio/webm" });
     const base64 = await blobToBase64(blob);
     try {
+      const token = await getToken();
+      if (!token) {
+        setShowPopup(true);
+        throw new Error("missing_token");
+      }
       const res = await fetch("/api/interrogazione/transcribe", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ audio: base64, mime: blob.type }),
       });
       const data = await res.json();

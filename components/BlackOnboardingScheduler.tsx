@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import Link from "next/link";
 import {
@@ -232,6 +232,10 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
   const [note, setNote] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
   const [showSuccess, setShowSuccess] = useState(false);
+  const getToken = useCallback(async () => {
+    const { getAuth } = await import("firebase/auth");
+    return await getAuth().currentUser?.getIdToken();
+  }, []);
 
   useEffect(() => {
     const mail =
@@ -252,9 +256,18 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
       setLoadingSlots(true);
       try {
         setDayStatus((prev) => ({ ...prev, [selectedDay.id]: "unknown" }));
+        const token = await getToken();
+        if (!token) {
+          setBookedSlots([]);
+          setStatus("error");
+          setStatusDetail("Accedi per vedere le disponibilita.");
+          setDayStatus((prev) => ({ ...prev, [selectedDay.id]: "error" }));
+          return;
+        }
         const res = await fetch(
           `/api/black-onboarding/book?date=${selectedDay.id}&type=${copy.callTypeSlug}`,
           {
+            headers: { Authorization: `Bearer ${token}` },
             cache: "no-store",
           },
         );
@@ -300,7 +313,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
       }
     };
     fetchAvailability();
-  }, [copy.callTypeSlug, copy.slotPrompt, selectedDay]);
+  }, [copy.callTypeSlug, copy.slotPrompt, selectedDay, getToken]);
 
   const handleConfirm = async () => {
     if (!selectedDay || !selectedSlot) {
@@ -315,9 +328,18 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
       setSubmitting(true);
       setStatus("idle");
       setStatusDetail("Invio in corso...");
+      const token = await getToken();
+      if (!token) {
+        setStatus("error");
+        setStatusDetail("Accedi per prenotare.");
+        return;
+      }
       const res = await fetch("/api/black-onboarding/book", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           date: selectedDay.id,
           time: selectedSlot,

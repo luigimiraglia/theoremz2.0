@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import FlashCard from '@/components/FlashCard';
-import { sanityFetch } from '@/lib/sanityFetch';
-import { groq } from 'next-sanity';
+import { useAuth } from '@/lib/AuthContext';
+
+const BlackPopup = dynamic(() => import('@/components/BlackPopup'), { ssr: false });
 
 // Tipo per le formule della lezione
 type FormulaFlashcard = {
@@ -22,27 +24,16 @@ type LessonData = {
   formule: FormulaFlashcard[];
 };
 
-// Query per ottenere le formule di una lezione specifica
-const lessonFormulasQuery = groq`
-  *[_type == "lesson" && _id == $lessonId][0] {
-    _id,
-    title,
-    slug,
-    formule[] {
-      title,
-      formula,
-      explanation,
-      difficulty
-    }
-  }
-`;
-
 export default function FlashCardsExercise() {
   const searchParams = useSearchParams();
   const lessonId = searchParams?.get('lesson');
+  const { isSubscribed } = useAuth();
   
   const [lessonData, setLessonData] = useState<LessonData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
   const [started, setStarted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [remembered, setRemembered] = useState<boolean[]>([]);
@@ -54,25 +45,54 @@ export default function FlashCardsExercise() {
       setLoading(false);
       return;
     }
+    if (isSubscribed === false) {
+      setBlocked(true);
+      setLoading(false);
+      return;
+    }
+    if (isSubscribed === null) return;
 
     const loadLessonData = async () => {
+      setLoading(true);
+      setError(null);
+      setBlocked(false);
       try {
-        const data = await sanityFetch<LessonData>(lessonFormulasQuery, {
-          lessonId
-        });
+        const { getAuth } = await import('firebase/auth');
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) {
+          setBlocked(true);
+          return;
+        }
+        const res = await fetch(
+          `/api/flashcards?lessonId=${encodeURIComponent(lessonId)}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          }
+        );
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok || !payload?.ok) {
+          if (res.status === 401 || res.status === 403) {
+            setBlocked(true);
+            return;
+          }
+          throw new Error(payload?.error || 'Errore caricamento');
+        }
+        const data = payload.lesson as LessonData;
         setLessonData(data);
         if (data?.formule) {
           setRemembered(Array(data.formule.length).fill(false));
         }
-      } catch (error) {
-        console.error('Errore nel caricamento delle formule:', error);
+      } catch (err) {
+        console.error('Errore nel caricamento delle formule:', err);
+        setError('Errore nel caricamento delle formule');
       } finally {
         setLoading(false);
       }
     };
 
     loadLessonData();
-  }, [lessonId]);
+  }, [lessonId, isSubscribed]);
 
   const handleStart = () => {
     if (!lessonData?.formule?.length) return;
@@ -106,6 +126,8 @@ export default function FlashCardsExercise() {
     setFinished(false);
   };
 
+  const isBlocked = blocked || isSubscribed === false;
+
   // Mostra loading o errore se necessario
   if (loading) {
     return (
@@ -115,6 +137,63 @@ export default function FlashCardsExercise() {
             <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-slate-600 [.dark_&]:text-slate-400">Caricamento flashcards...</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isBlocked) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert overflow-x-hidden">
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-bold mb-4">Accesso riservato</h1>
+          <p className="text-slate-600 [.dark_&]:text-slate-400 mb-6">
+            Le flashcards sono disponibili solo per gli abbonati Black.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowPopup(true)}
+              className="px-6 py-3 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-semibold shadow-md hover:brightness-110 transition-all duration-300"
+            >
+              Scopri Theoremz Black
+            </button>
+            <Link
+              href="/"
+              className="px-6 py-3 rounded-lg bg-white [.dark_&]:bg-slate-700 border border-gray-200 [.dark_&]:border-slate-600 text-slate-700 [.dark_&]:text-slate-300 font-semibold shadow-sm hover:bg-gray-50 [.dark_&]:hover:bg-slate-600 transition-all duration-300"
+            >
+              Torna alla home
+            </Link>
+          </div>
+        </div>
+        {showPopup && (
+          <div
+            onClick={() => setShowPopup(false)}
+            className="fixed inset-0 z-50 backdrop-blur-md flex justify-center items-center"
+          >
+            <div onClick={(e) => e.stopPropagation()}>
+              <BlackPopup />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert overflow-x-hidden">
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-bold mb-4">Errore</h1>
+          <p className="text-slate-600 [.dark_&]:text-slate-400 mb-6">
+            {error}
+          </p>
+          <Link 
+            href="/" 
+            className="px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-md hover:brightness-110 transition-all duration-300"
+          >
+            Torna alla home
+          </Link>
         </div>
       </div>
     );

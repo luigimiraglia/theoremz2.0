@@ -58,6 +58,10 @@ export default function EserciziClient({
   const LIMIT = initialLimit;
   const fuseRef = useRef<any | null>(null);
   const fuseLoadedRef = useRef(false);
+  const getToken = async () => {
+    const { getAuth } = await import("firebase/auth");
+    return await getAuth().currentUser?.getIdToken();
+  };
 
   // ricerca client con import dinamico di Fuse
   useEffect(() => {
@@ -112,8 +116,13 @@ export default function EserciziClient({
     let cancelled = false;
     (async () => {
       try {
+        const token = await getToken();
+        if (!token) return;
         const qs = encodeURIComponent(visibleNeedingKey);
-        const res = await fetch(`/api/exercises-batch?ids=${qs}`);
+        const res = await fetch(`/api/exercises-batch?ids=${qs}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
         const json = await res.json();
         if (!json.ok) throw new Error(json.error || "Errore");
         const byId: Record<string, any> = {};
@@ -141,7 +150,15 @@ export default function EserciziClient({
     }
     try {
       setLoading(true);
-      const res = await fetch(`/api/exercises-list?offset=${offset}&limit=${LIMIT}`);
+      const token = await getToken();
+      if (!token) {
+        setError("Accesso riservato agli abbonati.");
+        return;
+      }
+      const res = await fetch(`/api/exercises-list?offset=${offset}&limit=${LIMIT}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "Errore Sanity");
       const mapped: ExerciseDoc[] = (json.items || []).map((d: any) => ({

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { requirePremium } from "@/lib/premium-access";
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -9,6 +10,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const auth = await requirePremium(req);
+  if (!("user" in auth)) return auth;
+
   if (!openai) {
     return NextResponse.json({ error: "missing_openai_api_key" }, { status: 500 });
   }

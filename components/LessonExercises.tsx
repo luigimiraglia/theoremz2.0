@@ -51,8 +51,13 @@ export default function LessonExercises({
       return;
     }      // Se tutto ok, carica gli esercizi
       setError(null);
+      const token = await currentUser.getIdToken();
       const res = await fetch(
-        `/api/exercises?lessonId=${encodeURIComponent(lessonId)}`
+        `/api/exercises?lessonId=${encodeURIComponent(lessonId)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        }
       );
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "Errore Sanity");

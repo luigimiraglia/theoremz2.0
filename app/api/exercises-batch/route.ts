@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { client as base } from "@/sanity/lib/client";
 import { groq } from "next-sanity";
+import { requirePremium } from "@/lib/premium-access";
 
-export const revalidate = 600; // Cache per 10 min per ridurre CPU
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const QUERY = groq`
   *[_type=="exercise" && _id in $ids]{
@@ -17,6 +19,9 @@ const QUERY = groq`
 `;
 
 export async function GET(req: Request) {
+  const auth = await requirePremium(req);
+  if (!("user" in auth)) return auth;
+
   const url = new URL(req.url);
   const idsParam = url.searchParams.get("ids");
   if (!idsParam) {
@@ -27,10 +32,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "Empty ids" }, { status: 400 });
   }
 
-  const client = base.withConfig({ useCdn: true });
+  const client = base.withConfig({
+    token: process.env.SANITY_TOKEN,
+    apiVersion: "2025-07-23",
+    useCdn: false,
+  });
   try {
     const items = await client.fetch<any[]>(QUERY, { ids });
-    return NextResponse.json({ ok: true, items });
+    return NextResponse.json(
+      { ok: true, items },
+      { headers: { "Cache-Control": "private, no-store, max-age=0" } }
+    );
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ ok: false, error: errorMessage }, { status: 500 });

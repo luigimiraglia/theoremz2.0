@@ -39,6 +39,10 @@ export default function BlackOnboardingExperience() {
   });
   const { user } = useAuth();
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const getToken = useCallback(async () => {
+    const { getAuth } = await import("firebase/auth");
+    return await getAuth().currentUser?.getIdToken();
+  }, []);
 
   const today = useMemo(() => {
     const d = new Date();
@@ -174,9 +178,18 @@ export default function BlackOnboardingExperience() {
       if (!selectedDay) return;
       setLoadingSlots(true);
       try {
-        const res = await fetch(`/api/black-onboarding/book?date=${selectedDay}&type=all`, {
-          cache: "no-store",
-        });
+        const token = await getToken();
+        if (!token) {
+          setBookedIntervals([]);
+          return;
+        }
+        const res = await fetch(
+          `/api/black-onboarding/book?date=${selectedDay}&type=all`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+          }
+        );
         const data = await res.json();
         const raw = Array.isArray(data?.booked) ? data.booked : [];
         setBookedIntervals(res.ok ? extractIntervals(raw) : []);
@@ -187,7 +200,7 @@ export default function BlackOnboardingExperience() {
       }
     };
     fetchAvailability();
-  }, [selectedDay, extractIntervals]);
+  }, [selectedDay, extractIntervals, getToken]);
 
   const canGoPrev = useMemo(() => {
     const prev = new Date(currentMonth);
@@ -481,10 +494,18 @@ export default function BlackOnboardingExperience() {
               };
 
               try {
+                const token = await getToken();
+                if (!token) {
+                  setBookingError("Accedi per prenotare.");
+                  return;
+                }
                 const res = await Promise.all([
                   fetch("/api/black-onboarding/book", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
                     body: JSON.stringify(body),
                   }),
                   wait,

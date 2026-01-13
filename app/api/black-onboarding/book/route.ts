@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { supabaseServer } from "@/lib/supabase";
 import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
+import { requirePremium } from "@/lib/premium-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -212,6 +213,9 @@ function overlapsWindow(slot: SlotRow, startIso: string, endIso: string) {
 }
 
 export async function GET(req: Request) {
+  const auth = await requirePremium(req);
+  if (!("user" in auth)) return auth;
+
   const { searchParams } = new URL(req.url);
   const date = normalizeDate(searchParams.get("date") || "");
   const callTypeSlug = (searchParams.get("type") || DEFAULT_CALL_TYPE_SLUG).trim();
@@ -351,6 +355,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requirePremium(req);
+    if (!("user" in auth)) return auth;
+    const { user } = auth;
+
     const {
       date,
       time,
@@ -369,8 +377,8 @@ export async function POST(req: Request) {
     const extraNote = String(note || "").trim();
     const tz = String(timezone || "").trim() || "n.d.";
     const accountInfo = account && typeof account === "object" ? account : {};
-    const accEmail = String(accountInfo.email || "").trim();
-    const accUid = String(accountInfo.uid || "").trim();
+    const accEmail = user.email;
+    const accUid = user.uid;
     const accDisplay = String(accountInfo.displayName || "").trim();
     const accUsername = String(accountInfo.username || "").trim();
     const callTypeSlug = String(callTypeSlugRaw || "").trim() || DEFAULT_CALL_TYPE_SLUG;

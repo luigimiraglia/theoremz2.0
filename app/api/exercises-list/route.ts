@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { client as base } from "@/sanity/lib/client";
 import { groq } from "next-sanity";
+import { requirePremium } from "@/lib/premium-access";
 
-export const revalidate = 3600; // Cache per 1 ora
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const QUERY = groq`
   *[_type=="exercise"]{
@@ -14,6 +16,9 @@ const QUERY = groq`
 `;
 
 export async function GET(req: Request) {
+  const auth = await requirePremium(req);
+  if (!("user" in auth)) return auth;
+
   const url = new URL(req.url);
   const offsetParam = url.searchParams.get("offset");
   const limitParam = url.searchParams.get("limit");
@@ -26,12 +31,18 @@ export async function GET(req: Request) {
 
   const end = offset + limit;
 
-  // use CDN for public, token-less reads
-  const client = base.withConfig({ useCdn: true });
+  const client = base.withConfig({
+    token: process.env.SANITY_TOKEN,
+    apiVersion: "2025-07-23",
+    useCdn: false,
+  });
 
   try {
     const items = await client.fetch<any[]>(QUERY, { offset, end });
-    return NextResponse.json({ ok: true, items, offset, limit });
+    return NextResponse.json(
+      { ok: true, items, offset, limit },
+      { headers: { "Cache-Control": "private, no-store, max-age=0" } }
+    );
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ ok: false, error: errorMessage }, { status: 500 });
