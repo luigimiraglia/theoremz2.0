@@ -24,6 +24,7 @@ const ROME_TZ = "Europe/Rome";
 const CHECK_MIN_DAYS = 1; // oggi -> domani
 const CHECK_MAX_DAYS = 14; // entro due settimane
 const GENERIC_MIN_DAYS = 1; // tutte le call: prenotabili da domani
+const CONFIRMATION_CC = "theoremz.team@gmail.com";
 
 const fromUser = process.env.GMAIL_USER;
 const appPass = process.env.GMAIL_APP_PASS;
@@ -89,6 +90,175 @@ function timeFromIsoUtc(iso: string) {
   const hh = String(d.getUTCHours()).padStart(2, "0");
   const mm = String(d.getUTCMinutes()).padStart(2, "0");
   return `${hh}:${mm}`;
+}
+
+function formatRomeDateLabel(date: string) {
+  const d = new Date(`${date}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return date;
+  const label = d.toLocaleDateString("it-IT", {
+    timeZone: ROME_TZ,
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function toIcsLocal(date: string, time: string) {
+  const [y, m, d] = date.split("-").map((v) => parseInt(v, 10));
+  const [hh, mm] = time.split(":").map((v) => parseInt(v, 10));
+  const start = new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0));
+  return start;
+}
+
+function formatIcsLocal(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(
+    date.getUTCHours(),
+  )}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}`;
+}
+
+function buildIcsInvite(opts: {
+  date: string;
+  time: string;
+  durationMin: number;
+  summary: string;
+  description: string;
+}) {
+  const startLocal = toIcsLocal(opts.date, opts.time);
+  const endLocal = new Date(startLocal.getTime() + opts.durationMin * 60000);
+  const uid = `theoremz-${startLocal.getTime()}-${Math.random().toString(16).slice(2)}@theoremz.com`;
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Theoremz//Booking Confirmation//IT",
+    "CALSCALE:GREGORIAN",
+    "METHOD:REQUEST",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${formatIcsLocal(new Date())}Z`,
+    `DTSTART;TZID=${ROME_TZ}:${formatIcsLocal(startLocal)}`,
+    `DTEND;TZID=${ROME_TZ}:${formatIcsLocal(endLocal)}`,
+    `SUMMARY:${opts.summary}`,
+    `DESCRIPTION:${opts.description.replace(/\r?\n/g, "\\n")}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+}
+
+function renderBookingConfirmationHtml(opts: {
+  name: string;
+  callTypeLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  durationMinutes: number;
+  note?: string | null;
+}) {
+  const detailRows = [
+    { label: "Tipo di call", value: opts.callTypeLabel },
+    { label: "Data", value: opts.dateLabel },
+    { label: "Orario", value: `${opts.timeLabel} (ora di Roma)` },
+    { label: "Durata", value: `${opts.durationMinutes} minuti` },
+  ];
+  return `<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title>Prenotazione confermata</title>
+  <style>
+    html, body { margin:0; padding:0; height:100%; background:#f6f8fb; }
+    @media (prefers-color-scheme: dark) { body { background:#0b1220; } }
+    a[x-apple-data-detectors] { color:inherit !important; text-decoration:none !important; }
+  </style>
+</head>
+<body style="margin:0; padding:0; background:#f6f8fb;">
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">
+    La tua call Theoremz è confermata. Aggiungi l'evento al calendario.
+  </div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f6f8fb;">
+    <tr>
+      <td align="center" style="padding:24px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+               style="max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(16,24,40,.06);">
+          <tr>
+            <td style="background:#1e3a8a; padding:24px 28px;">
+              <table width="100%" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td align="left">
+                    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:18px; line-height:1.2; color:#e5edff; letter-spacing:.2px; font-weight:600;">
+                      Theoremz<span style="opacity:.85;">&nbsp;Black</span>
+                    </div>
+                  </td>
+                  <td align="right">
+                    <div style="width:10px;height:10px;border-radius:50%;background:#93c5fd;display:inline-block;"></div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 28px 8px 28px;">
+              <h1 style="margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:24px; line-height:1.3; color:#0b1220;">
+                Prenotazione confermata ✅
+              </h1>
+              <p style="margin:12px 0 0 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; line-height:1.6; color:#334155;">
+                Ciao ${escapeHtml(opts.name)}, la tua call è stata confermata. In allegato trovi l'evento calendario.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px 28px 0 28px;">
+              <div style="border:1px solid #e2e8f0; border-radius:12px; padding:16px; background:#f8fafc;">
+                ${detailRows
+                  .map(
+                    (row) => `
+                  <div style="display:flex; justify-content:space-between; gap:8px; margin-bottom:8px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; color:#334155;">
+                    <span style="font-weight:600; color:#0f172a;">${escapeHtml(row.label)}</span>
+                    <span>${escapeHtml(row.value)}</span>
+                  </div>`,
+                  )
+                  .join("")}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 28px 0 28px;">
+              <p style="margin:0 0 10px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; line-height:1.6; color:#334155;">
+                Riceverai il link per collegarti poco prima della call. Se non puoi partecipare, rispondi a questa mail e riprogrammiamo.
+              </p>
+              ${
+                opts.note
+                  ? `<p style="margin:0 0 10px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; line-height:1.6; color:#334155;">
+                      Nota che hai lasciato: <strong>${escapeHtml(opts.note)}</strong>
+                    </p>`
+                  : ""
+              }
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 28px;">
+              <hr style="border:none; border-top:1px solid #e5e7eb; margin:8px 0 0 0;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 28px 24px 28px;">
+              <p style="margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#94a3b8;">
+                Se hai dubbi, rispondi a questa email o scrivi a ${CONFIRMATION_CC}.
+              </p>
+              <p style="margin:6px 0 0 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#94a3b8;">
+                © Theoremz. Tutti i diritti riservati.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 async function getCallTypes(
@@ -606,6 +776,72 @@ Username: ${accUsername || "—"}
       html,
       replyTo: replyEmail,
     });
+
+    const confirmationEmail = (replyEmail || accEmail || "").trim();
+    const shouldSendConfirmation =
+      ["onboarding", "check-percorso"].includes(callType.slug) &&
+      confirmationEmail.includes("@") &&
+      confirmationEmail.toLowerCase() !== "noreply@theoremz.com";
+    if (shouldSendConfirmation) {
+      try {
+        const dateLabel = formatRomeDateLabel(normalizedDate);
+        const confirmSubject = `Conferma ${callTypeLabel} · ${dateLabel} ${timeSlot}`;
+        const confirmText = [
+          `Ciao ${safeName},`,
+          "",
+          "La tua prenotazione è confermata.",
+          `Tipo di call: ${callTypeLabel}`,
+          `Quando: ${dateLabel} alle ${timeSlot} (ora di Roma)`,
+          `Durata: ${durationMinutes} minuti`,
+          extraNote ? `Nota: ${extraNote}` : null,
+          "",
+          "In allegato trovi l'evento calendario (.ics).",
+          "Riceverai il link per collegarti poco prima della call.",
+          "",
+          "A presto,",
+          "Team Theoremz",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        const confirmHtml = renderBookingConfirmationHtml({
+          name: safeName,
+          callTypeLabel,
+          dateLabel,
+          timeLabel: timeSlot,
+          durationMinutes,
+          note: extraNote || null,
+        });
+
+        const ics = buildIcsInvite({
+          date: normalizedDate,
+          time: timeSlot,
+          durationMin: durationMinutes,
+          summary: `${callTypeLabel} Theoremz`,
+          description:
+            "Conferma prenotazione Theoremz. Riceverai il link per collegarti poco prima della call.",
+        });
+
+        await mailer.sendMail({
+          from: `"Theoremz" <${fromUser}>`,
+          to: confirmationEmail,
+          cc: CONFIRMATION_CC,
+          subject: confirmSubject,
+          text: confirmText,
+          html: confirmHtml,
+          replyTo: CONFIRMATION_CC,
+          attachments: [
+            {
+              filename: "call-theoremz.ics",
+              content: ics,
+              contentType: "text/calendar; charset=utf-8",
+            },
+          ],
+        });
+      } catch (err) {
+        console.error("[black-onboarding/book] confirmation email failed", err);
+      }
+    }
 
     const slots = await markSlotsWithBookings(
       db,
