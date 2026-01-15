@@ -212,15 +212,24 @@ function renderBookingConfirmationHtml(opts: {
           <tr>
             <td style="padding:12px 28px 0 28px;">
               <div style="border:1px solid #e2e8f0; border-radius:12px; padding:16px; background:#f8fafc;">
-                ${detailRows
-                  .map(
-                    (row) => `
-                  <div style="display:flex; justify-content:space-between; gap:8px; margin-bottom:8px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; color:#334155;">
-                    <span style="font-weight:600; color:#0f172a;">${escapeHtml(row.label)}</span>
-                    <span>${escapeHtml(row.value)}</span>
-                  </div>`,
-                  )
-                  .join("")}
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                       style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; color:#334155;">
+                  <tbody>
+                    ${detailRows
+                      .map(
+                        (row) => `
+                      <tr>
+                        <td style="padding:0 0 8px 0; font-weight:600; color:#0f172a;">
+                          ${escapeHtml(row.label)}
+                        </td>
+                        <td align="right" style="padding:0 0 8px 0;">
+                          ${escapeHtml(row.value)}
+                        </td>
+                      </tr>`,
+                      )
+                      .join("")}
+                  </tbody>
+                </table>
               </div>
             </td>
           </tr>

@@ -29,6 +29,9 @@ const SUPPORT_WHATSAPP_MESSAGE_TEMPLATE =
   "Ciao, sono [nome], nuovo abbonato [piano]. Ecco classe, materie e prossime verifiche:";
 const SUPPORT_WHATSAPP_DISPLAY =
   process.env.SUPPORT_WHATSAPP_DISPLAY || SUPPORT_WHATSAPP_NUMBER;
+const CHURN_FOLLOWUP_TO = process.env.CHURN_FOLLOWUP_TO || "theoremz.team@gmail.com";
+const CHURN_WHATSAPP_MESSAGE =
+  "Ciao, sono Luigi di Theoremz. Ti scrivo perché in passato avevi usato il servizio e volevo solo sapere se in questo periodo la matematica ti sta creando difficoltà oppure no.";
 const WHATSAPP_GRAPH_VERSION =
   process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v20.0";
 const WHATSAPP_PHONE_NUMBER_ID =
@@ -454,6 +457,98 @@ async function sendWelcomeEmail({
     to: CONTACT_TO,
     subject: `[Stripe] Nuova attivazione ${planName}`,
     text,
+    html,
+  });
+}
+
+async function sendChurnWhatsappFollowupEmail({
+  name,
+  email,
+  phone,
+  planLabel,
+  status,
+  cancelAtPeriodEnd,
+  canceledAt,
+  currentPeriodEnd,
+  cancelReason,
+}: {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  planLabel: string | null;
+  status: string | null;
+  cancelAtPeriodEnd: boolean;
+  canceledAt: string | null;
+  currentPeriodEnd: string | null;
+  cancelReason: string | null;
+}) {
+  if (!GMAIL_USER || !GMAIL_APP_PASS || !CHURN_FOLLOWUP_TO) {
+    console.error("gmail envs missing, cannot send churn followup email");
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASS },
+  });
+
+  const whatsappLink = phone ? buildWhatsAppLink(phone, CHURN_WHATSAPP_MESSAGE) : null;
+  const textLines = [
+    "Disdetta abbonamento",
+    name ? `Nome: ${name}` : null,
+    email ? `Email: ${email}` : null,
+    phone ? `Telefono: ${phone}` : null,
+    planLabel ? `Piano: ${planLabel}` : null,
+    status ? `Status: ${status}` : null,
+    cancelReason ? `Motivo: ${cancelReason}` : null,
+    canceledAt ? `Disdetta: ${canceledAt.slice(0, 10)}` : null,
+    cancelAtPeriodEnd && currentPeriodEnd ? `Fine periodo: ${currentPeriodEnd.slice(0, 10)}` : null,
+    whatsappLink ? `WhatsApp: ${whatsappLink}` : "WhatsApp: numero non disponibile",
+    "",
+    "Messaggio:",
+    CHURN_WHATSAPP_MESSAGE,
+  ].filter(Boolean) as string[];
+
+  const html = `
+    <div style="font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;line-height:1.65;color:#111827">
+      <p><strong>Disdetta abbonamento</strong></p>
+      ${name ? `<p><strong>Nome:</strong> ${escapeHtml(name)}</p>` : ""}
+      ${email ? `<p><strong>Email:</strong> ${escapeHtml(email)}</p>` : ""}
+      ${phone ? `<p><strong>Telefono:</strong> ${escapeHtml(phone)}</p>` : ""}
+      ${planLabel ? `<p><strong>Piano:</strong> ${escapeHtml(planLabel)}</p>` : ""}
+      ${status ? `<p><strong>Status:</strong> ${escapeHtml(status)}</p>` : ""}
+      ${cancelReason ? `<p><strong>Motivo:</strong> ${escapeHtml(cancelReason)}</p>` : ""}
+      ${canceledAt ? `<p><strong>Disdetta:</strong> ${escapeHtml(canceledAt.slice(0, 10))}</p>` : ""}
+      ${
+        cancelAtPeriodEnd && currentPeriodEnd
+          ? `<p><strong>Fine periodo:</strong> ${escapeHtml(
+              currentPeriodEnd.slice(0, 10),
+            )}</p>`
+          : ""
+      }
+      ${
+        whatsappLink
+          ? `<p><strong>WhatsApp:</strong> <a href="${escapeHtml(
+              whatsappLink,
+            )}" style="color:#0ea5e9;text-decoration:none">Apri chat con messaggio pronto</a></p>`
+          : "<p><strong>WhatsApp:</strong> numero non disponibile</p>"
+      }
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0" />
+      <p><strong>Messaggio:</strong></p>
+      <pre style="background:#f1f5f9;border-radius:12px;padding:12px;font-family:ui-monospace,Menlo,Consolas,'Liberation Mono',monospace;white-space:pre-wrap">${escapeHtml(
+        CHURN_WHATSAPP_MESSAGE,
+      )}</pre>
+    </div>
+  `;
+
+  const subjectLabel = name || email || phone || "Studente";
+  await transporter.sendMail({
+    from: `Theoremz Churn <${GMAIL_USER}>`,
+    to: CHURN_FOLLOWUP_TO,
+    subject: `Disdetta · ${subjectLabel}`,
+    text: textLines.join("\n"),
     html,
   });
 }
@@ -1636,10 +1731,11 @@ async function ensureBlackLeadFromCancellation({
   const nowIso = new Date().toISOString();
   let leadStudentId = studentId;
   let leadName = name?.trim() || null;
-  let leadContact = normalizeLeadPhone(phone) || normalizeEmail(email);
+  let leadPhone = normalizeLeadPhone(phone);
+  let leadContact = leadPhone || normalizeEmail(email);
   let leadEmail = email?.trim() || null;
 
-  if (leadStudentId && (!leadName || !leadContact || !leadEmail)) {
+  if (leadStudentId && (!leadName || !leadContact || !leadEmail || !leadPhone)) {
     const { data: student, error } = await db
       .from("black_students")
       .select("preferred_name, student_name, student_email, parent_email, student_phone, parent_phone")
@@ -1649,9 +1745,12 @@ async function ensureBlackLeadFromCancellation({
       if (!leadName) {
         leadName = student.preferred_name || student.student_name || null;
       }
+      if (!leadPhone) {
+        leadPhone = normalizeLeadPhone(student.student_phone || student.parent_phone || null);
+      }
       if (!leadContact) {
         leadContact =
-          normalizeLeadPhone(student.student_phone || student.parent_phone || null) ||
+          leadPhone ||
           normalizeEmail(student.student_email || student.parent_email || leadEmail);
       }
       if (!leadEmail) {
@@ -1660,16 +1759,19 @@ async function ensureBlackLeadFromCancellation({
     }
   }
 
-  if ((!leadStudentId || !leadContact || !leadName) && leadEmail) {
+  if ((!leadStudentId || !leadContact || !leadName || !leadPhone) && leadEmail) {
     const student = await findBlackStudentByEmail(db, leadEmail);
     if (student) {
       leadStudentId = leadStudentId || student.id || null;
       if (!leadName) {
         leadName = student.preferred_name || student.student_name || null;
       }
+      if (!leadPhone) {
+        leadPhone = normalizeLeadPhone(student.student_phone || student.parent_phone || null);
+      }
       if (!leadContact) {
         leadContact =
-          normalizeLeadPhone(student.student_phone || student.parent_phone || null) ||
+          leadPhone ||
           normalizeEmail(student.student_email || student.parent_email || leadEmail);
       }
     }
@@ -1708,6 +1810,8 @@ async function ensureBlackLeadFromCancellation({
     existing = data || null;
   }
 
+  const shouldNotify =
+    !existing || !String(existing.note || "").includes("Disdetta abbonamento");
   const noteParts = [
     "Disdetta abbonamento",
     planLabel ? `Piano: ${planLabel}` : null,
@@ -1740,6 +1844,19 @@ async function ensureBlackLeadFromCancellation({
       }
     }
     await db.from("black_followups").update(patch).eq("id", existing.id);
+    if (shouldNotify) {
+      await sendChurnWhatsappFollowupEmail({
+        name: leadName,
+        email: leadEmail,
+        phone: leadPhone,
+        planLabel,
+        status,
+        cancelAtPeriodEnd,
+        canceledAt,
+        currentPeriodEnd,
+        cancelReason,
+      });
+    }
     return;
   }
 
@@ -1754,6 +1871,19 @@ async function ensureBlackLeadFromCancellation({
     updated_at: nowIso,
   };
   await db.from("black_followups").insert(insertPayload);
+  if (shouldNotify) {
+    await sendChurnWhatsappFollowupEmail({
+      name: leadName,
+      email: leadEmail,
+      phone: leadPhone,
+      planLabel,
+      status,
+      cancelAtPeriodEnd,
+      canceledAt,
+      currentPeriodEnd,
+      cancelReason,
+    });
+  }
 }
 
 function formatAmount(amount: number, currency?: string | null) {
