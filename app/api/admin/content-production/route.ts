@@ -1,0 +1,208 @@
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseServer } from "@/lib/supabase";
+
+const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function isAdminEmail(email?: string | null) {
+  return Boolean(email && email.toLowerCase() === ADMIN_EMAIL);
+}
+
+async function requireAdmin(request: NextRequest) {
+  if (process.env.NODE_ENV === "development") return null;
+
+  const authHeader = request.headers.get("authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  try {
+    const { adminAuth } = await import("@/lib/firebaseAdmin");
+    const token = authHeader.slice("Bearer ".length);
+    const decoded = await adminAuth.verifyIdToken(token);
+    if (!isAdminEmail(decoded.email)) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+    return null;
+  } catch (error) {
+    console.error("[admin/content-production] auth error", error);
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+}
+
+function normalizeText(value: unknown) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function normalizeStatus(value: unknown) {
+  return value === "completed" ? "completed" : "draft";
+}
+
+function parseInteger(value: unknown) {
+  if (value === null || value === undefined) return null;
+  const numeric =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value.trim())
+        : Number.NaN;
+  if (!Number.isFinite(numeric)) return null;
+  return Math.max(0, Math.round(numeric));
+}
+
+function normalizeTimestamp(value: unknown) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
+function mapVideo(row: any) {
+  if (!row) return null;
+  return {
+    id: row.id as string,
+    script: row.script || null,
+    views: typeof row.views === "number" ? row.views : row.views ?? null,
+    publishedAt: row.published_at || null,
+    hook: row.hook || null,
+    format: row.format || null,
+    durationSec: typeof row.duration_sec === "number" ? row.duration_sec : row.duration_sec ?? null,
+    status: row.status === "completed" ? "completed" : "draft",
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null,
+  };
+}
+
+export async function GET(request: NextRequest) {
+  const authError = await requireAdmin(request);
+  if (authError) return authError;
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: "missing_supabase_config" }, { status: 500 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const limitRaw = Number(searchParams.get("limit") || 500);
+  const limit = Math.max(1, Math.min(1000, limitRaw));
+
+  const db = supabaseServer();
+  const { data, error } = await db
+    .from("content_short_videos")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[admin/content-production] fetch error", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    videos: (data || []).map(mapVideo).filter(Boolean),
+  });
+}
+
+export async function POST(request: NextRequest) {
+  const authError = await requireAdmin(request);
+  if (authError) return authError;
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: "missing_supabase_config" }, { status: 500 });
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+  }
+
+  const script = normalizeText(body.script);
+  if (!script) {
+    return NextResponse.json({ error: "missing_script" }, { status: 400 });
+  }
+
+  const status = normalizeStatus(body.status);
+  const payload = {
+    script,
+    hook: normalizeText(body.hook),
+    format: normalizeText(body.format),
+    duration_sec: parseInteger(body.durationSec),
+    views: parseInteger(body.views),
+    published_at:
+      status === "completed"
+        ? normalizeTimestamp(body.publishedAt) || new Date().toISOString()
+        : null,
+    status,
+  };
+
+  const db = supabaseServer();
+  const { data, error } = await db
+    .from("content_short_videos")
+    .insert(payload)
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("[admin/content-production] insert error", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ video: mapVideo(data) });
+}
+
+export async function PATCH(request: NextRequest) {
+  const authError = await requireAdmin(request);
+  if (authError) return authError;
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: "missing_supabase_config" }, { status: 500 });
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+  }
+
+  const id = typeof body.id === "string" ? body.id : null;
+  if (!id) {
+    return NextResponse.json({ error: "missing_id" }, { status: 400 });
+  }
+
+  const payload: Record<string, any> = {};
+  if ("script" in body) payload.script = normalizeText(body.script);
+  if ("hook" in body) payload.hook = normalizeText(body.hook);
+  if ("format" in body) payload.format = normalizeText(body.format);
+  if ("durationSec" in body) payload.duration_sec = parseInteger(body.durationSec);
+  if ("views" in body) payload.views = parseInteger(body.views);
+  if ("publishedAt" in body) payload.published_at = normalizeTimestamp(body.publishedAt);
+  if ("status" in body) payload.status = normalizeStatus(body.status);
+
+  if (payload.status === "completed" && !("published_at" in payload)) {
+    payload.published_at = new Date().toISOString();
+  }
+
+  if (!Object.keys(payload).length) {
+    return NextResponse.json({ error: "missing_update" }, { status: 400 });
+  }
+
+  const db = supabaseServer();
+  const { data, error } = await db
+    .from("content_short_videos")
+    .update(payload)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("[admin/content-production] update error", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ video: mapVideo(data) });
+}

@@ -413,3 +413,20 @@ CREATE TABLE public.tutors (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT tutors_pkey PRIMARY KEY (id)
 );
+
+CREATE TABLE public.content_short_videos (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  script text,
+  views integer,
+  published_at timestamp with time zone,
+  hook text,
+  format text,
+  duration_sec integer,
+  status text NOT NULL DEFAULT 'draft'::text,
+  CONSTRAINT content_short_videos_pkey PRIMARY KEY (id),
+  CONSTRAINT content_short_videos_status_check CHECK (status = ANY (ARRAY['draft'::text, 'completed'::text])),
+  CONSTRAINT content_short_videos_views_check CHECK ((views IS NULL) OR (views >= 0)),
+  CONSTRAINT content_short_videos_duration_check CHECK ((duration_sec IS NULL) OR (duration_sec >= 0))
+);

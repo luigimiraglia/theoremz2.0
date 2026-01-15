@@ -317,7 +317,7 @@ export default function LessonClient({
               lessonTitle={lesson.title}
               lessonSlug={lesson.slug}
             />
-            <FormularioSection url={lesson.resources?.formulario ?? ""} />
+            <FormularioSection url={lesson.resources?.formulario ?? null} />
           </div>
           <details className="w-full max-w-3xl rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800/80">
             <summary className="cursor-pointer select-none text-center font-semibold text-slate-700 [.dark_&]:text-slate-100">
