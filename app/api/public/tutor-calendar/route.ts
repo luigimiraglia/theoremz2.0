@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createGoogleCalendarEvent } from "@/lib/googleCalendar";
 import { supabaseServer } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -237,9 +238,40 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     if (error) throw new Error(error.message);
 
+    const bookingId = inserted?.id || null;
+    if (bookingId) {
+      const durationMin = Number(slot.duration_min ?? callType.duration_min ?? DEFAULT_DURATION_MIN);
+      const endsAtIso = new Date(
+        new Date(slot.starts_at).getTime() + durationMin * 60000,
+      ).toISOString();
+      const summary = `${callType.name || callType.slug || "Call"} Theoremz - ${fullName}`;
+      const description = [
+        `Studente: ${fullName}`,
+        `Email: ${studentEmail}`,
+        tutor.display_name ? `Tutor: ${tutor.display_name}` : null,
+        tutor.email && !tutor.display_name ? `Tutor: ${tutor.email}` : null,
+        callType.name ? `Tipo: ${callType.name}` : callType.slug ? `Tipo: ${callType.slug}` : null,
+        payload.note ? `Note: ${String(payload.note)}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      try {
+        await createGoogleCalendarEvent({
+          bookingId,
+          summary,
+          description,
+          startIso: slot.starts_at,
+          endIso: endsAtIso,
+        });
+      } catch (err) {
+        console.error("[public/tutor-calendar] calendar event failed", err);
+      }
+    }
+
     return NextResponse.json({
       ok: true,
-      bookingId: inserted?.id || null,
+      bookingId,
       startsAt: slot.starts_at,
     });
   } catch (err: any) {

@@ -18,6 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/mentor`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${baseUrl}/risoluzione-esercizi`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${baseUrl}/contatto-rapido`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${baseUrl}/ilmetodotheoremz`, changeFrequency: "monthly", priority: 0.6 },
   ];
 
   // Dynamic lesson pages from Sanity

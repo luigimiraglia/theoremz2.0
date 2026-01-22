@@ -29,10 +29,21 @@ export default {
           "0%, 100%": { transform: "scale(1)" },
           "50%": { transform: "scale(1.015)" },
         },
+        fadeUp: {
+          "0%": { opacity: "0", transform: "translateY(18px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        floatSlow: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-14px)" },
+        },
       },
       animation: {
         shimmer: "shimmer 2.2s linear infinite",
         gentlePulse: "gentlePulse 4.5s ease-in-out infinite",
+        fadeUp: "fadeUp 0.7s ease-out both",
+        floatSlow: "floatSlow 10s ease-in-out infinite",
+        floatSlower: "floatSlow 14s ease-in-out infinite",
       },
     },
   },

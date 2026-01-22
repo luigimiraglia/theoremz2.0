@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { createGoogleCalendarEvent } from "@/lib/googleCalendar";
 import { supabaseServer } from "@/lib/supabase";
 import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
 import { requirePremium } from "@/lib/premium-access";
@@ -695,16 +696,20 @@ export async function POST(req: Request) {
     }
 
     const userId = accUid || null;
-    const { error: bookingErr } = await db.from("call_bookings").insert({
-      slot_id: ensuredSlot.id,
-      call_type_id: callType.id,
-      tutor_id: tutor.id,
-      user_id: userId,
-      full_name: safeName,
-      email: safeEmail,
-      note: extraNote || null,
-      status: "confirmed",
-    });
+    const { data: inserted, error: bookingErr } = await db
+      .from("call_bookings")
+      .insert({
+        slot_id: ensuredSlot.id,
+        call_type_id: callType.id,
+        tutor_id: tutor.id,
+        user_id: userId,
+        full_name: safeName,
+        email: safeEmail,
+        note: extraNote || null,
+        status: "confirmed",
+      })
+      .select("id")
+      .maybeSingle();
     if (bookingErr) {
       if (
         bookingErr.code === "23505" ||
@@ -730,6 +735,35 @@ export async function POST(req: Request) {
     }
 
     const callTypeLabel = callType.name;
+    const bookingId = inserted?.id || null;
+    if (bookingId) {
+      const summary = `${callTypeLabel} Theoremz - ${safeName}`;
+      const description = [
+        `Studente: ${safeName}`,
+        `Email: ${safeEmail}`,
+        `Tipo: ${callTypeLabel}`,
+        `Durata: ${durationMinutes} minuti`,
+        `Tutor: ${tutor.display_name || "Tutor"}`,
+        `Timezone: ${tz}`,
+        extraNote ? `Note: ${extraNote}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      try {
+        await createGoogleCalendarEvent({
+          bookingId,
+          summary,
+          description,
+          startIso: slotStartIso,
+          endIso: slotEndIso,
+          useFloatingTime: true,
+          timeZone: ROME_TZ,
+        });
+      } catch (err) {
+        console.error("[black-onboarding/book] calendar event failed", err);
+      }
+    }
 
     if (!toEmail) {
       throw new Error("Email destinatario mancante (BLACK_ONBOARDING_TO o GMAIL_USER).");

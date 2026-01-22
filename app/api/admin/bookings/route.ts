@@ -1,4 +1,6 @@
+import nodemailer from "nodemailer";
 import { NextRequest, NextResponse } from "next/server";
+import { createGoogleCalendarEvent } from "@/lib/googleCalendar";
 import { supabaseServer } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -9,6 +11,8 @@ const DEFAULT_TUTOR_EMAIL = "luigi.miraglia006@gmail.com";
 const DEFAULT_CALL_TYPE = "ripetizione";
 const DEFAULT_DURATION_MIN = 60;
 const BLACK_CALENDAR_CALL_TYPES = new Set(["onboarding", "check-percorso"]);
+const ROME_TZ = "Europe/Rome";
+const FALLBACK_EMAIL = "noreply@theoremz.com";
 
 type CallTypeRow = { id: string; slug: string; name: string; duration_min: number };
 type TutorRow = { id: string; display_name?: string | null; email?: string | null };
@@ -148,6 +152,107 @@ function mapBooking(row: any) {
       (slot.tutor?.full_name as string | null) ||
       (slot.tutor?.email as string | null),
   };
+}
+
+let mailer: nodemailer.Transporter | null = null;
+
+function getMailer() {
+  if (mailer) return mailer;
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASS;
+  if (!user || !pass) return null;
+  mailer = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: { user, pass },
+  });
+  return mailer;
+}
+
+function isDeliverableEmail(value?: string | null) {
+  const email = String(value || "").trim();
+  if (!email || !email.includes("@")) return false;
+  if (email.toLowerCase() === FALLBACK_EMAIL) return false;
+  return true;
+}
+
+function formatRomeDateLabel(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const label = date.toLocaleDateString("it-IT", {
+    timeZone: ROME_TZ,
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function formatRomeTimeLabel(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "--:--";
+  return date.toLocaleTimeString("it-IT", {
+    timeZone: ROME_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+async function sendBookingConfirmationEmail(opts: {
+  to: string;
+  name: string;
+  callTypeLabel: string;
+  startsAtIso: string;
+  durationMin: number;
+  note?: string | null;
+}) {
+  const transporter = getMailer();
+  const fromUser = process.env.GMAIL_USER;
+  if (!transporter || !fromUser) return;
+  const replyTo = process.env.CONTACT_TO || fromUser;
+  const safeName = opts.name?.trim() || "Studente";
+  const callLabel = opts.callTypeLabel || "call Theoremz";
+  const dateLabel = formatRomeDateLabel(opts.startsAtIso);
+  const timeLabel = formatRomeTimeLabel(opts.startsAtIso);
+  const subject = `Prenotazione confermata: ${callLabel}`;
+  const text = [
+    `Ciao ${safeName},`,
+    `la tua ${callLabel} e stata confermata.`,
+    `Quando: ${dateLabel} alle ${timeLabel} (ora di Roma).`,
+    `Durata: ${opts.durationMin} minuti.`,
+    opts.note ? `Note: ${opts.note}` : null,
+    "Ti invieremo il link poco prima della call.",
+    "Se devi spostare l'appuntamento, rispondi a questa email.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const html = `
+    <div style="font-family:Inter,system-ui,Arial,sans-serif;line-height:1.6;color:#0f172a">
+      <p style="margin:0 0 12px">Ciao ${escapeHtml(safeName)},</p>
+      <p style="margin:0 0 12px">la tua ${escapeHtml(callLabel)} e stata confermata.</p>
+      <p style="margin:0 0 12px"><strong>Quando:</strong> ${escapeHtml(
+        dateLabel,
+      )} alle ${escapeHtml(timeLabel)} (ora di Roma)</p>
+      <p style="margin:0 0 12px"><strong>Durata:</strong> ${escapeHtml(
+        String(opts.durationMin),
+      )} minuti</p>
+      ${opts.note ? `<p style="margin:0 0 12px">Note: ${escapeHtml(opts.note)}</p>` : ""}
+      <p style="margin:0 0 12px">Ti invieremo il link poco prima della call.</p>
+      <p style="margin:12px 0 0">Se devi spostare l'appuntamento, rispondi a questa email.</p>
+    </div>
+  `.trim();
+
+  await transporter.sendMail({
+    from: `"Theoremz" <${fromUser}>`,
+    to: opts.to,
+    subject,
+    text,
+    html,
+    replyTo,
+  });
 }
 
 async function fetchCallType(db: ReturnType<typeof supabaseServer>, slug: string) {
@@ -657,7 +762,56 @@ export async function POST(request: NextRequest) {
       )
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return NextResponse.json({ booking: inserted ? mapBooking(inserted) : null });
+    const booking = inserted ? mapBooking(inserted) : null;
+    if (booking && status === "confirmed" && isDeliverableEmail(payload.email)) {
+      const durationMin = Number(slot.duration_min ?? callType.duration_min ?? DEFAULT_DURATION_MIN);
+      const callTypeLabel = callType.name || callType.slug || "call Theoremz";
+      try {
+        await sendBookingConfirmationEmail({
+          to: String(payload.email).trim(),
+          name: String(payload.full_name || "Studente"),
+          callTypeLabel,
+          startsAtIso: slot.starts_at,
+          durationMin,
+          note: payload.note,
+        });
+      } catch (sendErr) {
+        console.error("[admin/bookings] confirmation email failed", sendErr);
+      }
+    }
+    const bookingId = booking?.id || null;
+    if (bookingId && status === "confirmed") {
+      const durationMin = Number(slot.duration_min ?? callType.duration_min ?? DEFAULT_DURATION_MIN);
+      const endsAtIso = new Date(
+        new Date(slot.starts_at).getTime() + durationMin * 60000,
+      ).toISOString();
+      const callTypeLabel = callType.name || callType.slug || "call Theoremz";
+      const summary = `${callTypeLabel} - ${payload.full_name}`;
+      const description = [
+        `Studente: ${payload.full_name}`,
+        `Email: ${payload.email}`,
+        `Tipo: ${callTypeLabel}`,
+        `Durata: ${durationMin} minuti`,
+        `Tutor: ${tutor.display_name || tutor.email || "Tutor"}`,
+        payload.note ? `Note: ${payload.note}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      try {
+        await createGoogleCalendarEvent({
+          bookingId,
+          summary,
+          description,
+          startIso: slot.starts_at,
+          endIso: endsAtIso,
+          useFloatingTime: isBlackCalendarCall,
+          timeZone: ROME_TZ,
+        });
+      } catch (err) {
+        console.error("[admin/bookings] calendar event failed", err);
+      }
+    }
+    return NextResponse.json({ booking });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Errore creazione booking" }, { status: 500 });
   }
@@ -780,4 +934,13 @@ export async function DELETE(request: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Errore cancellazione" }, { status: 500 });
   }
+}
+
+function escapeHtml(value: string) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
