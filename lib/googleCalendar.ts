@@ -42,7 +42,7 @@ function toFloatingDateTime(iso: string) {
 
 export async function createGoogleCalendarEvent(input: CalendarEventInput) {
   const calendar = getCalendarClient();
-  if (!calendar) return { skipped: true } as const;
+  if (!calendar) return { skipped: true, meetLink: null } as const;
 
   const useFloating = Boolean(input.useFloatingTime);
   const startValue = useFloating ? toFloatingDateTime(input.startIso) : input.startIso;
@@ -78,5 +78,11 @@ export async function createGoogleCalendarEvent(input: CalendarEventInput) {
     sendUpdates: "none",
   });
 
-  return { skipped: false, event: response.data } as const;
+  const meetLink =
+    response.data.hangoutLink ||
+    response.data.conferenceData?.entryPoints?.find((entry) => entry.entryPointType === "video")
+      ?.uri ||
+    null;
+
+  return { skipped: false, event: response.data, meetLink } as const;
 }

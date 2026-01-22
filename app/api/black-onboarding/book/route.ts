@@ -126,10 +126,14 @@ function buildIcsInvite(opts: {
   durationMin: number;
   summary: string;
   description: string;
+  location?: string | null;
+  url?: string | null;
 }) {
   const startLocal = toIcsLocal(opts.date, opts.time);
   const endLocal = new Date(startLocal.getTime() + opts.durationMin * 60000);
   const uid = `theoremz-${startLocal.getTime()}-${Math.random().toString(16).slice(2)}@theoremz.com`;
+  const location = (opts.location || "").trim();
+  const url = (opts.url || "").trim() || location;
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -142,10 +146,14 @@ function buildIcsInvite(opts: {
     `DTSTART;TZID=${ROME_TZ}:${formatIcsLocal(startLocal)}`,
     `DTEND;TZID=${ROME_TZ}:${formatIcsLocal(endLocal)}`,
     `SUMMARY:${opts.summary}`,
+    location ? `LOCATION:${location.replace(/\r?\n/g, " ")}` : null,
+    url ? `URL:${url.replace(/\r?\n/g, " ")}` : null,
     `DESCRIPTION:${opts.description.replace(/\r?\n/g, "\\n")}`,
     "END:VEVENT",
     "END:VCALENDAR",
-  ].join("\r\n");
+  ]
+    .filter(Boolean)
+    .join("\r\n");
 }
 
 function renderBookingConfirmationHtml(opts: {
@@ -155,12 +163,24 @@ function renderBookingConfirmationHtml(opts: {
   timeLabel: string;
   durationMinutes: number;
   note?: string | null;
+  meetLink?: string | null;
 }) {
+  const meetLink = opts.meetLink?.trim() || "";
+  const meetLinkSafe = meetLink ? escapeHtml(meetLink) : "";
   const detailRows = [
     { label: "Tipo di call", value: opts.callTypeLabel },
     { label: "Data", value: opts.dateLabel },
     { label: "Orario", value: `${opts.timeLabel} (ora di Roma)` },
     { label: "Durata", value: `${opts.durationMinutes} minuti` },
+    ...(meetLink
+      ? [
+          {
+            label: "Link Meet",
+            value: meetLink,
+            valueHtml: `<a href="${meetLinkSafe}" style="color:#1d4ed8;text-decoration:underline;">Apri Meet</a>`,
+          },
+        ]
+      : []),
   ];
   return `<!doctype html>
 <html lang="it">
@@ -224,7 +244,7 @@ function renderBookingConfirmationHtml(opts: {
                           ${escapeHtml(row.label)}
                         </td>
                         <td align="right" style="padding:0 0 8px 0;">
-                          ${escapeHtml(row.value)}
+                          ${row.valueHtml || escapeHtml(row.value)}
                         </td>
                       </tr>`,
                       )
@@ -236,9 +256,15 @@ function renderBookingConfirmationHtml(opts: {
           </tr>
           <tr>
             <td style="padding:18px 28px 0 28px;">
-              <p style="margin:0 0 10px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; line-height:1.6; color:#334155;">
-                Riceverai il link per collegarti poco prima della call. Se non puoi partecipare, rispondi a questa mail e riprogrammiamo.
-              </p>
+              ${
+                meetLink
+                  ? `<p style="margin:0 0 10px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; line-height:1.6; color:#334155;">
+                      Link Meet: <a href="${meetLinkSafe}" style="color:#1d4ed8;text-decoration:underline;">${meetLinkSafe}</a>
+                    </p>`
+                  : `<p style="margin:0 0 10px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; line-height:1.6; color:#334155;">
+                      Riceverai il link per collegarti poco prima della call. Se non puoi partecipare, rispondi a questa mail e riprogrammiamo.
+                    </p>`
+              }
               ${
                 opts.note
                   ? `<p style="margin:0 0 10px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; line-height:1.6; color:#334155;">
@@ -735,6 +761,7 @@ export async function POST(req: Request) {
     }
 
     const callTypeLabel = callType.name;
+    let meetLink: string | null = null;
     const bookingId = inserted?.id || null;
     if (bookingId) {
       const summary = `${callTypeLabel} Theoremz - ${safeName}`;
@@ -751,7 +778,7 @@ export async function POST(req: Request) {
         .join("\n");
 
       try {
-        await createGoogleCalendarEvent({
+        const calendarResult = await createGoogleCalendarEvent({
           bookingId,
           summary,
           description,
@@ -760,6 +787,7 @@ export async function POST(req: Request) {
           useFloatingTime: true,
           timeZone: ROME_TZ,
         });
+        meetLink = calendarResult.meetLink || null;
       } catch (err) {
         console.error("[black-onboarding/book] calendar event failed", err);
       }
@@ -785,6 +813,13 @@ export async function POST(req: Request) {
           tutor.display_name || "Tutor",
         )}</p>
         <p style="margin:4px 0"><strong>Timezone:</strong> ${escapeHtml(tz)}</p>
+        ${
+          meetLink
+            ? `<p style="margin:4px 0"><strong>Link Meet:</strong> <a href="${escapeHtml(
+                meetLink,
+              )}" style="color:#1d4ed8;text-decoration:underline;">${escapeHtml(meetLink)}</a></p>`
+            : ""
+        }
         ${extraNote ? `<p style="margin:8px 0"><strong>Nota:</strong><br>${escapeHtml(extraNote)}</p>` : ""}
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0" />
         <p style="margin:4px 0"><strong>Account email:</strong> ${escapeHtml(accEmail || replyEmail)}</p>
@@ -804,6 +839,7 @@ Data: ${normalizedDate}
 Ora: ${timeSlot}
 Tutor: ${tutor.display_name || "Tutor"}
 Timezone: ${tz}
+${meetLink ? `Link Meet: ${meetLink}` : ""}
 ${extraNote ? `Nota: ${extraNote}` : ""}
 Account email: ${accEmail || replyEmail}
 UID: ${accUid || "—"}
@@ -839,7 +875,7 @@ Username: ${accUsername || "—"}
           extraNote ? `Nota: ${extraNote}` : null,
           "",
           "In allegato trovi l'evento calendario (.ics).",
-          "Riceverai il link per collegarti poco prima della call.",
+          meetLink ? `Link Meet: ${meetLink}` : "Riceverai il link per collegarti poco prima della call.",
           "",
           "A presto,",
           "Team Theoremz",
@@ -854,15 +890,24 @@ Username: ${accUsername || "—"}
           timeLabel: timeSlot,
           durationMinutes,
           note: extraNote || null,
+          meetLink,
         });
+
+        const icsDescription = [
+          "Conferma prenotazione Theoremz.",
+          meetLink ? `Link Meet: ${meetLink}` : "Riceverai il link per collegarti poco prima della call.",
+        ]
+          .filter(Boolean)
+          .join("\n");
 
         const ics = buildIcsInvite({
           date: normalizedDate,
           time: timeSlot,
           durationMin: durationMinutes,
           summary: `${callTypeLabel} Theoremz`,
-          description:
-            "Conferma prenotazione Theoremz. Riceverai il link per collegarti poco prima della call.",
+          description: icsDescription,
+          location: meetLink,
+          url: meetLink,
         });
 
         await mailer.sendMail({

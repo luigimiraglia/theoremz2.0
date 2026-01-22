@@ -207,6 +207,7 @@ async function sendBookingConfirmationEmail(opts: {
   startsAtIso: string;
   durationMin: number;
   note?: string | null;
+  meetLink?: string | null;
 }) {
   const transporter = getMailer();
   const fromUser = process.env.GMAIL_USER;
@@ -216,6 +217,7 @@ async function sendBookingConfirmationEmail(opts: {
   const callLabel = opts.callTypeLabel || "call Theoremz";
   const dateLabel = formatRomeDateLabel(opts.startsAtIso);
   const timeLabel = formatRomeTimeLabel(opts.startsAtIso);
+  const meetLink = opts.meetLink?.trim() || "";
   const subject = `Prenotazione confermata: ${callLabel}`;
   const text = [
     `Ciao ${safeName},`,
@@ -223,7 +225,7 @@ async function sendBookingConfirmationEmail(opts: {
     `Quando: ${dateLabel} alle ${timeLabel} (ora di Roma).`,
     `Durata: ${opts.durationMin} minuti.`,
     opts.note ? `Note: ${opts.note}` : null,
-    "Ti invieremo il link poco prima della call.",
+    meetLink ? `Link Meet: ${meetLink}` : "Ti invieremo il link poco prima della call.",
     "Se devi spostare l'appuntamento, rispondi a questa email.",
   ]
     .filter(Boolean)
@@ -240,7 +242,13 @@ async function sendBookingConfirmationEmail(opts: {
         String(opts.durationMin),
       )} minuti</p>
       ${opts.note ? `<p style="margin:0 0 12px">Note: ${escapeHtml(opts.note)}</p>` : ""}
-      <p style="margin:0 0 12px">Ti invieremo il link poco prima della call.</p>
+      ${
+        meetLink
+          ? `<p style="margin:0 0 12px"><strong>Link Meet:</strong> <a href="${escapeHtml(
+              meetLink,
+            )}" style="color:#1d4ed8;text-decoration:underline;">${escapeHtml(meetLink)}</a></p>`
+          : `<p style="margin:0 0 12px">Ti invieremo il link poco prima della call.</p>`
+      }
       <p style="margin:12px 0 0">Se devi spostare l'appuntamento, rispondi a questa email.</p>
     </div>
   `.trim();
@@ -763,23 +771,8 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     if (error) throw new Error(error.message);
     const booking = inserted ? mapBooking(inserted) : null;
-    if (booking && status === "confirmed" && isDeliverableEmail(payload.email)) {
-      const durationMin = Number(slot.duration_min ?? callType.duration_min ?? DEFAULT_DURATION_MIN);
-      const callTypeLabel = callType.name || callType.slug || "call Theoremz";
-      try {
-        await sendBookingConfirmationEmail({
-          to: String(payload.email).trim(),
-          name: String(payload.full_name || "Studente"),
-          callTypeLabel,
-          startsAtIso: slot.starts_at,
-          durationMin,
-          note: payload.note,
-        });
-      } catch (sendErr) {
-        console.error("[admin/bookings] confirmation email failed", sendErr);
-      }
-    }
     const bookingId = booking?.id || null;
+    let meetLink: string | null = null;
     if (bookingId && status === "confirmed") {
       const durationMin = Number(slot.duration_min ?? callType.duration_min ?? DEFAULT_DURATION_MIN);
       const endsAtIso = new Date(
@@ -798,7 +791,7 @@ export async function POST(request: NextRequest) {
         .filter(Boolean)
         .join("\n");
       try {
-        await createGoogleCalendarEvent({
+        const calendarResult = await createGoogleCalendarEvent({
           bookingId,
           summary,
           description,
@@ -807,8 +800,26 @@ export async function POST(request: NextRequest) {
           useFloatingTime: isBlackCalendarCall,
           timeZone: ROME_TZ,
         });
+        meetLink = calendarResult.meetLink || null;
       } catch (err) {
         console.error("[admin/bookings] calendar event failed", err);
+      }
+    }
+    if (booking && status === "confirmed" && isDeliverableEmail(payload.email)) {
+      const durationMin = Number(slot.duration_min ?? callType.duration_min ?? DEFAULT_DURATION_MIN);
+      const callTypeLabel = callType.name || callType.slug || "call Theoremz";
+      try {
+        await sendBookingConfirmationEmail({
+          to: String(payload.email).trim(),
+          name: String(payload.full_name || "Studente"),
+          callTypeLabel,
+          startsAtIso: slot.starts_at,
+          durationMin,
+          note: payload.note,
+          meetLink,
+        });
+      } catch (sendErr) {
+        console.error("[admin/bookings] confirmation email failed", sendErr);
       }
     }
     return NextResponse.json({ booking });
