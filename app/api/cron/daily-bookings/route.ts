@@ -12,19 +12,52 @@ const DAILY_BOOKINGS_TO =
   process.env.DAILY_BOOKINGS_TO || process.env.CONTACT_TO || process.env.GMAIL_USER || "";
 const CRON_SECRET = process.env.BLACK_CRON_SECRET || process.env.CRON_SECRET;
 
+type CallTypeRow = { slug: string; name: string };
+type TutorRow = { display_name?: string | null; full_name?: string | null; email?: string | null };
+type SlotRow = {
+  starts_at: string;
+  duration_min: number | null;
+  call_type: CallTypeRow | null;
+  tutor: TutorRow | null;
+};
+
 type BookingRow = {
   id: string;
   full_name: string;
   email: string;
   note?: string | null;
   status?: string | null;
-  slot: {
-    starts_at: string;
-    duration_min: number | null;
-    call_type: { slug: string; name: string } | null;
-    tutor: { display_name?: string | null; full_name?: string | null; email?: string | null } | null;
-  } | null;
+  slot: SlotRow | null;
 };
+
+type RawSlotRow = {
+  starts_at: string;
+  duration_min: number | null;
+  call_type: CallTypeRow | CallTypeRow[] | null;
+  tutor: TutorRow | TutorRow[] | null;
+};
+
+type RawBookingRow = Omit<BookingRow, "slot"> & {
+  slot: RawSlotRow | RawSlotRow[] | null;
+};
+
+function normalizeMaybeArray<T>(value: T | T[] | null | undefined) {
+  if (!value) return null;
+  return Array.isArray(value) ? value[0] || null : value;
+}
+
+function normalizeBookingRow(row: RawBookingRow): BookingRow | null {
+  const slot = normalizeMaybeArray(row.slot);
+  if (!slot) return null;
+  return {
+    ...row,
+    slot: {
+      ...slot,
+      call_type: normalizeMaybeArray(slot.call_type),
+      tutor: normalizeMaybeArray(slot.tutor),
+    },
+  };
+}
 
 export async function GET(req: Request) {
   return handle(req);
@@ -81,9 +114,10 @@ async function handle(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const bookings = (data || [])
-    .filter((row: BookingRow) => row && row.slot)
-    .filter((row: BookingRow) => String(row.status || "").toLowerCase() !== "cancelled");
+  const bookings = (Array.isArray(data) ? data : [])
+    .map((row) => normalizeBookingRow(row as RawBookingRow))
+    .filter((row): row is BookingRow => Boolean(row))
+    .filter((row) => String(row.status || "").toLowerCase() !== "cancelled");
 
   const titleDate = formatRomeDateLabel(ymd);
   const subject = `Prenotazioni ${titleDate} (${bookings.length})`;
