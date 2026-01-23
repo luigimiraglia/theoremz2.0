@@ -8,17 +8,10 @@ import { requirePremium } from "@/lib/premium-access";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ALLOWED_SLOTS = [
-  "17:00",
-  "17:20",
-  "17:30",
-  "17:40",
-  "18:00",
-  "18:20",
-  "18:30",
-  "18:40",
-  "19:00",
-] as const;
+const SLOT_STEPS_MINUTES = [20, 30] as const;
+const DEFAULT_WINDOW = { start: "15:00", end: "17:30" };
+const SHORT_WINDOW = { start: "15:00", end: "16:00" };
+const SHORT_DAYS = new Set([2, 5]); // Tue, Fri
 const DEFAULT_CALL_TYPE_SLUG = "onboarding";
 const DEFAULT_TUTOR_EMAIL = "luigi.miraglia006@gmail.com";
 const ROME_TZ = "Europe/Rome";
@@ -59,8 +52,50 @@ function normalizeDate(date: string) {
   return date;
 }
 
-function isAllowedSlot(time: string): time is (typeof ALLOWED_SLOTS)[number] {
-  return ALLOWED_SLOTS.includes(time as (typeof ALLOWED_SLOTS)[number]);
+function parseTimeToMinutes(value: string) {
+  const [h, m] = value.split(":").map((v) => Number(v));
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return h * 60 + m;
+}
+
+function formatMinutes(total: number) {
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function buildSlotsForWindow(start: string, end: string, stepMinutes: number) {
+  const startMin = parseTimeToMinutes(start);
+  const endMin = parseTimeToMinutes(end);
+  if (
+    startMin === null ||
+    endMin === null ||
+    !Number.isFinite(stepMinutes) ||
+    stepMinutes <= 0 ||
+    endMin < startMin
+  ) {
+    return [] as string[];
+  }
+  const slots: string[] = [];
+  for (let minutes = startMin; minutes <= endMin; minutes += stepMinutes) {
+    slots.push(formatMinutes(minutes));
+  }
+  return slots;
+}
+
+function getAllowedSlotsForDate(date: string) {
+  const parsed = new Date(`${date}T12:00:00Z`);
+  const day = Number.isNaN(parsed.getTime()) ? null : parsed.getUTCDay();
+  const window = day !== null && SHORT_DAYS.has(day) ? SHORT_WINDOW : DEFAULT_WINDOW;
+  const slots = SLOT_STEPS_MINUTES.flatMap((step) =>
+    buildSlotsForWindow(window.start, window.end, step),
+  );
+  return Array.from(new Set(slots)).sort();
+}
+
+function isAllowedSlot(date: string, time: string) {
+  return getAllowedSlotsForDate(date).includes(time);
 }
 
 function todayInRome() {
@@ -383,7 +418,7 @@ async function ensureSlotsForDate(
   tutor: TutorRow,
   date: string,
 ) {
-  const rows = ALLOWED_SLOTS.map((time) => ({
+  const rows = getAllowedSlotsForDate(date).map((time) => ({
     call_type_id: callType.id,
     tutor_id: tutor.id,
     starts_at: toUtcIso(date, time),
@@ -475,7 +510,7 @@ export async function GET(req: Request) {
     if (!callTypes.length) throw new Error("Tipi di chiamata non trovati");
 
     const allSlots: { slot: SlotRow; callType: CallTypeRow }[] = [];
-    const allowedTimes = ALLOWED_SLOTS.map((t) => ({ time: t, iso: toUtcIso(date, t) }));
+    const allowedTimes = getAllowedSlotsForDate(date).map((t) => ({ time: t, iso: toUtcIso(date, t) }));
 
     // Assicura slot per ogni callType, poi calcola disponibilità globale per tutor
     for (const callType of callTypes) {
@@ -589,7 +624,7 @@ export async function POST(req: Request) {
     const accUsername = String(accountInfo.username || "").trim();
     const callTypeSlug = String(callTypeSlugRaw || "").trim() || DEFAULT_CALL_TYPE_SLUG;
 
-    if (!normalizedDate || !isAllowedSlot(timeSlot)) {
+    if (!normalizedDate || !isAllowedSlot(normalizedDate, timeSlot)) {
       return NextResponse.json({ error: "Data o orario non validi" }, { status: 400 });
     }
 

@@ -12,12 +12,15 @@ import {
   Video,
 } from "lucide-react";
 
-const ALLOWED_SLOTS = ["17:00", "17:20", "17:40", "18:00", "18:20", "18:40", "19:00"] as const;
+const SLOT_STEP_MINUTES = 20;
+const DEFAULT_WINDOW = { start: "15:00", end: "17:30" };
+const SHORT_WINDOW = { start: "15:00", end: "16:00" };
+const SHORT_DAYS = new Set([2, 5]); // Tue, Fri
 const WEEKDAYS_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
 export type BlackSchedulerVariant = "onboarding" | "check";
 
-const SLOT_RANGE_LABEL = `${ALLOWED_SLOTS[0]} e ${ALLOWED_SLOTS[ALLOWED_SLOTS.length - 1]}`;
+const SLOT_RANGE_LABEL = "15:00 e 17:30 (Mar/Ven fino alle 16:00)";
 const GENERIC_MIN_DAYS = 1; // prenotabile da domani
 
 const VARIANT_COPY: Record<
@@ -77,7 +80,7 @@ type DayOption = {
 };
 
 type TimeSlot = {
-  time: (typeof ALLOWED_SLOTS)[number];
+  time: string;
   period: "Mattina" | "Pomeriggio" | "Sera";
 };
 
@@ -109,6 +112,48 @@ function getFirstBookableDate(): Date {
 function capitalize(value: string) {
   if (!value) return value;
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function parseTimeToMinutes(value: string) {
+  const [h, m] = value.split(":").map((v) => Number(v));
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return h * 60 + m;
+}
+
+function formatMinutes(total: number) {
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function buildSlotsForWindow(start: string, end: string, stepMinutes: number) {
+  const startMin = parseTimeToMinutes(start);
+  const endMin = parseTimeToMinutes(end);
+  if (
+    startMin === null ||
+    endMin === null ||
+    !Number.isFinite(stepMinutes) ||
+    stepMinutes <= 0 ||
+    endMin < startMin
+  ) {
+    return [] as string[];
+  }
+  const slots: string[] = [];
+  for (let minutes = startMin; minutes <= endMin; minutes += stepMinutes) {
+    slots.push(formatMinutes(minutes));
+  }
+  return slots;
+}
+
+function getAllowedSlotsForDate(dateId?: string | null) {
+  if (!dateId) {
+    return buildSlotsForWindow(DEFAULT_WINDOW.start, DEFAULT_WINDOW.end, SLOT_STEP_MINUTES);
+  }
+  const parsed = new Date(`${dateId}T12:00:00Z`);
+  const day = Number.isNaN(parsed.getTime()) ? null : parsed.getUTCDay();
+  const window = day !== null && SHORT_DAYS.has(day) ? SHORT_WINDOW : DEFAULT_WINDOW;
+  return buildSlotsForWindow(window.start, window.end, SLOT_STEP_MINUTES);
 }
 
 function buildCalendarMonth(
@@ -154,8 +199,8 @@ function buildCalendarMonth(
   return days;
 }
 
-function createTimeSlots(): TimeSlot[] {
-  return ALLOWED_SLOTS.map((time) => {
+function createTimeSlots(dateId?: string | null): TimeSlot[] {
+  return getAllowedSlotsForDate(dateId).map((time) => {
     const [h] = time.split(":").map((v) => parseInt(v, 10));
     const period: TimeSlot["period"] =
       h < 13 ? "Mattina" : h < 17 ? "Pomeriggio" : "Sera";
@@ -170,7 +215,6 @@ type Props = {
 export default function BlackOnboardingScheduler({ variant = "onboarding" }: Props) {
   const copy = VARIANT_COPY[variant] ?? VARIANT_COPY.onboarding;
   const { user } = useAuth();
-  const timeSlots = useMemo(() => createTimeSlots(), []);
   const todayStart = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -210,6 +254,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
     [calendarDays],
   );
   const [selectedDay, setSelectedDay] = useState<DayOption | null>(null);
+  const timeSlots = useMemo(() => createTimeSlots(selectedDay?.id ?? null), [selectedDay]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "error" | "success">("idle");
   const [statusDetail, setStatusDetail] = useState<string>(

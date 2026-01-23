@@ -1166,14 +1166,19 @@ export default function AccountPage() {
     schedulePast,
   ]);
 
-  const handleGenerateAvailability = useCallback(async () => {
-    setAvailSaving(true);
-    setAvailMsg(null);
-    setAvailDeleteMsg(null);
-    try {
-      const token = await getAuth().currentUser?.getIdToken();
-      if (!token) throw new Error("Token non disponibile");
-      const daysOfWeek = new Set(availDays.values());
+  const parseTimeParts = useCallback((value: string) => {
+    const [hours, minutes] = value.split(":").map((v) => Number(v));
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    return { hours, minutes };
+  }, []);
+
+  const buildAvailabilityBlocks = useCallback(
+    (
+      daysOfWeek: Set<number>,
+      defaultStart: string,
+      defaultEnd: string,
+      overrides?: Partial<Record<number, { start?: string; end?: string }>>,
+    ) => {
       const startDate = parseYmdDate(availFrom);
       const endDate = parseYmdDate(availTo);
       if (!startDate || !endDate) {
@@ -1182,33 +1187,30 @@ export default function AccountPage() {
       if (endDate.getTime() < startDate.getTime()) {
         throw new Error("Data fine precedente alla data inizio");
       }
-      const [startH, startM] = availStart.split(":").map((v) => Number(v));
-      const [endH, endM] = availEnd.split(":").map((v) => Number(v));
-      if (
-        !Number.isFinite(startH) ||
-        !Number.isFinite(startM) ||
-        !Number.isFinite(endH) ||
-        !Number.isFinite(endM)
-      ) {
+      const defaultStartParts = parseTimeParts(defaultStart);
+      const defaultEndParts = parseTimeParts(defaultEnd);
+      if (!defaultStartParts || !defaultEndParts) {
         throw new Error("Finestra oraria non valida");
       }
-      const startTotal = startH * 60 + startM;
-      const endTotal = endH * 60 + endM;
-      if (endTotal <= startTotal) {
-        throw new Error("Finestra oraria non valida");
-      }
+
       const blocks: Array<{ startMs: number; endMs: number }> = [];
       const cursor = new Date(startDate);
       cursor.setHours(0, 0, 0, 0);
       while (cursor.getTime() <= endDate.getTime()) {
         const dow = (cursor.getDay() + 6) % 7;
         if (daysOfWeek.has(dow)) {
+          const override = overrides?.[dow];
+          const startParts = parseTimeParts(override?.start || defaultStart);
+          const endParts = parseTimeParts(override?.end || defaultEnd);
+          if (!startParts || !endParts) {
+            throw new Error("Finestra oraria non valida");
+          }
           const start = new Date(
             cursor.getFullYear(),
             cursor.getMonth(),
             cursor.getDate(),
-            startH,
-            startM,
+            startParts.hours,
+            startParts.minutes,
             0,
             0
           );
@@ -1216,8 +1218,8 @@ export default function AccountPage() {
             cursor.getFullYear(),
             cursor.getMonth(),
             cursor.getDate(),
-            endH,
-            endM,
+            endParts.hours,
+            endParts.minutes,
             0,
             0
           );
@@ -1232,8 +1234,22 @@ export default function AccountPage() {
         cursor.setHours(0, 0, 0, 0);
       }
       if (!blocks.length) {
-        throw new Error("Nessuna disponibilità generata");
+        throw new Error("Nessuna disponibilita generata");
       }
+      return blocks;
+    },
+    [availFrom, availTo, parseTimeParts]
+  );
+
+  const handleGenerateAvailability = useCallback(async () => {
+    setAvailSaving(true);
+    setAvailMsg(null);
+    setAvailDeleteMsg(null);
+    try {
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("Token non disponibile");
+      const daysOfWeek = new Set(availDays.values());
+      const blocks = buildAvailabilityBlocks(daysOfWeek, availStart, availEnd);
       const res = await fetch("/api/admin/availability", {
         method: "POST",
         headers: {
@@ -1259,7 +1275,39 @@ export default function AccountPage() {
     availDays,
     loadTutorBookings,
     fetchAvailabilitySlots,
+    buildAvailabilityBlocks,
   ]);
+
+  const handleGenerateAvailabilityPreset = useCallback(async () => {
+    setAvailSaving(true);
+    setAvailMsg(null);
+    setAvailDeleteMsg(null);
+    try {
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("Token non disponibile");
+      const allDays = new Set([0, 1, 2, 3, 4, 5, 6]);
+      const blocks = buildAvailabilityBlocks(allDays, "15:00", "17:30", {
+        1: { end: "16:00" },
+        4: { end: "16:00" },
+      });
+      const res = await fetch("/api/admin/availability", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ blocks }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      setAvailMsg(`Disponibilita inserite: ${data?.slots || "ok"}`);
+      await Promise.all([loadTutorBookings(), fetchAvailabilitySlots()]);
+    } catch (err: any) {
+      setAvailMsg(err?.message || "Errore disponibilita");
+    } finally {
+      setAvailSaving(false);
+    }
+  }, [buildAvailabilityBlocks, loadTutorBookings, fetchAvailabilitySlots]);
 
   const handleCompleteBooking = useCallback(
     async (booking?: any) => {
@@ -2174,6 +2222,14 @@ export default function AccountPage() {
                   </button>
                 </div>
                 <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGenerateAvailabilityPreset}
+                    disabled={availSaving}
+                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200 [.dark_&]:hover:bg-slate-800/70"
+                  >
+                    Preset 15:00-17:30 (Mar/Ven 15-16)
+                  </button>
                   <button
                     type="button"
                     onClick={handleGenerateAvailability}

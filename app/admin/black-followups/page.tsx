@@ -88,7 +88,16 @@ type ScheduleDraft = {
   note: string;
 };
 
+type CheckinDraft = {
+  date: string;
+  time: string;
+  note: string;
+};
+
 const allowedEmail = "luigi.miraglia006@gmail.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
+const CHECKIN_CALL_LINK = `${SITE_URL}/black-check-percorso-call`;
+const FOLLOWUP_CALL_LINK = `${SITE_URL}/black-onboarding-call`;
 const whatsappPrefixes = ["+39", "+41", "+44", "+34", "+33", "+49", "+43"];
 const callTypeOptions: Array<{ value: ScheduleDraft["callType"]; label: string }> = [
   { value: "onboarding", label: "Onboarding" },
@@ -246,6 +255,18 @@ export default function BlackFollowupsPage() {
   const [studentResults, setStudentResults] = useState<BlackStudent[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<BlackStudent | null>(null);
+  const [checkinQuery, setCheckinQuery] = useState("");
+  const [checkinResults, setCheckinResults] = useState<BlackStudent[]>([]);
+  const [checkinSearching, setCheckinSearching] = useState(false);
+  const [checkinStudent, setCheckinStudent] = useState<BlackStudent | null>(null);
+  const [checkinDraft, setCheckinDraft] = useState<CheckinDraft>(() => ({
+    date: toDateInputValue(new Date()),
+    time: "10:00",
+    note: "",
+  }));
+  const [checkinScheduling, setCheckinScheduling] = useState(false);
+  const [checkinError, setCheckinError] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [quickQuery, setQuickQuery] = useState("");
   const [blackBookings, setBlackBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
@@ -261,6 +282,20 @@ export default function BlackFollowupsPage() {
     const ua = navigator.userAgent.toLowerCase();
     const isMobile = /android|iphone|ipad|ipod/.test(ua);
     setPreferWebWhatsApp(!isMobile);
+  }, []);
+
+  const copyLink = useCallback(async (label: string, link: string) => {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(link);
+      } else if (typeof window !== "undefined") {
+        window.prompt("Copia il link:", link);
+      }
+      setCopiedLink(label);
+      window.setTimeout(() => setCopiedLink(null), 1800);
+    } catch {
+      setCopiedLink(null);
+    }
   }, []);
 
   const fetchBlackBookings = useCallback(async () => {
@@ -923,6 +958,32 @@ export default function BlackFollowupsPage() {
     }
   }, [studentQuery]);
 
+  const fetchCheckinStudents = useCallback(async () => {
+    if (!checkinQuery.trim()) {
+      setCheckinResults([]);
+      return;
+    }
+    setCheckinSearching(true);
+    setCheckinError(null);
+    try {
+      const headers = await buildHeaders();
+      const res = await fetch(
+        `/api/admin/black-followups?lookup=${encodeURIComponent(checkinQuery.trim())}`,
+        {
+          headers,
+          cache: "no-store",
+        }
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      setCheckinResults(Array.isArray(json.students) ? json.students : []);
+    } catch (err: any) {
+      setCheckinError(err?.message || "Errore ricerca studente");
+    } finally {
+      setCheckinSearching(false);
+    }
+  }, [checkinQuery]);
+
   const applyStudentSelection = useCallback((student: BlackStudent) => {
     if (student.hasActiveFollowup) {
       setError("Studente già collegato a un follow-up attivo");
@@ -953,6 +1014,80 @@ export default function BlackFollowupsPage() {
       note: prev.note || autoNoteParts.join(" • "),
     }));
   }, [form.whatsappPrefix]);
+
+  const applyCheckinSelection = useCallback((student: BlackStudent) => {
+    setCheckinStudent(student);
+    const noteParts: string[] = [];
+    if (student.year_class) noteParts.push(`Classe: ${student.year_class}`);
+    if (student.track) noteParts.push(`Percorso: ${student.track}`);
+    if (student.student_email || student.parent_email) {
+      noteParts.push(`Email: ${student.student_email || student.parent_email}`);
+    }
+    setCheckinDraft((prev) => ({
+      ...prev,
+      note: prev.note || noteParts.join(" • "),
+    }));
+  }, []);
+
+  const handleCheckinBooking = useCallback(async () => {
+    if (!checkinStudent) {
+      setCheckinError("Seleziona uno studente");
+      return;
+    }
+    if (!checkinDraft.date || !checkinDraft.time) {
+      setCheckinError("Seleziona data e ora");
+      return;
+    }
+    const startsAtIso = localPartsToIso(checkinDraft.date, checkinDraft.time);
+    if (!startsAtIso) {
+      setCheckinError("Data/ora non valida");
+      return;
+    }
+    setCheckinScheduling(true);
+    setCheckinError(null);
+    try {
+      const headers = await buildHeaders();
+      headers["Content-Type"] = "application/json";
+      const fullName =
+        checkinStudent.preferred_name ||
+        checkinStudent.student_name ||
+        "Studente";
+      const email =
+        checkinStudent.student_email ||
+        checkinStudent.parent_email ||
+        "noreply@theoremz.com";
+      const note = checkinDraft.note.trim() || null;
+      const res = await fetch("/api/admin/bookings", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          startsAt: startsAtIso,
+          callTypeSlug: "check-percorso",
+          fullName,
+          email,
+          note,
+          studentId: checkinStudent.id,
+          allowUnpaid: true,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const details = [json?.error, json?.details, json?.code]
+          .filter(Boolean)
+          .join(" · ");
+        throw new Error(details || `HTTP ${res.status}`);
+      }
+      setCheckinStudent(null);
+      setCheckinResults([]);
+      setCheckinQuery("");
+      setCheckinDraft((prev) => ({ ...prev, note: "" }));
+      void fetchBlackBookings();
+    } catch (err: any) {
+      setCheckinError(err?.message || "Errore creazione check-in");
+    } finally {
+      setCheckinScheduling(false);
+    }
+  }, [checkinDraft, checkinStudent, fetchBlackBookings]);
 
   const dayDue = useMemo(() => {
     const list = data?.due || [];
@@ -1658,97 +1793,260 @@ export default function BlackFollowupsPage() {
           </div>
         </form>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Giorno da evadere
-              </p>
-              <h3 className="text-xl font-bold text-slate-900 leading-tight">
-                {new Date(selectedDate).toLocaleDateString("it-IT", {
-                  weekday: "long",
-                  day: "2-digit",
-                  month: "2-digit",
-                })}
-              </h3>
-            </div>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
-            />
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-lg bg-slate-900/90 px-3 py-3 text-white shadow">
-              <p className="text-xs uppercase tracking-[0.18em] text-white/60">Da contattare</p>
-              <p className="mt-1 text-2xl font-black">
-                {dayDue.length}
-                <span className="text-xs font-semibold text-white/60"> contatti</span>
-              </p>
-              {dueChurn.length ? (
-                <p className="mt-1 text-[11px] font-semibold text-white/70">
-                  di cui disdette: {dueChurn.length}
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Giorno da evadere
                 </p>
-              ) : null}
-            </div>
-            <div className="rounded-lg border border-slate-200 px-3 py-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Prossimi</p>
-              <p className="mt-1 text-2xl font-black text-slate-900">
-                {data?.upcoming?.length || 0}
-                <span className="text-xs font-semibold text-slate-500"> in coda</span>
-              </p>
-              {upcomingChurn.length ? (
-                <p className="mt-1 text-[11px] font-semibold text-slate-500">
-                  disdette: {upcomingChurn.length}
-                </p>
-              ) : null}
-            </div>
-            <label className="col-span-2 flex items-center gap-2 text-sm text-slate-600">
+                <h3 className="text-xl font-bold text-slate-900 leading-tight">
+                  {new Date(selectedDate).toLocaleDateString("it-IT", {
+                    weekday: "long",
+                    day: "2-digit",
+                    month: "2-digit",
+                  })}
+                </h3>
+              </div>
               <input
-                type="checkbox"
-                checked={showCompleted}
-                onChange={(e) => setShowCompleted(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
               />
-              Mostra anche i completati
-            </label>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-lg bg-slate-900/90 px-3 py-3 text-white shadow">
+                <p className="text-xs uppercase tracking-[0.18em] text-white/60">Da contattare</p>
+                <p className="mt-1 text-2xl font-black">
+                  {dayDue.length}
+                  <span className="text-xs font-semibold text-white/60"> contatti</span>
+                </p>
+                {dueChurn.length ? (
+                  <p className="mt-1 text-[11px] font-semibold text-white/70">
+                    di cui disdette: {dueChurn.length}
+                  </p>
+                ) : null}
+              </div>
+              <div className="rounded-lg border border-slate-200 px-3 py-3">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Prossimi</p>
+                <p className="mt-1 text-2xl font-black text-slate-900">
+                  {data?.upcoming?.length || 0}
+                  <span className="text-xs font-semibold text-slate-500"> in coda</span>
+                </p>
+                {upcomingChurn.length ? (
+                  <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                    disdette: {upcomingChurn.length}
+                  </p>
+                ) : null}
+              </div>
+              <label className="col-span-2 flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={showCompleted}
+                  onChange={(e) => setShowCompleted(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                />
+                Mostra anche i completati
+              </label>
+            </div>
+
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                <span>Prossimi appuntamenti Black</span>
+                {loadingBookings ? <Loader2 size={12} className="animate-spin" /> : null}
+              </div>
+              {bookingError ? (
+                <p className="mt-2 text-xs text-rose-600">{bookingError}</p>
+              ) : upcomingBlackBookings.length ? (
+                <div className="mt-2 space-y-2">
+                  {upcomingBlackBookings.map((booking) => (
+                    <div
+                      key={booking.id}
+                      className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-slate-900">
+                          {booking.fullName || "Studente"}
+                        </span>
+                        <span className="text-[11px] font-semibold text-slate-500">
+                          {formatDate(booking.startsAt)}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-[11px] font-semibold text-slate-600">
+                        {formatCallTypeLabel(booking)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-slate-500">
+                  Nessun appuntamento programmato.
+                </p>
+              )}
+            </div>
+
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Link chiamate
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => copyLink("checkin", CHECKIN_CALL_LINK)}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 hover:border-slate-300"
+                >
+                  Copia link check-in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyLink("followup", FOLLOWUP_CALL_LINK)}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 hover:border-slate-300"
+                >
+                  Copia link follow-up
+                </button>
+              </div>
+              {copiedLink ? (
+                <p className="mt-2 text-xs font-semibold text-emerald-600">
+                  Link copiato.
+                </p>
+              ) : null}
+            </div>
           </div>
 
-          <div className="mt-4 border-t border-slate-200 pt-4">
-            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-              <span>Prossimi appuntamenti Black</span>
-              {loadingBookings ? <Loader2 size={12} className="animate-spin" /> : null}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white">
+                <Clock3 size={16} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 leading-tight">
+                  Prenota check-in cliente
+                </h3>
+                <p className="text-sm text-slate-500">
+                  Cerca per email o telefono, anche se non e in follow-up.
+                </p>
+              </div>
             </div>
-            {bookingError ? (
-              <p className="mt-2 text-xs text-rose-600">{bookingError}</p>
-            ) : upcomingBlackBookings.length ? (
-              <div className="mt-2 space-y-2">
-                {upcomingBlackBookings.map((booking) => (
-                  <div
-                    key={booking.id}
-                    className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs"
+
+            <div className="mt-4 space-y-2">
+              <label className="text-xs font-semibold text-slate-600">
+                Cerca cliente Black
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                <input
+                  type="text"
+                  value={checkinQuery}
+                  onChange={(e) => setCheckinQuery(e.target.value)}
+                  placeholder="email o telefono"
+                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400"
+                />
+                <button
+                  type="button"
+                  onClick={fetchCheckinStudents}
+                  disabled={checkinSearching}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:border-emerald-300 disabled:opacity-50"
+                >
+                  {checkinSearching ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <ListFilter size={14} />
+                  )}
+                  Cerca
+                </button>
+              </div>
+            </div>
+
+            {checkinResults.length ? (
+              <div className="mt-3 space-y-2">
+                {checkinResults.map((student) => (
+                  <button
+                    key={student.id}
+                    type="button"
+                    onClick={() => applyCheckinSelection(student)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-emerald-300"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-slate-900">
-                        {booking.fullName || "Studente"}
-                      </span>
-                      <span className="text-[11px] font-semibold text-slate-500">
-                        {formatDate(booking.startsAt)}
-                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {student.preferred_name || student.student_name || "Studente"}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {student.student_email || student.parent_email || "Email n/d"}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {student.student_phone || student.parent_phone || "Telefono n/d"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[11px] text-slate-500">
+                          {student.year_class || "classe?"} · {student.track || "track?"}
+                        </p>
+                        {student.hasActiveFollowup ? (
+                          <span className="mt-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                            In follow-up
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="mt-1 text-[11px] font-semibold text-slate-600">
-                      {formatCallTypeLabel(booking)}
-                    </div>
-                  </div>
+                  </button>
                 ))}
               </div>
-            ) : (
-              <p className="mt-2 text-xs text-slate-500">
-                Nessun appuntamento programmato.
-              </p>
-            )}
+            ) : null}
+
+            {checkinStudent ? (
+              <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                Selezionato: {checkinStudent.preferred_name || checkinStudent.student_name || "Studente"} (
+                {checkinStudent.student_email || checkinStudent.parent_email || "email n/d"})
+              </div>
+            ) : null}
+
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Data</label>
+                <input
+                  type="date"
+                  value={checkinDraft.date}
+                  onChange={(e) => setCheckinDraft((prev) => ({ ...prev, date: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Ora</label>
+                <input
+                  type="time"
+                  value={checkinDraft.time}
+                  onChange={(e) => setCheckinDraft((prev) => ({ ...prev, time: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="mt-3 space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">Nota</label>
+              <input
+                type="text"
+                value={checkinDraft.note}
+                onChange={(e) => setCheckinDraft((prev) => ({ ...prev, note: e.target.value }))}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:bg-white"
+                placeholder="Dettagli o contesto"
+              />
+            </div>
+
+            {checkinError ? (
+              <p className="mt-2 text-xs text-rose-600">{checkinError}</p>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={handleCheckinBooking}
+              disabled={checkinScheduling || !checkinStudent}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+            >
+              {checkinScheduling ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+              Prenota check-in
+            </button>
           </div>
         </div>
       </div>

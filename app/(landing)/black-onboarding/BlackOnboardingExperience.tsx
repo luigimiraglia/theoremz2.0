@@ -17,7 +17,58 @@ type BurstPiece = {
   size: number;
 };
 
-const ALLOWED_SLOTS = ["17:00", "17:30", "18:00", "18:30", "19:00"] as const;
+const SLOT_STEPS_MINUTES = [30] as const;
+const DEFAULT_WINDOW = { start: "15:00", end: "17:30" };
+const SHORT_WINDOW = { start: "15:00", end: "16:00" };
+const SHORT_DAYS = new Set([2, 5]); // Tue, Fri
+
+const parseTimeToMinutes = (value: string) => {
+  const [h, m] = value.split(":").map((v) => Number(v));
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return h * 60 + m;
+};
+
+const formatMinutes = (total: number) => {
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
+
+const buildSlotsForWindow = (start: string, end: string, stepMinutes: number) => {
+  const startMin = parseTimeToMinutes(start);
+  const endMin = parseTimeToMinutes(end);
+  if (
+    startMin === null ||
+    endMin === null ||
+    !Number.isFinite(stepMinutes) ||
+    stepMinutes <= 0 ||
+    endMin < startMin
+  ) {
+    return [] as string[];
+  }
+  const slots: string[] = [];
+  for (let minutes = startMin; minutes <= endMin; minutes += stepMinutes) {
+    slots.push(formatMinutes(minutes));
+  }
+  return slots;
+};
+
+const getAllowedSlotsForDate = (date: string | null) => {
+  if (!date) {
+    const slots = SLOT_STEPS_MINUTES.flatMap((step) =>
+      buildSlotsForWindow(DEFAULT_WINDOW.start, DEFAULT_WINDOW.end, step),
+    );
+    return Array.from(new Set(slots)).sort();
+  }
+  const parsed = new Date(`${date}T12:00:00Z`);
+  const day = Number.isNaN(parsed.getTime()) ? null : parsed.getUTCDay();
+  const window = day !== null && SHORT_DAYS.has(day) ? SHORT_WINDOW : DEFAULT_WINDOW;
+  const slots = SLOT_STEPS_MINUTES.flatMap((step) =>
+    buildSlotsForWindow(window.start, window.end, step),
+  );
+  return Array.from(new Set(slots)).sort();
+};
 
 export default function BlackOnboardingExperience() {
   const [step, setStep] = useState<Step>(1);
@@ -57,7 +108,9 @@ export default function BlackOnboardingExperience() {
   }, [today]);
 
   const formReady = nome.trim().length > 0 && classe.trim().length > 0;
-  const bookingReady = !!selectedDay && !!selectedSlot && !bookingDone;
+  const allowedSlots = useMemo(() => getAllowedSlotsForDate(selectedDay), [selectedDay]);
+  const bookingReady =
+    !!selectedDay && !!selectedSlot && allowedSlots.includes(selectedSlot) && !bookingDone;
 
   const monthLabel = useMemo(() => {
     const formatter = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" });
@@ -201,6 +254,12 @@ export default function BlackOnboardingExperience() {
     };
     fetchAvailability();
   }, [selectedDay, extractIntervals, getToken]);
+
+  useEffect(() => {
+    if (selectedSlot && !allowedSlots.includes(selectedSlot)) {
+      setSelectedSlot(null);
+    }
+  }, [allowedSlots, selectedSlot]);
 
   const canGoPrev = useMemo(() => {
     const prev = new Date(currentMonth);
@@ -416,7 +475,7 @@ export default function BlackOnboardingExperience() {
                   </div>
                 ) : null}
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {ALLOWED_SLOTS.map((slot) => {
+                  {allowedSlots.map((slot) => {
                     const disabled = isSlotDisabled(slot) || loadingSlots;
                     const active = selectedSlot === slot;
                     return (
@@ -449,7 +508,8 @@ export default function BlackOnboardingExperience() {
                 </div>
                 {!loadingSlots &&
                 bookedIntervals.length > 0 &&
-                ALLOWED_SLOTS.every((slot) => {
+                allowedSlots.length > 0 &&
+                allowedSlots.every((slot) => {
                   const start = toMinutes(slot) || 0;
                   const end = start + 30;
                   return bookedIntervals.some((b) => start < b.end && b.start < end);
