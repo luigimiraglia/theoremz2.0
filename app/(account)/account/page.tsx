@@ -1268,8 +1268,6 @@ export default function AccountPage() {
       setAvailSaving(false);
     }
   }, [
-    availFrom,
-    availTo,
     availStart,
     availEnd,
     availDays,

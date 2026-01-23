@@ -81,7 +81,7 @@ export default function MetodoTheoremzPage() {
                   un 10 in pagella
                 </h1>
                 <p className="max-w-xl text-lg font-bold italic leading-snug text-[#232323] sm:text-xl">
-                  L'unico sistema strutturato e testato che recupera studenti a
+                  L&apos;unico sistema strutturato e testato che recupera studenti a
                   rischio e sviluppa un metodo di studio solido, risultati
                   concreti e autonomia.
                 </p>
@@ -164,9 +164,9 @@ export default function MetodoTheoremzPage() {
                     Perche le ripetizioni tradizionali non funzionano
                   </h2>
                   <div className={`mt-4 space-y-3 text-base ${mutedText}`}>
-                    <p>Un'ora a settimana senza strategia non cambia il metodo.</p>
+                    <p>Un&apos;ora a settimana senza strategia non cambia il metodo.</p>
                     <p>
-                      Si recupera l'emergenza, ma non si costruisce autonomia.
+                      Si recupera l&apos;emergenza, ma non si costruisce autonomia.
                     </p>
                     <p>
                       Serve continuita, misurazione e correzioni costanti.
