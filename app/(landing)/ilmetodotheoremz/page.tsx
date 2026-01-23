@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "Il Metodo Theoremz",
@@ -68,7 +69,7 @@ export default function MetodoTheoremzPage() {
         const panelClass = isDark
           ? "border-white/20 bg-white/10"
           : "border-slate-200 bg-white";
-        let content: JSX.Element;
+        let content: ReactNode;
 
         if (isHero) {
           content = (
