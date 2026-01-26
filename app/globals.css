@@ -65,6 +65,22 @@ html[data-scroll-behavior="smooth"] {
   }
 }
 
+@keyframes ctaBreathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.cta-breathe {
+  animation: ctaBreathe 6.5s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+
 .btn-gradient-animate {
   background-image: linear-gradient(
     90deg,
@@ -83,6 +99,9 @@ html[data-scroll-behavior="smooth"] {
 
 @media (prefers-reduced-motion: reduce) {
   .btn-gradient-animate {
+    animation: none;
+  }
+  .cta-breathe {
     animation: none;
   }
 }

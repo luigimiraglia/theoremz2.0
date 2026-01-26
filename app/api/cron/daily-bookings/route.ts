@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { supabaseServer } from "@/lib/supabase";
 import { getRomeDayRange, ROME_TZ } from "@/lib/rome-time";
+import { formatBookingTime } from "@/lib/booking-time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -180,11 +181,7 @@ function formatRomeDateLabel(ymd: string) {
 }
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("it-IT", {
-    timeZone: ROME_TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatBookingTime(iso, { hour: "2-digit", minute: "2-digit" });
 }
 
 function pickTutorLabel(row: BookingRow) {

@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { formatRomeYmd, getRomeDayRange } from "@/lib/rome-time";
+import { bookingIsoFromParts, bookingNowMs, formatBookingDateTime } from "@/lib/booking-time";
 
 type Contact = {
   id: string;
@@ -105,6 +106,7 @@ const callTypeOptions: Array<{ value: ScheduleDraft["callType"]; label: string }
 ];
 const BLACK_CALL_TYPES = new Set(["onboarding", "check-percorso"]);
 const CHURN_NOTE_MARKER = "disdetta abbonamento";
+const ROME_TZ = "Europe/Rome";
 
 async function buildHeaders() {
   const headers: Record<string, string> = {};
@@ -122,6 +124,7 @@ function formatDate(iso?: string | null) {
   if (!iso) return "—";
   const d = new Date(iso);
   return d.toLocaleString("it-IT", {
+    timeZone: ROME_TZ,
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -132,7 +135,11 @@ function formatDate(iso?: string | null) {
 function formatDay(iso?: string | null) {
   if (!iso) return "—";
   const d = new Date(iso);
-  return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+  return d.toLocaleDateString("it-IT", {
+    timeZone: ROME_TZ,
+    day: "2-digit",
+    month: "2-digit",
+  });
 }
 
 function formatCallTypeLabel(booking: Booking) {
@@ -166,10 +173,7 @@ function toDateInputValue(date: Date) {
 }
 
 function localPartsToIso(date: string, time: string) {
-  if (!date || !time) return null;
-  const d = new Date(`${date}T${time}:00`);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
+  return bookingIsoFromParts(date, time);
 }
 
 function isEmailContact(value?: string | null) {
@@ -911,7 +915,7 @@ export default function BlackFollowupsPage() {
   );
 
   const upcomingBlackBookings = useMemo(() => {
-    const now = Date.now();
+    const now = bookingNowMs();
     return blackBookings
       .filter((booking) => {
         const callType = typeof booking.callType === "string" ? booking.callType : "";
@@ -1802,6 +1806,7 @@ export default function BlackFollowupsPage() {
                 </p>
                 <h3 className="text-xl font-bold text-slate-900 leading-tight">
                   {new Date(selectedDate).toLocaleDateString("it-IT", {
+                    timeZone: ROME_TZ,
                     weekday: "long",
                     day: "2-digit",
                     month: "2-digit",
@@ -1871,7 +1876,7 @@ export default function BlackFollowupsPage() {
                           {booking.fullName || "Studente"}
                         </span>
                         <span className="text-[11px] font-semibold text-slate-500">
-                          {formatDate(booking.startsAt)}
+                          {formatBookingDateTime(booking.startsAt)}
                         </span>
                       </div>
                       <div className="mt-1 text-[11px] font-semibold text-slate-600">
@@ -2211,7 +2216,7 @@ export default function BlackFollowupsPage() {
                               </span>
                             </div>
                             <span className="text-xs font-semibold text-slate-500">
-                              {nextAt ? nextAt.toLocaleDateString("it-IT") : "—"}
+                              {nextAt ? nextAt.toLocaleDateString("it-IT", { timeZone: ROME_TZ }) : "—"}
                             </span>
                           </div>
                           {contact.student ? (
@@ -2263,7 +2268,7 @@ export default function BlackFollowupsPage() {
                               </span>
                             </div>
                             <span className="text-xs font-semibold text-slate-500">
-                              {nextAt ? nextAt.toLocaleDateString("it-IT") : "—"}
+                              {nextAt ? nextAt.toLocaleDateString("it-IT", { timeZone: ROME_TZ }) : "—"}
                             </span>
                           </div>
                           {contact.student ? (

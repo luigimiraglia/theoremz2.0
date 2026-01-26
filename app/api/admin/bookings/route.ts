@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { NextRequest, NextResponse } from "next/server";
 import { createGoogleCalendarEvent } from "@/lib/googleCalendar";
 import { supabaseServer } from "@/lib/supabase";
+import { formatBookingDate, formatBookingTime } from "@/lib/booking-time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -178,26 +179,19 @@ function isDeliverableEmail(value?: string | null) {
 }
 
 function formatRomeDateLabel(iso: string) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  const label = date.toLocaleDateString("it-IT", {
-    timeZone: ROME_TZ,
+  const label = formatBookingDate(iso, {
     weekday: "long",
     day: "2-digit",
     month: "long",
     year: "numeric",
   });
+  if (label === "—") return iso;
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function formatRomeTimeLabel(iso: string) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "--:--";
-  return date.toLocaleTimeString("it-IT", {
-    timeZone: ROME_TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const label = formatBookingTime(iso, { hour: "2-digit", minute: "2-digit" });
+  return label === "—" ? "--:--" : label;
 }
 
 async function sendBookingConfirmationEmail(opts: {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { createGoogleCalendarEvent } from "@/lib/googleCalendar";
 import { supabaseServer } from "@/lib/supabase";
+import { bookingIsoFromParts, bookingIsoToParts } from "@/lib/booking-time";
 import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
 import { requirePremium } from "@/lib/premium-access";
 
@@ -116,16 +117,11 @@ function formatDateOnly(date: Date) {
 }
 
 function toUtcIso(date: string, time: string) {
-  const [y, m, d] = date.split("-").map((v) => parseInt(v, 10));
-  const [hh, mm] = time.split(":").map((v) => parseInt(v, 10));
-  return new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0)).toISOString();
+  return bookingIsoFromParts(date, time) || "";
 }
 
 function timeFromIsoUtc(iso: string) {
-  const d = new Date(iso);
-  const hh = String(d.getUTCHours()).padStart(2, "0");
-  const mm = String(d.getUTCMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
+  return bookingIsoToParts(iso).time;
 }
 
 function formatRomeDateLabel(date: string) {
@@ -882,6 +878,22 @@ Display name: ${accDisplay || "—"}
 Username: ${accUsername || "—"}
 `.trim();
 
+    const internalIcsDescription = [
+      "Nuova prenotazione Theoremz.",
+      meetLink ? `Link Meet: ${meetLink}` : "Link Meet non disponibile.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const internalIcs = buildIcsInvite({
+      date: normalizedDate,
+      time: timeSlot,
+      durationMin: durationMinutes,
+      summary: `${callTypeLabel} Theoremz`,
+      description: internalIcsDescription,
+      location: meetLink,
+      url: meetLink,
+    });
+
     await mailer.sendMail({
       from: `"Theoremz Black" <${fromUser}>`,
       to: toEmail,
@@ -889,6 +901,13 @@ Username: ${accUsername || "—"}
       text,
       html,
       replyTo: replyEmail,
+      attachments: [
+        {
+          filename: "call-theoremz.ics",
+          content: internalIcs,
+          contentType: "text/calendar; charset=utf-8",
+        },
+      ],
     });
 
     const confirmationEmail = (replyEmail || accEmail || "").trim();

@@ -7,6 +7,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { formatRomeYmd, romeDateToUtc } from "@/lib/rome-time";
+import {
+  bookingIsoFromParts,
+  bookingIsoToParts,
+  bookingNowMs,
+  formatBookingDate,
+  formatBookingDateTime,
+  formatBookingTime,
+} from "@/lib/booking-time";
 import { getAuth } from "firebase/auth";
 import {
   PlayCircle,
@@ -891,7 +899,7 @@ export default function AccountPage() {
       if (s.email) studentIdByEmail.set(s.email.toLowerCase(), s.id);
       remainingByStudent.set(s.id, getStudentRemainingMinutes(s));
     });
-    const now = Date.now();
+    const now = bookingNowMs();
     const grouped = new Map<string, any[]>();
     bookings.forEach((bk) => {
       const status = String(bk?.status || "confirmed").toLowerCase();
@@ -977,10 +985,10 @@ export default function AccountPage() {
     if (schedulePast) return false;
     if (!selectedScheduleStudent) return false;
     if (!scheduleDate || !scheduleTime) return false;
-    const draftDate = new Date(`${scheduleDate}T${scheduleTime}:00`);
-    if (Number.isNaN(draftDate.getTime())) return false;
-    const draftMs = draftDate.getTime();
-    if (draftMs < Date.now()) return false;
+    const draftIso = bookingIsoFromParts(scheduleDate, scheduleTime);
+    if (!draftIso) return false;
+    const draftMs = new Date(draftIso).getTime();
+    if (draftMs < bookingNowMs()) return false;
     const studentId = selectedScheduleStudent.id;
     const bookings = Array.isArray(tutorData?.bookings)
       ? tutorData.bookings
@@ -989,7 +997,7 @@ export default function AccountPage() {
       const status = String(bk?.status || "confirmed").toLowerCase();
       if (status === "completed" || status === "cancelled") return false;
       const startMs = getBookingStartMs(bk);
-      if (startMs == null || startMs < Date.now()) return false;
+      if (startMs == null || startMs < bookingNowMs()) return false;
       if (bk?.studentId === studentId) return true;
       const studentEmail = selectedScheduleStudent.email
         ? selectedScheduleStudent.email.toLowerCase()
@@ -999,7 +1007,7 @@ export default function AccountPage() {
     });
     const draftBooking = {
       __draft: true,
-      startsAt: draftDate.toISOString(),
+      startsAt: draftIso,
       durationMin: DEFAULT_DURATION_MIN,
     };
     const sorted = [...futureBookings, draftBooking].sort((a: any, b: any) => {
@@ -1061,11 +1069,7 @@ export default function AccountPage() {
   const openEditBooking = useCallback(
     (booking: any) => {
       if (!booking) return;
-      const startDate = booking.startsAt ? new Date(booking.startsAt) : null;
-      const fallbackDate =
-        startDate && !Number.isNaN(startDate.getTime())
-          ? ymd(startDate)
-          : todayYmd;
+      const fallbackDate = bookingIsoToParts(booking.startsAt).date || todayYmd;
       setScheduleMode("edit");
       setEditingBooking(booking);
       setScheduleStudentId(booking.studentId || "");
@@ -1079,14 +1083,11 @@ export default function AccountPage() {
   );
 
   const handleScheduleSubmit = useCallback(async () => {
-    const parsedDate = new Date(
-      `${scheduleDate}T${scheduleTime || "00:00"}:00`
-    );
-    if (Number.isNaN(parsedDate.getTime())) {
+    const iso = bookingIsoFromParts(scheduleDate, scheduleTime || "00:00");
+    if (!iso) {
       setScheduleError("Inserisci data e ora valide");
       return;
     }
-    const iso = parsedDate.toISOString();
     setScheduleSaving(true);
     setScheduleError(null);
     try {
@@ -3107,10 +3108,7 @@ function formatDate(d: Date) {
 }
 
 function formatDateTimeLabel(input?: string | null) {
-  if (!input) return "—";
-  const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("it-IT", {
+  return formatBookingDateTime(input, {
     weekday: "short",
     day: "2-digit",
     month: "short",
@@ -3140,15 +3138,14 @@ function formatEuro(val?: number | null) {
 
 function formatTutorDayLabel(input?: string | null) {
   if (!input) return { key: "n.d.", label: "Data non disponibile" };
-  const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return { key: input, label: input };
-  const key = formatRomeYmd(d);
-  const label = d.toLocaleDateString("it-IT", {
+  const parts = bookingIsoToParts(input);
+  if (!parts.date) return { key: input, label: input };
+  const label = formatBookingDate(input, {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
-  return { key, label };
+  return { key: parts.date, label: capitalize(label) };
 }
 
 function formatTutorTimeRange(
@@ -3160,11 +3157,10 @@ function formatTutorTimeRange(
   if (Number.isNaN(start.getTime())) return "Orario non disponibile";
   const dur = Number(durationMin) > 0 ? Number(durationMin) : 30;
   const end = new Date(start.getTime() + dur * 60_000);
-  const opts: Intl.DateTimeFormatOptions = {
-    hour: "2-digit",
-    minute: "2-digit",
-  };
-  return `${start.toLocaleTimeString("it-IT", opts)} - ${end.toLocaleTimeString("it-IT", opts)}`;
+  const startLabel = formatBookingTime(start.toISOString());
+  const endLabel = formatBookingTime(end.toISOString());
+  if (startLabel === "—" || endLabel === "—") return "Orario non disponibile";
+  return `${startLabel} - ${endLabel}`;
 }
 
 /* ────────────────────── icons ────────────────────── */
@@ -4242,10 +4238,7 @@ function buildAvailabilityCalendar(
 }
 
 function toInputTime(iso?: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return bookingIsoToParts(iso).time;
 }
 
 function monthMatrix(year: number, month: number) {

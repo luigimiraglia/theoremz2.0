@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { supabaseServer } from "@/lib/supabase";
+import { addRomeDays, formatRomeYmd } from "@/lib/rome-time";
+import {
+  bookingIsoToParts,
+  formatBookingDate,
+  formatBookingDateTime,
+  formatBookingTime,
+} from "@/lib/booking-time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
-const ROME_TZ = "Europe/Rome";
-
 type BookingRow = {
   id: string;
   full_name: string;
@@ -100,9 +105,7 @@ function buildTransport() {
 }
 
 function formatRome(iso: string) {
-  const date = new Date(iso);
-  return date.toLocaleString("it-IT", {
-    timeZone: ROME_TZ,
+  return formatBookingDateTime(iso, {
     weekday: "long",
     day: "2-digit",
     month: "2-digit",
@@ -126,22 +129,14 @@ function diffHuman(iso: string) {
 }
 
 function dayPhrase(iso: string) {
-  const now = new Date();
-  const start = new Date(iso);
-  const nowDate = new Date(now.toLocaleString("en-US", { timeZone: ROME_TZ }));
-  const startDate = new Date(start.toLocaleString("en-US", { timeZone: ROME_TZ }));
-  const diffDays = Math.floor(
-    (startDate.setHours(0, 0, 0, 0) - nowDate.setHours(0, 0, 0, 0)) / 86400000,
-  );
-  const hourLabel = start
-    .toLocaleTimeString("it-IT", { timeZone: ROME_TZ, hour: "2-digit", minute: "2-digit" })
-    .replace(":00", "");
-  if (diffDays === 0) return `oggi alle ${hourLabel}`;
-  if (diffDays === 1) return `domani alle ${hourLabel}`;
-  const weekday = start.toLocaleDateString("it-IT", {
-    timeZone: ROME_TZ,
-    weekday: "long",
-  });
+  const parts = bookingIsoToParts(iso);
+  if (!parts.date) return "giorno non disponibile";
+  const today = formatRomeYmd();
+  const tomorrow = addRomeDays(today, 1);
+  const hourLabel = formatBookingTime(iso).replace(":00", "");
+  if (parts.date === today) return `oggi alle ${hourLabel}`;
+  if (parts.date === tomorrow) return `domani alle ${hourLabel}`;
+  const weekday = formatBookingDate(iso, { weekday: "long" });
   return `${weekday} alle ${hourLabel}`;
 }
 

@@ -6,6 +6,13 @@ import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { ArrowRight, ListFilter, MessageCircle } from "lucide-react";
 import { addRomeDays, formatRomeYmd } from "@/lib/rome-time";
+import {
+  bookingIsoFromParts,
+  bookingIsoToParts,
+  bookingNowMs,
+  formatBookingDate,
+  formatBookingTime,
+} from "@/lib/booking-time";
 
 type Booking = {
   id: string;
@@ -1045,7 +1052,7 @@ export default function WhatsAppAdmin() {
   }, [bookings]);
 
   const upcomingBookings = useMemo(() => {
-    const now = Date.now();
+    const now = bookingNowMs();
     return bookings.filter((b) => {
       if (!b?.startsAt) return false;
       const startMs = new Date(b.startsAt).getTime();
@@ -1297,19 +1304,10 @@ export default function WhatsAppAdmin() {
     }
   };
 
-  const formatDateLabel = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleDateString("it-IT", {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-    });
-  };
+  const formatDateLabel = (iso: string) =>
+    formatBookingDate(iso, { weekday: "short", day: "2-digit", month: "short" });
 
-  const formatTime = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
-  };
+  const formatTime = (iso: string) => formatBookingTime(iso);
 
   const openBookingEditor = (booking?: Booking | null) => {
     const { date, time } = isoToLocalParts(booking?.startsAt);
@@ -3074,24 +3072,11 @@ function formatAbsolute(input?: string | null) {
 }
 
 function isoToLocalParts(iso?: string | null) {
-  if (!iso) return { date: "", time: "" };
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return { date: "", time: "" };
-  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate(),
-  ).padStart(2, "0")}`;
-  const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(
-    2,
-    "0",
-  )}`;
-  return { date, time };
+  return bookingIsoToParts(iso);
 }
 
 function localPartsToIso(date: string, time: string) {
-  if (!date || !time) return null;
-  const d = new Date(`${date}T${time}:00`);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
+  return bookingIsoFromParts(date, time);
 }
 
 function ProfileModal({
