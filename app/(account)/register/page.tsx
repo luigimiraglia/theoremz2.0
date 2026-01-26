@@ -100,19 +100,37 @@ export default function Register() {
   async function handleForgotPassword() {
     setError(null);
     setInfo(null);
-    if (!email) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
       setError("Inserisci l'email per reimpostare la password.");
       return;
     }
     try {
       setLoading(true);
-      await sendPasswordResetEmail(auth, email.trim().toLowerCase(), {
-        url: `${window.location.origin}/reset-password`,
-        handleCodeInApp: true,
-      });
+      const apiResult = await requestPasswordResetViaApi(normalizedEmail);
+      if (!apiResult.ok) {
+        if (shouldFallbackToFirebase(apiResult.error)) {
+          const resetUrl = getPasswordResetUrl();
+          await sendPasswordResetEmail(auth, normalizedEmail, {
+            url: resetUrl,
+            handleCodeInApp: true,
+          });
+        } else {
+          setError(
+            humanizeFirebaseError(apiResult.error) ||
+              "Non riesco a inviare l'email di reset."
+          );
+          return;
+        }
+      }
       setInfo("Email inviata: controlla la posta per reimpostare la password.");
     } catch (err: any) {
-      setError(err?.message || "Non riesco a inviare l'email di reset.");
+      const code = err?.code as string | undefined;
+      setError(
+        humanizeFirebaseError(code) ||
+          err?.message ||
+          "Non riesco a inviare l'email di reset."
+      );
     } finally {
       setLoading(false);
     }
@@ -254,4 +272,71 @@ export default function Register() {
       </div>
     </div>
   );
+}
+
+function getPasswordResetUrl() {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+  return `${baseUrl.replace(/\/$/, "")}/reset-password`;
+}
+
+type ResetApiResult = { ok: true } | { ok: false; error: string };
+
+async function requestPasswordResetViaApi(
+  email: string
+): Promise<ResetApiResult> {
+  try {
+    const res = await fetch("/api/auth/password-reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (res.ok) return { ok: true };
+    let data: { error?: string } | null = null;
+    try {
+      data = (await res.json()) as { error?: string };
+    } catch {
+      data = null;
+    }
+    return { ok: false, error: data?.error || "request_failed" };
+  } catch {
+    return { ok: false, error: "request_failed" };
+  }
+}
+
+function shouldFallbackToFirebase(error?: string) {
+  return (
+    error === "missing_email_config" ||
+    error === "send_failed" ||
+    error === "admin_error" ||
+    error === "server_error" ||
+    error === "request_failed"
+  );
+}
+
+function humanizeFirebaseError(code?: string) {
+  switch (code) {
+    case "auth/user-not-found":
+      return "Nessun account con questa email.";
+    case "auth/invalid-email":
+      return "Email non valida.";
+    case "auth/too-many-requests":
+      return "Troppi tentativi. Riprova tra qualche minuto.";
+    case "auth/unauthorized-continue-uri":
+    case "auth/invalid-continue-uri":
+    case "auth/missing-continue-uri":
+      return "Link di reset non valido. Contatta l'assistenza.";
+    case "auth/operation-not-allowed":
+      return "Reset password non abilitato. Contatta l'assistenza.";
+    case "missing_email_config":
+      return "Servizio email non configurato. Contatta l'assistenza.";
+    case "send_failed":
+    case "admin_error":
+    case "server_error":
+      return "Non riesco a inviare l'email di reset.";
+    case "request_failed":
+      return "Connessione assente o instabile. Riprova.";
+    default:
+      return "";
+  }
 }
