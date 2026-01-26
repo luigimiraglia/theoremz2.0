@@ -419,9 +419,12 @@ export default function AccountPage() {
     >();
     availSlots.forEach((slot) => {
       const slotTs = slot?.starts_at || slot?.startsAt;
-      const slotDate = slotTs ? new Date(slotTs) : null;
-      if (!slotDate || Number.isNaN(slotDate.getTime())) return;
-      const key = ymd(slotDate);
+      const slotIso = typeof slotTs === "string" ? slotTs : null;
+      const parts = bookingIsoToParts(slotIso);
+      if (!parts.date || !parts.time) return;
+      const [hours, minutes] = parts.time.split(":").map((v) => Number(v));
+      if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return;
+      const key = parts.date;
       if (!key) return;
       const durationRaw = Number(
         slot?.duration_min ?? slot?.durationMin ?? DEFAULT_DURATION_MIN
@@ -430,14 +433,12 @@ export default function AccountPage() {
         Number.isFinite(durationRaw) && durationRaw > 0
           ? durationRaw
           : DEFAULT_DURATION_MIN;
-      const startMinutes = slotDate.getHours() * 60 + slotDate.getMinutes();
+      const startMinutes = hours * 60 + minutes;
       const rawEndMinutes = startMinutes + durationMin;
       const endMinutes = Math.min(24 * 60, Math.max(startMinutes, rawEndMinutes));
       const clampedDuration = Math.max(1, endMinutes - startMinutes);
-      const label = slotDate.toLocaleTimeString("it-IT", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      let label = slotIso ? formatBookingTime(slotIso) : parts.time;
+      if (label === "—") label = parts.time;
       const id =
         slot?.id != null
           ? String(slot.id)
@@ -1443,6 +1444,17 @@ export default function AccountPage() {
     () => tutorGrouped.find((g) => g.key === selectedTutorDay) || null,
     [tutorGrouped, selectedTutorDay]
   );
+  const selectedTutorGroupDateLabel = useMemo(() => {
+    if (!selectedTutorGroup?.key) return null;
+    const iso =
+      bookingIsoFromParts(selectedTutorGroup.key, "12:00") ||
+      selectedTutorGroup.key;
+    return formatBookingDate(iso, {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  }, [selectedTutorGroup?.key]);
 
   const handleTutorMonthChange = (delta: number) => {
     setTutorCalendarMonth((prev) => {
@@ -1955,14 +1967,7 @@ export default function AccountPage() {
                 </div>
                 {selectedTutorGroup ? (
                   <div className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-200">
-                    {new Date(selectedTutorGroup.key).toLocaleDateString(
-                      "it-IT",
-                      {
-                        day: "2-digit",
-                        month: "long",
-                        year: "numeric",
-                      }
-                    )}
+                    {selectedTutorGroupDateLabel}
                   </div>
                 ) : null}
               </div>

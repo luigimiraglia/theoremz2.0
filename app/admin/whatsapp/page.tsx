@@ -1042,11 +1042,11 @@ export default function WhatsAppAdmin() {
   const bookingMap = useMemo(() => {
     const m = new Map<string, Booking[]>();
     bookings.forEach((b) => {
-      const day = b.startsAt?.split("T")[0];
-      if (!day) return;
-      const list = m.get(day) || [];
+      const { date } = bookingIsoToParts(b.startsAt);
+      if (!date) return;
+      const list = m.get(date) || [];
       list.push(b);
-      m.set(day, list);
+      m.set(date, list);
     });
     return m;
   }, [bookings]);
