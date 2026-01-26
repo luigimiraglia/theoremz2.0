@@ -67,17 +67,49 @@ const sections = [
 ];
 
 const testimonianze = [
-  "/images/test1.jpeg",
-  "/images/test2.jpeg",
-  "/images/test3.png",
-  "/images/test4.png",
-  "/images/test6.png",
   "/images/test7.png",
-  "/images/test8.png",
+  "/images/test2.jpeg",
+  "/images/test11.jpeg",
+  "/images/test4.png",
   "/images/test9.png",
+  "/images/test1.jpeg",
+  "/images/test5.png",
   "/images/test10.png",
+  "/images/test3.jpeg",
+  "/images/test8.png",
   "/images/test11.png",
+  "/images/test6.png",
 ];
+
+const testimonianzeOrizzontali = new Set([
+  "/images/test3.jpeg",
+  "/images/test5.png",
+]);
+
+type TestimonianzaProps = {
+  src: string;
+  alt: string;
+  className: string;
+};
+
+function Testimonianza({ src, alt, className }: TestimonianzaProps) {
+  if (!testimonianzeOrizzontali.has(src)) {
+    return <img src={src} alt={alt} className={`h-auto ${className}`} />;
+  }
+
+  return (
+    <div
+      className={`aspect-[3/4] overflow-hidden bg-black ${className}`}
+      aria-label={alt}
+    >
+      <img
+        src={src}
+        alt={alt}
+        className="h-full w-full object-contain object-center"
+      />
+    </div>
+  );
+}
 
 export default function MetodoTheoremzPage() {
   return (
@@ -138,50 +170,50 @@ export default function MetodoTheoremzPage() {
                 <div className="w-full overflow-hidden testimonianze-fade hidden sm:block">
                   <div className="flex w-max items-center testimonianze-track">
                     <div className="flex gap-[6vw] pr-[6vw] sm:gap-4 sm:pr-4">
-                      {testimonianze.map((src, idx) => (
-                        <img
-                          key={`testimonianza-${idx}`}
-                          src={src}
-                          alt="Testimonianza"
-                          className="h-auto w-[78vw] max-w-[320px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
-                        />
-                      ))}
-                    </div>
-                    <div
-                      className="flex gap-[6vw] pr-[6vw] sm:gap-4 sm:pr-4"
-                      aria-hidden="true"
-                    >
-                      {testimonianze.map((src, idx) => (
-                        <img
-                          key={`testimonianza-dup-${idx}`}
-                          src={src}
-                          alt=""
-                          className="h-auto w-[78vw] max-w-[320px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
-                        />
-                      ))}
-                    </div>
+                    {testimonianze.map((src, idx) => (
+                      <Testimonianza
+                        key={`testimonianza-${idx}`}
+                        src={src}
+                        alt="Testimonianza"
+                        className="w-[78vw] max-w-[320px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
+                      />
+                    ))}
+                  </div>
+                  <div
+                    className="flex gap-[6vw] pr-[6vw] sm:gap-4 sm:pr-4"
+                    aria-hidden="true"
+                  >
+                    {testimonianze.map((src, idx) => (
+                      <Testimonianza
+                        key={`testimonianza-dup-${idx}`}
+                        src={src}
+                        alt=""
+                        className="w-[78vw] max-w-[320px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
+                      />
+                    ))}
                   </div>
                 </div>
+              </div>
                 <div className="w-full sm:hidden">
                   <div className="mx-auto w-[90vw] overflow-hidden testimonianze-fade">
                     <div className="flex w-max items-center testimonianze-track testimonianze-track-mobile">
                       <div className="flex gap-[6vw] pr-[6vw]">
                         {testimonianze.map((src, idx) => (
-                          <img
+                          <Testimonianza
                             key={`testimonianza-mobile-${idx}`}
                             src={src}
                             alt="Testimonianza"
-                            className="h-auto w-[90vw] shrink-0 rounded-2xl"
+                            className="w-[90vw] shrink-0 rounded-2xl"
                           />
                         ))}
                       </div>
                       <div className="flex gap-[6vw] pr-[6vw]" aria-hidden="true">
                         {testimonianze.map((src, idx) => (
-                          <img
+                          <Testimonianza
                             key={`testimonianza-mobile-dup-${idx}`}
                             src={src}
                             alt=""
-                            className="h-auto w-[90vw] shrink-0 rounded-2xl"
+                            className="w-[90vw] shrink-0 rounded-2xl"
                           />
                         ))}
                       </div>
@@ -1283,11 +1315,11 @@ export default function MetodoTheoremzPage() {
               </div>
               <div className="flex flex-wrap justify-center gap-4">
                 {testimonianze.map((src, idx) => (
-                  <img
+                  <Testimonianza
                     key={`gallery-${idx}`}
                     src={src}
                     alt={`Testimonianza ${idx + 1}`}
-                    className="h-auto w-[80vw] max-w-[320px] rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
+                    className="w-[80vw] max-w-[320px] rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
                   />
                 ))}
               </div>
