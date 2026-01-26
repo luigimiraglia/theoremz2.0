@@ -222,16 +222,29 @@ export default function MetodoTheoremzPage() {
                   </div>
                 </div>
                 <style>{`
-                  @keyframes testimonianze-scroll {
+                  @-webkit-keyframes testimonianze-scroll {
                     0% {
-                      transform: translateX(0);
+                      -webkit-transform: translate3d(0, 0, 0);
+                      transform: translate3d(0, 0, 0);
                     }
                     100% {
-                      transform: translateX(-50%);
+                      -webkit-transform: translate3d(-50%, 0, 0);
+                      transform: translate3d(-50%, 0, 0);
+                    }
+                  }
+                  @keyframes testimonianze-scroll {
+                    0% {
+                      transform: translate3d(0, 0, 0);
+                    }
+                    100% {
+                      transform: translate3d(-50%, 0, 0);
                     }
                   }
                   .testimonianze-track {
                     animation: testimonianze-scroll 28s linear infinite;
+                    backface-visibility: hidden;
+                    -webkit-backface-visibility: hidden;
+                    will-change: transform;
                   }
                   .testimonianze-track-mobile {
                     animation-duration: 24s;
@@ -280,7 +293,7 @@ export default function MetodoTheoremzPage() {
                     .testimonianze-track,
                     .testimonianze-track-mobile {
                       animation: none;
-                      transform: translateX(0);
+                      transform: translate3d(0, 0, 0);
                     }
                   }
                   @media (min-width: 640px) {
