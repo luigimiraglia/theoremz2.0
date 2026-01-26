@@ -1177,32 +1177,32 @@ export default function MetodoTheoremzPage() {
             {
               title: "Supporto WhatsApp",
               body: "Quando lo studente si blocca, interveniamo subito. Cos\u00ec il problema non cresce e lo studio non si interrompe.",
-              image: "/images/mocky1.png",
+              image: "/images/mocky1.webp",
             },
             {
               title: "Tracking voti",
               body: "Tutti i voti e le verifiche sono monitorati. Sai sempre se la situazione sta migliorando o no.",
-              image: "/images/mocky2.png",
+              image: "/images/mocky2.webp",
             },
             {
               title: "Simulazioni verifiche",
               body: "Lo studente si allena prima della prova reale. Arriva pi\u00f9 sicuro e con meno stress.",
-              image: "/images/mocky3.png",
+              image: "/images/mocky3.webp",
             },
             {
               title: "Esercizi spiegati",
               body: "Ogni esercizio mostra il ragionamento completo. Serve per allenarsi anche quando finiscono i compiti.",
-              image: "/images/mocky4.png",
+              image: "/images/mocky4.webp",
             },
             {
               title: "Lezioni on-demand",
               body: "Per ripassare gli argomenti quando serve. Senza dipendere dagli orari di qualcuno.",
-              image: "/images/mocky5.png",
+              image: "/images/mocky5.webp",
             },
             {
               title: "Materiali guidati",
               body: "Schemi, procedure e checklist operative. Per sapere sempre come partire e non bloccarsi.",
-              image: "/images/mocky6.png",
+              image: "/images/mocky6.webp",
             },
           ];
           content = (

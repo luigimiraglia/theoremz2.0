@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
     
     const mentorPageEvents = events?.filter(e => 
       e.event_type === 'page_view' && 
-      e.page_url?.includes('/mentor') &&
+      e.page_url?.includes('/ilmetodotheoremz') &&
       (funnelSessions.has(e.session_id) || segmentationSessions.has(e.session_id))
     ) || [];
     
@@ -205,7 +205,7 @@ export async function GET(request: NextRequest) {
         if (event.page_url?.includes('/black')) {
           dailyData[date].blackVisits++;
         }
-        if (event.page_url?.includes('/mentor')) {
+        if (event.page_url?.includes('/ilmetodotheoremz')) {
           dailyData[date].mentorVisits++;
         }
         if (event.page_url?.includes('quiz') || event.page_url?.includes('funnel')) {

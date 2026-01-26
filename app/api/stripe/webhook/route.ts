@@ -2025,7 +2025,7 @@ function buildMentorTemplate(isParent: boolean) {
       "",
       "Il programma Mentor è pensato per chi vuole risultati visibili e un metodo personale, non standard.",
       "",
-      "Puoi attivare subito il percorso qui: theoremz.com/mentor",
+      "Puoi attivare subito il percorso qui: theoremz.com/ilmetodotheoremz",
       "Dopo l'attivazione ti scrivo io per programmare la prima lezione e il piano di studio.",
     ].join("\n");
   }
@@ -2045,7 +2045,7 @@ function buildMentorTemplate(isParent: boolean) {
     "",
     "Il programma Mentor è pensato per chi vuole risultati visibili e un metodo personale, non standard.",
     "",
-    "Puoi attivare subito il tuo percorso qui: theoremz.com/mentor",
+    "Puoi attivare subito il tuo percorso qui: theoremz.com/ilmetodotheoremz",
     "Dopo l'attivazione ti scrivo io per programmare la prima lezione e il piano di studio.",
   ].join("\n");
 }

@@ -21,7 +21,7 @@ export default function BlackStickyPromo() {
     // Do not show on sales pages and lead form page
     if (
       p.startsWith("/black") ||
-      p.startsWith("/mentor") ||
+      p.startsWith("/ilmetodotheoremz") ||
       p.startsWith("/contatto-rapido")
     )
       return false;

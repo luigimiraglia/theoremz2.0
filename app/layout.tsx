@@ -185,7 +185,7 @@ export default async function RootLayout({
                 </Suspense>
 
                 <div className="mt-24 md:mt-24">
-                  {/* Banner Black (client) — mostra solo se non abbonato; escluso /black, /mentor e /contatto-rapido */}
+                  {/* Banner Black (client) — mostra solo se non abbonato; escluso /black, /ilmetodotheoremz e /contatto-rapido */}
                   <Suspense fallback={null}>
                     <BlackPromoBanner />
                   </Suspense>

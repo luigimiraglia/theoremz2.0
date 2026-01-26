@@ -37,7 +37,7 @@ Altri comandi legacy: `/chat` (ultimi messaggi WA per studente), `/logs`, `/chec
 
 ## Bot Sales (prospect/altro)
 - Metodo Straight Line: prima raccoglie dati (classe, materia, prossima verifica/obiettivo, difficoltà, autonomia). Se mancano info, fa 1–2 domande, niente proposta.
-- Quando propone: UN solo piano (Essential OPPURE Black OPPURE Mentor), con max 5–6 righe separate da righe vuote: sintesi + perk chiave + link (Essential/Black: theoremz.com/black; Mentor: theoremz.com/mentor) + follow-up breve.
+- Quando propone: UN solo piano (Essential OPPURE Black OPPURE Mentor), con max 5–6 righe separate da righe vuote: sintesi + perk chiave + link (Essential/Black: theoremz.com/black; Mentor: theoremz.com/ilmetodotheoremz) + follow-up breve.
 - Prompt include descrizione completa dei tre livelli (Essential: risorse + AI + risolutore illimitato; Black: Essential + tutor umano in chat, onboarding, piano, 1 domanda/sett.; Mentor: Black + lezioni 1:1 settimanali, supervisione continua).
 - Usa cronologia per ricordare preferenze/obiettivi e riprendere la vendita da dove era rimasta.
 

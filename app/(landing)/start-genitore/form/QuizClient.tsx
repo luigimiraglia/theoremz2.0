@@ -63,7 +63,7 @@ const PLANS = {
     description:
       "Un insegnante 1:1 segue tuo figlio ogni settimana con lezioni dedicate, report e coaching motivazionale.",
     ctaLabel: "Vai al piano Mentor",
-    href: "/mentor",
+    href: "/ilmetodotheoremz",
     highlight: "Lezioni individuali + follow-up alla famiglia",
   },
   black: {

@@ -102,7 +102,7 @@ const actions: Action[] = [
     variant: "secondary",
   },
   {
-    href: "/mentor",
+    href: "/ilmetodotheoremz",
     label: "Lavora 1:1 con un Mentor",
     emoji: "",
     gradient: "from-amber-400 via-orange-500 to-rose-500",

@@ -45,7 +45,7 @@ export default function TutorHero() {
           {/* CTA */}
           <div className="mt-4">
             <Link
-              href="/mentor"
+              href="/ilmetodotheoremz"
               className="inline-flex items-center justify-center rounded-2xl w-full md:w-fit bg-blue-600 px-7 py-4 text-[18px] font-extrabold text-white shadow-[0_6px_0_#1d4ed8] transition active:translate-y-[1px] active:shadow-[0_5px_0_#1d4ed8]"
             >
               Scopri di più

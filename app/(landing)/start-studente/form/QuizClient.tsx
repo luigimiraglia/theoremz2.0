@@ -63,7 +63,7 @@ const PLANS = {
     description:
       "Un insegnante dedica una lezione 1:1 ogni settimana per costruire un percorso su misura verso i voti più alti.",
     ctaLabel: "Vai al piano Mentor",
-    href: "/mentor",
+    href: "/ilmetodotheoremz",
     highlight: "Lezioni 1:1 + percorso personalizzato",
   },
   black: {
