@@ -67,23 +67,24 @@ const sections = [
 ];
 
 const testimonianze = [
-  "/images/test7.png",
-  "/images/test2.jpeg",
-  "/images/test11.jpeg",
-  "/images/test4.png",
-  "/images/test9.png",
-  "/images/test1.jpeg",
-  "/images/test5.png",
-  "/images/test10.png",
-  "/images/test3.jpeg",
-  "/images/test8.png",
-  "/images/test11.png",
-  "/images/test6.png",
+  "/images/test7.webp",
+  "/images/test2.webp",
+  "/images/test12.webp",
+  "/images/test4.webp",
+  "/images/test9.webp",
+  "/images/test1.webp",
+  "/images/test5.webp",
+  "/images/test10.webp",
+  "/images/test3.webp",
+  "/images/test8.webp",
+  "/images/test13.webp",
+  "/images/test6.webp",
 ];
 
 const testimonianzeOrizzontali = new Set([
-  "/images/test3.jpeg",
-  "/images/test5.png",
+  "/images/test3.webp",
+  "/images/test5.webp",
+  "/images/test12.webp",
 ]);
 
 type TestimonianzaProps = {
@@ -153,7 +154,7 @@ export default function MetodoTheoremzPage() {
               </div>
               <div
                 className="hidden min-h-[420px] w-full max-w-[52rem] bg-cover bg-center bg-no-repeat sm:block lg:min-h-[620px]"
-                style={{ backgroundImage: "url('/images/avaluigis.png')" }}
+                style={{ backgroundImage: "url('/images/avaluigis.webp')" }}
                 aria-label="Immagine hero"
               />
             </div>
@@ -349,7 +350,7 @@ export default function MetodoTheoremzPage() {
                   <br />
                   <div
                     className={`mt-4 w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat lg:hidden ${panelClass}`}
-                    style={{ backgroundImage: "url('/images/verifica.png')" }}
+                    style={{ backgroundImage: "url('/images/verifica.webp')" }}
                     role="img"
                     aria-label="Immagine verifica"
                   />
@@ -394,7 +395,7 @@ export default function MetodoTheoremzPage() {
                 <div className="hidden lg:ml-12 lg:mr-8 lg:block lg:flex-none lg:w-[420px]">
                   <div
                     className={`w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat ${panelClass}`}
-                    style={{ backgroundImage: "url('/images/verifica.png')" }}
+                    style={{ backgroundImage: "url('/images/verifica.webp')" }}
                     role="img"
                     aria-label="Immagine verifica"
                   />
@@ -417,7 +418,7 @@ export default function MetodoTheoremzPage() {
                   <div
                     className={`mt-4 w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat lg:hidden ${panelClass}`}
                     style={{
-                      backgroundImage: "url('/images/studentetriste.png')",
+                      backgroundImage: "url('/images/studentetriste.webp')",
                     }}
                     role="img"
                     aria-label="Immagine percorso"
@@ -464,7 +465,7 @@ export default function MetodoTheoremzPage() {
                   <div
                     className={`w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat ${panelClass}`}
                     style={{
-                      backgroundImage: "url('/images/studentetriste.png')",
+                      backgroundImage: "url('/images/studentetriste.webp')",
                     }}
                     role="img"
                     aria-label="Immagine percorso"
@@ -486,7 +487,7 @@ export default function MetodoTheoremzPage() {
                   <br />
                   <div
                     className={`mt-4 w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat lg:hidden ${panelClass}`}
-                    style={{ backgroundImage: "url('/images/verifica.png')" }}
+                    style={{ backgroundImage: "url('/images/verifica.webp')" }}
                     role="img"
                     aria-label="Immagine risultati"
                   />
@@ -525,7 +526,7 @@ export default function MetodoTheoremzPage() {
                 <div className="hidden lg:block lg:ml-12 lg:flex-none lg:w-[420px]">
                   <div
                     className={`w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat ${panelClass}`}
-                    style={{ backgroundImage: "url('/images/verifica.png')" }}
+                    style={{ backgroundImage: "url('/images/verifica.webp')" }}
                     role="img"
                     aria-label="Immagine risultati"
                   />
@@ -550,7 +551,7 @@ export default function MetodoTheoremzPage() {
                 <div className="flex-1 lg:flex-none lg:w-[520px]">
                   <div
                     className="w-full aspect-[3/4] overflow-hidden rounded-2xl bg-cover bg-center bg-no-repeat"
-                    style={{ backgroundImage: "url('/images/avaluigis.png')" }}
+                    style={{ backgroundImage: "url('/images/avaluigis.webp')" }}
                     role="img"
                     aria-label="Immagine introduzione"
                   />
@@ -733,7 +734,7 @@ export default function MetodoTheoremzPage() {
                 <div className="w-full lg:flex-1">
                   <div
                     className="w-full aspect-[3/4] rounded-2xl bg-cover bg-center bg-no-repeat"
-                    style={{ backgroundImage: "url('/images/avaluigis.png')" }}
+                    style={{ backgroundImage: "url('/images/avaluigis.webp')" }}
                     role="img"
                     aria-label="Immagine studente"
                   />
