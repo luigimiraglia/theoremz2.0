@@ -224,23 +224,25 @@ export default function MetodoTheoremzPage() {
                 <style>{`
                   @-webkit-keyframes testimonianze-scroll {
                     0% {
-                      -webkit-transform: translate3d(0, 0, 0);
-                      transform: translate3d(0, 0, 0);
+                      -webkit-transform: translateX(0);
+                      transform: translateX(0);
                     }
                     100% {
-                      -webkit-transform: translate3d(-50%, 0, 0);
-                      transform: translate3d(-50%, 0, 0);
+                      -webkit-transform: translateX(-50%);
+                      transform: translateX(-50%);
                     }
                   }
                   @keyframes testimonianze-scroll {
                     0% {
-                      transform: translate3d(0, 0, 0);
+                      transform: translateX(0);
                     }
                     100% {
-                      transform: translate3d(-50%, 0, 0);
+                      transform: translateX(-50%);
                     }
                   }
                   .testimonianze-track {
+                    display: inline-flex;
+                    flex-wrap: nowrap;
                     -webkit-animation: testimonianze-scroll 28s linear infinite;
                     animation: testimonianze-scroll 28s linear infinite;
                     backface-visibility: hidden;
@@ -248,6 +250,7 @@ export default function MetodoTheoremzPage() {
                     will-change: transform;
                   }
                   .testimonianze-track-mobile {
+                    -webkit-animation-duration: 24s;
                     animation-duration: 24s;
                   }
                   .testimonianze-fade {
@@ -283,9 +286,11 @@ export default function MetodoTheoremzPage() {
                   }
                   @media (max-width: 639px) {
                     .testimonianze-track {
+                      -webkit-animation-duration: 36s;
                       animation-duration: 36s;
                     }
                     .testimonianze-track-mobile {
+                      -webkit-animation-duration: 26s;
                       animation-duration: 26s;
                     }
                     .testimonianze-fade {
@@ -295,8 +300,10 @@ export default function MetodoTheoremzPage() {
                   @media (prefers-reduced-motion: reduce) {
                     .testimonianze-track,
                     .testimonianze-track-mobile {
+                      -webkit-animation: none;
                       animation: none;
-                      transform: translate3d(0, 0, 0);
+                      -webkit-transform: translateX(0);
+                      transform: translateX(0);
                     }
                   }
                   @media (min-width: 640px) {
