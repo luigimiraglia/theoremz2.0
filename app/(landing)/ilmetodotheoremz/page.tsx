@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import CtaModalButton from "./CtaModalButton";
+import TestimonianzeMobileFade from "./TestimonianzeMobileFade";
 
 export const metadata: Metadata = {
   title: "Il Metodo Theoremz",
@@ -196,30 +197,10 @@ export default function MetodoTheoremzPage() {
                 </div>
               </div>
                 <div className="w-full sm:hidden">
-                  <div className="mx-auto w-[90vw] overflow-hidden testimonianze-fade">
-                    <div className="flex w-max items-center testimonianze-track testimonianze-track-mobile">
-                      <div className="flex gap-[6vw] pr-[6vw]">
-                        {testimonianze.map((src, idx) => (
-                          <Testimonianza
-                            key={`testimonianza-mobile-${idx}`}
-                            src={src}
-                            alt="Testimonianza"
-                            className="w-[90vw] shrink-0 rounded-2xl"
-                          />
-                        ))}
-                      </div>
-                      <div className="flex gap-[6vw] pr-[6vw]" aria-hidden="true">
-                        {testimonianze.map((src, idx) => (
-                          <Testimonianza
-                            key={`testimonianza-mobile-dup-${idx}`}
-                            src={src}
-                            alt=""
-                            className="w-[90vw] shrink-0 rounded-2xl"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <TestimonianzeMobileFade
+                    items={testimonianze}
+                    horizontalItems={[...testimonianzeOrizzontali]}
+                  />
                 </div>
                 <style>{`
                   @-webkit-keyframes testimonianze-scroll {
