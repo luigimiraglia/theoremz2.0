@@ -241,6 +241,7 @@ export default function MetodoTheoremzPage() {
                     }
                   }
                   .testimonianze-track {
+                    -webkit-animation: testimonianze-scroll 28s linear infinite;
                     animation: testimonianze-scroll 28s linear infinite;
                     backface-visibility: hidden;
                     -webkit-backface-visibility: hidden;
@@ -250,19 +251,34 @@ export default function MetodoTheoremzPage() {
                     animation-duration: 24s;
                   }
                   .testimonianze-fade {
-                    -webkit-mask-image: linear-gradient(
+                    position: relative;
+                    isolation: isolate;
+                    --fade-size: clamp(20px, 8vw, 72px);
+                  }
+                  .testimonianze-fade::before,
+                  .testimonianze-fade::after {
+                    content: "";
+                    position: absolute;
+                    top: 0;
+                    bottom: 0;
+                    width: var(--fade-size);
+                    z-index: 2;
+                    pointer-events: none;
+                    background: linear-gradient(
                       to right,
-                      transparent,
-                      black 2%,
-                      black 98%,
-                      transparent
+                      #ffffff,
+                      rgba(255, 255, 255, 0)
                     );
-                    mask-image: linear-gradient(
-                      to right,
-                      transparent,
-                      black 2%,
-                      black 98%,
-                      transparent
+                  }
+                  .testimonianze-fade::before {
+                    left: 0;
+                  }
+                  .testimonianze-fade::after {
+                    right: 0;
+                    background: linear-gradient(
+                      to left,
+                      #ffffff,
+                      rgba(255, 255, 255, 0)
                     );
                   }
                   @media (max-width: 639px) {
@@ -273,20 +289,7 @@ export default function MetodoTheoremzPage() {
                       animation-duration: 26s;
                     }
                     .testimonianze-fade {
-                      -webkit-mask-image: linear-gradient(
-                        to right,
-                        transparent,
-                        black 8%,
-                        black 92%,
-                        transparent
-                      );
-                      mask-image: linear-gradient(
-                        to right,
-                        transparent,
-                        black 8%,
-                        black 92%,
-                        transparent
-                      );
+                      --fade-size: clamp(18px, 12vw, 80px);
                     }
                   }
                   @media (prefers-reduced-motion: reduce) {
@@ -298,38 +301,12 @@ export default function MetodoTheoremzPage() {
                   }
                   @media (min-width: 640px) {
                     .testimonianze-fade {
-                      -webkit-mask-image: linear-gradient(
-                        to right,
-                        transparent,
-                        black 6%,
-                        black 94%,
-                        transparent
-                      );
-                      mask-image: linear-gradient(
-                        to right,
-                        transparent,
-                        black 6%,
-                        black 94%,
-                        transparent
-                      );
+                      --fade-size: clamp(24px, 6vw, 96px);
                     }
                   }
                   @media (min-width: 1024px) {
                     .testimonianze-fade {
-                      -webkit-mask-image: linear-gradient(
-                        to right,
-                        transparent,
-                        black 8%,
-                        black 92%,
-                        transparent
-                      );
-                      mask-image: linear-gradient(
-                        to right,
-                        transparent,
-                        black 8%,
-                        black 92%,
-                        transparent
-                      );
+                      --fade-size: clamp(32px, 5vw, 120px);
                     }
                   }
                 `}</style>
