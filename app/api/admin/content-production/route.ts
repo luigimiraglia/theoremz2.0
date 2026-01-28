@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 
 const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
+type ShortVideoStatus = "girato" | "editato" | "pubblicato";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,8 +39,15 @@ function normalizeText(value: unknown) {
   return trimmed ? trimmed : null;
 }
 
-function normalizeStatus(value: unknown) {
-  return value === "completed" ? "completed" : "draft";
+function parseStatus(value: unknown): ShortVideoStatus | null {
+  if (value === "girato" || value === "editato" || value === "pubblicato") return value;
+  if (value === "draft") return "girato";
+  if (value === "completed") return "pubblicato";
+  return null;
+}
+
+function mapStatus(value: unknown): ShortVideoStatus {
+  return parseStatus(value) ?? "girato";
 }
 
 function parseInteger(value: unknown) {
@@ -74,7 +82,7 @@ function mapVideo(row: any) {
     hook: row.hook || null,
     format: row.format || null,
     durationSec: typeof row.duration_sec === "number" ? row.duration_sec : row.duration_sec ?? null,
-    status: row.status === "completed" ? "completed" : "draft",
+    status: mapStatus(row.status),
     createdAt: row.created_at || null,
     updatedAt: row.updated_at || null,
   };
@@ -123,19 +131,36 @@ export async function POST(request: NextRequest) {
   }
 
   const script = normalizeText(body.script);
-  if (!script) {
-    return NextResponse.json({ error: "missing_script" }, { status: 400 });
+  const hook = normalizeText(body.hook);
+  const format = normalizeText(body.format);
+  if (!script || !hook || !format) {
+    return NextResponse.json(
+      { error: "missing_required_fields", details: "script/hook/format" },
+      { status: 400 }
+    );
   }
 
-  const status = normalizeStatus(body.status);
+  const parsedStatus = parseStatus(body.status);
+  if ("status" in body && !parsedStatus) {
+    return NextResponse.json({ error: "invalid_status" }, { status: 400 });
+  }
+  const status = parsedStatus ?? "girato";
+  const durationSec = parseInteger(body.durationSec);
+  const views = parseInteger(body.views);
+  if (status === "pubblicato" && (durationSec === null || views === null)) {
+    return NextResponse.json(
+      { error: "missing_publish_fields", details: "durationSec/views" },
+      { status: 400 }
+    );
+  }
   const payload = {
     script,
-    hook: normalizeText(body.hook),
-    format: normalizeText(body.format),
-    duration_sec: parseInteger(body.durationSec),
-    views: parseInteger(body.views),
+    hook,
+    format,
+    duration_sec: durationSec,
+    views,
     published_at:
-      status === "completed"
+      status === "pubblicato"
         ? normalizeTimestamp(body.publishedAt) || new Date().toISOString()
         : null,
     status,
@@ -175,16 +200,57 @@ export async function PATCH(request: NextRequest) {
   }
 
   const payload: Record<string, any> = {};
-  if ("script" in body) payload.script = normalizeText(body.script);
-  if ("hook" in body) payload.hook = normalizeText(body.hook);
-  if ("format" in body) payload.format = normalizeText(body.format);
+  if ("script" in body) {
+    const script = normalizeText(body.script);
+    if (!script) {
+      return NextResponse.json({ error: "missing_script" }, { status: 400 });
+    }
+    payload.script = script;
+  }
+  if ("hook" in body) {
+    const hook = normalizeText(body.hook);
+    if (!hook) {
+      return NextResponse.json({ error: "missing_hook" }, { status: 400 });
+    }
+    payload.hook = hook;
+  }
+  if ("format" in body) {
+    const format = normalizeText(body.format);
+    if (!format) {
+      return NextResponse.json({ error: "missing_format" }, { status: 400 });
+    }
+    payload.format = format;
+  }
   if ("durationSec" in body) payload.duration_sec = parseInteger(body.durationSec);
   if ("views" in body) payload.views = parseInteger(body.views);
   if ("publishedAt" in body) payload.published_at = normalizeTimestamp(body.publishedAt);
-  if ("status" in body) payload.status = normalizeStatus(body.status);
+  if ("status" in body) {
+    const status = parseStatus(body.status);
+    if (!status) {
+      return NextResponse.json({ error: "invalid_status" }, { status: 400 });
+    }
+    payload.status = status;
+  }
 
-  if (payload.status === "completed" && !("published_at" in payload)) {
-    payload.published_at = new Date().toISOString();
+  if (payload.status === "pubblicato") {
+    if (payload.duration_sec === null || payload.duration_sec === undefined) {
+      return NextResponse.json(
+        { error: "missing_publish_fields", details: "durationSec" },
+        { status: 400 }
+      );
+    }
+    if (payload.views === null || payload.views === undefined) {
+      return NextResponse.json(
+        { error: "missing_publish_fields", details: "views" },
+        { status: 400 }
+      );
+    }
+    if (!("published_at" in payload) || !payload.published_at) {
+      return NextResponse.json(
+        { error: "missing_publish_fields", details: "publishedAt" },
+        { status: 400 }
+      );
+    }
   }
 
   if (!Object.keys(payload).length) {

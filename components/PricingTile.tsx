@@ -49,6 +49,7 @@ export default function PricingTile({
     priceContentByToggleId?.[selectedId] ?? priceContent;
   const priceGradientResolved =
     priceGradientByToggleId?.[selectedId] ?? priceGradient;
+  const showToggle = toggleOptions.length > 1;
 
   return (
     <div className={outerClassName}>
@@ -58,29 +59,31 @@ export default function PricingTile({
         <div className="text-[12px] font-extrabold uppercase tracking-wide">
           {headerLabel}
         </div>
-        <div className="flex items-center">
-          <div className="inline-flex items-center justify-center gap-1 rounded-full border border-white/30 bg-white/15 px-1 py-1 shadow-[0_6px_18px_-10px_rgba(255,255,255,0.9)] backdrop-blur-sm">
-            {toggleOptions.map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setSelectedId(opt.id)}
-                className={`rounded-full px-2 py-1 text-[11px] font-semibold transition ${
-                  selectedId === opt.id
-                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-white/30"
-                    : "text-white/90 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                {opt.label}
-                {opt.desktopNote ? (
-                  <span className="ml-1 hidden text-[10px] font-semibold text-white/90 md:inline">
-                    {opt.desktopNote}
-                  </span>
-                ) : null}
-              </button>
-            ))}
+        {showToggle ? (
+          <div className="flex items-center">
+            <div className="inline-flex items-center justify-center gap-1 rounded-full border border-white/30 bg-white/15 px-1 py-1 shadow-[0_6px_18px_-10px_rgba(255,255,255,0.9)] backdrop-blur-sm">
+              {toggleOptions.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setSelectedId(opt.id)}
+                  className={`rounded-full px-2 py-1 text-[11px] font-semibold transition ${
+                    selectedId === opt.id
+                      ? "bg-white text-slate-900 shadow-sm ring-1 ring-white/30"
+                      : "text-white/90 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {opt.label}
+                  {opt.desktopNote ? (
+                    <span className="ml-1 hidden text-[10px] font-semibold text-white/90 md:inline">
+                      {opt.desktopNote}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
 
       <div className="mt-2 overflow-hidden rounded-[22px] bg-white shadow-sm">

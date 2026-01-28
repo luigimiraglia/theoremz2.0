@@ -15,17 +15,15 @@ import {
   Star,
   Users,
 } from "lucide-react";
-import PriceCard from "@/components/PriceCard";
 import PricingTile from "@/components/PricingTile";
 // import CountdownTimer from "@/components/CountdownTimer";
 
 // ---------- METADATA SEO ----------
-const TITLE =
-  "Theoremz Black — Mentoring didattico, esercizi illimitati e videolezioni";
+const TITLE = "Theoremz Black — Piattaforma completa per matematica e fisica";
 const DESC =
-  "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Piani da 12€/mese. Soddisfatti o rimborsati.";
+  "Accesso completo alla piattaforma Theoremz: videolezioni, esercizi svolti, formulari, quiz e appunti. Piano unico semplice. Soddisfatti o rimborsati.";
 // const DESC =
-//   "Sblocca tutto Theoremz: mentoring personalizzato via chat, esercizi risolti, formulari, appunti e videolezioni. Offerta di Natale Black: 7 giorni di prova gratuita + 2 mesi al 50% fino al 6 gennaio a mezzanotte. Piani da 12€/mese. Soddisfatti o rimborsati.";
+//   "Accesso completo alla piattaforma Theoremz: videolezioni, esercizi svolti, formulari, quiz e appunti. Offerta di Natale Black: 7 giorni di prova gratuita + 2 mesi al 50% fino al 6 gennaio a mezzanotte. Piano unico semplice. Soddisfatti o rimborsati.";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
 const CANONICAL = `${SITE}/black`;
 // const HOLIDAY_DEADLINE = "6 gennaio a mezzanotte";
@@ -51,12 +49,10 @@ export const metadata: Metadata = {
     },
   },
   keywords: [
-    "ripetizioni",
     "esercizi risolti",
     "videolezioni",
     "matematica",
     "fisica",
-    "aiuto compiti",
     "formulario",
     "quiz",
     "studio",
@@ -90,34 +86,18 @@ export default function BlackPage() {
     image: [`${SITE}/metadata.png`],
     offers: {
       "@type": "AggregateOffer",
-      offerCount: 3,
+      offerCount: 1,
       lowPrice: "12.00",
-      highPrice: "259.00",
+      highPrice: "12.00",
       priceCurrency: "EUR",
       offers: [
         {
           "@type": "Offer",
-          name: "Piano Essential",
+          name: "Piano Piattaforma",
           price: "12.00",
           priceCurrency: "EUR",
           availability: "https://schema.org/InStock",
-          url: "https://buy.stripe.com/7sIaIa5f5b21dOgcNo",
-        },
-        {
-          "@type": "Offer",
-          name: "Piano Black",
-          price: "26.00",
-          priceCurrency: "EUR",
-          availability: "https://schema.org/InStock",
-          url: "https://buy.stripe.com/cN29E66j97PPbG84gT",
-        },
-        {
-          "@type": "Offer",
-          name: "Annuale",
-          price: "259.00",
-          priceCurrency: "EUR",
-          availability: "https://schema.org/InStock",
-          url: "https://buy.stripe.com/6oE3fIfTJ6LL11u9Be",
+          url: "https://buy.stripe.com/9B68wP7gw8Qv0Fb3v8c7u1a",
         },
       ],
     },
@@ -162,14 +142,14 @@ export default function BlackPage() {
         reviewRating: { "@type": "Rating", ratingValue: 5, bestRating: 5 },
         author: { "@type": "Person", name: "Giulia" },
         reviewBody:
-          "Risolto in 35 minuti con spiegazione dettagliata. Super servizio!",
+          "Esercizi svolti chiarissimi, mi hanno sbloccato in poco tempo.",
       },
       {
         "@type": "Review",
         reviewRating: { "@type": "Rating", ratingValue: 5, bestRating: 5 },
         author: { "@type": "Person", name: "Marco" },
         reviewBody:
-          "Mi hanno aiutato anche dopo con due dubbi in chat. Gentilissimi.",
+          "Videolezioni e appunti ordinati: ripasso veloce prima delle verifiche.",
       },
     ],
   } as const;
@@ -189,7 +169,7 @@ export default function BlackPage() {
   } as const;
 
   const graph = [breadcrumb, product, faq];
-  const heroCtaLabel = "Scopri i piani Black";
+  const heroCtaLabel = "Scopri il piano";
   // const heroCtaLabel = "Scopri l'offerta di Natale Black";
   const SHIMMER_CSS = `
           @keyframes shimmer {
@@ -288,10 +268,10 @@ export default function BlackPage() {
             {/* Testo */}
             <div>
               <h1 className="font-black leading-tight text-[36px] sm:text-[44px] lg:text-[54px]">
-                Mai più solo davanti alla
+                Matematica e fisica, tutto in un unico
                 <span className="italic font-extrabold text-sky-300">
                   {" "}
-                  matematica.
+                  piano.
                 </span>
               </h1>
 
@@ -300,9 +280,9 @@ export default function BlackPage() {
                 <span className="inline-block bg-[linear-gradient(90deg,#38bdf8,#bae6fd,#38bdf8)] bg-[length:200%_100%] bg-clip-text text-transparent animate-shimmer font-extrabold">
                   Theoremz Black
                 </span>{" "}
-                hai un <span className="font-bold">tutor</span> che ti segue 1:1
-                ogni giorno, tutte le risorse di Theoremz e molto altro.{" "}
-                <span className="inline-block bg-[linear-gradient(90deg,#00FFD1,#bae6fd,#EC9B3B)] bg-[length:200%_100%] bg-clip-text text-transparent animate-shimmer font-extrabold"></span>
+                hai accesso completo alla piattaforma: videolezioni, esercizi
+                svolti passo&ndash;passo, formulari, quiz, appunti e
+                simulazioni. Un unico piano semplice.
               </p>
 
               <div className="mt-8 flex items-center gap-4">
@@ -383,44 +363,30 @@ export default function BlackPage() {
         <div className="mt-4 max-w-3xl space-y-4 text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/90 font-medium">
           <p>
             <span className="font-semibold text-white">Theoremz Black</span> è
-            <span className="font-semibold text-sky-200">
-              {" "}
-              il tuo mentore didattico personale
-            </span>
-            : un insegnante dedicato ti accompagna nel tuo percorso di studio,
-            costruendo con te un piano personalizzato e adattandolo ai tuoi
-            ritmi e obiettivi.
+            l&apos;accesso completo alla piattaforma Theoremz, con tutto il
+            materiale di matematica e fisica sempre disponibile.
           </p>
           <p>
-            Non aspettiamo che tu abbia dubbi: ti forniamo
-            <span className="font-semibold text-white">
-              {" "}
-              materiale mirato ogni settimana
-            </span>
-            , ti prepariamo attivamente per le verifiche e ti insegniamo
-            strategie di studio efficaci. Allo stesso tempo, puoi sempre
-            scriverci per qualsiasi domanda o difficoltà.
+            Trovi videolezioni, esercizi svolti, formulari, quiz, appunti e
+            flashcard, organizzati per argomento e livello.
           </p>
           <p>
-            <span className="font-semibold text-sky-200">
-              Un approccio proattivo
-            </span>{" "}
-            che ti fa sentire sempre preparato e sicuro, trasformando lo studio
-            da fatica a crescita costante.
+            Studia quando vuoi e ripassa prima delle verifiche con un unico
+            piano mensile semplice.
           </p>
         </div>
         <ul className="mt-5 grid gap-3 text-[14.5px] font-semibold text-white/85 sm:grid-cols-3">
           <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-            <MessageCircle className="h-5 w-5 text-sky-300" aria-hidden />
-            Mentore didattico personale
+            <BookOpen className="h-5 w-5 text-sky-300" aria-hidden />
+            Videolezioni per ogni argomento
           </li>
           <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <ListChecks className="h-5 w-5 text-cyan-300" aria-hidden />
-            Preparazione attiva alle verifiche
+            Esercizi svolti passo&ndash;passo
           </li>
           <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-            <Sparkles className="h-5 w-5 text-emerald-300" aria-hidden />
-            Strategie di studio personalizzate
+            <CheckCircle2 className="h-5 w-5 text-emerald-300" aria-hidden />
+            Formulari, quiz e appunti pronti
           </li>
         </ul>
       </section>
@@ -433,47 +399,51 @@ export default function BlackPage() {
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <IncludeCard
-            title="Mentoring Didattico Personalizzato"
+            title="Videolezioni e spiegazioni complete"
             items={[
               [
-                "Piano di Studio ",
-                "Il tuo mentore crea un percorso su misura basato sui tuoi obiettivi, punti di forza e aree di miglioramento.",
+                "Lezioni per ogni argomento",
+                "Video e spiegazioni chiare per matematica e fisica.",
               ],
               [
-                "Supporto Costante via Chat",
-                "Puoi scrivere in qualsiasi momento per ogni dubbio o difficoltà. Il tuo mentore ti risponde sempre e ti guida passo passo.",
+                "Percorsi ordinati",
+                "Contenuti divisi per argomento e livello per ripasso rapido.",
               ],
             ]}
           />
 
           <IncludeCard
-            title="Tutti gli Esercizi che vuoi"
+            title="Esercizi svolti e simulazioni"
             items={[
               [
-                "Catalogo Illimitato di Esercizi",
-                "Accesso a centinaia di esercizi già presenti; è possibile richiederne ulteriori se non bastassero.",
+                "Esercizi illimitati",
+                "Accesso a centinaia di esercizi già presenti.",
               ],
               [
-                "Già Risolti e Spiegati",
-                "Spiegazioni passo passo, con immagini; possibilità di rispiegazione privata su richiesta.",
+                "Soluzioni passo passo",
+                "Svolgimenti chiari per capire subito il metodo.",
               ],
               [
-                "Flashcards Interattive",
-                "Schede di ripasso personalizzate per memorizzare formule, teoremi e concetti chiave.",
+                "Simulazioni verifiche",
+                "Allenati con esercizi simili a quelli in classe.",
               ],
             ]}
           />
 
           <IncludeCard
-            title="Appunti, Formulari e Lezioni"
+            title="Formulari, quiz e appunti"
             items={[
               [
-                "Tutti gli argomenti coperti",
-                "Formulario e videolezione per ogni argomento + molti appunti in PDF.",
+                "Formulari pronti",
+                "Formule e teoremi sempre a portata di mano.",
               ],
               [
-                "Mai senza materiale",
-                "Si può richiedere materiale aggiuntivo in ogni momento.",
+                "Quiz e flashcard",
+                "Ripasso rapido dei concetti chiave.",
+              ],
+              [
+                "Appunti PDF",
+                "Materiale scaricabile quando serve.",
               ],
             ]}
           />
@@ -493,20 +463,22 @@ export default function BlackPage() {
         </div>
       </section>
 
-      {/* ============ PRICING (3 card da lg) ============ */}
+      {/* ============ PRICING (piano unico) ============ */}
       <section
         id="pricing"
         className="mx-auto mt-16 max-w-7xl px-5 pb-4 sm:px-8 lg:px-12"
       >
-        <div className="mx-auto grid max-w-2xl gap-6 items-end justify-items-center lg:max-w-none lg:grid-cols-2 xl:grid-cols-3">
-          {/* Colonna 1 – Essential */}
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-6">
+          <h2 className="text-center text-[26px] sm:text-[28px] lg:text-[32px] font-black text-white">
+            Piano unico Theoremz Black
+          </h2>
           <PricingTile
-            outerClassName="group origin-bottom w-full max-w-[440px] rounded-[24px] bg-gradient-to-r from-green-500 to-cyan-400 p-[8px] shadow-[0_22px_55px_-28px_rgba(34,197,94,0.55)] transition-transform duration-300 hover:-translate-y-2 hover:shadow-[0_28px_70px_-32px_rgba(34,197,94,0.6)]"
-            headerLabel="Il più economico"
-            headerGradient="bg-gradient-to-r from-green-500 to-cyan-400"
-            title="Piano Essential"
+            outerClassName="group origin-bottom w-full max-w-[460px] rounded-[24px] bg-gradient-to-r from-blue-600 to-cyan-400 p-[8px] shadow-[0_22px_55px_-28px_rgba(59,130,246,0.6)] transition-transform duration-300 hover:-translate-y-2 hover:shadow-[0_28px_70px_-32px_rgba(59,130,246,0.7)]"
+            headerLabel="Piano unico"
+            headerGradient="bg-gradient-to-r from-blue-600 to-cyan-400"
+            title="Piattaforma Theoremz"
             priceContentByToggleId={{
-              "essential-monthly": (
+              "black-platform-monthly": (
                 <div className="flex flex-col items-center leading-tight text-center gap-2">
                   <span className="text-[46px] sm:text-[46px] font-black bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_14px_34px_-12px_rgba(14,165,233,0.6)]">
                     12€/mese
@@ -515,177 +487,34 @@ export default function BlackPage() {
               ),
             }}
             priceGradientByToggleId={{
-              "essential-monthly": "from-blue-600 via-cyan-500 to-blue-600",
+              "black-platform-monthly": "from-blue-600 via-cyan-500 to-blue-600",
             }}
             toggleOptions={[
               {
-                id: "essential-monthly",
+                id: "black-platform-monthly",
                 label: "Mensile",
                 price: "12€",
                 unit: " /mese",
                 buyHref: "https://buy.stripe.com/9B68wP7gw8Qv0Fb3v8c7u1a",
                 infoHref: "https://wa.link/mkxv41",
-                plan: "Essential Mensile",
-              },
-              {
-                id: "essential-annual",
-                label: "Annuale",
-                price: "99€",
-                unit: " /anno",
-                buyHref: "https://buy.stripe.com/bJe4gz44k6InafL7Loc7u14",
-                infoHref: "https://wa.link/mkxv41",
-                plan: "Essential Annuale",
+                plan: "Black Piattaforma Mensile",
               },
             ]}
-            defaultToggleId="essential-monthly"
-            priceCardClassName="pb-1"
+            defaultToggleId="black-platform-monthly"
+            priceCardClassName="pb-2"
             features={[
-              [
-                "violet",
-                "Theoremz AI illimitata su WhatsApp",
-                [
-                  "Mandi la foto dell’esercizio: il bot lo risolve e spiega i passaggi.",
-                  "Ti aiuta a preparare verifiche e interrogazioni ogni giorno.",
-                  "Ti manda video, esercizi e schemi in base a classe, voti e obiettivi.",
-                ],
-              ],
+              ["ok", "Accesso completo alla piattaforma Theoremz"],
               ["ok", "Tutte le videolezioni"],
               ["ok", "Esercizi svolti passo–passo"],
               ["ok", "Formulari, quiz e appunti"],
               ["ok", "Flashcard per le formule"],
               ["ok", "Simulazioni verifiche"],
-              ["ok", "Correzione verifiche"],
-              ["ok", "Risorse aggiuntive illimitate"],
-              ["ok", "Tutti i vantaggi di Free"],
-              ["ok", "100% Soddisfatti o Rimborsati"],
-              ["no", "Tutor umano"],
-              ["no", "Check-in settimanale"],
-              ["no", "Programma di studio"],
-            ]}
-          />
-
-          {/* Colonna 2 – Base mensile */}
-          <PricingTile
-            outerClassName="group origin-bottom w-full max-w-[440px] rounded-[24px] bg-gradient-to-r from-rose-500 to-pink-500 p-[8px] shadow-[0_22px_55px_-28px_rgba(244,63,94,0.6)] transition-transform duration-300 hover:-translate-y-2 hover:shadow-[0_28px_70px_-32px_rgba(244,63,94,0.65)]"
-            headerLabel="Il più popolare"
-            headerGradient="bg-gradient-to-r from-rose-500 to-pink-500"
-            title="Piano Black"
-            priceContentByToggleId={{
-              "black-monthly": (
-                <div className="flex flex-col items-center leading-tight text-center gap-2">
-                  <span className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-gradient-to-r from-rose-500 to-pink-500 px-3 py-1.5 text-[20px] sm:text-[22px] font-black text-white">
-                    7 giorni di prova
-                  </span>
-                  <span className="text-[46px] sm:text-[46px] font-black bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_14px_34px_-12px_rgba(14,165,233,0.6)]">
-                    26€/mese
-                  </span>
-                  <span className="text-[14px] sm:text-[15px] font-bold text-slate-600">
-                    dopo la prova
-                  </span>
-                </div>
-              ),
-            }}
-            priceGradientByToggleId={{
-              "black-monthly": "from-blue-600 via-cyan-500 to-blue-600",
-            }}
-            toggleOptions={[
-              {
-                id: "black-monthly",
-                label: "Mensile",
-                price: "26€",
-                unit: " /mese",
-                buyHref: "https://buy.stripe.com/6oU6oHcAQgiXafL7Loc7u19",
-                infoHref: "https://wa.link/4ogl5q",
-                plan: "Black Standard Mensile",
-              },
-              {
-                id: "black-annual",
-                label: "Annuale",
-                price: "259€",
-                unit: " /anno",
-                buyHref: "https://buy.stripe.com/7sY8wP44k0jZ1Jf1n0c7u16",
-                infoHref: "https://wa.link/rwbkqd",
-                plan: "Black Annuale",
-              },
-            ]}
-            defaultToggleId="black-monthly"
-            priceCardClassName="pb-3"
-            features={[
-              [
-                "violet",
-                "Mentoring didattico personalizzato",
-                [
-                  "Tutor dedicato che ti segue 1:1 su Whatsapp ogni giorno.",
-                  "Costruisce con te un piano di studio su misura.",
-                  "Ti aiuta a individurare, e superare le difficoltà.",
-                ],
-              ],
-              [
-                "violet",
-                "Check-in settimanale in videochiamata",
-                [
-                  "Ogni settimana ci vediamo per capire dove sei e cosa serve per migliorare.",
-                  "Prepariamo insieme verifiche, interrogazioni e argomenti difficili.",
-                  "Uscirai dalla call sapendo esattamente cosa fare nei giorni successivi.",
-                ],
-              ],
-              [
-                "violet",
-                "Theoremz AI illimitata su WhatsApp",
-                [
-                  "Mandi la foto dell’esercizio: il bot lo risolve e spiega i passaggi.",
-                  "Ti aiuta a preparare verifiche e interrogazioni ogni giorno.",
-                  "Ti manda video, esercizi e schemi in base a classe, voti e obiettivi.",
-                ],
-              ],
-              ["ok", "Primo incontro di 30 min"],
-              ["ok", "Tutte le videolezioni"],
-              ["ok", "Esercizi svolti passo–passo"],
-              ["ok", "Formulari, quiz e appunti"],
-              ["ok", "Simulazioni verifiche"],
-              ["ok", "Correzione verifiche"],
-              ["ok", "Risorse aggiuntive illimitate"],
-              ["ok", "Tutti i vantaggi di Essential"],
-              ["ok", "Tutti i vantaggi di Free"],
+              ["ok", "Dashboard dei voti"],
+              ["ok", "Salvataggio lezioni nei preferiti"],
+              ["ok", "Dark Mode"],
               ["ok", "100% Soddisfatti o Rimborsati"],
             ]}
           />
-
-          {/* Colonna 3 – Annuale */}
-          <div className="group origin-bottom w-full max-w-[420px] rounded-[22px] bg-gradient-to-r from-blue-600 to-cyan-400 p-[7px] shadow-[0_22px_55px_-28px_rgba(59,130,246,0.55)] transition-transform duration-300 hover:-translate-y-2 hover:shadow-[0_28px_70px_-32px_rgba(59,130,246,0.6)]">
-            <div className="rounded-[18px] bg-gradient-to-r from-blue-600 to-cyan-400 px-4 py-2.5 text-center text-white shadow-md ring-1 ring-white/30">
-              <div className="text-[12px] font-extrabold uppercase tracking-wide">
-                Gratuito
-              </div>
-            </div>
-            <div className="mt-2 overflow-hidden rounded-[22px] bg-white shadow-sm">
-              <div className="border-b border-slate-100 bg-white px-5 py-3 text-center text-lg font-black text-slate-900">
-                Piano Free
-              </div>
-
-              <PriceCard
-                price="0€"
-                unit=" /sempre"
-                buyHref="/account"
-                infoHref="https://wa.link/rwbkqd"
-                className="mt-0 rounded-none border-none shadow-none ring-0 hover:translate-y-0 group-hover:translate-y-0 cta-quiet"
-                features={[
-                  ["ok", "Lezioni per tutti gli argomenti"],
-                  ["ok", "Dashboard dei voti"],
-                  ["ok", "Salvataggio lezioni nei preferiti"],
-                  ["ok", "Dark Mode"],
-                  ["no", "AI Theoremz"],
-                  ["no", "Esercizi svolti"],
-                  ["no", "Simulazioni verifiche"],
-                  ["no", "Videolezioni"],
-                  ["no", "Tutor dedicato"],
-                  ["no", "Aiuto compiti"],
-                  ["no", "Programma di studio"],
-                  ["no", "Priorità nelle risposte"],
-                ]}
-              />
-            </div>
-          </div>
         </div>
       </section>
 
@@ -786,39 +615,27 @@ function IncludeCard({
 /* ---------- FAQ data ---------- */
 const FAQS = [
   {
-    q: "Il tutor è disponibile il weekend?",
-    a: "Certo, il servizio di mentoring è attivo ogni giorno, tranne in occasione di festività nazionali.",
+    q: "Cosa include il piano?",
+    a: "Accesso completo alla piattaforma: videolezioni, esercizi svolti, formulari, quiz, appunti e flashcard.",
   },
   {
-    q: "A che ora si può contattare il tutor?",
-    a: "In generale a qualsiasi orario ma potrebbe capitare che i messaggi ricevuti in tarda notte vengano visualizzati la mattina dopo.",
+    q: "I contenuti coprono matematica e fisica?",
+    a: "Sì, l'abbonamento include tutte le risorse di matematica e fisica.",
   },
   {
-    q: "Tutto questo vale per matematica e fisica?",
-    a: "Sì, l'abbonamento include tutte le risorse di matematica e fisica e lo stesso vale per il mentoring didattico.",
+    q: "È adatto anche per studenti delle medie?",
+    a: "Sì, la piattaforma è pensata per studenti di medie e liceo.",
   },
   {
-    q: "È anche per studenti delle medie?",
-    a: "Assolutamente sì! Il servizio è pensato per tutti gli studenti di medie e liceo.",
+    q: "Posso usare Theoremz da mobile?",
+    a: "Sì, funziona su smartphone, tablet e desktop.",
   },
   {
-    q: "Vorrei abbonarmi con un amico, è possibile avere uno sconto?",
-    a: "Probabilmente sì, contatta il servizio clienti per avere maggiori informazioni.",
+    q: "Posso cancellare l'abbonamento quando voglio?",
+    a: "Sì, puoi annullare l'abbonamento in qualsiasi momento senza penalità.",
   },
   {
-    q: "Che qualifiche hanno gli insegnanti?",
-    a: "Tutti gli insegnanti sono laureati in matematica, fisica o ingegneria e molti di loro hanno anche conseguito un master o una seconda laurea.",
-  },
-  {
-    q: "In cosa consiste l'aiuto compiti?",
-    a: "Puoi scrivere in qualsiasi momento per ogni dubbio o difficoltà. Il tutor ti risponde sempre e ti guida nell'apprendimento, spiegandoti come affrontare gli esercizi e aiutandoti a capire i metodi e la logica di risoluzione.",
-  },
-  {
-    q: "E se provo e non sono convinto?",
-    a: "Nessun problema, se il servizio non soddisfa le aspettative è possibile richiedere un rimborso completo e immediato semplicemente informando l'assistenza clienti.",
-  },
-  {
-    q: "Posso cancellare l'abbonamento in qualsiasi momento?",
-    a: "Sì, puoi annullare il tuo abbonamento in qualsiasi momento senza penalità.",
+    q: "E se non mi trovo bene?",
+    a: "Nessun problema, se il servizio non soddisfa le aspettative è possibile richiedere un rimborso completo e immediato.",
   },
 ];

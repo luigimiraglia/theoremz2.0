@@ -3,28 +3,34 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState } from "react";
 
 /** ---------------------- Data ---------------------- */
-type BenefitKey = "ads" | "quiz" | "tutor" | "dark";
+type BenefitKey = "lessons" | "exercises" | "practice" | "resources";
 
 const IMG_BY_BENEFIT: Record<
-  Exclude<BenefitKey, "ads">,
+  BenefitKey,
   { src: string; alt: string; width: number; height: number }
 > = {
-  quiz: {
+  lessons: {
     src: "/images/resources.webp",
-    alt: "Esercizi e quiz su Theoremz",
+    alt: "Videolezioni Theoremz",
     width: 520,
     height: 240,
   },
-  tutor: {
+  exercises: {
     src: "/images/aiutocompiti.webp",
-    alt: "Tutor dedicato Theoremz",
+    alt: "Esercizi svolti su Theoremz",
     width: 520,
     height: 240,
   },
-  dark: {
+  practice: {
+    src: "/images/mock5.webp",
+    alt: "Quiz e simulazioni verifiche",
+    width: 520,
+    height: 240,
+  },
+  resources: {
     src: "/images/dark-mode.webp",
     alt: "Interfaccia Theoremz",
     width: 520,
@@ -32,97 +38,7 @@ const IMG_BY_BENEFIT: Record<
   },
 };
 
-/** Hook: reduced motion */
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const m = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
-    setReduced(m.matches);
-    m.addEventListener?.("change", onChange);
-    return () => m.removeEventListener?.("change", onChange);
-  }, []);
-  return reduced;
-}
-
-/** Lottie per “No pubblicità” con lazy mount + pause */
-function AdsLottie({ play }: { play: boolean }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const animRef = useRef<any>(null);
-  const [visible, setVisible] = useState(false);
-  const reduced = useReducedMotion();
-
-  // Track viewport
-  useEffect(() => {
-    if (!ref.current) return;
-    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), {
-      threshold: 0.2,
-    });
-    io.observe(ref.current);
-    return () => io.disconnect();
-  }, []);
-
-  // Load / control animation
-  useEffect(() => {
-    let mounted = true;
-
-    async function ensureAnim() {
-      if (!ref.current || !play || !visible || reduced) return;
-      if (animRef.current) {
-        animRef.current.play();
-        return;
-      }
-      const lottie = (await import("lottie-web")).default;
-      if (!mounted || !ref.current) return;
-      animRef.current = lottie.loadAnimation({
-        container: ref.current,
-        renderer: "svg",
-        loop: true,
-        autoplay: true,
-        path: "/animations/no-ads.json",
-        rendererSettings: { progressiveLoad: true },
-      });
-    }
-
-    ensureAnim();
-
-    // Pause if not playing/visible/reduced
-    if (!play || !visible || reduced) {
-      animRef.current?.pause?.();
-    }
-
-    return () => {
-      mounted = false;
-      // Se esci dalla pill, distruggi (libera memoria/CPU)
-      if (!play && animRef.current) {
-        animRef.current.destroy();
-        animRef.current = null;
-      }
-    };
-  }, [play, visible, reduced]);
-
-  // Pause in background tab
-  useEffect(() => {
-    const onVis = () => {
-      if (document.hidden) animRef.current?.pause?.();
-      else if (play && visible && !reduced) animRef.current?.play?.();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, [play, visible, reduced]);
-
-  return (
-    <div
-      ref={ref}
-      className="h-[240px] w-full"
-      role="img"
-      aria-label="Animazione: zero pubblicità su Theoremz"
-    />
-  );
-}
-
-function ImgIllo({ kind }: { kind: Exclude<BenefitKey, "ads"> }) {
+function ImgIllo({ kind }: { kind: BenefitKey }) {
   const { src, alt, width, height } = IMG_BY_BENEFIT[kind];
   return (
     <div className="relative h-[240px] w-full">
@@ -140,16 +56,6 @@ function ImgIllo({ kind }: { kind: Exclude<BenefitKey, "ads"> }) {
 
 type IlloProps = { play?: boolean };
 
-const inlineMemo = (
-  <Image
-    alt="Icona appunti"
-    src="/images/memo.webp"
-    width={20}
-    height={20}
-    className="inline-block h-[1.1em] w-[1.1em] translate-y-[1px]"
-  />
-);
-
 const BENEFITS: Record<
   BenefitKey,
   {
@@ -160,50 +66,39 @@ const BENEFITS: Record<
     Illustration: React.FC<IlloProps>;
   }
 > = {
-  ads: {
-    title: (
-      <span className="inline-flex items-center gap-2">
-        <Image
-          alt="Icona chat"
-          src="/images/mess.webp"
-          width={24}
-          height={24}
-          className="inline-block h-[1.05em] w-[1.05em] translate-y-[1px]"
-        />
-        <span>Assistenza via chat illimitata</span>
-      </span>
-    ),
-    lead: "Un tutor personale sempre con te",
-    desc: "Con Black hai assistenza costante via chat: un insegnante ti segue 1:1 ogni giorno per aiutarti con i compiti e rispondere a ogni dubbio.",
-    icon: "👨‍🏫",
-    Illustration: ({ play }) => <AdsLottie play={!!play} />,
+  lessons: {
+    title: "Videolezioni per ogni argomento",
+    lead: "Spiegazioni chiare, sempre disponibili",
+    desc: "Video e spiegazioni ordinate per matematica e fisica, con percorsi per livello.",
+    icon: "🎥",
+    Illustration: () => <ImgIllo kind="lessons" />,
   },
-  quiz: {
-    title: "Theoremz AI Avanzato 🤖",
-    lead: "Intelligenza artificiale al tuo servizio",
-    desc: "AI tutor che conosce il tuo percorso, crea quiz personalizzati, simula verifiche e ti prepara con consigli mirati sui tuoi punti deboli.",
-    icon: "🧠",
-    Illustration: () => <ImgIllo kind="quiz" />,
+  exercises: {
+    title: "Esercizi svolti passo-passo",
+    lead: "Capisci il metodo, non solo il risultato",
+    desc: "Svolgimenti chiari e guidati per imparare come si risolve davvero.",
+    icon: "✍️",
+    Illustration: () => <ImgIllo kind="exercises" />,
   },
-  tutor: {
-    title: "Aiuto compiti giornaliero 📚",
-    lead: "Supporto costante per ogni materia",
-    desc: "Ogni giorno un tutor ti segue passo passo nella risoluzione degli esercizi, con spiegazioni dettagliate e personalizzate per te.",
-    icon: inlineMemo,
-    Illustration: () => <ImgIllo kind="tutor" />,
+  practice: {
+    title: "Quiz e simulazioni verifiche",
+    lead: "Allenati prima delle prove in classe",
+    desc: "Esercizi di ripasso e simulazioni per arrivare pronto alle verifiche.",
+    icon: "🧪",
+    Illustration: () => <ImgIllo kind="practice" />,
   },
-  dark: {
-    title: "Tutte le risorse Theoremz ✨",
-    lead: "Accesso completo alla piattaforma",
-    desc: "Centinaia di esercizi risolti, videolezioni, formulari, quiz, dark mode e sconto del 10% sulle ripetizioni individuali.",
-    icon: "🎯",
-    Illustration: () => <ImgIllo kind="dark" />,
+  resources: {
+    title: "Formulari, appunti e dark mode",
+    lead: "Tutto il materiale in un unico posto",
+    desc: "Formule, appunti PDF, flashcard e un'interfaccia comoda anche di sera.",
+    icon: "📚",
+    Illustration: () => <ImgIllo kind="resources" />,
   },
 };
 
 /** ---------------------- Component ---------------------- */
 export default function BlackPromo() {
-  const [active, setActive] = useState<BenefitKey>("ads");
+  const [active, setActive] = useState<BenefitKey>("lessons");
   const data = useMemo(() => BENEFITS[active], [active]);
 
   return (
@@ -212,11 +107,13 @@ export default function BlackPromo() {
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="max-w-2xl">
           <h2 className="text-[28px] font-bold leading-tight text-slate-900 [.dark_&]:text-white sm:text-[32px]">
-            Mai più solo con la <span className="text-sky-600">matematica</span>
-            !
+            La piattaforma completa per{" "}
+            <span className="text-sky-600">matematica e fisica</span>
           </h2>
 
           <p className="mt-8 text-[18px] leading-relaxed text-slate-800 [.dark_&]:text-slate-200">
+            Un unico piano con tutto il materiale Theoremz.
+            <br />
             <span className="font-semibold text-sky-600">{data.title}</span>
             <br />
             {data.desc}
@@ -248,8 +145,7 @@ export default function BlackPromo() {
         {/* Illustrazione dinamica */}
         <div className="mx-auto w-full max-w-[520px] md:mx-0">
           <div className="rounded-2xl bg-white p-6 ring-1 ring-slate-200/70 transition-colors [.dark_&]:bg-slate-900/40 [.dark_&]:ring-white/15">
-            {/* play solo se la pill attiva è "ads" */}
-            <data.Illustration play={active === "ads"} />
+            <data.Illustration />
           </div>
         </div>
       </div>
@@ -258,10 +154,10 @@ export default function BlackPromo() {
       <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {(
           [
-            ["ads", "Chat illimitata"] as const,
-            ["quiz", "Theoremz AI"] as const,
-            ["tutor", "Aiuto compiti"] as const,
-            ["dark", "Tutte le risorse"] as const,
+            ["lessons", "Videolezioni"] as const,
+            ["exercises", "Esercizi svolti"] as const,
+            ["practice", "Quiz e simulazioni"] as const,
+            ["resources", "Formulari e appunti"] as const,
           ] satisfies ReadonlyArray<readonly [BenefitKey, string]>
         ).map(([key, label]) => {
           const activeNow = active === key;
