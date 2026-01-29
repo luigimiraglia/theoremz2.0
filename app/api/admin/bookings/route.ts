@@ -438,6 +438,194 @@ async function releaseSlot(db: ReturnType<typeof supabaseServer>, slotId?: strin
     .eq("id", slotId);
 }
 
+async function applyBookingCompletion(opts: {
+  db: ReturnType<typeof supabaseServer>;
+  bookingId: string;
+  viewer: Viewer | undefined;
+  studentId?: string | null;
+  hoursOverride?: number | null;
+}) {
+  const { db, bookingId, viewer, studentId: rawStudentId, hoursOverride } = opts;
+  const { data: booking, error: bookingErr } = await db
+    .from("call_bookings")
+    .select(
+      `
+        id,
+        tutor_id,
+        email,
+        full_name,
+        status,
+        slot:call_slots ( id, starts_at, duration_min )
+      `,
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (bookingErr) throw new Error(bookingErr.message);
+  if (!booking) throw new Error("Booking non trovato");
+  if (!viewer?.isAdmin && viewer?.tutorId && booking.tutor_id !== viewer.tutorId) {
+    throw new Error("forbidden");
+  }
+
+  const slot = Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
+  const durationMin =
+    Number(hoursOverride) > 0
+      ? Number(hoursOverride) * 60
+      : Number(slot?.duration_min) > 0
+        ? Number(slot.duration_min)
+        : DEFAULT_DURATION_MIN;
+  const hours = Math.max(0.25, Number(durationMin) / 60);
+
+  let studentId: string | null = rawStudentId || null;
+  let hoursPaid = 0;
+  let hoursConsumed = 0;
+  if (studentId) {
+    const { data: student, error: studentErr } = await db
+      .from("black_students")
+      .select("id, hours_paid, hours_consumed, videolesson_tutor_id")
+      .eq("id", studentId)
+      .maybeSingle();
+    if (studentErr) throw new Error(studentErr.message);
+    if (!student) throw new Error("Studente non trovato");
+    if (
+      !viewer?.isAdmin &&
+      viewer?.tutorId &&
+      student.videolesson_tutor_id &&
+      student.videolesson_tutor_id !== viewer.tutorId
+    ) {
+      throw new Error("Studente non assegnato a te");
+    }
+    hoursPaid = Number(student.hours_paid ?? 0);
+    hoursConsumed = Number(student.hours_consumed ?? 0);
+  } else if (booking.email) {
+    const normalizedEmail = String(booking.email || "").toLowerCase();
+    const { data: student, error: studentErr } = await db
+      .from("black_students")
+      .select("id, hours_paid, hours_consumed, videolesson_tutor_id")
+      .or(`student_email.ilike.${normalizedEmail},parent_email.ilike.${normalizedEmail}`)
+      .maybeSingle();
+    if (studentErr) throw new Error(studentErr.message);
+    if (student) {
+      if (
+        !viewer?.isAdmin &&
+        viewer?.tutorId &&
+        student.videolesson_tutor_id &&
+        student.videolesson_tutor_id !== viewer.tutorId
+      ) {
+        throw new Error("Studente non assegnato a te");
+      }
+      studentId = student.id;
+      hoursPaid = Number(student.hours_paid ?? 0);
+      hoursConsumed = Number(student.hours_consumed ?? 0);
+    }
+  }
+
+  if (!studentId && booking.tutor_id) {
+    const candidatesMap = new Map<
+      string,
+      {
+        id: string;
+        hours_paid: number;
+        hours_consumed: number;
+        videolesson_tutor_id: string | null;
+      }
+    >();
+    const { data: direct } = await db
+      .from("black_students")
+      .select("id, hours_paid, hours_consumed, videolesson_tutor_id")
+      .eq("videolesson_tutor_id", booking.tutor_id);
+    (direct || []).forEach((s: any) => {
+      if (s?.id) {
+        candidatesMap.set(s.id, {
+          id: s.id,
+          hours_paid: Number(s.hours_paid ?? 0),
+          hours_consumed: Number(s.hours_consumed ?? 0),
+          videolesson_tutor_id: s.videolesson_tutor_id || null,
+        });
+      }
+    });
+    const { data: assigned } = await db
+      .from("tutor_assignments")
+      .select(
+        "student_id, black_students!inner(id, hours_paid, hours_consumed, videolesson_tutor_id)",
+      )
+      .eq("tutor_id", booking.tutor_id);
+    (assigned || []).forEach((row: any) => {
+      const s = row?.black_students;
+      if (s?.id && !candidatesMap.has(s.id)) {
+        candidatesMap.set(s.id, {
+          id: s.id,
+          hours_paid: Number(s.hours_paid ?? 0),
+          hours_consumed: Number(s.hours_consumed ?? 0),
+          videolesson_tutor_id: s.videolesson_tutor_id || null,
+        });
+      }
+    });
+    const candidates = Array.from(candidatesMap.values()).filter(
+      (c) => Number(c.hours_paid) > 0,
+    );
+    if (candidates.length) {
+      const best = candidates.sort(
+        (a, b) => Number(b.hours_paid) - Number(a.hours_paid),
+      )[0];
+      studentId = best.id;
+      hoursPaid = Number(best.hours_paid ?? 0);
+      hoursConsumed = Number(best.hours_consumed ?? 0);
+    }
+  }
+
+  if (!studentId) {
+    throw new Error("Nessuno studente collegato alla lezione");
+  }
+
+  const availableHours = Math.max(0, hoursPaid);
+  const hoursToDeduct = Math.min(hours, availableHours);
+  if (hoursToDeduct <= 0) {
+    throw new Error("Ore disponibili esaurite per lo studente");
+  }
+
+  const completionTs = new Date().toISOString();
+  const { error: statusUpdateErr } = await db
+    .from("call_bookings")
+    .update({ status: "completed", updated_at: completionTs })
+    .eq("id", bookingId);
+  if (statusUpdateErr) throw new Error(statusUpdateErr.message);
+
+  const { data: tutorRow, error: tutorErr } = await db
+    .from("tutors")
+    .select("hours_due")
+    .eq("id", booking.tutor_id)
+    .maybeSingle();
+  if (tutorErr) throw new Error(tutorErr.message);
+  const currentDue = Number(tutorRow?.hours_due ?? 0);
+  const { error: tutorUpdateErr } = await db
+    .from("tutors")
+    .update({ hours_due: currentDue + hoursToDeduct })
+    .eq("id", booking.tutor_id);
+  if (tutorUpdateErr) throw new Error(tutorUpdateErr.message);
+
+  const { error: studentUpdateErr } = await db
+    .from("black_students")
+    .update({
+      hours_consumed: hoursConsumed + hoursToDeduct,
+      hours_paid: Math.max(0, hoursPaid - hoursToDeduct),
+    })
+    .eq("id", studentId);
+  if (studentUpdateErr) throw new Error(studentUpdateErr.message);
+
+  const happenedAt =
+    slot?.starts_at || new Date().toISOString().slice(0, 10);
+  const { error: sessionErr } = await db.from("tutor_sessions").insert({
+    tutor_id: booking.tutor_id,
+    student_id: studentId,
+    duration: hoursToDeduct,
+    happened_at: happenedAt.slice(0, 10),
+    note: booking.full_name || null,
+  });
+  if (sessionErr) throw new Error(sessionErr.message);
+
+  return { studentId, hours: hoursToDeduct };
+}
+
 async function fetchBookingById(db: ReturnType<typeof supabaseServer>, id: string) {
   const { data, error } = await db
     .from("call_bookings")
@@ -711,12 +899,15 @@ export async function POST(request: NextRequest) {
     const tutor = viewer?.isAdmin
       ? await fetchDefaultTutor(db, isBlackCalendarCall ? null : body.tutorId)
       : await fetchTutorById(db, viewer?.tutorId || "");
-    const status =
+    const requestedStatus =
       body.status === "cancelled"
         ? "cancelled"
         : body.status === "completed"
           ? "completed"
           : "confirmed";
+    const shouldComplete = requestedStatus === "completed";
+    const status = shouldComplete ? "confirmed" : requestedStatus;
+    const skipNotifications = Boolean(body.skipNotifications || body.silent || shouldComplete);
 
     const slot = await ensureBookableSlot(db, {
       startsAtIso,
@@ -767,7 +958,7 @@ export async function POST(request: NextRequest) {
     const booking = inserted ? mapBooking(inserted) : null;
     const bookingId = booking?.id || null;
     let meetLink: string | null = null;
-    if (bookingId && status === "confirmed") {
+    if (bookingId && status === "confirmed" && !skipNotifications) {
       const durationMin = Number(slot.duration_min ?? callType.duration_min ?? DEFAULT_DURATION_MIN);
       const endsAtIso = new Date(
         new Date(slot.starts_at).getTime() + durationMin * 60000,
@@ -799,7 +990,7 @@ export async function POST(request: NextRequest) {
         console.error("[admin/bookings] calendar event failed", err);
       }
     }
-    if (booking && status === "confirmed" && isDeliverableEmail(payload.email)) {
+    if (booking && status === "confirmed" && !skipNotifications && isDeliverableEmail(payload.email)) {
       const durationMin = Number(slot.duration_min ?? callType.duration_min ?? DEFAULT_DURATION_MIN);
       const callTypeLabel = callType.name || callType.slug || "call Theoremz";
       try {
@@ -816,7 +1007,24 @@ export async function POST(request: NextRequest) {
         console.error("[admin/bookings] confirmation email failed", sendErr);
       }
     }
-    return NextResponse.json({ booking });
+    if (bookingId && shouldComplete) {
+      try {
+        await applyBookingCompletion({
+          db,
+          bookingId,
+          viewer,
+          studentId: body.studentId || null,
+        });
+      } catch (err: any) {
+        return NextResponse.json(
+          { error: err?.message || "Errore completamento lezione" },
+          { status: 409 },
+        );
+      }
+    }
+    const finalBooking =
+      booking && shouldComplete ? { ...booking, status: "completed" } : booking;
+    return NextResponse.json({ booking: finalBooking });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Errore creazione booking" }, { status: 500 });
   }
@@ -861,6 +1069,17 @@ export async function PATCH(request: NextRequest) {
       ? await fetchDefaultTutor(db, isBlackCalendarCall ? null : (body.tutorId || existing.tutorId))
       : await fetchTutorById(db, viewer?.tutorId || existing.tutorId || "");
 
+    const requestedStatus =
+      body.status === "completed"
+        ? "completed"
+        : body.status === "cancelled"
+          ? "cancelled"
+          : body.status === "confirmed" || !body.status
+            ? "confirmed"
+            : existing.status || "confirmed";
+    const shouldComplete = requestedStatus === "completed";
+    const nextStatus = shouldComplete ? "confirmed" : requestedStatus;
+
     const startsAtIso = normalizeIso(body.startsAt || existing.startsAt);
     if (!startsAtIso) return NextResponse.json({ error: "Data/ora non valida" }, { status: 400 });
 
@@ -882,14 +1101,7 @@ export async function PATCH(request: NextRequest) {
       full_name: String(body.fullName || body.name || existing.fullName || "Senza nome"),
       email: String(body.email || existing.email || "noreply@theoremz.com"),
       note: body.note !== undefined ? (body.note ? String(body.note) : null) : existing.note,
-      status:
-        body.status === "completed"
-          ? "completed"
-          : body.status === "cancelled"
-            ? "cancelled"
-            : body.status === "confirmed" || !body.status
-              ? "confirmed"
-              : existing.status || "confirmed",
+      status: nextStatus,
       updated_at: new Date().toISOString(),
     };
 
@@ -898,6 +1110,22 @@ export async function PATCH(request: NextRequest) {
 
     if (existing.slotId && existing.slotId !== slot.id) {
       await releaseSlot(db, existing.slotId);
+    }
+
+    if (shouldComplete) {
+      try {
+        await applyBookingCompletion({
+          db,
+          bookingId: id,
+          viewer,
+          studentId: body.studentId || null,
+        });
+      } catch (err: any) {
+        return NextResponse.json(
+          { error: err?.message || "Errore completamento lezione" },
+          { status: 409 },
+        );
+      }
     }
 
     const refreshed = await fetchBookingById(db, id);

@@ -847,9 +847,8 @@ export default function AccountPage() {
   );
   const tutorAmountDueDisplay = useMemo(() => {
     if (!isTutor) return null;
-    if (tutorHoursDue === 0) return 0;
     return tutorAmountDue;
-  }, [isTutor, tutorHoursDue, tutorAmountDue]);
+  }, [isTutor, tutorAmountDue]);
   const tutorGrouped = useMemo(() => {
     if (!isTutor || !tutorData) return [];
     const sorted = [...(tutorData.bookings || [])].sort((a, b) => {
@@ -1052,7 +1051,7 @@ export default function AccountPage() {
   }, []);
 
   const openScheduleModal = useCallback(
-    (opts?: { studentId?: string; date?: string }) => {
+    (opts?: { studentId?: string; date?: string; past?: boolean }) => {
       const nextStudentId = opts?.studentId || tutorStudents[0]?.id || "";
       setScheduleMode("create");
       setEditingBooking(null);
@@ -1062,7 +1061,7 @@ export default function AccountPage() {
       setScheduleError(null);
       setScheduleModalOpen(true);
       setScheduleCallType((prev) => prev || DEFAULT_CALL_TYPE);
-      setSchedulePast(false);
+      setSchedulePast(Boolean(opts?.past));
     },
     [todayYmd, tutorStudents]
   );
@@ -1146,6 +1145,7 @@ export default function AccountPage() {
           studentId: student.id,
           status: schedulePast ? "completed" : "confirmed",
           allowUnpaid: true,
+          skipNotifications: schedulePast ? true : undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -1863,6 +1863,18 @@ export default function AccountPage() {
                     className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 [.dark_&]:border-slate-700 [.dark_&]:text-slate-100 [.dark_&]:hover:bg-slate-800/60"
                   >
                     Programma
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openScheduleModal({
+                        date: selectedTutorDay || todayYmd,
+                        past: true,
+                      })
+                    }
+                    className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 [.dark_&]:border-sky-500/40 [.dark_&]:bg-sky-500/10 [.dark_&]:text-sky-100 [.dark_&]:hover:bg-sky-500/20"
+                  >
+                    Lezione passata
                   </button>
                   <div className="flex items-center gap-1">
                     <button
@@ -2910,7 +2922,7 @@ export default function AccountPage() {
                       onChange={(e) => setSchedulePast(e.target.checked)}
                       className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
-                    Lezione già svolta (segna come completata)
+                    Lezione già svolta (registra ore)
                   </label>
                   {scheduleError ? (
                     <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-700 [.dark_&]:border-rose-500/40 [.dark_&]:bg-rose-500/10 [.dark_&]:text-rose-100">

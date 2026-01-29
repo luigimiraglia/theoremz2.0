@@ -14,6 +14,7 @@ import {
   recordStudentAssessmentLite,
   recordStudentGradeLite,
 } from "@/lib/studentLiteSync";
+import { resetTutorBalance } from "@/lib/tutor-balance";
 
 const TG = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 type AllowedEntry = { id: string; label: string | null };
@@ -309,11 +310,23 @@ async function cmdPAGATUTOR({ db, chatId, text }: CmdCtx) {
     .eq("id", tutorId);
   if (updErr) return send(chatId, `❌ Errore update tutor: ${updErr.message}`);
 
+  let resetWarning = "";
+  if (updated === 0) {
+    try {
+      await resetTutorBalance({ db, tutorId });
+    } catch (err: any) {
+      console.error("[telegram] reset tutor balance failed", err);
+      resetWarning = `\n⚠️ Reset saldo studenti fallito: ${
+        err?.message || "errore"
+      }`;
+    }
+  }
+
   await send(
     chatId,
     `💸 Pagamento registrato per ${bold(
       name
-    )}: -${hours}h (restano ${updated.toFixed(2)}h da saldare)`
+    )}: -${hours}h (restano ${updated.toFixed(2)}h da saldare)${resetWarning}`
   );
 }
 

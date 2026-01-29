@@ -8,13 +8,14 @@ create table if not exists public.content_short_videos (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  title text not null default 'Senza titolo',
   script text not null,
   hook text not null,
   format text not null,
   duration_sec integer null check (duration_sec is null or duration_sec >= 0),
   views integer null check (views is null or views >= 0),
   published_at timestamptz null,
-  status text not null default 'girato' check (status in ('girato', 'editato', 'pubblicato')),
+  status text not null default 'bozza' check (status in ('bozza', 'girato', 'editato', 'pubblicato')),
   constraint content_short_videos_published_requirements check (
     status <> 'pubblicato'
     or (duration_sec is not null and views is not null and published_at is not null)

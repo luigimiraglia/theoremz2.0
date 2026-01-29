@@ -161,14 +161,13 @@ function TutorRow({
   setTutorError: (v: string | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [hoursDraft, setHoursDraft] = useState<string>(tutor.hoursDue != null ? String(tutor.hoursDue) : "");
-  const [hoursSaving, setHoursSaving] = useState(false);
-  const [baselineDrafts, setBaselineDrafts] = useState<Record<string, string>>({});
-  const [baselineSavingId, setBaselineSavingId] = useState<string | null>(null);
+  const [pendingDrafts, setPendingDrafts] = useState<Record<string, string>>({});
+  const [balanceDrafts, setBalanceDrafts] = useState<Record<string, string>>({});
+  const [savingStudentId, setSavingStudentId] = useState<string | null>(null);
   const [resettingTutor, setResettingTutor] = useState(false);
   const totalAmountDue = useMemo(() => {
     const list = tutor.students || [];
-    const computed = list.reduce((sum, s) => {
+    return list.reduce((sum, s) => {
       const rate = Number(s.hourlyRate ?? 0);
       const baseline = Number(s.consumedBaseline ?? 0);
       const consumed = Number(s.hoursConsumed ?? 0);
@@ -178,53 +177,32 @@ function TutorRow({
       if (!Number.isFinite(rate) || !Number.isFinite(chargeable)) return sum;
       return sum + rate * chargeable;
     }, 0);
-    if (tutor.hoursDue === 0) return 0;
-    return computed;
-  }, [tutor.students, tutor.hoursDue]);
-
-  useEffect(() => {
-    setHoursDraft(tutor.hoursDue != null ? String(tutor.hoursDue) : "");
-  }, [tutor.hoursDue]);
-
-  useEffect(() => {
-    const next: Record<string, string> = {};
-    (tutor.students || []).forEach((s) => {
-      next[s.id] = s.consumedBaseline != null ? String(s.consumedBaseline) : "0";
-    });
-    setBaselineDrafts(next);
   }, [tutor.students]);
 
-  const updateHoursDue = async (next: number) => {
-    setHoursSaving(true);
-    setTutorsLoading(true);
-    setTutorError(null);
-    try {
-      const headers = await buildHeaders();
-      headers["Content-Type"] = "application/json";
-      const res = await fetch("/api/admin/tutors", {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({ id: tutor.id, hoursDue: next }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
-      onUpdated(data.tutor);
-      setHoursDraft(String(next));
-    } catch (err: any) {
-      setTutorError(err?.message || "Errore update ore tutor");
-    } finally {
-      setHoursSaving(false);
-      setTutorsLoading(false);
-    }
-  };
+  useEffect(() => {
+    const nextPending: Record<string, string> = {};
+    const nextBalance: Record<string, string> = {};
+    (tutor.students || []).forEach((s) => {
+      const hoursConsumed = Number(s.hoursConsumed ?? 0);
+      const baseline = Number(s.consumedBaseline ?? 0);
+      const chargeable = Number.isFinite(Number(s.chargeableHours))
+        ? Number(s.chargeableHours)
+        : Math.max(0, hoursConsumed - baseline);
+      const pending = Math.max(0, chargeable);
+      const rate = Number(s.hourlyRate ?? 0);
+      nextPending[s.id] = String(pending);
+      nextBalance[s.id] =
+        Number.isFinite(rate) && rate > 0 ? (pending * rate).toFixed(2) : "";
+    });
+    setPendingDrafts(nextPending);
+    setBalanceDrafts(nextBalance);
+  }, [tutor.students]);
 
-  const handleSaveHours = async () => {
-    const parsed = Number((hoursDraft || "").toString().replace(",", "."));
-    if (!Number.isFinite(parsed)) {
-      setTutorError("Inserisci ore valide");
-      return;
-    }
-    await updateHoursDue(parsed);
+  const parseNumber = (raw?: string) => {
+    const cleaned = String(raw ?? "").trim();
+    if (!cleaned) return null;
+    const n = Number(cleaned.replace(",", "."));
+    return Number.isFinite(n) ? n : null;
   };
 
   const patchAssignment = async (studentId: string, consumedBaseline: number) => {
@@ -244,52 +222,119 @@ function TutorRow({
     return data.assignment;
   };
 
-  const handleSaveBaseline = async (studentId: string) => {
-    const raw = baselineDrafts[studentId] ?? "0";
-    const parsed = Number(raw.toString().replace(",", "."));
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      setTutorError("Inserisci una baseline valida (>= 0)");
+  const handleSaveStudentBalance = async (studentId: string) => {
+    const target = (tutor.students || []).find((s) => s.id === studentId);
+    if (!target) return;
+    const hoursConsumed = Number(target.hoursConsumed ?? 0);
+    const baseline = Number(target.consumedBaseline ?? 0);
+    const currentPending = Math.max(
+      0,
+      Number.isFinite(Number(target.chargeableHours))
+        ? Number(target.chargeableHours)
+        : hoursConsumed - baseline,
+    );
+    const currentBalance = (() => {
+      const rate = Number(target.hourlyRate ?? 0);
+      if (!Number.isFinite(rate) || rate <= 0) return null;
+      return rate * currentPending;
+    })();
+
+    const pendingRaw = pendingDrafts[studentId];
+    const balanceRaw = balanceDrafts[studentId];
+    const pendingValue = parseNumber(pendingRaw ?? "");
+    const balanceValue = parseNumber(balanceRaw ?? "");
+
+    let nextPending: number | null = null;
+    if (
+      pendingValue != null &&
+      Math.abs(pendingValue - currentPending) > 0.0001
+    ) {
+      nextPending = pendingValue;
+    } else if (
+      balanceValue != null &&
+      (currentBalance == null || Math.abs(balanceValue - currentBalance) > 0.01)
+    ) {
+      const rate = Number(target.hourlyRate ?? 0);
+      if (!Number.isFinite(rate) || rate <= 0) {
+        setTutorError("Tariffa oraria mancante per salvare il saldo");
+        return;
+      }
+      nextPending = balanceValue / rate;
+    }
+
+    if (nextPending == null) return;
+    if (!Number.isFinite(nextPending) || nextPending < 0) {
+      setTutorError("Inserisci un numero di lezioni valido (>= 0)");
       return;
     }
-    setBaselineSavingId(studentId);
+    if (nextPending > hoursConsumed) {
+      setTutorError("Lezioni non conteggiate oltre le ore consumate");
+      return;
+    }
+
+    const nextBaseline = Math.max(0, hoursConsumed - nextPending);
+    setSavingStudentId(studentId);
     setTutorsLoading(true);
     setTutorError(null);
     try {
-      await patchAssignment(studentId, parsed);
+      await patchAssignment(studentId, nextBaseline);
       const nextStudents = (tutor.students || []).map((s) => {
         if (s.id !== studentId) return s;
-        const hoursConsumed = Number(s.hoursConsumed ?? 0);
-        const chargeableHours = Math.max(0, hoursConsumed - parsed);
-        return { ...s, consumedBaseline: parsed, chargeableHours };
+        const chargeableHours = Math.max(0, hoursConsumed - nextBaseline);
+        return { ...s, consumedBaseline: nextBaseline, chargeableHours };
       });
       onUpdated({ ...tutor, students: nextStudents });
-      setBaselineDrafts((prev) => ({ ...prev, [studentId]: String(parsed) }));
+      setPendingDrafts((prev) => ({
+        ...prev,
+        [studentId]: String(Number.isFinite(nextPending) ? nextPending : 0),
+      }));
+      const rate = Number(target.hourlyRate ?? 0);
+      setBalanceDrafts((prev) => ({
+        ...prev,
+        [studentId]:
+          Number.isFinite(rate) && rate > 0
+            ? (Math.max(0, nextPending) * rate).toFixed(2)
+            : "",
+      }));
     } catch (err: any) {
-      setTutorError(err?.message || "Errore salvataggio baseline");
+      setTutorError(err?.message || "Errore salvataggio saldo");
     } finally {
-      setBaselineSavingId(null);
+      setSavingStudentId(null);
       setTutorsLoading(false);
     }
   };
 
-  const handleResetBaselines = async () => {
-    if (!tutor.students || tutor.students.length === 0) return;
+  const handleResetBalance = async () => {
     setResettingTutor(true);
     setTutorsLoading(true);
     setTutorError(null);
     try {
-      for (const s of tutor.students) {
-        const consumed = Number(s.hoursConsumed ?? 0);
-        await patchAssignment(s.id, consumed);
-        setBaselineDrafts((prev) => ({ ...prev, [s.id]: String(consumed) }));
-      }
+      const headers = await buildHeaders();
+      headers["Content-Type"] = "application/json";
+      const res = await fetch("/api/admin/tutors/reset-balance", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ tutorId: tutor.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+
       const nextStudents = (tutor.students || []).map((s) => {
         const hoursConsumed = Number(s.hoursConsumed ?? 0);
         return { ...s, consumedBaseline: hoursConsumed, chargeableHours: 0 };
       });
-      onUpdated({ ...tutor, students: nextStudents });
+      const nextPending: Record<string, string> = {};
+      const nextBalance: Record<string, string> = {};
+      nextStudents.forEach((s) => {
+        nextPending[s.id] = "0";
+        const rate = Number(s.hourlyRate ?? 0);
+        nextBalance[s.id] = Number.isFinite(rate) && rate > 0 ? "0.00" : "";
+      });
+      setPendingDrafts(nextPending);
+      setBalanceDrafts(nextBalance);
+      onUpdated({ ...tutor, hoursDue: 0, students: nextStudents });
     } catch (err: any) {
-      setTutorError(err?.message || "Errore azzeramento saldi");
+      setTutorError(err?.message || "Errore azzeramento saldo");
     } finally {
       setResettingTutor(false);
       setTutorsLoading(false);
@@ -375,35 +420,11 @@ function TutorRow({
                 Saldo (ore×tariffa): {formatEuro(totalAmountDue)}
               </span>
               <button
-                onClick={() => updateHoursDue(0)}
-                disabled={hoursSaving}
+                onClick={handleResetBalance}
+                disabled={resettingTutor}
                 className="rounded-lg border border-white/20 px-2 py-1 text-[11px] font-semibold text-white hover:border-emerald-300 disabled:opacity-60"
               >
-                Azzera
-              </button>
-              <button
-                onClick={handleResetBaselines}
-                disabled={resettingTutor || hoursSaving}
-                className="rounded-lg border border-white/20 px-2 py-1 text-[11px] font-semibold text-white hover:border-sky-300 disabled:opacity-60"
-              >
-                {resettingTutor ? "Sto azzerando..." : "Azzera saldo studenti"}
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                value={hoursDraft}
-                onChange={(e) => setHoursDraft(e.target.value)}
-                placeholder="Ore dovute"
-                className="w-28 rounded-lg border border-white/15 bg-slate-900/70 px-2 py-1 text-xs text-white placeholder:text-slate-500"
-                type="number"
-                step="0.5"
-              />
-              <button
-                onClick={handleSaveHours}
-                disabled={hoursSaving}
-                className="rounded-lg bg-emerald-500 text-slate-900 px-3 py-1 text-xs font-semibold hover:bg-emerald-400 disabled:opacity-60"
-              >
-                {hoursSaving ? "Salvo..." : "Aggiorna ore dovute"}
+                {resettingTutor ? "Sto azzerando..." : "Azzera saldo"}
               </button>
             </div>
           </div>
@@ -417,87 +438,76 @@ function TutorRow({
             </div>
             {tutor.students && tutor.students.length > 0 ? (
               <div className="mt-2 grid gap-2">
-                {tutor.students.slice(0, 8).map((s) => (
-                  <div
-                    key={s.id}
-                    className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold">{s.name}</p>
-                      <span className="text-[11px] text-emerald-200">
-                        Rimaste: {formatHoursLabel(s.remainingPaid)}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-300">
-                      {s.email || "Email n/d"}
-                      {s.phone ? ` • ${s.phone}` : ""}
-                    </p>
-                    <p className="text-[11px] text-slate-300">
-                      Tariffa: {s.hourlyRate != null ? `${s.hourlyRate} €/h` : "n/d"}
-                    </p>
-                    <div className="mt-1 grid grid-cols-2 gap-1 text-[11px] text-slate-200">
-                      <span>Consumato: {formatHoursLabel(s.hoursConsumed)}</span>
-                      <span>Baseline: {formatHoursLabel(s.consumedBaseline)}</span>
-                      <span className="col-span-2">
-                        Conteggiato: {formatHoursLabel(
-                          Number.isFinite(Number(s.chargeableHours))
-                            ? Number(s.chargeableHours)
-                            : Math.max(
-                                0,
-                                Number(s.hoursConsumed ?? 0) - Number(s.consumedBaseline ?? 0)
-                              )
-                        )}
-                      </span>
-                    </div>
-                    {Number(s.hourlyRate ?? 0) > 0 ? (
-                      <p className="text-[11px] text-emerald-200">
-                        Saldo stimato:{" "}
-                        {formatEuro(
-                          Number(s.hourlyRate ?? 0) *
-                            Math.max(
-                              0,
-                              Number(
-                                Number.isFinite(Number(s.chargeableHours))
-                                  ? s.chargeableHours
-                                  : Number(s.hoursConsumed ?? 0) - Number(s.consumedBaseline ?? 0)
-                              ),
-                            ),
-                        )}
+                {tutor.students.slice(0, 8).map((s) => {
+                  const hoursConsumed = Number(s.hoursConsumed ?? 0);
+                  const baseline = Number(s.consumedBaseline ?? 0);
+                  const pending = Math.max(
+                    0,
+                    Number.isFinite(Number(s.chargeableHours))
+                      ? Number(s.chargeableHours)
+                      : hoursConsumed - baseline,
+                  );
+                  const rate = Number(s.hourlyRate ?? 0);
+                  const balance =
+                    Number.isFinite(rate) && rate > 0 ? pending * rate : null;
+                  return (
+                    <div
+                      key={s.id}
+                      className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white"
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold">{s.name}</p>
+                        <span className="text-[11px] text-emerald-200">
+                          Rimaste: {formatHoursLabel(s.remainingPaid)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-300">
+                        {s.email || "Email n/d"}
+                        {s.phone ? ` • ${s.phone}` : ""}
                       </p>
-                    ) : null}
-                    <div className="mt-2 flex items-center gap-2">
-                      <input
-                        value={baselineDrafts[s.id] ?? String(s.consumedBaseline ?? 0)}
-                        onChange={(e) =>
-                          setBaselineDrafts((prev) => ({ ...prev, [s.id]: e.target.value }))
-                        }
-                        className="w-20 rounded border border-white/15 bg-slate-900/60 px-2 py-1 text-[11px]"
-                        type="number"
-                        step="0.25"
-                        min="0"
-                        aria-label="Baseline ore consumate"
-                      />
-                      <button
-                        onClick={() => handleSaveBaseline(s.id)}
-                        disabled={baselineSavingId === s.id}
-                        className="rounded border border-white/30 px-2 py-1 text-[11px] font-semibold hover:border-white/60 disabled:opacity-60"
-                      >
-                        {baselineSavingId === s.id ? "Salvo..." : "Salva baseline"}
-                      </button>
-                      <button
-                        onClick={() =>
-                          setBaselineDrafts((prev) => ({
-                            ...prev,
-                            [s.id]: String(Number(s.hoursConsumed ?? 0)),
-                          }))
-                        }
-                        className="text-[11px] text-sky-200 underline-offset-2 hover:underline"
-                      >
-                        Usa consumato
-                      </button>
+                      <p className="text-[11px] text-slate-300">
+                        Tariffa: {s.hourlyRate != null ? `${s.hourlyRate} €/h` : "n/d"}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-200">
+                        <span>Lezioni non conteggiate: {formatHoursLabel(pending)}</span>
+                        <span className="text-emerald-200">Saldo: {formatEuro(balance)}</span>
+                      </div>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                        <input
+                          value={pendingDrafts[s.id] ?? ""}
+                          onChange={(e) =>
+                            setPendingDrafts((prev) => ({ ...prev, [s.id]: e.target.value }))
+                          }
+                          className="rounded border border-white/15 bg-slate-900/60 px-2 py-1 text-[11px]"
+                          type="number"
+                          step="0.25"
+                          min="0"
+                          placeholder="Lezioni non conteggiate (h)"
+                          aria-label="Lezioni non conteggiate"
+                        />
+                        <input
+                          value={balanceDrafts[s.id] ?? ""}
+                          onChange={(e) =>
+                            setBalanceDrafts((prev) => ({ ...prev, [s.id]: e.target.value }))
+                          }
+                          className="rounded border border-white/15 bg-slate-900/60 px-2 py-1 text-[11px]"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Saldo €"
+                          aria-label="Saldo"
+                        />
+                        <button
+                          onClick={() => handleSaveStudentBalance(s.id)}
+                          disabled={savingStudentId === s.id || resettingTutor}
+                          className="rounded border border-white/30 px-2 py-1 text-[11px] font-semibold hover:border-white/60 disabled:opacity-60"
+                        >
+                          {savingStudentId === s.id ? "Salvo..." : "Salva"}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {tutor.students.length > 8 && (
                   <p className="text-[11px] text-slate-400">
                     +{tutor.students.length - 8} altri studenti

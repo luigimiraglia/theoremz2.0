@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 
 const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
-type ShortVideoStatus = "girato" | "editato" | "pubblicato";
+type ShortVideoStatus = "bozza" | "girato" | "editato" | "pubblicato";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,14 +40,14 @@ function normalizeText(value: unknown) {
 }
 
 function parseStatus(value: unknown): ShortVideoStatus | null {
-  if (value === "girato" || value === "editato" || value === "pubblicato") return value;
-  if (value === "draft") return "girato";
+  if (value === "bozza" || value === "girato" || value === "editato" || value === "pubblicato") return value;
+  if (value === "draft") return "bozza";
   if (value === "completed") return "pubblicato";
   return null;
 }
 
 function mapStatus(value: unknown): ShortVideoStatus {
-  return parseStatus(value) ?? "girato";
+  return parseStatus(value) ?? "bozza";
 }
 
 function parseInteger(value: unknown) {
@@ -76,6 +76,7 @@ function mapVideo(row: any) {
   if (!row) return null;
   return {
     id: row.id as string,
+    title: row.title || null,
     script: row.script || null,
     views: typeof row.views === "number" ? row.views : row.views ?? null,
     publishedAt: row.published_at || null,
@@ -133,9 +134,16 @@ export async function POST(request: NextRequest) {
   const script = normalizeText(body.script);
   const hook = normalizeText(body.hook);
   const format = normalizeText(body.format);
-  if (!script || !hook || !format) {
+  const title = normalizeText(body.title);
+  if (!title || !script || !hook || !format) {
     return NextResponse.json(
-      { error: "missing_required_fields", details: "script/hook/format" },
+      { error: "missing_required_fields", details: "title/script/hook/format" },
+      { status: 400 }
+    );
+  }
+  if (title.toLowerCase() === hook.toLowerCase()) {
+    return NextResponse.json(
+      { error: "invalid_title", details: "title_equals_hook" },
       { status: 400 }
     );
   }
@@ -144,7 +152,7 @@ export async function POST(request: NextRequest) {
   if ("status" in body && !parsedStatus) {
     return NextResponse.json({ error: "invalid_status" }, { status: 400 });
   }
-  const status = parsedStatus ?? "girato";
+  const status = parsedStatus ?? "bozza";
   const durationSec = parseInteger(body.durationSec);
   const views = parseInteger(body.views);
   if (status === "pubblicato" && (durationSec === null || views === null)) {
@@ -154,6 +162,7 @@ export async function POST(request: NextRequest) {
     );
   }
   const payload = {
+    title,
     script,
     hook,
     format,
@@ -207,6 +216,13 @@ export async function PATCH(request: NextRequest) {
     }
     payload.script = script;
   }
+  if ("title" in body) {
+    const title = normalizeText(body.title);
+    if (!title) {
+      return NextResponse.json({ error: "missing_title" }, { status: 400 });
+    }
+    payload.title = title;
+  }
   if ("hook" in body) {
     const hook = normalizeText(body.hook);
     if (!hook) {
@@ -230,6 +246,15 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "invalid_status" }, { status: 400 });
     }
     payload.status = status;
+  }
+
+  if (payload.title && payload.hook) {
+    if (payload.title.toLowerCase() === payload.hook.toLowerCase()) {
+      return NextResponse.json(
+        { error: "invalid_title", details: "title_equals_hook" },
+        { status: 400 }
+      );
+    }
   }
 
   if (payload.status === "pubblicato") {

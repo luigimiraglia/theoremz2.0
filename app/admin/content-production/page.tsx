@@ -21,10 +21,11 @@ import {
 import { useAuth } from "@/lib/AuthContext";
 import { formatRomeYmd, romeDateToUtc } from "@/lib/rome-time";
 
-type ShortVideoStatus = "girato" | "editato" | "pubblicato";
+type ShortVideoStatus = "bozza" | "girato" | "editato" | "pubblicato";
 
 type ShortVideo = {
   id: string;
+  title: string | null;
   script: string | null;
   views: number | null;
   publishedAt: string | null;
@@ -37,6 +38,7 @@ type ShortVideo = {
 };
 
 type VideoFormState = {
+  title: string;
   script: string;
   hook: string;
   format: string;
@@ -49,6 +51,7 @@ type VideoFormState = {
 type WorkspaceItem = {
   key: string;
   id: string | null;
+  title: string;
   script: string;
   hook: string;
   format: string;
@@ -79,18 +82,22 @@ type FormatRanking = {
 
 const allowedEmail = "luigi.miraglia006@gmail.com";
 const FALLBACK_LABEL = "n/d";
+const TITLE_FALLBACK = "Senza titolo";
 const FORMAT_FALLBACK = "Formato n/d";
 const STATUS_LABELS: Record<ShortVideoStatus, string> = {
+  bozza: "Bozza",
   girato: "Girato",
   editato: "Editato",
   pubblicato: "Pubblicato",
 };
 const STATUS_BADGES: Record<ShortVideoStatus, string> = {
+  bozza: "bg-slate-100 text-slate-700",
   girato: "bg-amber-100 text-amber-700",
   editato: "bg-sky-100 text-sky-700",
   pubblicato: "bg-emerald-100 text-emerald-700",
 };
 const STATUS_OPTIONS: Array<{ value: ShortVideoStatus; label: string }> = [
+  { value: "bozza", label: "Bozza" },
   { value: "girato", label: "Girato" },
   { value: "editato", label: "Editato" },
   { value: "pubblicato", label: "Pubblicato" },
@@ -154,11 +161,63 @@ function normalizeValue(value?: string | null) {
   return (value || "").trim();
 }
 
+function formatTitle(value?: string | null) {
+  const trimmed = normalizeValue(value);
+  return trimmed || TITLE_FALLBACK;
+}
+
+function stripHookFromScript(hook?: string | null, script?: string | null) {
+  const hookLine = normalizeValue(hook);
+  const rawScript = script || "";
+  if (!hookLine || !rawScript) return rawScript;
+  const normalized = rawScript.replace(/\r\n/g, "\n");
+  const [firstLine, ...rest] = normalized.split("\n");
+  if (normalizeValue(firstLine) === hookLine) {
+    return rest.join("\n").replace(/^\n+/, "");
+  }
+  return rawScript;
+}
+
+function buildScriptText(hook?: string | null, script?: string | null) {
+  const hookLine = normalizeValue(hook);
+  const body = normalizeValue(stripHookFromScript(hookLine, script));
+  if (hookLine && body) return `${hookLine}\n${body}`;
+  return hookLine || body || "";
+}
+
 function getScriptPreview(script?: string | null, max = 140) {
   const cleaned = normalizeValue(script);
   if (!cleaned) return "Script non disponibile.";
   if (cleaned.length <= max) return cleaned;
   return `${cleaned.slice(0, max)}...`;
+}
+
+function getScriptPreviewWithHook(hook?: string | null, script?: string | null, max = 140) {
+  const hookLine = normalizeValue(hook);
+  const body = normalizeValue(stripHookFromScript(hookLine, script));
+  if (!hookLine) return getScriptPreview(body, max);
+  if (!body) return hookLine;
+  return `${hookLine}\n${getScriptPreview(body, max)}`;
+}
+
+function mergeHookAndScript(hook: string, script: string) {
+  const hookLine = hook.replace(/\r\n/g, "\n");
+  const body = script.replace(/\r\n/g, "\n");
+  if (!hookLine) return body;
+  if (!body) return hookLine;
+  if (body.startsWith("\n")) return `${hookLine}${body}`;
+  return `${hookLine}\n${body}`;
+}
+
+function splitHookAndScript(value: string) {
+  const normalized = value.replace(/\r\n/g, "\n");
+  const [firstLine, ...rest] = normalized.split("\n");
+  const hookLine = firstLine ?? "";
+  let body = rest.join("\n");
+  if (!body && normalized.endsWith("\n")) {
+    body = "\n";
+  }
+  return { hook: hookLine, script: body };
 }
 
 function parseNumber(value: string) {
@@ -186,11 +245,12 @@ function toRomeIso(value: string) {
 
 function getEmptyFormState(): VideoFormState {
   return {
+    title: "",
     script: "",
     hook: "",
     format: "",
     durationSec: "",
-    status: "girato",
+    status: "bozza",
     publishedAt: formatRomeYmd(),
     views: "",
   };
@@ -202,10 +262,12 @@ function getFormatLabel(value?: string | null) {
 }
 
 function buildWorkspaceItemFromVideo(video: ShortVideo): WorkspaceItem {
+  const cleanedScript = stripHookFromScript(video.hook, video.script);
   return {
     key: video.id,
     id: video.id,
-    script: video.script ?? "",
+    title: video.title ?? "",
+    script: cleanedScript ?? "",
     hook: video.hook ?? "",
     format: video.format ?? "",
     durationSec:
@@ -224,6 +286,7 @@ function buildWorkspaceItemNew(): WorkspaceItem {
   return {
     key: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     id: null,
+    title: form.title,
     script: form.script,
     hook: form.hook,
     format: form.format,
@@ -248,6 +311,7 @@ export default function ContentProductionDashboard() {
   const [workspaceErrors, setWorkspaceErrors] = useState<Record<string, string>>({});
   const workbenchRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<WorkspaceItem[]>([]);
+  const [autosaveEnabled, setAutosaveEnabled] = useState(true);
 
   const hasAccess = useMemo(
     () => Boolean(user?.email && user.email.toLowerCase() === allowedEmail),
@@ -301,6 +365,7 @@ export default function ContentProductionDashboard() {
     if (!normalizedQuery) return sortedDrafts;
     return sortedDrafts.filter((video) => {
       const haystack = [
+        video.title,
         video.script,
         video.hook,
         video.format,
@@ -435,12 +500,32 @@ export default function ContentProductionDashboard() {
     []
   );
 
+  const updateWorkspaceScript = useCallback((key: string, value: string) => {
+    const { hook, script } = splitHookAndScript(value);
+    setWorkspaceItems((prev) =>
+      prev.map((item) =>
+        item.key === key
+          ? { ...item, hook, script, hasChanges: true }
+          : item
+      )
+    );
+    setWorkspaceErrors((prev) => {
+      if (!(key in prev)) return prev;
+      const { [key]: _, ...rest } = prev;
+      return rest;
+    });
+  }, []);
+
   const validateWorkspaceItem = useCallback((item: WorkspaceItem) => {
+    const title = normalizeValue(item.title);
     const script = normalizeValue(item.script);
     const hook = normalizeValue(item.hook);
     const format = normalizeValue(item.format);
-    if (!script || !hook || !format) {
-      return { ok: false, message: "Inserisci script, hook e format." };
+    if (!title || !script || !hook || !format) {
+      return { ok: false, message: "Inserisci titolo, script, hook e format." };
+    }
+    if (title.toLowerCase() === hook.toLowerCase()) {
+      return { ok: false, message: "Il titolo non può essere uguale all'hook." };
     }
     if (item.status === "pubblicato") {
       const durationSec = parseNumber(item.durationSec);
@@ -470,6 +555,7 @@ export default function ContentProductionDashboard() {
         return;
       }
 
+      const title = normalizeValue(item.title);
       const script = normalizeValue(item.script);
       const hook = normalizeValue(item.hook);
       const format = normalizeValue(item.format);
@@ -484,6 +570,7 @@ export default function ContentProductionDashboard() {
         const headers = await buildHeaders();
         headers["Content-Type"] = "application/json";
         const payload = {
+          title,
           script,
           hook,
           format,
@@ -564,6 +651,7 @@ export default function ContentProductionDashboard() {
   }, [saveWorkspaceItem]);
 
   useEffect(() => {
+    if (!autosaveEnabled) return;
     const interval = setInterval(() => {
       const items = workspaceRef.current;
       for (const item of items) {
@@ -573,7 +661,7 @@ export default function ContentProductionDashboard() {
       }
     }, 30_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [autosaveEnabled]);
 
   const handleStatusChange = async (video: ShortVideo, nextStatus: ShortVideoStatus) => {
     if (nextStatus === video.status) return;
@@ -715,7 +803,7 @@ export default function ContentProductionDashboard() {
                 type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Cerca script, hook, format"
+                placeholder="Cerca titolo, hook, format"
                 className="w-full min-w-[200px] bg-transparent text-sm text-slate-800 outline-none"
               />
             </div>
@@ -736,7 +824,10 @@ export default function ContentProductionDashboard() {
                 key={video.id}
                 className="flex h-full flex-col rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm"
               >
-                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
+                <h3 className="text-base font-semibold text-slate-900">
+                  {formatTitle(video.title)}
+                </h3>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 ${STATUS_BADGES[video.status]}`}
                   >
@@ -751,14 +842,9 @@ export default function ContentProductionDashboard() {
                     <Clock3 size={12} />
                     {formatDuration(video.durationSec)}
                   </span>
-                  {video.hook ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-slate-600">
-                      Hook: {video.hook}
-                    </span>
-                  ) : null}
                 </div>
                 <p className="mt-3 text-sm text-slate-700">
-                  {getScriptPreview(video.script, 180)}
+                  {getScriptPreviewWithHook(video.hook, video.script, 180)}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
                   <span>Creato {formatDate(video.createdAt)}</span>
@@ -869,9 +955,15 @@ export default function ContentProductionDashboard() {
               <Plus size={14} />
               Nuovo script
             </button>
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600">
+              <input
+                type="checkbox"
+                checked={autosaveEnabled}
+                onChange={(event) => setAutosaveEnabled(event.target.checked)}
+                className="h-3.5 w-3.5 accent-slate-900"
+              />
               Autosave 30s
-            </span>
+            </label>
           </div>
         </div>
 
@@ -914,26 +1006,16 @@ export default function ContentProductionDashboard() {
                   </button>
                 </div>
 
-                <textarea
-                  rows={8}
-                  value={item.script}
-                  onChange={(event) =>
-                    updateWorkspaceField(item.key, "script", event.target.value)
-                  }
-                  placeholder="Scrivi lo script o la scaletta..."
-                  className="mt-4 w-full min-h-[240px] rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-slate-400"
-                />
-
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="text-xs font-semibold text-slate-600">Hook</label>
+                    <label className="text-xs font-semibold text-slate-600">Titolo</label>
                     <input
                       type="text"
-                      value={item.hook}
+                      value={item.title}
                       onChange={(event) =>
-                        updateWorkspaceField(item.key, "hook", event.target.value)
+                        updateWorkspaceField(item.key, "title", event.target.value)
                       }
-                      placeholder="Errore comune, promessa..."
+                      placeholder="Titolo breve e chiaro"
                       className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400"
                     />
                   </div>
@@ -950,6 +1032,17 @@ export default function ContentProductionDashboard() {
                     />
                   </div>
                 </div>
+
+                <label className="mt-4 text-xs font-semibold text-slate-600">
+                  Testo completo (prima riga = hook)
+                </label>
+                <textarea
+                  rows={8}
+                  value={mergeHookAndScript(item.hook, item.script)}
+                  onChange={(event) => updateWorkspaceScript(item.key, event.target.value)}
+                  placeholder={"Hook (prima riga)\n\nScript o scaletta..."}
+                  className="mt-1 w-full min-h-[240px] rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-slate-400"
+                />
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <div>
@@ -1039,7 +1132,9 @@ export default function ContentProductionDashboard() {
                         ? "Allineato"
                         : "Nuovo non salvato"}
                   </span>
-                  <span>Autosave attivo</span>
+                  <span>
+                    {autosaveEnabled ? "Autosave attivo" : "Autosave disattivato"}
+                  </span>
                 </div>
               </div>
             ))}
@@ -1087,7 +1182,10 @@ export default function ContentProductionDashboard() {
                         className="rounded-lg border border-emerald-100 bg-white px-3 py-2"
                       >
                         <p className="text-xs font-semibold text-slate-900">
-                          {getScriptPreview(video.script, 80)}
+                          {formatTitle(video.title)}
+                        </p>
+                        <p className="mt-1 text-[11px] text-slate-600">
+                          {getScriptPreviewWithHook(video.hook, video.script, 70)}
                         </p>
                         <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
                           <span>{getFormatLabel(video.format)}</span>
@@ -1116,7 +1214,10 @@ export default function ContentProductionDashboard() {
                         className="rounded-lg border border-rose-100 bg-white px-3 py-2"
                       >
                         <p className="text-xs font-semibold text-slate-900">
-                          {getScriptPreview(video.script, 80)}
+                          {formatTitle(video.title)}
+                        </p>
+                        <p className="mt-1 text-[11px] text-slate-600">
+                          {getScriptPreviewWithHook(video.hook, video.script, 70)}
                         </p>
                         <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
                           <span>{getFormatLabel(video.format)}</span>
@@ -1168,8 +1269,9 @@ export default function ContentProductionDashboard() {
                       <div className="flex items-start justify-between gap-3 rounded-lg border border-emerald-100 bg-white px-3 py-2">
                         <div>
                           <p className="font-semibold text-emerald-700">Top</p>
-                          <p className="text-slate-700">
-                            {getScriptPreview(row.best.script, 70)}
+                          <p className="text-slate-700">{formatTitle(row.best.title)}</p>
+                          <p className="text-[11px] text-slate-500">
+                            {getScriptPreviewWithHook(row.best.hook, row.best.script, 60)}
                           </p>
                         </div>
                         <span className="font-semibold text-emerald-700">
@@ -1179,8 +1281,9 @@ export default function ContentProductionDashboard() {
                       <div className="flex items-start justify-between gap-3 rounded-lg border border-rose-100 bg-white px-3 py-2">
                         <div>
                           <p className="font-semibold text-rose-700">Bottom</p>
-                          <p className="text-slate-700">
-                            {getScriptPreview(row.worst.script, 70)}
+                          <p className="text-slate-700">{formatTitle(row.worst.title)}</p>
+                          <p className="text-[11px] text-slate-500">
+                            {getScriptPreviewWithHook(row.worst.hook, row.worst.script, 60)}
                           </p>
                         </div>
                         <span className="font-semibold text-rose-700">
@@ -1231,7 +1334,10 @@ export default function ContentProductionDashboard() {
                     className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2"
                   >
                     <p className="text-xs font-semibold text-slate-900">
-                      {getScriptPreview(video.script, 70)}
+                      {formatTitle(video.title)}
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-600">
+                      {getScriptPreviewWithHook(video.hook, video.script, 60)}
                     </p>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
                       <span>{getFormatLabel(video.format)}</span>
@@ -1343,7 +1449,7 @@ export default function ContentProductionDashboard() {
                     className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2 text-[11px] text-slate-600"
                   >
                     <span className="font-semibold text-slate-900">
-                      {getScriptPreview(video.script, 45)}
+                      {formatTitle(video.title)}
                     </span>
                     <span>{formatDateTime(video.publishedAt)}</span>
                   </div>
