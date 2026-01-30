@@ -74,6 +74,14 @@ export default function CtaModalButton({
     if (status === "loading") return;
 
     const form = event.currentTarget;
+    const emailField = form.elements.namedItem("email");
+    if (emailField instanceof HTMLInputElement) {
+      emailField.value = emailField.value.trim();
+    }
+    const phoneField = form.elements.namedItem("phone");
+    if (phoneField instanceof HTMLInputElement) {
+      phoneField.value = phoneField.value.trim();
+    }
     if (!form.checkValidity()) {
       form.reportValidity();
       return;
@@ -238,7 +246,6 @@ export default function CtaModalButton({
                   required
                   autoComplete="email"
                   inputMode="email"
-                  pattern="[^@\\s]+@[^@\\s]+\\.[^@\\s]+"
                   aria-label="Email"
                   placeholder="Email*"
                   title="Inserisci un'email valida"
