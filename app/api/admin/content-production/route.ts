@@ -39,6 +39,27 @@ function normalizeText(value: unknown) {
   return trimmed ? trimmed : null;
 }
 
+function normalizeHookList(value: unknown) {
+  if (value === null || value === undefined) return null;
+  const source = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split("\n")
+      : [];
+  const cleaned: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of source) {
+    if (typeof raw !== "string") continue;
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleaned.push(trimmed);
+  }
+  return cleaned;
+}
+
 function parseStatus(value: unknown): ShortVideoStatus | null {
   if (value === "bozza" || value === "girato" || value === "editato" || value === "pubblicato") return value;
   if (value === "draft") return "bozza";
@@ -72,6 +93,16 @@ function normalizeTimestamp(value: unknown) {
   return parsed.toISOString();
 }
 
+async function formatExists(db: ReturnType<typeof supabaseServer>, value: string) {
+  const { data, error } = await db
+    .from("content_short_video_formats")
+    .select("name")
+    .eq("name", value)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+}
+
 function mapVideo(row: any) {
   if (!row) return null;
   return {
@@ -81,7 +112,9 @@ function mapVideo(row: any) {
     views: typeof row.views === "number" ? row.views : row.views ?? null,
     publishedAt: row.published_at || null,
     hook: row.hook || null,
+    altHooks: Array.isArray(row.alt_hooks) ? row.alt_hooks : [],
     format: row.format || null,
+    editedFileName: row.edited_file_name || null,
     durationSec: typeof row.duration_sec === "number" ? row.duration_sec : row.duration_sec ?? null,
     status: mapStatus(row.status),
     createdAt: row.created_at || null,
@@ -133,8 +166,10 @@ export async function POST(request: NextRequest) {
 
   const script = normalizeText(body.script);
   const hook = normalizeText(body.hook);
+  const altHooks = normalizeHookList(body.altHooks);
   const format = normalizeText(body.format);
   const title = normalizeText(body.title);
+  const editedFileName = normalizeText(body.editedFileName);
   if (!title || !script || !hook || !format) {
     return NextResponse.json(
       { error: "missing_required_fields", details: "title/script/hook/format" },
@@ -161,11 +196,24 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+  const db = supabaseServer();
+  try {
+    const exists = await formatExists(db, format);
+    if (!exists) {
+      return NextResponse.json({ error: "invalid_format" }, { status: 400 });
+    }
+  } catch (error: any) {
+    console.error("[admin/content-production] format check error", error);
+    return NextResponse.json({ error: "format_check_failed" }, { status: 500 });
+  }
+
   const payload = {
     title,
     script,
     hook,
+    alt_hooks: altHooks ?? [],
     format,
+    edited_file_name: editedFileName,
     duration_sec: durationSec,
     views,
     published_at:
@@ -175,7 +223,6 @@ export async function POST(request: NextRequest) {
     status,
   };
 
-  const db = supabaseServer();
   const { data, error } = await db
     .from("content_short_videos")
     .insert(payload)
@@ -230,12 +277,18 @@ export async function PATCH(request: NextRequest) {
     }
     payload.hook = hook;
   }
+  if ("altHooks" in body) {
+    payload.alt_hooks = normalizeHookList(body.altHooks) ?? [];
+  }
   if ("format" in body) {
     const format = normalizeText(body.format);
     if (!format) {
       return NextResponse.json({ error: "missing_format" }, { status: 400 });
     }
     payload.format = format;
+  }
+  if ("editedFileName" in body) {
+    payload.edited_file_name = normalizeText(body.editedFileName);
   }
   if ("durationSec" in body) payload.duration_sec = parseInteger(body.durationSec);
   if ("views" in body) payload.views = parseInteger(body.views);
@@ -283,6 +336,17 @@ export async function PATCH(request: NextRequest) {
   }
 
   const db = supabaseServer();
+  if (payload.format) {
+    try {
+      const exists = await formatExists(db, payload.format);
+      if (!exists) {
+        return NextResponse.json({ error: "invalid_format" }, { status: 400 });
+      }
+    } catch (error: any) {
+      console.error("[admin/content-production] format check error", error);
+      return NextResponse.json({ error: "format_check_failed" }, { status: 500 });
+    }
+  }
   const { data, error } = await db
     .from("content_short_videos")
     .update(payload)
