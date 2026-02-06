@@ -67,19 +67,24 @@ export default function SimulaVerificaPage() {
 
   // Preselezione da querystring: ?lessonId=...&slug=...&title=...
   const searchParams = useSearchParams();
+  const [entryLesson, setEntryLesson] = useState<LessonRef | null>(null);
   useEffect(() => {
     try {
       const id = searchParams?.get("lessonId");
       const slug = searchParams?.get("slug");
       const title = searchParams?.get("title");
       if (id && slug) {
-        setSelected((prev) => (prev.some((p) => p.id === id) ? prev : [...prev, { id, slug, title: title || slug }]));
-        setStep("durata");
+        setEntryLesson({ id, slug, title: title || slug });
+        setStep((prev) => (prev === "classe" ? "argomenti" : prev));
       }
     } catch {}
   }, [searchParams]);
 
   const [search, setSearch] = useState("");
+  const [bulkTopics, setBulkTopics] = useState("");
+  const [bulkAdding, setBulkAdding] = useState(false);
+  const [bulkMissing, setBulkMissing] = useState<string[]>([]);
+  const [bulkAddedCount, setBulkAddedCount] = useState<number | null>(null);
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<LessonRef[]>([]);
   const [suggested, setSuggested] = useState<LessonRef[]>([]);
@@ -114,6 +119,67 @@ export default function SimulaVerificaPage() {
       console.error(e);
     } finally {
       setSearching(false);
+    }
+  }
+
+  function parseTopicsInput(value: string) {
+    return value
+      .split(/\r?\n|,|;/)
+      .map((item) => item.replace(/^[-•]\s*/, "").trim())
+      .filter(Boolean);
+  }
+
+  async function handleBulkAdd() {
+    const items = parseTopicsInput(bulkTopics);
+    setBulkMissing([]);
+    setBulkAddedCount(null);
+    if (!items.length) return;
+    setBulkAdding(true);
+    try {
+      const responses = await Promise.all(
+        items.map(async (topic) => {
+          try {
+            const res = await fetch(
+              `/api/lessons-search?q=${encodeURIComponent(topic)}`
+            );
+            const json = await res.json();
+            if (res.ok && Array.isArray(json.items) && json.items.length) {
+              return { topic, lesson: json.items[0] as LessonRef };
+            }
+          } catch {}
+          return { topic, lesson: null };
+        })
+      );
+
+      const missing: string[] = [];
+      const toAdd: LessonRef[] = [];
+      for (const entry of responses) {
+        if (!entry.lesson) {
+          missing.push(entry.topic);
+          continue;
+        }
+        toAdd.push(entry.lesson);
+      }
+
+      setSelected((curr) => {
+        const next = [...curr];
+        let added = 0;
+        for (const lesson of toAdd) {
+          const exists = next.some(
+            (s) => s.id === lesson.id || s.slug === lesson.slug
+          );
+          if (!exists) {
+            next.push(lesson);
+            added += 1;
+          }
+        }
+        setBulkAddedCount(added);
+        return next;
+      });
+
+      setBulkMissing(missing);
+    } finally {
+      setBulkAdding(false);
     }
   }
 
@@ -386,6 +452,52 @@ export default function SimulaVerificaPage() {
           </div>
         </div>
 
+        {entryLesson ? (
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800/60 [.dark_&]:text-white/80">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span>
+                Hai aperto la simulazione da:{" "}
+                <strong className="text-slate-900 [.dark_&]:text-white">
+                  {entryLesson.title}
+                </strong>
+              </span>
+              <button
+                onClick={() =>
+                  setSelected((curr) => {
+                    const exists = curr.some(
+                      (c) =>
+                        c.id === entryLesson.id || c.slug === entryLesson.slug
+                    );
+                    if (exists) {
+                      return curr.filter(
+                        (c) =>
+                          c.id !== entryLesson.id &&
+                          c.slug !== entryLesson.slug
+                      );
+                    }
+                    return [...curr, entryLesson];
+                  })
+                }
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  selected.some(
+                    (c) =>
+                      c.id === entryLesson.id || c.slug === entryLesson.slug
+                  )
+                    ? "bg-slate-200 text-slate-800 hover:bg-slate-300 [.dark_&]:bg-slate-700 [.dark_&]:text-white"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
+                {selected.some(
+                  (c) =>
+                    c.id === entryLesson.id || c.slug === entryLesson.slug
+                )
+                  ? "Rimuovi"
+                  : "Aggiungi"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {/* Suggeriti */}
         <div className="mt-4">
           <div className="text-sm font-medium mb-2">Suggeriti per {classeLabel}</div>
@@ -507,6 +619,42 @@ export default function SimulaVerificaPage() {
               })}
             </ul>
           )}
+        </div>
+
+        {/* Lista argomenti */}
+        <div className="mt-6">
+          <div className="text-sm font-medium mb-2">
+            Oppure incolla la lista degli argomenti
+          </div>
+          <textarea
+            value={bulkTopics}
+            onChange={(e) => setBulkTopics(e.target.value)}
+            placeholder={`Es.:\n- Equazioni di secondo grado\n- Disequazioni\n- Funzioni`}
+            rows={4}
+            className="w-full rounded-lg border px-3 py-2 text-sm bg-white [.dark_&]:bg-slate-800 [.dark_&]:border-slate-600 [.dark_&]:text-white"
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span>Uno per riga o separati da virgola.</span>
+            {bulkAddedCount !== null && (
+              <span className="text-emerald-600">
+                Aggiunti {bulkAddedCount} argomenti.
+              </span>
+            )}
+          </div>
+          {bulkMissing.length > 0 && (
+            <div className="mt-2 text-xs text-rose-600">
+              Non trovati: {bulkMissing.join(", ")}.
+            </div>
+          )}
+          <div className="mt-2 flex justify-end">
+            <button
+              onClick={handleBulkAdd}
+              disabled={bulkAdding}
+              className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm hover:bg-blue-700 disabled:opacity-60"
+            >
+              {bulkAdding ? "Aggiungo..." : "Aggiungi lista"}
+            </button>
+          </div>
         </div>
 
         {selected.length > 0 && (

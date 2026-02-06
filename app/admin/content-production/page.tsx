@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -2553,7 +2553,7 @@ export default function ContentProductionDashboard() {
                       const createdCount = draftsCreatedByDay[day.ymd] || 0;
                       const showPurple =
                         createdCount > 7 && day.ymd >= calendarTrackingStartYmd;
-                      let statusNode: JSX.Element | null = null;
+                      let statusNode: ReactNode = null;
                       if (status && status !== "inactive") {
                         let icon = <Circle size={14} className="text-sky-500" />;
                         let label = "Futuro";
