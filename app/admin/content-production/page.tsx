@@ -418,6 +418,9 @@ export default function ContentProductionDashboard() {
   );
   const [calendarStatuses, setCalendarStatuses] = useState<Record<string, string>>({});
   const [calendarStatusLoading, setCalendarStatusLoading] = useState(false);
+  const [calendarTrackingStart, setCalendarTrackingStart] = useState<string | null>(
+    null
+  );
   const [planItems, setPlanItems] = useState<EditorialPlanItem[]>([]);
   const [planLoading, setPlanLoading] = useState(false);
   const [planSaving, setPlanSaving] = useState(false);
@@ -662,12 +665,30 @@ export default function ContentProductionDashboard() {
     };
   }, [calendarDays]);
 
+  const calendarTrackingStartYmd = useMemo(
+    () => calendarTrackingStart || formatRomeYmd(),
+    [calendarTrackingStart]
+  );
+
   const planTotal = useMemo(() => {
     return planItems.reduce((sum, item) => {
       const parsed = Number(item.videoCount);
       return Number.isFinite(parsed) ? sum + parsed : sum;
     }, 0);
   }, [planItems]);
+
+  const draftsCreatedByDay = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const video of videos) {
+      const createdAt = video.createdAt;
+      if (!createdAt) continue;
+      const date = new Date(createdAt);
+      if (Number.isNaN(date.getTime())) continue;
+      const ymd = formatRomeYmd(date);
+      counts[ymd] = (counts[ymd] || 0) + 1;
+    }
+    return counts;
+  }, [videos]);
 
   const recentPublished = useMemo(() => {
     return [...published]
@@ -1121,6 +1142,9 @@ export default function ContentProductionDashboard() {
         if (item?.date) statuses[String(item.date)] = String(item.status || "");
       }
       setCalendarStatuses(statuses);
+      if (typeof json?.trackingStart === "string") {
+        setCalendarTrackingStart(json.trackingStart);
+      }
     } catch (err) {
       console.warn("[content-production] calendar status fetch failed", err);
     } finally {
@@ -2526,31 +2550,48 @@ export default function ContentProductionDashboard() {
                     ) : (
                     (() => {
                       const status = calendarStatuses[day.ymd] || "";
-                      if (!status || status === "inactive") {
-                        return null;
+                      const createdCount = draftsCreatedByDay[day.ymd] || 0;
+                      const showPurple =
+                        createdCount > 7 && day.ymd >= calendarTrackingStartYmd;
+                      let statusNode: JSX.Element | null = null;
+                      if (status && status !== "inactive") {
+                        let icon = <Circle size={14} className="text-sky-500" />;
+                        let label = "Futuro";
+                        if (status === "met") {
+                          icon = <CheckCircle2 size={14} className="text-emerald-500" />;
+                          label = "Schedule rispettata";
+                        } else if (status === "partial") {
+                          icon = <AlertTriangle size={14} className="text-amber-500" />;
+                          label = "Pubblicazioni parziali";
+                        } else if (status === "missed") {
+                          icon = <XCircle size={14} className="text-rose-500" />;
+                          label = "Nessuna pubblicazione";
+                        } else if (status === "future") {
+                          icon = <Circle size={14} className="text-sky-500" />;
+                          label = "Futuro";
+                        } else {
+                          icon = <Circle size={14} className="text-sky-500" />;
+                          label = "In corso";
+                        }
+                        statusNode = (
+                          <span title={label} aria-label={label}>
+                            {icon}
+                          </span>
+                        );
                       }
-                      let icon = <Circle size={14} className="text-sky-500" />;
-                      let label = "Futuro";
-                      if (status === "met") {
-                        icon = <CheckCircle2 size={14} className="text-emerald-500" />;
-                        label = "Schedule rispettata";
-                      } else if (status === "partial") {
-                        icon = <AlertTriangle size={14} className="text-amber-500" />;
-                        label = "Pubblicazioni parziali";
-                      } else if (status === "missed") {
-                        icon = <XCircle size={14} className="text-rose-500" />;
-                        label = "Nessuna pubblicazione";
-                      } else if (status === "future") {
-                        icon = <Circle size={14} className="text-sky-500" />;
-                        label = "Futuro";
-                      } else {
-                        icon = <Circle size={14} className="text-sky-500" />;
-                        label = "In corso";
-                      }
+                      if (!statusNode && !showPurple) return null;
                       return (
-                        <span title={label} aria-label={label}>
-                          {icon}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          {statusNode}
+                          {showPurple ? (
+                            <span
+                              title="Oltre 7 bozze create"
+                              aria-label="Oltre 7 bozze create"
+                            >
+                              <CheckCircle2 size={14} className="text-violet-500" />
+                            </span>
+                          ) : null}
+                        </div>
                       );
                     })()
                     )}

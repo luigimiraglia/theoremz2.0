@@ -2,19 +2,7 @@
 import type { Metadata } from "next";
 import SenjaEmbed from "@/components/SenjaEmbed";
 import BlackPageGuard from "@/components/BlackPageGuard";
-import type { LucideIcon } from "lucide-react";
-import {
-  MessageCircle,
-  ClipboardCheck,
-  ListChecks,
-  CheckCircle2,
-  BookOpen,
-  Megaphone,
-  Trophy,
-  Sparkles,
-  Star,
-  Users,
-} from "lucide-react";
+import { ListChecks, CheckCircle2, BookOpen, Star, Users } from "lucide-react";
 import PricingTile from "@/components/PricingTile";
 // import CountdownTimer from "@/components/CountdownTimer";
 
@@ -76,7 +64,18 @@ export const metadata: Metadata = {
 
 // ---------- PAGINA ----------
 export default function BlackPage() {
-  // JSON-LD: Breadcrumb, Prodotto (con 3 offerte), FAQ
+  // JSON-LD: Breadcrumb, Prodotto (con 2 offerte), FAQ
+  const MONTHLY_PRICE = 12;
+  const YEARLY_PRICE = 99;
+  const MONTHLY_PRICE_LABEL = MONTHLY_PRICE.toFixed(2);
+  const YEARLY_PRICE_LABEL = YEARLY_PRICE.toFixed(2);
+  const YEARLY_EQUIV = (YEARLY_PRICE / 12).toFixed(2).replace(".", ",");
+  const YEARLY_DISCOUNT = Math.round(
+    (1 - YEARLY_PRICE / (MONTHLY_PRICE * 12)) * 100,
+  );
+  const MONTHLY_BUY_HREF = "https://buy.stripe.com/9B68wP7gw8Qv0Fb3v8c7u1a";
+  const YEARLY_BUY_HREF = "https://buy.stripe.com/bJe4gz44k6InafL7Loc7u14";
+
   const productLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -86,18 +85,26 @@ export default function BlackPage() {
     image: [`${SITE}/metadata.png`],
     offers: {
       "@type": "AggregateOffer",
-      offerCount: 1,
-      lowPrice: "12.00",
-      highPrice: "12.00",
+      offerCount: 2,
+      lowPrice: MONTHLY_PRICE_LABEL,
+      highPrice: YEARLY_PRICE_LABEL,
       priceCurrency: "EUR",
       offers: [
         {
           "@type": "Offer",
-          name: "Piano Piattaforma",
-          price: "12.00",
+          name: "Piano Black Mensile",
+          price: MONTHLY_PRICE_LABEL,
           priceCurrency: "EUR",
           availability: "https://schema.org/InStock",
-          url: "https://buy.stripe.com/9B68wP7gw8Qv0Fb3v8c7u1a",
+          url: MONTHLY_BUY_HREF,
+        },
+        {
+          "@type": "Offer",
+          name: "Piano Black Annuale",
+          price: YEARLY_PRICE_LABEL,
+          priceCurrency: "EUR",
+          availability: "https://schema.org/InStock",
+          url: YEARLY_BUY_HREF,
         },
       ],
     },
@@ -171,6 +178,28 @@ export default function BlackPage() {
   const graph = [breadcrumb, product, faq];
   const heroCtaLabel = "Scopri il piano";
   // const heroCtaLabel = "Scopri l'offerta di Natale Black";
+  const platformFeatures = [
+    {
+      title: "Tracking voti",
+      body: "Tutti i voti e le verifiche sono monitorati: capisci subito se stai migliorando o se serve cambiare approccio.",
+      image: "/images/mocky2.webp",
+    },
+    {
+      title: "Simulazioni verifiche",
+      body: "Ti alleni prima della prova reale, così arrivi più sicuro e con meno stress.",
+      image: "/images/mocky3.webp",
+    },
+    {
+      title: "Esercizi spiegati",
+      body: "Ogni esercizio mostra il ragionamento completo (3000+ esercizi), così ti alleni anche quando finiscono i compiti.",
+      image: "/images/mocky4.webp",
+    },
+    {
+      title: "Lezioni on-demand",
+      body: "Ripassi gli argomenti quando serve, senza dipendere dagli orari di qualcuno.",
+      image: "/images/mocky5.webp",
+    },
+  ];
   const SHIMMER_CSS = `
           @keyframes shimmer {
             0% {
@@ -268,11 +297,12 @@ export default function BlackPage() {
             {/* Testo */}
             <div>
               <h1 className="font-black leading-tight text-[36px] sm:text-[44px] lg:text-[54px]">
-                Matematica e fisica, tutto in un unico
+                Con Black sai
                 <span className="italic font-extrabold text-sky-300">
                   {" "}
-                  piano.
-                </span>
+                  sempre{" "}
+                </span>{" "}
+                da dove iniziare
               </h1>
 
               <p className="mt-5 max-w-2xl text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/90 font-medium">
@@ -280,15 +310,15 @@ export default function BlackPage() {
                 <span className="inline-block bg-[linear-gradient(90deg,#38bdf8,#bae6fd,#38bdf8)] bg-[length:200%_100%] bg-clip-text text-transparent animate-shimmer font-extrabold">
                   Theoremz Black
                 </span>{" "}
-                hai accesso completo alla piattaforma: videolezioni, esercizi
-                svolti passo&ndash;passo, formulari, quiz, appunti e
-                simulazioni. Un unico piano semplice.
+                hai tutto in un solo posto per studiare davvero. Così non resti
+                mai senza materiale e sai sempre cosa ripassare prima delle
+                verifiche.
               </p>
 
               <div className="mt-8 flex items-center gap-4">
                 <a
                   href="#pricing"
-                  className="group relative inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[16px] font-extrabold text-white transition-all duration-300 bg-gradient-to-r from-[#b91c1c] via-[#dc2626] to-[#7f1d1d] shadow-[0_18px_44px_-18px_rgba(185,28,28,0.9)] hover:shadow-[0_20px_52px_-18px_rgba(185,28,28,1)]"
+                  className="group relative inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[16px] font-extrabold text-white transition-all duration-300 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 shadow-[0_18px_44px_-18px_rgba(14,165,233,0.75)] hover:from-sky-500 hover:via-cyan-400 hover:to-blue-600 hover:shadow-[0_20px_52px_-18px_rgba(14,165,233,0.95)]"
                 >
                   {heroCtaLabel}
                   <svg
@@ -363,152 +393,156 @@ export default function BlackPage() {
         <div className="mt-4 max-w-3xl space-y-4 text-[16px] sm:text-[17px] lg:text-[18px] leading-relaxed text-white/90 font-medium">
           <p>
             <span className="font-semibold text-white">Theoremz Black</span> è
-            l&apos;accesso completo alla piattaforma Theoremz, con tutto il
-            materiale di matematica e fisica sempre disponibile.
+            l&apos;accesso completo alla piattaforma Theoremz, pensato per farti
+            studiare con continuità e senza blocchi.
           </p>
           <p>
-            Trovi videolezioni, esercizi svolti, formulari, quiz, appunti e
-            flashcard, organizzati per argomento e livello.
+            Videolezioni, esercizi svolti, formulari, quiz, appunti e flashcard
+            sono organizzati per argomento e livello: così sai subito cosa
+            ripassare e in che ordine.
           </p>
           <p>
-            Studia quando vuoi e ripassa prima delle verifiche con un unico
-            piano mensile semplice.
+            Studia quando vuoi e arrivi alle verifiche più sicuro, con un piano
+            semplice (mensile o annuale).
           </p>
         </div>
         <ul className="mt-5 grid gap-3 text-[14.5px] font-semibold text-white/85 sm:grid-cols-3">
           <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <BookOpen className="h-5 w-5 text-sky-300" aria-hidden />
-            Videolezioni per ogni argomento
+            Videolezioni chiare per sbloccare gli argomenti
           </li>
           <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <ListChecks className="h-5 w-5 text-cyan-300" aria-hidden />
-            Esercizi svolti passo&ndash;passo
+            Esercizi svolti passo&ndash;passo: impari il metodo
           </li>
           <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <CheckCircle2 className="h-5 w-5 text-emerald-300" aria-hidden />
-            Formulari, quiz e appunti pronti
+            Formulari, quiz e appunti pronti per il ripasso
           </li>
         </ul>
       </section>
 
-      {/* ============ COSA INCLUDE (grid 2 colonne da lg) ============ */}
+      {/* ============ VANTAGGI PIATTAFORMA ============ */}
       <section className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-12">
-        <h2 className="text-[26px] sm:text-[28px] lg:text-[32px] font-black text-white">
-          Cosa include?
-        </h2>
+        <div className="max-w-3xl">
+          <h2 className="text-[26px] sm:text-[28px] lg:text-[32px] font-black text-white">
+            I vantaggi della piattaforma
+          </h2>
+          <p className="mt-3 text-[16px] sm:text-[17px] text-white/80">
+            Strumenti pratici per studiare con continuità, allenarti prima delle
+            verifiche e non restare mai senza materiale.
+          </p>
+        </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <IncludeCard
-            title="Videolezioni e spiegazioni complete"
-            items={[
-              [
-                "Lezioni per ogni argomento",
-                "Video e spiegazioni chiare per matematica e fisica.",
-              ],
-              [
-                "Percorsi ordinati",
-                "Contenuti divisi per argomento e livello per ripasso rapido.",
-              ],
-            ]}
-          />
-
-          <IncludeCard
-            title="Esercizi svolti e simulazioni"
-            items={[
-              [
-                "Esercizi illimitati",
-                "Accesso a centinaia di esercizi già presenti.",
-              ],
-              [
-                "Soluzioni passo passo",
-                "Svolgimenti chiari per capire subito il metodo.",
-              ],
-              [
-                "Simulazioni verifiche",
-                "Allenati con esercizi simili a quelli in classe.",
-              ],
-            ]}
-          />
-
-          <IncludeCard
-            title="Formulari, quiz e appunti"
-            items={[
-              [
-                "Formulari pronti",
-                "Formule e teoremi sempre a portata di mano.",
-              ],
-              [
-                "Quiz e flashcard",
-                "Ripasso rapido dei concetti chiave.",
-              ],
-              [
-                "Appunti PDF",
-                "Materiale scaricabile quando serve.",
-              ],
-            ]}
-          />
-
-          {/* Garanzia */}
-          <div className="lg:col-span-2">
-            <div className="rounded-2xl border border-white/20 bg-gradient-to-br from-cyan-500/90 via-sky-500/80 to-blue-600/80 px-6 py-9 text-center text-2xl sm:text-3xl lg:text-4xl font-black text-white shadow-[0_20px_45px_-28px_rgba(14,165,233,0.9)]">
-              <span className="block text-sm font-semibold uppercase tracking-[0.35em] text-white/80">
-                Garanzia totale
-              </span>
-              <span className="mt-4 block">+100% Soddisfatti o Rimborsati</span>
-              <span className="mt-3 block text-base font-semibold text-white/90">
-                Cambia idea quando vuoi
-              </span>
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
+          {platformFeatures.map((feature) => (
+            <div
+              key={feature.title}
+              className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-[0_18px_50px_-30px_rgba(56,189,248,0.45)] transition-all duration-300 hover:-translate-y-1 hover:border-white/25 hover:bg-white/10 hover:shadow-[0_22px_60px_-30px_rgba(56,189,248,0.6)]"
+            >
+              <div className="h-56 w-full overflow-hidden bg-gradient-to-br from-white/10 via-white/0 to-sky-500/10 sm:h-64">
+                <img
+                  src={feature.image}
+                  alt={feature.title}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <div className="flex flex-1 flex-col gap-3 p-6 text-center">
+                <p className="text-[22px] font-black text-white sm:text-[24px]">
+                  {feature.title}
+                </p>
+                <p className="text-[15px] text-white/75">{feature.body}</p>
+              </div>
             </div>
+          ))}
+        </div>
+
+        {/* Garanzia */}
+        <div className="mt-8">
+          <div className="rounded-2xl border border-white/20 bg-gradient-to-br from-cyan-500/90 via-sky-500/80 to-blue-600/80 px-6 py-9 text-center text-2xl sm:text-3xl lg:text-4xl font-black text-white shadow-[0_20px_45px_-28px_rgba(14,165,233,0.9)]">
+            <span className="block text-sm font-semibold uppercase tracking-[0.35em] text-white/80">
+              Garanzia totale
+            </span>
+            <span className="mt-4 block">+100% Soddisfatti o Rimborsati</span>
+            <span className="mt-3 block text-base font-semibold text-white/90">
+              Cambia idea quando vuoi
+            </span>
           </div>
         </div>
       </section>
 
-      {/* ============ PRICING (piano unico) ============ */}
+      {/* ============ PRICING (Piano Black) ============ */}
       <section
         id="pricing"
         className="mx-auto mt-16 max-w-7xl px-5 pb-4 sm:px-8 lg:px-12"
       >
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-6">
           <h2 className="text-center text-[26px] sm:text-[28px] lg:text-[32px] font-black text-white">
-            Piano unico Theoremz Black
+            Sblocca tutto prima della prossima verifica ↓
           </h2>
           <PricingTile
-            outerClassName="group origin-bottom w-full max-w-[460px] rounded-[24px] bg-gradient-to-r from-blue-600 to-cyan-400 p-[8px] shadow-[0_22px_55px_-28px_rgba(59,130,246,0.6)] transition-transform duration-300 hover:-translate-y-2 hover:shadow-[0_28px_70px_-32px_rgba(59,130,246,0.7)]"
-            headerLabel="Piano unico"
+            outerClassName="group relative z-0 origin-bottom w-full max-w-[460px] rounded-[26px] bg-gradient-to-r from-blue-600 via-cyan-400 to-sky-400 p-[9px] shadow-[0_28px_80px_-30px_rgba(56,189,248,0.75)] transition-transform duration-300 hover:-translate-y-2 hover:shadow-[0_36px_95px_-34px_rgba(56,189,248,0.9)] before:absolute before:-inset-3 before:rounded-[28px] before:bg-gradient-to-r before:from-sky-400/40 before:via-cyan-400/30 before:to-blue-500/40 before:blur-2xl before:opacity-80 before:content-[''] before:-z-10"
+            headerLabel="Piano Black"
             headerGradient="bg-gradient-to-r from-blue-600 to-cyan-400"
-            title="Piattaforma Theoremz"
+            title="Piano Black"
             priceContentByToggleId={{
               "black-platform-monthly": (
                 <div className="flex flex-col items-center leading-tight text-center gap-2">
                   <span className="text-[46px] sm:text-[46px] font-black bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_14px_34px_-12px_rgba(14,165,233,0.6)]">
-                    12€/mese
+                    {MONTHLY_PRICE}€/mese
+                  </span>
+                </div>
+              ),
+              "black-platform-annual": (
+                <div className="flex flex-col items-center leading-tight text-center gap-2">
+                  <span className="text-[46px] sm:text-[46px] font-black bg-gradient-to-r from-emerald-500 via-teal-400 to-sky-500 bg-clip-text text-transparent drop-shadow-[0_14px_34px_-12px_rgba(16,185,129,0.55)]">
+                    {YEARLY_PRICE}€/anno
+                  </span>
+                  <span className="text-[13px] font-semibold text-slate-600">
+                    ~{YEARLY_EQUIV}€/mese
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">
+                    Risparmi ~{YEARLY_DISCOUNT}%
                   </span>
                 </div>
               ),
             }}
             priceGradientByToggleId={{
-              "black-platform-monthly": "from-blue-600 via-cyan-500 to-blue-600",
+              "black-platform-monthly":
+                "from-blue-600 via-cyan-500 to-blue-600",
+              "black-platform-annual":
+                "from-emerald-500 via-teal-400 to-sky-500",
             }}
             toggleOptions={[
               {
                 id: "black-platform-monthly",
                 label: "Mensile",
-                price: "12€",
+                price: `${MONTHLY_PRICE}€`,
                 unit: " /mese",
-                buyHref: "https://buy.stripe.com/9B68wP7gw8Qv0Fb3v8c7u1a",
+                buyHref: MONTHLY_BUY_HREF,
                 infoHref: "https://wa.link/mkxv41",
-                plan: "Black Piattaforma Mensile",
+                plan: "Piano Black Mensile",
+              },
+              {
+                id: "black-platform-annual",
+                label: "Annuale",
+                price: `${YEARLY_PRICE}€`,
+                unit: " /anno",
+                buyHref: YEARLY_BUY_HREF,
+                infoHref: "https://wa.link/mkxv41",
+                plan: "Piano Black Annuale",
+                desktopNote: `Risparmi ~${YEARLY_DISCOUNT}%`,
               },
             ]}
             defaultToggleId="black-platform-monthly"
-            priceCardClassName="pb-2"
+            priceCardClassName="pb-2 bg-gradient-to-b from-white via-slate-50 to-slate-100 ring-1 ring-cyan-200/60 shadow-[0_18px_50px_-32px_rgba(14,165,233,0.5)]"
             features={[
-              ["ok", "Accesso completo alla piattaforma Theoremz"],
-              ["ok", "Tutte le videolezioni"],
-              ["ok", "Esercizi svolti passo–passo"],
+              ["sky", "Accesso completo alla piattaforma Theoremz"],
+              ["sky", "Tutte le videolezioni"],
+              ["sky", "Esercizi svolti passo–passo"],
+              ["sky", "Simulazioni verifiche"],
               ["ok", "Formulari, quiz e appunti"],
               ["ok", "Flashcard per le formule"],
-              ["ok", "Simulazioni verifiche"],
               ["ok", "Dashboard dei voti"],
               ["ok", "Salvataggio lezioni nei preferiti"],
               ["ok", "Dark Mode"],
@@ -554,61 +588,6 @@ export default function BlackPage() {
         </div>
       </section>
     </main>
-  );
-}
-
-/* ---------- Mini components ---------- */
-function IncludeCard({
-  title,
-  items,
-}: {
-  title: string;
-  items: [string, string][];
-}) {
-  function iconFor(h: string): LucideIcon {
-    const t = h.toLowerCase();
-    if (t.includes("supporto") || t.includes("chat")) return MessageCircle;
-    if (t.includes("compiti")) return ClipboardCheck;
-    if (t.includes("catalogo") || t.includes("esercizi")) return ListChecks;
-    if (t.includes("risolti") || t.includes("spiegati")) return CheckCircle2;
-    if (
-      t.includes("argomenti") ||
-      t.includes("lezioni") ||
-      t.includes("formulari")
-    )
-      return BookOpen;
-    if (t.includes("materiale")) return Megaphone;
-    if (t.includes("premi") || t.includes("primo posto")) return Trophy;
-    return Sparkles;
-  }
-  return (
-    <div className="group rounded-2xl border border-white/25 bg-gradient-to-br from-white/15 via-white/5 to-white/0 p-6 shadow-[0_18px_40px_-30px_rgba(56,189,248,0.6)] transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/50 hover:shadow-[0_22px_50px_-28px_rgba(56,189,248,0.9)] lg:p-7">
-      <h3 className="text-[20px] lg:text-[22px] font-black text-white">
-        {title}
-      </h3>
-      <ul className="mt-5 space-y-3">
-        {items.map(([h, p]) => (
-          <li
-            key={h}
-            className="flex gap-3 rounded-xl border border-white/15 bg-white/[0.07] px-4 py-3 transition-colors duration-300 group-hover:border-cyan-200/60 group-hover:bg-white/15"
-          >
-            {(() => {
-              const Icon = iconFor(h);
-              return (
-                <Icon
-                  className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300"
-                  aria-hidden
-                />
-              );
-            })()}
-            <div>
-              <p className="font-semibold text-white tracking-wide">{h}</p>
-              <p className="text-[15px] leading-relaxed text-white/85">{p}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 

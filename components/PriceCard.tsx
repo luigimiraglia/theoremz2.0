@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Check, ChevronDown, X } from "lucide-react";
 import BuyLink from "@/components/BuyLink";
 
-export type FeatureVariant = "ok" | "no" | "pink" | "violet";
+export type FeatureVariant = "ok" | "no" | "pink" | "violet" | "sky";
 export type PriceFeature = [FeatureVariant, ReactNode, string[]?];
 
 export type ToggleOption = {
@@ -138,13 +138,16 @@ export default function PriceCard({
             const strike = variant === "no";
             const pink = variant === "pink";
             const violet = variant === "violet";
+            const sky = variant === "sky";
             const colorClass =
               variant === "no"
                 ? "text-rose-500"
                 : variant === "pink"
-                  ? "text-pink-500"
-                  : variant === "violet"
-                    ? "text-purple-500"
+                  ? "text-fuchsia-500"
+                : variant === "violet"
+                  ? "text-purple-500"
+                    : variant === "sky"
+                      ? "text-blue-700"
                     : "text-slate-900";
 
             return (
@@ -199,10 +202,12 @@ export default function PriceCard({
                   <span
                     className={`${
                       pink
-                        ? "bg-clip-text bg-gradient-to-r text-transparent from-purple-500 font-bold to-pink-500"
+                        ? "bg-clip-text bg-gradient-to-r text-transparent from-fuchsia-500 via-pink-500 font-bold to-rose-500"
                         : violet
                           ? "bg-clip-text bg-gradient-to-r text-transparent from-purple-500 to-pink-500 font-bold"
-                          : "text-black"
+                          : sky
+                            ? "bg-clip-text bg-gradient-to-r text-transparent from-blue-800 via-blue-700 to-sky-600 font-bold"
+                            : "text-black"
                     } ${strike ? "line-through text-slate-400" : ""} mt-1`}
                   >
                     {text}

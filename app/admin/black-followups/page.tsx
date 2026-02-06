@@ -97,7 +97,12 @@ type CheckinDraft = {
 
 const allowedEmail = "luigi.miraglia006@gmail.com";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
-const CHECKIN_CALL_LINK = `${SITE_URL}/black-check-percorso-call`;
+const SUPPORT_WHATSAPP_NUMBER =
+  process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP_NUMBER || "3519523641";
+const CHECKIN_WHATSAPP_MESSAGE = "Ciao! Vorrei prenotare il check-in Black.";
+const CHECKIN_CALL_LINK =
+  buildWhatsAppMessageLink(SUPPORT_WHATSAPP_NUMBER, CHECKIN_WHATSAPP_MESSAGE) ||
+  `${SITE_URL}/black-check-percorso-call`;
 const FOLLOWUP_CALL_LINK = `${SITE_URL}/black-onboarding-call`;
 const whatsappPrefixes = ["+39", "+41", "+44", "+34", "+33", "+49", "+43"];
 const callTypeOptions: Array<{ value: ScheduleDraft["callType"]; label: string }> = [
@@ -200,6 +205,16 @@ function buildWhatsAppLink(phone?: string | null, preferWeb?: boolean) {
   if (!digits) return null;
   if (preferWeb) return `https://web.whatsapp.com/send?phone=${digits}`;
   return `https://wa.me/${digits}`;
+}
+
+function buildWhatsAppMessageLink(phone: string, message: string, preferWeb?: boolean) {
+  const digits = phone.replace(/[^\d]/g, "");
+  if (!digits) return null;
+  const encoded = encodeURIComponent(message);
+  if (preferWeb) {
+    return `https://web.whatsapp.com/send?phone=${digits}&text=${encoded}`;
+  }
+  return `https://wa.me/${digits}?text=${encoded}`;
 }
 
 function buildCardLink(contact: Contact) {
@@ -1902,7 +1917,7 @@ export default function BlackFollowupsPage() {
                   onClick={() => copyLink("checkin", CHECKIN_CALL_LINK)}
                   className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 hover:border-slate-300"
                 >
-                  Copia link check-in
+                  Copia link check-in WhatsApp
                 </button>
                 <button
                   type="button"
