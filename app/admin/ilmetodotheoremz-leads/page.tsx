@@ -382,7 +382,7 @@ export default function IlMetodoCallLeadsPage() {
     async (
       id: string,
       status: LeadStatus,
-      source: "ilmetodo" | "manual",
+      source: "ilmetodo" | "manual" | "black",
       onUpdate: (lead: Lead) => void,
     ) => {
       if (!hasAccess) return;
