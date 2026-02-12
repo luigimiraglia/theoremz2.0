@@ -39,3 +39,12 @@ execute function public.manual_leads_set_updated_at();
 
 create index if not exists manual_leads_next_follow_up_idx on public.manual_leads (status, next_follow_up_at);
 create index if not exists manual_leads_channel_idx on public.manual_leads (channel);
+
+alter table public.manual_leads
+  add column if not exists response_status text not null default 'pending',
+  add column if not exists responded_at timestamptz null,
+  add column if not exists no_response_at timestamptz null,
+  add column if not exists paused_at timestamptz null;
+
+create index if not exists manual_leads_response_status_idx
+  on public.manual_leads (response_status);

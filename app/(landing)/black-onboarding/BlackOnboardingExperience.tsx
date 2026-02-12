@@ -89,6 +89,9 @@ export default function BlackOnboardingExperience() {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const { user } = useAuth();
+  const accountEmail = (user as { email?: string | null })?.email || "";
+  const needsEmailInput = !accountEmail;
+  const [email, setEmail] = useState(accountEmail);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const getToken = useCallback(async () => {
     const { getAuth } = await import("firebase/auth");
@@ -107,7 +110,10 @@ export default function BlackOnboardingExperience() {
     return d;
   }, [today]);
 
-  const formReady = nome.trim().length > 0 && classe.trim().length > 0;
+  const formReady =
+    nome.trim().length > 0 &&
+    classe.trim().length > 0 &&
+    (!needsEmailInput || email.trim().length > 0);
   const allowedSlots = useMemo(() => getAllowedSlotsForDate(selectedDay), [selectedDay]);
   const bookingReady =
     !!selectedDay && !!selectedSlot && allowedSlots.includes(selectedSlot) && !bookingDone;
@@ -199,6 +205,12 @@ export default function BlackOnboardingExperience() {
     const t = setTimeout(() => setShowConfetti(false), 2600);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    if (accountEmail && !email) {
+      setEmail(accountEmail);
+    }
+  }, [accountEmail, email]);
 
   const toMinutes = useCallback((time: string) => {
     const [h, m] = time.split(":").map((v) => parseInt(v, 10));
@@ -307,7 +319,9 @@ export default function BlackOnboardingExperience() {
             Benvenuto su Theoremz Black 🎉
           </h1>
           <p className="text-[15px] font-semibold text-slate-600 dark:text-slate-300">
-            Inserisci nome e classe per iniziare
+            {needsEmailInput
+              ? "Inserisci nome, classe ed email per iniziare"
+              : "Inserisci nome e classe per iniziare"}
           </p>
 
           <input
@@ -328,6 +342,20 @@ export default function BlackOnboardingExperience() {
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400 dark:focus:ring-slate-700"
             placeholder="Classe"
           />
+
+          {needsEmailInput ? (
+            <input
+              id="onb-email"
+              name="onb-email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400 dark:focus:ring-slate-700"
+              placeholder="Email (obbligatoria)"
+              required
+            />
+          ) : null}
 
           <button
             type="button"
@@ -531,14 +559,24 @@ export default function BlackOnboardingExperience() {
             disabled={!bookingReady || bookingSubmitting}
             onClick={async () => {
               if (!bookingReady || bookingSubmitting || !selectedDay || !selectedSlot) return;
+              const safeEmail = email.trim() || accountEmail;
+              if (!safeEmail) {
+                setBookingError("Inserisci un'email valida per confermare.");
+                return;
+              }
+              const safeName =
+                nome.trim() ||
+                (user as any)?.displayName ||
+                accountEmail ||
+                "Utente Black";
               setBookingError(null);
               setBookingSubmitting(true);
               const wait = new Promise((res) => setTimeout(res, 500));
               const body = {
                 date: selectedDay,
                 time: selectedSlot,
-                name: nome || (user as any)?.displayName || "",
-                email: (user as any)?.email || "",
+                name: safeName,
+                email: safeEmail,
                 note: classe || "",
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 account: user

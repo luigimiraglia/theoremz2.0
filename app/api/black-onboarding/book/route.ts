@@ -4,7 +4,7 @@ import { createGoogleCalendarEvent } from "@/lib/googleCalendar";
 import { supabaseServer } from "@/lib/supabase";
 import { bookingIsoFromParts, bookingIsoToParts } from "@/lib/booking-time";
 import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
-import { requirePremium } from "@/lib/premium-access";
+import { adminAuth } from "@/lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +31,17 @@ let transporter: nodemailer.Transporter | null = null;
 type CallTypeRow = { id: string; slug: string; name: string; duration_min: number };
 type SlotRow = { id: string; starts_at: string; status: string; call_type_id?: string | null };
 type TutorRow = { id: string; display_name?: string | null; email?: string | null };
+
+async function verifyAuth(req: Request) {
+  const header = req.headers.get("authorization") || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return null;
+  try {
+    return await adminAuth.verifyIdToken(token);
+  } catch {
+    return null;
+  }
+}
 
 function ensureTransporter() {
   if (transporter) return transporter;
@@ -450,8 +461,8 @@ function overlapsWindow(slot: SlotRow, startIso: string, endIso: string) {
 }
 
 export async function GET(req: Request) {
-  const auth = await requirePremium(req);
-  if (!("user" in auth)) return auth;
+  const auth = await verifyAuth(req);
+  if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const date = normalizeDate(searchParams.get("date") || "");
@@ -592,9 +603,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const auth = await requirePremium(req);
-    if (!("user" in auth)) return auth;
-    const { user } = auth;
+    const user = await verifyAuth(req);
+    if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
     const {
       date,
@@ -614,7 +624,7 @@ export async function POST(req: Request) {
     const extraNote = String(note || "").trim();
     const tz = String(timezone || "").trim() || "n.d.";
     const accountInfo = account && typeof account === "object" ? account : {};
-    const accEmail = user.email;
+    const accEmail = String(user.email || "").trim();
     const accUid = user.uid;
     const accDisplay = String(accountInfo.displayName || "").trim();
     const accUsername = String(accountInfo.username || "").trim();
@@ -647,7 +657,10 @@ export async function POST(req: Request) {
       }
     }
 
-    const safeEmail = replyEmail || accEmail || "noreply@theoremz.com";
+    const safeEmail = replyEmail || accEmail;
+    if (!safeEmail) {
+      return NextResponse.json({ error: "email_required" }, { status: 400 });
+    }
     const safeName = fullName || accDisplay || accEmail || "Utente Black";
 
     const db = supabaseServer();
@@ -913,8 +926,7 @@ Username: ${accUsername || "—"}
     const confirmationEmail = (replyEmail || accEmail || "").trim();
     const shouldSendConfirmation =
       ["onboarding", "check-percorso"].includes(callType.slug) &&
-      confirmationEmail.includes("@") &&
-      confirmationEmail.toLowerCase() !== "noreply@theoremz.com";
+      confirmationEmail.includes("@");
     if (shouldSendConfirmation) {
       try {
         const dateLabel = formatRomeDateLabel(normalizedDate);

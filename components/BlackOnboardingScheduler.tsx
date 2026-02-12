@@ -264,10 +264,9 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
   const [dayStatus, setDayStatus] = useState<Record<string, "unknown" | "available" | "full" | "error">>({});
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const defaultEmail =
-    (user as { email?: string | null })?.email ||
-    (user as { displayName?: string | null })?.displayName ||
-    "";
+  const accountEmail = (user as { email?: string | null })?.email || "";
+  const defaultEmail = accountEmail;
+  const needsEmailInput = !accountEmail;
   const defaultName =
     (user as { displayName?: string | null })?.displayName ||
     (user as { email?: string | null })?.email ||
@@ -283,10 +282,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
   }, []);
 
   useEffect(() => {
-    const mail =
-      (user as { email?: string | null })?.email ||
-      (user as { displayName?: string | null })?.displayName ||
-      "";
+    const mail = (user as { email?: string | null })?.email || "";
     if (mail) setEmail(mail);
     const name =
       (user as { displayName?: string | null })?.displayName ||
@@ -367,7 +363,12 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
       return;
     }
     const safeName = fullName.trim() || defaultName || "Utente Black";
-    const safeEmail = email.trim() || defaultEmail || "noreply@theoremz.com";
+    const safeEmail = email.trim() || defaultEmail;
+    if (!safeEmail) {
+      setStatus("error");
+      setStatusDetail("Inserisci un'email valida per confermare.");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -755,7 +756,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
                     </div>
                     <div className="sm:col-span-1">
                       <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-300">
-                        Email
+                        Email{needsEmailInput ? " (obbligatoria)" : ""}
                       </label>
                       <input
                         type="email"
@@ -763,6 +764,7 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
                         onChange={(e) => setEmail(e.target.value)}
                         className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none ring-0 focus:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                         placeholder="nome@email.it"
+                        required={needsEmailInput}
                       />
                     </div>
                     <div className="sm:col-span-2">
@@ -780,6 +782,21 @@ export default function BlackOnboardingScheduler({ variant = "onboarding" }: Pro
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    {needsEmailInput ? (
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-300">
+                          Email (obbligatoria)
+                        </label>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none ring-0 focus:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                          placeholder="nome@email.it"
+                          required
+                        />
+                      </div>
+                    ) : null}
                     <div>
                       <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-300">
                         Note per il tutor (opzionale)
