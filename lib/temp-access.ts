@@ -38,6 +38,12 @@ const TEMP_ACCESS_EMAILS_RAW: TempAccessEntry[] = [
     reason: "Prova Theoremz Mentor",
     grantedAt: "2025-11-14T18:55:49.886Z",
   },
+  {
+    email: "bettaconti@hotmail.it",
+    expiresAt: "2099-12-31T23:59:59.000Z",
+    reason: "Accesso Black (indeterminato)",
+    grantedAt: "2026-02-17T00:00:00.000Z",
+  },
 
   // Aggiungi qui nuove email generate dal pannello admin:
   // (usa il componente TempAccessAdmin in /admin/analytics per generare il codice)
