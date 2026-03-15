@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import CtaModalButton from "./CtaModalButton";
-import TestimonianzeMobileFade from "./TestimonianzeMobileFade";
-
 export const metadata: Metadata = {
   title: "Il Metodo Theoremz",
   alternates: { canonical: "/ilmetodotheoremz" },
@@ -56,62 +53,11 @@ const sections = [
     description: "Feature in griglia con icone.",
   },
   {
-    id: "cta-final",
-    title: "CTA finale",
-    description: "Chiusura a sfondo blu con call to action.",
-  },
-  {
     id: "galleria",
     title: "Galleria risultati",
     description: "Griglia immagini finali.",
   },
 ];
-
-const testimonianze = [
-  "/images/test7.webp",
-  "/images/test2.webp",
-  "/images/test12.webp",
-  "/images/test4.webp",
-  "/images/test9.webp",
-  "/images/test1.webp",
-  "/images/test5.webp",
-  "/images/test10.webp",
-  "/images/test3.webp",
-  "/images/test8.webp",
-  "/images/test13.webp",
-  "/images/test6.webp",
-];
-
-const testimonianzeOrizzontali = new Set([
-  "/images/test3.webp",
-  "/images/test5.webp",
-  "/images/test12.webp",
-]);
-
-type TestimonianzaProps = {
-  src: string;
-  alt: string;
-  className: string;
-};
-
-function Testimonianza({ src, alt, className }: TestimonianzaProps) {
-  if (!testimonianzeOrizzontali.has(src)) {
-    return <img src={src} alt={alt} className={`h-auto ${className}`} />;
-  }
-
-  return (
-    <div
-      className={`aspect-[3/4] overflow-hidden bg-black ${className}`}
-      aria-label={alt}
-    >
-      <img
-        src={src}
-        alt={alt}
-        className="h-full w-full object-contain object-center"
-      />
-    </div>
-  );
-}
 
 export default function MetodoTheoremzPage() {
   return (
@@ -119,8 +65,6 @@ export default function MetodoTheoremzPage() {
       {sections.map((section, index) => {
         const isDark = index > 1 ? index % 2 === 0 : index % 2 === 1;
         const isHero = section.id === "hero";
-        const isCtaFinal = section.id === "cta-final";
-        const usesGrid = isHero || isCtaFinal;
         const mutedText = isDark ? "text-white/80" : "text-slate-600";
         const panelClass = isDark
           ? "border-white/20 bg-white/10"
@@ -143,24 +87,36 @@ export default function MetodoTheoremzPage() {
                   risultati concreti e autonomia.
                 </p>
                 <div className="relative z-20 mt-4 flex flex-wrap items-center gap-4">
-                  <CtaModalButton className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
+                  <button className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
                     <span className="text-base font-bold">
                       Candidati gratuitamente
                     </span>
-                    <span className="mt-1 block text-xs font-bold leading-snug text-white/90 sm:text-sm">
+                    <span className="mt-1 block text-sm font-bold text-white/90">
                       E svolta il percorso scolastico di tuo figlio
                     </span>
-                  </CtaModalButton>
+                  </button>
                 </div>
               </div>
               <div
                 className="hidden min-h-[420px] w-full max-w-[52rem] bg-cover bg-center bg-no-repeat sm:block lg:min-h-[620px]"
-                style={{ backgroundImage: "url('/images/avaluigis.webp')" }}
+                style={{ backgroundImage: "url('/images/avaluigis.png')" }}
                 aria-label="Immagine hero"
               />
             </div>
           );
         } else if (section.id === "problema") {
+          const testimonianze = [
+            "/images/test1.jpeg",
+            "/images/test2.jpeg",
+            "/images/test3.png",
+            "/images/test4.png",
+            "/images/test6.png",
+            "/images/test7.png",
+            "/images/test8.png",
+            "/images/test9.png",
+            "/images/test10.png",
+            "/images/test11.png",
+          ];
           content = (
             <div className="mx-auto flex max-w-4xl flex-col items-center gap-10 text-center">
               <h2 className="max-w-3xl text-[1.85rem] font-extrabold leading-[1.05] tracking-[-0.01em] sm:text-3xl lg:text-[2.7rem]">
@@ -168,51 +124,33 @@ export default function MetodoTheoremzPage() {
                 stanno ottenendo risultati che mai si sarebbero aspettati con
                 questo percorso
               </h2>
-              <div className="w-full">
-                <div className="w-full overflow-hidden testimonianze-fade hidden sm:block">
-                  <div className="flex w-max items-center testimonianze-track">
-                    <div className="flex gap-[6vw] pr-[6vw] sm:gap-4 sm:pr-4">
+              <div className="w-full overflow-hidden testimonianze-fade">
+                <div className="flex w-max items-center testimonianze-track">
+                  <div className="flex gap-[10vw] pr-[10vw] sm:gap-4 sm:pr-4">
                     {testimonianze.map((src, idx) => (
-                      <Testimonianza
+                      <img
                         key={`testimonianza-${idx}`}
                         src={src}
                         alt="Testimonianza"
-                        className="w-[78vw] max-w-[320px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
+                        className="h-auto w-[80vw] max-w-[320px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
                       />
                     ))}
                   </div>
                   <div
-                    className="flex gap-[6vw] pr-[6vw] sm:gap-4 sm:pr-4"
+                    className="flex gap-[10vw] pr-[10vw] sm:gap-4 sm:pr-4"
                     aria-hidden="true"
                   >
                     {testimonianze.map((src, idx) => (
-                      <Testimonianza
+                      <img
                         key={`testimonianza-dup-${idx}`}
                         src={src}
                         alt=""
-                        className="w-[78vw] max-w-[320px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
+                        className="h-auto w-[80vw] max-w-[320px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
                       />
                     ))}
                   </div>
                 </div>
-              </div>
-                <div className="w-full sm:hidden">
-                  <TestimonianzeMobileFade
-                    items={testimonianze}
-                    horizontalItems={[...testimonianzeOrizzontali]}
-                  />
-                </div>
                 <style>{`
-                  @-webkit-keyframes testimonianze-scroll {
-                    0% {
-                      -webkit-transform: translateX(0);
-                      transform: translateX(0);
-                    }
-                    100% {
-                      -webkit-transform: translateX(-50%);
-                      transform: translateX(-50%);
-                    }
-                  }
                   @keyframes testimonianze-scroll {
                     0% {
                       transform: translateX(0);
@@ -222,92 +160,82 @@ export default function MetodoTheoremzPage() {
                     }
                   }
                   .testimonianze-track {
-                    display: inline-flex;
-                    flex-wrap: nowrap;
-                    -webkit-animation: testimonianze-scroll 28s linear infinite;
                     animation: testimonianze-scroll 28s linear infinite;
-                    backface-visibility: hidden;
-                    -webkit-backface-visibility: hidden;
-                    will-change: transform;
-                  }
-                  .testimonianze-track-mobile {
-                    -webkit-animation-duration: 24s;
-                    animation-duration: 24s;
                   }
                   .testimonianze-fade {
-                    position: relative;
-                    isolation: isolate;
-                    --fade-size: clamp(20px, 8vw, 72px);
-                  }
-                  .testimonianze-fade::before,
-                  .testimonianze-fade::after {
-                    content: "";
-                    position: absolute;
-                    top: 0;
-                    bottom: 0;
-                    width: var(--fade-size);
-                    z-index: 2;
-                    pointer-events: none;
-                    background: linear-gradient(
+                    -webkit-mask-image: linear-gradient(
                       to right,
-                      #ffffff,
-                      rgba(255, 255, 255, 0)
+                      transparent,
+                      black 2%,
+                      black 98%,
+                      transparent
                     );
-                  }
-                  .testimonianze-fade::before {
-                    left: 0;
-                  }
-                  .testimonianze-fade::after {
-                    right: 0;
-                    background: linear-gradient(
-                      to left,
-                      #ffffff,
-                      rgba(255, 255, 255, 0)
+                    mask-image: linear-gradient(
+                      to right,
+                      transparent,
+                      black 2%,
+                      black 98%,
+                      transparent
                     );
                   }
                   @media (max-width: 639px) {
                     .testimonianze-track {
-                      -webkit-animation-duration: 36s;
                       animation-duration: 36s;
-                    }
-                    .testimonianze-track-mobile {
-                      -webkit-animation-duration: 26s;
-                      animation-duration: 26s;
-                    }
-                    .testimonianze-fade {
-                      --fade-size: clamp(18px, 12vw, 80px);
                     }
                   }
                   @media (prefers-reduced-motion: reduce) {
-                    .testimonianze-track,
-                    .testimonianze-track-mobile {
-                      -webkit-animation: none;
+                    .testimonianze-track {
                       animation: none;
-                      -webkit-transform: translateX(0);
                       transform: translateX(0);
                     }
                   }
                   @media (min-width: 640px) {
                     .testimonianze-fade {
-                      --fade-size: clamp(24px, 6vw, 96px);
+                      -webkit-mask-image: linear-gradient(
+                        to right,
+                        transparent,
+                        black 6%,
+                        black 94%,
+                        transparent
+                      );
+                      mask-image: linear-gradient(
+                        to right,
+                        transparent,
+                        black 6%,
+                        black 94%,
+                        transparent
+                      );
                     }
                   }
                   @media (min-width: 1024px) {
                     .testimonianze-fade {
-                      --fade-size: clamp(32px, 5vw, 120px);
+                      -webkit-mask-image: linear-gradient(
+                        to right,
+                        transparent,
+                        black 8%,
+                        black 92%,
+                        transparent
+                      );
+                      mask-image: linear-gradient(
+                        to right,
+                        transparent,
+                        black 8%,
+                        black 92%,
+                        transparent
+                      );
                     }
                   }
                 `}</style>
               </div>
               <div className="flex justify-center">
-                <CtaModalButton className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
+                <button className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
                   <span className="text-base font-bold">
                     Candidati gratuitamente
                   </span>
-                  <span className="mt-1 block text-xs font-bold leading-snug text-white/90 sm:text-sm">
+                  <span className="mt-1 block text-sm font-bold text-white/90">
                     E svolta il percorso scolastico di tuo figlio
                   </span>
-                </CtaModalButton>
+                </button>
               </div>
             </div>
           );
@@ -328,7 +256,7 @@ export default function MetodoTheoremzPage() {
                   <br />
                   <div
                     className={`mt-4 w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat lg:hidden ${panelClass}`}
-                    style={{ backgroundImage: "url('/images/verifica.webp')" }}
+                    style={{ backgroundImage: "url('/images/verifica.png')" }}
                     role="img"
                     aria-label="Immagine verifica"
                   />
@@ -373,13 +301,13 @@ export default function MetodoTheoremzPage() {
                 <div className="hidden lg:ml-12 lg:mr-8 lg:block lg:flex-none lg:w-[420px]">
                   <div
                     className={`w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat ${panelClass}`}
-                    style={{ backgroundImage: "url('/images/verifica.webp')" }}
+                    style={{ backgroundImage: "url('/images/verifica.png')" }}
                     role="img"
                     aria-label="Immagine verifica"
                   />
                 </div>
               </div>
-              <div className="hidden lg:block h-6" aria-hidden="true" />
+              <br />
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex-1 lg:order-2">
                   <p
@@ -393,14 +321,6 @@ export default function MetodoTheoremzPage() {
                     situazione
                   </h3>
                   <br />
-                  <div
-                    className={`mt-4 w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat lg:hidden ${panelClass}`}
-                    style={{
-                      backgroundImage: "url('/images/studentetriste.webp')",
-                    }}
-                    role="img"
-                    aria-label="Immagine percorso"
-                  />
                   <div
                     className={`mt-4 space-y-4 text-base leading-relaxed ${mutedText}`}
                   >
@@ -439,18 +359,18 @@ export default function MetodoTheoremzPage() {
                     </p>
                   </div>
                 </div>
-                <div className="hidden lg:block lg:order-1 lg:mr-12 lg:flex-none lg:w-[420px]">
+                <div className="flex-1 lg:order-1 lg:mr-12 lg:flex-none lg:w-[420px]">
                   <div
                     className={`w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat ${panelClass}`}
                     style={{
-                      backgroundImage: "url('/images/studentetriste.webp')",
+                      backgroundImage: "url('/images/studentetriste.png')",
                     }}
                     role="img"
                     aria-label="Immagine percorso"
                   />
                 </div>
               </div>
-              <div className="hidden lg:block h-6" aria-hidden="true" />
+              <br />
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex-1">
                   <p
@@ -463,12 +383,6 @@ export default function MetodoTheoremzPage() {
                     non significa saperlo affrontare
                   </h3>
                   <br />
-                  <div
-                    className={`mt-4 w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat lg:hidden ${panelClass}`}
-                    style={{ backgroundImage: "url('/images/verifica.webp')" }}
-                    role="img"
-                    aria-label="Immagine risultati"
-                  />
                   <div
                     className={`mt-4 space-y-4 text-base leading-relaxed ${mutedText}`}
                   >
@@ -501,10 +415,10 @@ export default function MetodoTheoremzPage() {
                     </p>
                   </div>
                 </div>
-                <div className="hidden lg:block lg:ml-12 lg:flex-none lg:w-[420px]">
+                <div className="flex-1 lg:ml-12 lg:flex-none lg:w-[420px]">
                   <div
                     className={`w-full aspect-[3/4] rounded-2xl border bg-cover bg-center bg-no-repeat ${panelClass}`}
-                    style={{ backgroundImage: "url('/images/verifica.webp')" }}
+                    style={{ backgroundImage: "url('/images/verifica.png')" }}
                     role="img"
                     aria-label="Immagine risultati"
                   />
@@ -525,18 +439,18 @@ export default function MetodoTheoremzPage() {
                   <span className="text-[#336DFD]">efficace</span> nello studio
                 </h3>
               </div>
-              <div className="flex flex-col gap-4 lg:gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex-1 lg:flex-none lg:w-[520px]">
                   <div
                     className="w-full aspect-[3/4] overflow-hidden rounded-2xl bg-cover bg-center bg-no-repeat"
-                    style={{ backgroundImage: "url('/images/avaluigis.webp')" }}
+                    style={{ backgroundImage: "url('/images/avaluigis.png')" }}
                     role="img"
                     aria-label="Immagine introduzione"
                   />
                 </div>
-                <div className="flex-1 mt-6 lg:mt-20">
+                <div className="flex-1 mt-20">
                   <div className="space-y-4 text-base leading-relaxed text-slate-800">
-                    <p className="pb-3 text-[1.5rem] font-black leading-[1.05] tracking-tight sm:text-[1.7rem] lg:text-[1.7rem]">
+                    <p className="pb-3 text-[1rem] font-black leading-[1.05] tracking-tight sm:text-[1.7rem] lg:text-[1.7rem]">
                       Quando uno studente si impegna ma i risultati non
                       arrivano, il problema non è la volontà.
                     </p>
@@ -564,16 +478,15 @@ export default function MetodoTheoremzPage() {
                     <p>&Egrave; qui che nasce il Metodo Theoremz.</p>
                   </div>
                   <div className="mt-6 flex justify-center">
-                    <CtaModalButton className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
+                    <button className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
                       <span className="text-base font-bold">
                         Candidati gratuitamente
                       </span>
-                      <span className="mt-1 block text-xs font-bold leading-snug text-white/90 sm:text-sm">
+                      <span className="mt-1 block text-sm font-bold text-white/90">
                         E svolta il percorso scolastico di tuo figlio
                       </span>
-                    </CtaModalButton>
+                    </button>
                   </div>
-                  <div className="h-12 sm:hidden" aria-hidden="true" />
                 </div>
               </div>
             </div>
@@ -653,13 +566,13 @@ export default function MetodoTheoremzPage() {
           ];
           content = (
             <div className="mx-auto flex max-w-5xl flex-col items-start text-left">
-              <h2 className="text-[2.4rem] font-black leading-[1.05] tracking-tight sm:text-[3.2rem] lg:text-[3.8rem]">
+              <h2 className="text-[2.6rem] font-black leading-[1.05] tracking-tight sm:text-[3.2rem] lg:text-[3.8rem]">
                 Il <span className="text-[#336DFD]">Metodo Theoremz</span> e i 7
                 step per costruire autonomia nello studio
               </h2>
               <div className="relative mt-10 w-full max-w-3xl">
                 <div
-                  className="absolute left-2 top-2 bottom-2 hidden w-[3px] rounded-full opacity-80 sm:block"
+                  className="absolute left-2 top-2 bottom-2 w-[3px] rounded-full opacity-80"
                   style={{
                     backgroundImage:
                       "repeating-linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(255,255,255,0.9) 10px, rgba(255,255,255,0.25) 10px, rgba(255,255,255,0.25) 22px)",
@@ -671,20 +584,20 @@ export default function MetodoTheoremzPage() {
                   {steps.map((step, idx) => (
                     <div
                       key={step.id}
-                      className="relative flex gap-6 pb-10 pl-0 last:pb-0 sm:gap-16 sm:pl-20"
+                      className="relative flex gap-16 pb-10 pl-20 last:pb-0"
                     >
                       <span
-                        className="absolute left-2 top-[64px] hidden h-4 w-4 -translate-x-1/2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.6)] sm:block"
+                        className="absolute left-2 top-[64px] h-4 w-4 -translate-x-1/2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.6)]"
                         aria-hidden="true"
                       />
-                      <span className="w-auto text-left text-[5.5rem] font-black leading-none text-white/30 tabular-nums sm:w-40 sm:text-center sm:text-[9rem] lg:w-52 lg:text-[12rem]">
+                      <span className="w-32 text-center text-[6.5rem] font-black leading-none text-white/30 tabular-nums sm:w-40 sm:text-[9rem] lg:w-52 lg:text-[12rem]">
                         {idx + 1}
                       </span>
                       <div className="mt-6">
-                        <p className="text-xl font-bold text-white sm:text-3xl lg:text-4xl">
+                        <p className="text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
                           {step.title}
                         </p>
-                        <p className={`mt-2 text-base ${mutedText} sm:text-xl`}>
+                        <p className={`mt-2 text-lg ${mutedText} sm:text-xl`}>
                           {step.body}
                         </p>
                       </div>
@@ -697,7 +610,7 @@ export default function MetodoTheoremzPage() {
         } else if (section.id === "cta") {
           content = (
             <div className="mx-auto flex w-full max-w-none flex-col items-center text-center">
-              <p className="mb-2 text-[1.3rem] font-bold tracking-tight text-slate-600 sm:text-3xl">
+              <p className="mb-2 text-2xl font-bold tracking-tight text-slate-600 sm:text-3xl">
                 Da insufficienze frequenti a...
               </p>
               <h2 className="text-[2.4rem] font-black leading-[1.05] tracking-tight sm:text-[3.3rem] lg:text-[3.8rem]">
@@ -708,11 +621,11 @@ export default function MetodoTheoremzPage() {
                   con il <span className="text-[#336DFD]">Metodo Theoremz</span>
                 </span>
               </h2>
-              <div className="mt-4 flex w-full flex-col items-center gap-10 lg:mt-10 lg:flex-row lg:items-stretch lg:justify-between">
+              <div className="mt-10 flex w-full flex-col items-center gap-10 lg:flex-row lg:items-stretch lg:justify-between">
                 <div className="w-full lg:flex-1">
                   <div
                     className="w-full aspect-[3/4] rounded-2xl bg-cover bg-center bg-no-repeat"
-                    style={{ backgroundImage: "url('/images/avaluigis.webp')" }}
+                    style={{ backgroundImage: "url('/images/avaluigis.png')" }}
                     role="img"
                     aria-label="Immagine studente"
                   />
@@ -786,14 +699,14 @@ export default function MetodoTheoremzPage() {
                         </li>
                       ))}
                     </ul>
-                    <CtaModalButton className="mt-2 rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
+                    <button className="mt-2 rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
                       <span className="text-base font-bold">
                         Candidati gratuitamente
                       </span>
-                      <span className="mt-1 block text-xs font-bold leading-snug text-white/90 sm:text-sm">
+                      <span className="mt-1 block text-sm font-bold text-white/90">
                         E svolta il percorso scolastico di tuo figlio
                       </span>
-                    </CtaModalButton>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -858,10 +771,10 @@ export default function MetodoTheoremzPage() {
                     className="flex h-full flex-col justify-between rounded-3xl border border-slate-200 bg-white px-8 py-10 text-left text-slate-900 shadow-[0_18px_45px_rgba(15,23,42,0.12)]"
                   >
                     <div>
-                      <h3 className="mb-4 -mt-2 text-center text-3xl font-black leading-tight tracking-tight sm:mt-0 sm:text-4xl">
+                      <h3 className="text-center text-2xl font-black leading-tight tracking-tight sm:text-3xl">
                         {offer.title}
                       </h3>
-                      <p className="text-center text-base font-semibold text-slate-800">
+                      <p className="mt-3 text-center text-base font-semibold text-slate-800">
                         {offer.lead}
                       </p>
                       <div className="mt-6 space-y-4 text-left">
@@ -946,9 +859,9 @@ export default function MetodoTheoremzPage() {
                         ))}
                       </div>
                     </div>
-                    <CtaModalButton className="mt-8 inline-flex w-full items-center justify-center rounded-2xl bg-[#336DFD] px-6 py-3 text-base font-bold text-white">
+                    <button className="mt-8 inline-flex w-full items-center justify-center rounded-2xl bg-[#336DFD] px-6 py-3 text-base font-bold text-white">
                       {offer.cta}
-                    </CtaModalButton>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -959,7 +872,7 @@ export default function MetodoTheoremzPage() {
             {
               title: "Brutto voto",
               traditional: [
-                "Si guarda solo il voto \u2192 non si capisce il vero problema",
+                "Si va di fretta \u2192 analisi superficiale del problema",
               ],
               method: [
                 "Analisi immediata \u2192 si individua la causa reale dell’insufficienza",
@@ -1021,16 +934,16 @@ export default function MetodoTheoremzPage() {
                 </span>
               </h2>
               <div className="mt-4 flex w-full flex-col gap-6 md:flex-row">
-                <div className="flex min-h-[280px] flex-1 flex-col rounded-3xl border border-slate-200 bg-white p-8">
+                <div className="min-h-[280px] flex-1 rounded-3xl border border-slate-200 bg-white p-8">
                   <h3 className="text-center text-[1.75rem] font-black text-slate-900 sm:text-[2.1rem] lg:text-[2.4rem]">
                     Ripetizioni tradizionali
                   </h3>
-                  <div className="mx-auto mt-4 h-px w-20 bg-slate-200 mb-4" />
+                  <div className="mx-auto mt-8 h-px w-20 bg-slate-200 mb-8" />
                   <div className="mt-6 space-y-10">
                     {confrontoItems.map((item, index) => (
                       <div
                         key={item.title}
-                        className="grid items-start gap-x-1 grid-cols-[3.5rem_1fr] sm:gap-x-2 sm:grid-cols-[4.5rem_1fr] lg:grid-cols-[5rem_1fr]"
+                        className="grid items-start gap-x-2 grid-cols-[4rem_1fr] sm:grid-cols-[4.5rem_1fr] lg:grid-cols-[5rem_1fr]"
                       >
                         <span className="text-left text-6xl font-black text-red-500/85 tabular-nums sm:text-7xl lg:text-8xl">
                           {index + 1}
@@ -1039,7 +952,7 @@ export default function MetodoTheoremzPage() {
                           <p className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl lg:text-4xl">
                             {item.title}
                           </p>
-                          <ul className="mt-3 space-y-3 text-sm text-slate-700 sm:text-base">
+                          <ul className="mt-3 space-y-3 text-base text-slate-700 sm:text-lg">
                             {item.traditional.map((line) => (
                               <li key={line} className="flex items-start gap-3">
                                 <span className="mt-1 inline-flex h-6 w-6 flex-none items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-500">
@@ -1065,37 +978,19 @@ export default function MetodoTheoremzPage() {
                       </div>
                     ))}
                   </div>
-                  <details className="group mt-auto pt-10">
-                    <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                      <p className="mb-3 text-sm font-bold text-orange-500">
-                        E alla fine...
-                      </p>
-                      <div className="relative flex min-h-[140px] items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-center shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition-all duration-500 group-open:border-orange-200 group-open:bg-orange-50/80 group-open:shadow-[0_12px_30px_rgba(249,115,22,0.2)]">
-                        <span className="pointer-events-none absolute -left-6 top-6 h-12 w-12 rounded-full bg-slate-100 transition-all duration-500 group-open:bg-orange-100" />
-                        <span className="pointer-events-none absolute -right-4 bottom-4 h-10 w-10 rounded-full bg-white/70" />
-                        <span className="inline-block -translate-y-6 -rotate-2 text-6xl font-black leading-none text-orange-500 transition-all duration-500 ease-out opacity-0 scale-75 group-open:translate-y-0 group-open:rotate-0 group-open:opacity-100 group-open:scale-125 sm:text-7xl">
-                          5
-                        </span>
-                        <div className="absolute inset-0 flex items-center justify-center gap-2">
-                          <span className="rounded-full bg-white/90 px-4 py-2 text-xs font-bold text-orange-500 shadow-sm group-open:hidden">
-                            Rivela il voto
-                          </span>
-                        </div>
-                      </div>
-                    </summary>
-                  </details>
                 </div>
-                <div className="flex min-h-[280px] flex-1 flex-col rounded-3xl border border-slate-200 bg-white p-8">
+                <div className="min-h-[280px] flex-1 rounded-3xl border border-slate-200 bg-white p-8">
                   <h3 className="text-center text-[1.75rem] font-black text-slate-900 sm:text-[2.1rem] lg:text-[2.4rem]">
                     Metodo Theoremz
                   </h3>
-                  <div className="mx-auto mt-4 h-px w-20 bg-slate-200 mb-4" />
+                  <div className="mx-auto mt-8 h-px w-20 bg-slate-200 mb-8" />
                   <div className="mt-6 space-y-10">
                     {confrontoItems.map((item, index) => (
                       <div
                         key={item.title}
-                        className="grid items-start gap-x-1 grid-cols-[3.5rem_1fr] sm:gap-x-2 sm:grid-cols-[4.5rem_1fr] lg:grid-cols-[5rem_1fr]"
+                        className="grid items-start gap-x-2 grid-cols-[4rem_1fr] sm:grid-cols-[4.5rem_1fr] lg:grid-cols-[5rem_1fr]"
                       >
+                        ri{" "}
                         <span className="text-left text-6xl font-black text-[#336DFD]/85 tabular-nums sm:text-7xl lg:text-8xl">
                           {index + 1}
                         </span>
@@ -1103,7 +998,7 @@ export default function MetodoTheoremzPage() {
                           <p className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl lg:text-4xl">
                             {item.title}
                           </p>
-                          <ul className="mt-3 space-y-3 text-sm text-slate-700 sm:text-base">
+                          <ul className="mt-3 space-y-3 text-base text-slate-700 sm:text-lg">
                             {item.method.map((line) => (
                               <li key={line} className="flex items-start gap-3">
                                 <span className="mt-1 inline-flex h-6 w-6 flex-none items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-[#336DFD]">
@@ -1128,160 +1023,106 @@ export default function MetodoTheoremzPage() {
                       </div>
                     ))}
                   </div>
-                  <details className="group mt-auto pt-10">
-                    <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                      <p className="mb-3 text-sm font-bold text-[#336DFD]">
-                        E alla fine...
-                      </p>
-                      <div className="relative flex min-h-[140px] items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-center shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition-all duration-500 group-open:border-blue-200 group-open:bg-blue-50/80 group-open:shadow-[0_12px_30px_rgba(59,130,246,0.18)]">
-                        <span className="pointer-events-none absolute -left-6 top-6 h-12 w-12 rounded-full bg-slate-100 transition-all duration-500 group-open:bg-blue-100" />
-                        <span className="pointer-events-none absolute -right-4 bottom-4 h-10 w-10 rounded-full bg-white/70" />
-                        <span className="inline-block -translate-y-6 -rotate-2 text-6xl font-black leading-none text-[#336DFD] transition-all duration-500 ease-out opacity-0 scale-75 group-open:translate-y-0 group-open:rotate-0 group-open:opacity-100 group-open:scale-125 sm:text-7xl">
-                          9
-                        </span>
-                        <div className="absolute inset-0 flex items-center justify-center gap-2">
-                          <span className="rounded-full bg-white/90 px-4 py-2 text-xs font-bold text-[#336DFD] shadow-sm group-open:hidden">
-                            Rivela il voto
-                          </span>
-                        </div>
-                      </div>
-                    </summary>
-                  </details>
                 </div>
+              </div>
+              <div className="mt-12 w-full">
+                <details className="group mx-auto w-full max-w-5xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-8">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-black text-slate-900 [&::-webkit-details-marker]:hidden">
+                    <span>Alla fine... rivela il voto</span>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition group-open:bg-slate-900 group-open:text-white">
+                      Rivela
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4 transition group-open:rotate-180"
+                        aria-hidden="true"
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </span>
+                  </summary>
+                  <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+                      <p className="text-sm font-semibold text-red-600">
+                        Ripetizioni tradizionali
+                      </p>
+                      <p className="mt-4 text-6xl font-black text-red-500">5</p>
+                    </div>
+                    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 text-center">
+                      <p className="text-sm font-semibold text-[#336DFD]">
+                        Metodo Theoremz
+                      </p>
+                      <p className="mt-4 text-6xl font-black text-[#336DFD]">
+                        9
+                      </p>
+                    </div>
+                  </div>
+                </details>
               </div>
             </div>
           );
         } else if (section.id === "piattaforma") {
           const features = [
             {
-              title: "Supporto WhatsApp",
-              body: "Quando lo studente si blocca, interveniamo subito. Cos\u00ec il problema non cresce e lo studio non si interrompe.",
-              image: "/images/mocky1.webp",
+              title: "Piano settimanale",
+              body: "Sempre chiaro cosa fare e quando farlo.",
             },
             {
-              title: "Tracking voti",
-              body: "Tutti i voti e le verifiche sono monitorati. Sai sempre se la situazione sta migliorando o no.",
-              image: "/images/mocky2.webp",
+              title: "Esercizi guidati",
+              body: "Allenamento mirato con soluzioni spiegate.",
+            },
+            {
+              title: "Report per genitori",
+              body: "Aggiornamenti semplici e comprensibili.",
+            },
+            {
+              title: "Materiali sempre disponibili",
+              body: "Schede, riassunti e mappe pronti all'uso.",
+            },
+            {
+              title: "Chat con tutor",
+              body: "Supporto rapido quando serve davvero.",
             },
             {
               title: "Simulazioni verifiche",
-              body: "Lo studente si allena prima della prova reale. Arriva pi\u00f9 sicuro e con meno stress.",
-              image: "/images/mocky3.webp",
-            },
-            {
-              title: "Esercizi spiegati",
-              body: "Ogni esercizio mostra il ragionamento completo. Serve per allenarsi anche quando finiscono i compiti.",
-              image: "/images/mocky4.webp",
-            },
-            {
-              title: "Lezioni on-demand",
-              body: "Per ripassare gli argomenti quando serve. Senza dipendere dagli orari di qualcuno.",
-              image: "/images/mocky5.webp",
-            },
-            {
-              title: "Materiali guidati",
-              body: "Schemi, procedure e checklist operative. Per sapere sempre come partire e non bloccarsi.",
-              image: "/images/mocky6.webp",
+              body: "Allenamento realistico prima del voto.",
             },
           ];
           content = (
-            <div className="mx-auto flex max-w-6xl flex-col gap-10">
-              <div className="text-center">
-                <h2 className="text-[2.4rem] font-black leading-[1.05] tracking-tight sm:text-[3.3rem] lg:text-[3.8rem]">
-                  La piattaforma che rende
-                  <span className="block">
-                    lo studio <span className="text-[#336DFD]">semplice</span>
-                  </span>
+            <div className="mx-auto flex max-w-6xl flex-col gap-8">
+              <div>
+                <h2 className="text-3xl font-black sm:text-4xl">
+                  La piattaforma che rende lo studio semplice
                 </h2>
+                <p className={`mt-2 text-base ${mutedText}`}>
+                  Strumenti chiari, progressi visibili e materiali sempre a
+                  disposizione.
+                </p>
               </div>
-              <div className="grid gap-10 md:grid-cols-2">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {features.map((feature) => (
                   <div
                     key={feature.title}
-                    className={`flex h-full flex-col overflow-hidden rounded-3xl border ${panelClass}`}
+                    className={`flex items-start gap-4 rounded-2xl border p-4 ${panelClass}`}
                   >
                     <div
-                      className={`h-64 w-full overflow-hidden sm:h-72 ${
-                        isDark ? "bg-white/10" : "bg-slate-100"
+                      className={`mt-1 h-10 w-10 rounded-full ${
+                        isDark ? "bg-white/20" : "bg-slate-100"
                       }`}
-                    >
-                      <img
-                        src={feature.image}
-                        alt={feature.title}
-                        className="h-full w-full object-contain"
-                      />
-                    </div>
-                    <div className="flex flex-1 flex-col gap-3 p-6 text-center">
-                      <p
-                        className={`text-2xl font-black sm:text-3xl ${
-                          isDark ? "text-white" : "text-slate-900"
-                        }`}
-                      >
-                        {feature.title}
-                      </p>
-                      <p
-                        className={`text-base ${
-                          isDark ? "text-white/75" : "text-slate-600"
-                        }`}
-                      >
+                    />
+                    <div>
+                      <p className="text-base font-bold">{feature.title}</p>
+                      <p className={`mt-1 text-sm ${mutedText}`}>
                         {feature.body}
                       </p>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="flex justify-center">
-                <CtaModalButton className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
-                  <span className="text-base font-bold">
-                    Candidati gratuitamente
-                  </span>
-                  <span className="mt-1 block text-xs font-bold leading-snug text-white/90 sm:text-sm">
-                    E svolta il percorso scolastico di tuo figlio
-                  </span>
-                </CtaModalButton>
-              </div>
-            </div>
-          );
-        } else if (section.id === "supporto") {
-          content = (
-            <div className="mx-auto flex max-w-6xl flex-col gap-6">
-              <h2 className="text-[2.2rem] font-black leading-[1.05] tracking-tight sm:text-[3rem] lg:text-[3.4rem]">
-                Una direzione chiara per lo studio
-              </h2>
-              <p className="max-w-3xl text-base text-slate-600 sm:text-lg">
-                Quando c&apos;&egrave; un metodo, lo studente sa cosa fare ogni
-                settimana, la famiglia vede i progressi e ogni verifica viene
-                preparata con anticipo.
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {[
-                  "Obiettivi settimanali chiari e realistici.",
-                  "Feedback costante su voti e lacune.",
-                  "Supporto continuo tra una lezione e l&apos;altra.",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 sm:text-base"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        } else if (section.id === "cta-final") {
-          content = (
-            <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 text-center">
-              <h2 className="text-[2.4rem] font-black leading-[1.05] tracking-tight sm:text-[3.3rem] lg:text-[3.8rem]">
-                <span className="text-[#336DFD]">Agisci</span> prima di leggerlo
-                in pagella
-              </h2>
-              <p className="max-w-none text-[1.4rem] font-semibold text-slate-700 sm:text-[1.8rem] lg:text-[2rem]">
-                Ogni verifica ignorata rende il problema pi&ugrave; grande
-              </p>
-              <CtaModalButton className="cta-breathe rounded-2xl bg-[#336DFD] px-10 py-4 text-center text-lg font-bold text-white sm:text-xl">
-                Candidati gratuitamente
-              </CtaModalButton>
             </div>
           );
         } else if (section.id === "galleria") {
@@ -1289,28 +1130,19 @@ export default function MetodoTheoremzPage() {
             <div className="mx-auto flex max-w-6xl flex-col gap-8">
               <div className="text-center">
                 <h2 className="text-3xl font-black sm:text-4xl">
-                  Altri risultati dei nostri studenti
+                  Risultati reali
                 </h2>
+                <p className={`mt-2 text-base ${mutedText}`}>
+                  Una galleria di progressi che parlano da soli.
+                </p>
               </div>
-              <div className="flex flex-wrap justify-center gap-4">
-                {testimonianze.map((src, idx) => (
-                  <Testimonianza
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <div
                     key={`gallery-${idx}`}
-                    src={src}
-                    alt={`Testimonianza ${idx + 1}`}
-                    className="w-[80vw] max-w-[320px] rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
+                    className={`aspect-[4/3] w-full rounded-2xl border ${panelClass}`}
                   />
                 ))}
-              </div>
-              <div className="mt-10 flex justify-center">
-                <CtaModalButton className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
-                  <span className="text-base font-bold">
-                    Candidati gratuitamente
-                  </span>
-                  <span className="mt-1 block text-xs font-bold leading-snug text-white/90 sm:text-sm">
-                    E svolta il percorso scolastico di tuo figlio
-                  </span>
-                </CtaModalButton>
               </div>
             </div>
           );
@@ -1348,20 +1180,15 @@ export default function MetodoTheoremzPage() {
             className={`${
               section.id === "problema"
                 ? "bg-white text-[#232323] overflow-hidden"
-                : section.id === "galleria"
-                  ? "bg-white text-[#232323]"
-                  : isCtaFinal
-                  ? "bg-white text-[#232323] relative overflow-hidden"
-                  : isDark
+                : isDark
                   ? "bg-[#05122F] text-white"
                   : "bg-white text-[#232323]"
             }${isHero ? " relative overflow-hidden sm:[clip-path:polygon(0_0,100%_0,100%_82%,0_100%)]" : ""}`}
           >
-            {usesGrid ? (
+            {isHero ? (
               <div
                 className="absolute inset-0 z-0"
                 style={{
-                  backgroundColor: "#eff6ff",
                   backgroundImage: `
                     linear-gradient(to right, #e5e7eb 1px, transparent 1px),
                     linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
@@ -1369,9 +1196,6 @@ export default function MetodoTheoremzPage() {
                   backgroundSize: "40px 40px",
                 }}
               />
-            ) : null}
-            {isCtaFinal ? (
-              <div className="absolute inset-x-0 bottom-0 z-0 h-[2px] bg-slate-300/80" />
             ) : null}
             {isHero ? (
               <div
@@ -1412,16 +1236,8 @@ export default function MetodoTheoremzPage() {
                   ? "relative z-10 mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-6 pb-12 sm:py-8"
                   : section.id === "problema"
                     ? "mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-8 pb-16 sm:pt-10 sm:pb-20"
-                    : section.id === "cta-final"
-                      ? "relative z-10 mx-auto flex max-w-6xl flex-col gap-3 px-4 py-20 sm:px-6 sm:py-24"
                     : section.id === "programma"
-                      ? "mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-12 pb-0 sm:pt-24 sm:pb-0"
-                    : section.id === "confronto"
-                      ? "mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-12 pb-20 sm:py-24"
-                    : section.id === "cta"
-                      ? "mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-12 pb-20 sm:py-24"
-                    : section.id === "piattaforma"
-                      ? "mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-12 pb-20 sm:py-24"
+                      ? "mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-20 pb-0 sm:pt-24 sm:pb-0"
                       : "mx-auto flex max-w-6xl flex-col gap-3 px-6 py-20 sm:py-24"
               }
             >

@@ -44,6 +44,12 @@ const TEMP_ACCESS_EMAILS_RAW: TempAccessEntry[] = [
     reason: "Accesso Black (indeterminato)",
     grantedAt: "2026-02-17T00:00:00.000Z",
   },
+  {
+    email: "sabatanoflavio5@gmail.com",
+    expiresAt: "2099-12-31T23:59:59.000Z",
+    reason: "Accesso Black (indeterminato)",
+    grantedAt: "2026-03-15T00:00:00.000Z",
+  },
 
   // Aggiungi qui nuove email generate dal pannello admin:
   // (usa il componente TempAccessAdmin in /admin/analytics per generare il codice)

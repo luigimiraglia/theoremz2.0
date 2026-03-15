@@ -2646,7 +2646,7 @@ export default function AccountPage() {
                 ) : weeklyCheck ? (
                   canBookWeeklyCall ? (
                     <Link
-                      href="/black-check-percorso-call"
+                      href="https://calendar.app.google/yPMLCGqXcrmrnVw67"
                       className="inline-flex items-center gap-2 rounded-lg bg-blue-400 px-4 py-2 text-sm font-extrabold text-slate-900 shadow-lg shadow-blue-500/30 transition hover:bg-blue-300"
                     >
                       Prenota la call settimanale
