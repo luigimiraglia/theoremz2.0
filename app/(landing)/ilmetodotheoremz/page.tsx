@@ -991,7 +991,7 @@ export default function MetodoTheoremzPage() {
                         key={item.title}
                         className="grid items-start gap-x-2 grid-cols-[4rem_1fr] sm:grid-cols-[4.5rem_1fr] lg:grid-cols-[5rem_1fr]"
                       >
-                        ri{" "}
+                        {" "}
                         <span className="text-left text-6xl font-black text-[#336DFD]/85 tabular-nums sm:text-7xl lg:text-8xl">
                           {index + 1}
                         </span>
