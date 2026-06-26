@@ -120,26 +120,26 @@ export default function MetodoTheoremzPage() {
           );
         } else if (section.id === "problema") {
           content = (
-            <div className="mx-auto flex max-w-4xl flex-col items-center gap-10 text-center">
-              <h2 className="max-w-3xl text-[1.85rem] font-extrabold leading-[1.05] tracking-[-0.01em] sm:text-3xl lg:text-[2.7rem]">
+            <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 text-center sm:gap-10">
+              <h2 className="max-w-[21rem] text-[1.45rem] font-extrabold leading-[1.08] tracking-[-0.01em] sm:max-w-3xl sm:text-3xl sm:leading-[1.05] lg:text-[2.7rem]">
                 <span className="text-[#336DFD]">Centinaia di studenti</span>{" "}
                 stanno ottenendo risultati che mai si sarebbero aspettati con
                 questo percorso
               </h2>
-              <div className="w-full overflow-hidden testimonianze-fade">
+              <div className="w-[calc(100vw-48px)] max-w-[280px] overflow-hidden testimonianze-fade sm:w-full sm:max-w-none">
                 <div className="flex w-max items-center testimonianze-track">
-                  <div className="flex gap-[10vw] pr-[10vw] sm:gap-4 sm:pr-4">
+                  <div className="flex gap-4 pr-4 sm:gap-4 sm:pr-4">
                     {testimonianzeImages.map((src, idx) => (
                       <img
                         key={`testimonianza-${idx}`}
                         src={src}
                         alt="Testimonianza"
-                        className="h-auto w-[80vw] max-w-[320px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
+                        className="h-auto w-[calc(100vw-48px)] max-w-[280px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
                       />
                     ))}
                   </div>
                   <div
-                    className="flex gap-[10vw] pr-[10vw] sm:gap-4 sm:pr-4"
+                    className="flex gap-4 pr-4 sm:gap-4 sm:pr-4"
                     aria-hidden="true"
                   >
                     {testimonianzeImages.map((src, idx) => (
@@ -147,7 +147,7 @@ export default function MetodoTheoremzPage() {
                         key={`testimonianza-dup-${idx}`}
                         src={src}
                         alt=""
-                        className="h-auto w-[80vw] max-w-[320px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
+                        className="h-auto w-[calc(100vw-48px)] max-w-[280px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
                       />
                     ))}
                   </div>
@@ -568,13 +568,13 @@ export default function MetodoTheoremzPage() {
           ];
           content = (
             <div className="mx-auto flex max-w-5xl flex-col items-start text-left">
-              <h2 className="text-[2.6rem] font-black leading-[1.05] tracking-tight sm:text-[3.2rem] lg:text-[3.8rem]">
+              <h2 className="text-[2rem] font-black leading-[1.08] tracking-tight sm:text-[3.2rem] sm:leading-[1.05] lg:text-[3.8rem]">
                 Il <span className="text-[#336DFD]">Metodo Theoremz</span> e i 7
                 step per costruire autonomia nello studio
               </h2>
-              <div className="relative mt-10 w-full max-w-3xl">
+              <div className="relative mt-7 w-full max-w-3xl sm:mt-10">
                 <div
-                  className="absolute left-2 top-2 bottom-2 w-[3px] rounded-full opacity-80"
+                  className="absolute left-2 top-2 bottom-2 hidden w-[3px] rounded-full opacity-80 sm:block"
                   style={{
                     backgroundImage:
                       "repeating-linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(255,255,255,0.9) 10px, rgba(255,255,255,0.25) 10px, rgba(255,255,255,0.25) 22px)",
@@ -586,20 +586,26 @@ export default function MetodoTheoremzPage() {
                   {steps.map((step, idx) => (
                     <div
                       key={step.id}
-                      className="relative flex gap-16 pb-10 pl-20 last:pb-0"
+                      className="relative flex items-start gap-4 pb-8 last:pb-0 sm:gap-16 sm:pb-10 sm:pl-20 sm:last:pb-0"
                     >
                       <span
-                        className="absolute left-2 top-[64px] h-4 w-4 -translate-x-1/2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.6)]"
+                        className={`absolute left-5 top-11 bottom-0 w-px bg-white/20 sm:hidden ${
+                          idx === steps.length - 1 ? "hidden" : ""
+                        }`}
                         aria-hidden="true"
                       />
-                      <span className="w-32 text-center text-[6.5rem] font-black leading-none text-white/30 tabular-nums sm:w-40 sm:text-[9rem] lg:w-52 lg:text-[12rem]">
+                      <span
+                        className="absolute left-2 top-[64px] hidden h-4 w-4 -translate-x-1/2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.6)] sm:block"
+                        aria-hidden="true"
+                      />
+                      <span className="relative z-10 flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/25 bg-[#336DFD] text-lg font-black leading-none text-white shadow-[0_8px_20px_rgba(51,109,253,0.28)] tabular-nums sm:h-auto sm:w-40 sm:rounded-none sm:border-0 sm:bg-transparent sm:text-center sm:text-[9rem] sm:text-white/30 sm:shadow-none lg:w-52 lg:text-[12rem]">
                         {idx + 1}
                       </span>
-                      <div className="mt-6">
-                        <p className="text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
+                      <div className="min-w-0 pt-1 sm:mt-6 sm:pt-0">
+                        <p className="text-[1.05rem] font-bold leading-tight text-white sm:text-3xl sm:leading-normal lg:text-4xl">
                           {step.title}
                         </p>
-                        <p className={`mt-2 text-lg ${mutedText} sm:text-xl`}>
+                        <p className={`mt-2 text-sm leading-relaxed ${mutedText} sm:text-xl sm:leading-normal`}>
                           {step.body}
                         </p>
                       </div>
@@ -927,37 +933,37 @@ export default function MetodoTheoremzPage() {
             },
           ];
           content = (
-            <div className="mx-auto flex w-full max-w-none flex-col gap-6">
-              <h2 className="text-center text-[2.4rem] font-black leading-[1.05] tracking-tight sm:text-[3.3rem] lg:text-[3.8rem]">
+            <div className="mx-auto flex w-full max-w-none flex-col gap-5 sm:gap-6">
+              <h2 className="text-center text-[1.9rem] font-black leading-[1.08] tracking-tight sm:text-[3.3rem] sm:leading-[1.05] lg:text-[3.8rem]">
                 Non tutti gli aiuti portano
                 <span className="block">
                   allo stesso{" "}
                   <span className="text-[#336DFD]">risultato...</span>
                 </span>
               </h2>
-              <div className="mt-4 flex w-full flex-col gap-6 md:flex-row">
-                <div className="min-h-[280px] flex-1 rounded-3xl border border-slate-200 bg-white p-8">
-                  <h3 className="text-center text-[1.75rem] font-black text-slate-900 sm:text-[2.1rem] lg:text-[2.4rem]">
+              <div className="mt-2 flex w-full flex-col gap-4 sm:mt-4 sm:gap-6 md:flex-row">
+                <div className="min-h-[280px] flex-1 rounded-2xl border border-slate-200 bg-white p-4 sm:rounded-3xl sm:p-8">
+                  <h3 className="text-center text-[1.35rem] font-black leading-tight text-slate-900 sm:text-[2.1rem] lg:text-[2.4rem]">
                     Ripetizioni tradizionali
                   </h3>
-                  <div className="mx-auto mt-8 h-px w-20 bg-slate-200 mb-8" />
-                  <div className="mt-6 space-y-10">
+                  <div className="mx-auto mb-5 mt-5 h-px w-16 bg-slate-200 sm:mb-8 sm:mt-8 sm:w-20" />
+                  <div className="mt-4 space-y-5 sm:mt-6 sm:space-y-10">
                     {confrontoItems.map((item, index) => (
                       <div
                         key={item.title}
-                        className="grid items-start gap-x-2 grid-cols-[4rem_1fr] sm:grid-cols-[4.5rem_1fr] lg:grid-cols-[5rem_1fr]"
+                        className="grid grid-cols-[2rem_1fr] items-start gap-x-3 sm:grid-cols-[4.5rem_1fr] sm:gap-x-2 lg:grid-cols-[5rem_1fr]"
                       >
-                        <span className="text-left text-6xl font-black text-red-500/85 tabular-nums sm:text-7xl lg:text-8xl">
+                        <span className="text-left text-3xl font-black leading-none text-red-500/85 tabular-nums sm:text-7xl lg:text-8xl">
                           {index + 1}
                         </span>
                         <div>
-                          <p className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl lg:text-4xl">
+                          <p className="text-lg font-black leading-tight text-slate-900 sm:mt-2 sm:text-3xl lg:text-4xl">
                             {item.title}
                           </p>
-                          <ul className="mt-3 space-y-3 text-base text-slate-700 sm:text-lg">
+                          <ul className="mt-2 space-y-2 text-sm leading-relaxed text-slate-700 sm:mt-3 sm:space-y-3 sm:text-lg">
                             {item.traditional.map((line) => (
-                              <li key={line} className="flex items-start gap-3">
-                                <span className="mt-1 inline-flex h-6 w-6 flex-none items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-500">
+                              <li key={line} className="flex items-start gap-2 sm:gap-3">
+                                <span className="mt-1 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-500 sm:h-6 sm:w-6">
                                   <svg
                                     viewBox="0 0 24 24"
                                     fill="none"
@@ -965,7 +971,7 @@ export default function MetodoTheoremzPage() {
                                     strokeWidth="2.5"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    className="h-4 w-4"
+                                    className="h-3.5 w-3.5 sm:h-4 sm:w-4"
                                     aria-hidden="true"
                                   >
                                     <line x1="6" y1="6" x2="18" y2="18" />
@@ -981,29 +987,28 @@ export default function MetodoTheoremzPage() {
                     ))}
                   </div>
                 </div>
-                <div className="min-h-[280px] flex-1 rounded-3xl border border-slate-200 bg-white p-8">
-                  <h3 className="text-center text-[1.75rem] font-black text-slate-900 sm:text-[2.1rem] lg:text-[2.4rem]">
+                <div className="min-h-[280px] flex-1 rounded-2xl border border-slate-200 bg-white p-4 sm:rounded-3xl sm:p-8">
+                  <h3 className="text-center text-[1.35rem] font-black leading-tight text-slate-900 sm:text-[2.1rem] lg:text-[2.4rem]">
                     Metodo Theoremz
                   </h3>
-                  <div className="mx-auto mt-8 h-px w-20 bg-slate-200 mb-8" />
-                  <div className="mt-6 space-y-10">
+                  <div className="mx-auto mb-5 mt-5 h-px w-16 bg-slate-200 sm:mb-8 sm:mt-8 sm:w-20" />
+                  <div className="mt-4 space-y-5 sm:mt-6 sm:space-y-10">
                     {confrontoItems.map((item, index) => (
                       <div
                         key={item.title}
-                        className="grid items-start gap-x-2 grid-cols-[4rem_1fr] sm:grid-cols-[4.5rem_1fr] lg:grid-cols-[5rem_1fr]"
+                        className="grid grid-cols-[2rem_1fr] items-start gap-x-3 sm:grid-cols-[4.5rem_1fr] sm:gap-x-2 lg:grid-cols-[5rem_1fr]"
                       >
-                        {" "}
-                        <span className="text-left text-6xl font-black text-[#336DFD]/85 tabular-nums sm:text-7xl lg:text-8xl">
+                        <span className="text-left text-3xl font-black leading-none text-[#336DFD]/85 tabular-nums sm:text-7xl lg:text-8xl">
                           {index + 1}
                         </span>
                         <div>
-                          <p className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl lg:text-4xl">
+                          <p className="text-lg font-black leading-tight text-slate-900 sm:mt-2 sm:text-3xl lg:text-4xl">
                             {item.title}
                           </p>
-                          <ul className="mt-3 space-y-3 text-base text-slate-700 sm:text-lg">
+                          <ul className="mt-2 space-y-2 text-sm leading-relaxed text-slate-700 sm:mt-3 sm:space-y-3 sm:text-lg">
                             {item.method.map((line) => (
-                              <li key={line} className="flex items-start gap-3">
-                                <span className="mt-1 inline-flex h-6 w-6 flex-none items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-[#336DFD]">
+                              <li key={line} className="flex items-start gap-2 sm:gap-3">
+                                <span className="mt-1 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-[#336DFD] sm:h-6 sm:w-6">
                                   <svg
                                     viewBox="0 0 24 24"
                                     fill="none"
@@ -1011,7 +1016,7 @@ export default function MetodoTheoremzPage() {
                                     strokeWidth="2.5"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    className="h-4 w-4"
+                                    className="h-3.5 w-3.5 sm:h-4 sm:w-4"
                                     aria-hidden="true"
                                   >
                                     <polyline points="20 6 9 17 4 12" />
@@ -1027,11 +1032,11 @@ export default function MetodoTheoremzPage() {
                   </div>
                 </div>
               </div>
-              <div className="mt-12 w-full">
-                <details className="group mx-auto w-full max-w-5xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-8">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-black text-slate-900 [&::-webkit-details-marker]:hidden">
+              <div className="mt-6 w-full sm:mt-12">
+                <details className="group mx-auto w-full max-w-5xl rounded-2xl border border-slate-200 bg-white p-4 sm:rounded-3xl sm:p-8">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-base font-black text-slate-900 sm:gap-4 sm:text-lg [&::-webkit-details-marker]:hidden">
                     <span>Alla fine... rivela il voto</span>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition group-open:bg-slate-900 group-open:text-white">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition group-open:bg-slate-900 group-open:text-white sm:px-4 sm:text-sm">
                       Rivela
                       <svg
                         viewBox="0 0 24 24"
@@ -1244,7 +1249,7 @@ export default function MetodoTheoremzPage() {
                 isHero
                   ? "relative z-10 mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-6 pb-12 sm:py-8"
                   : section.id === "problema"
-                    ? "mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-8 pb-16 sm:pt-10 sm:pb-20"
+                    ? "mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-6 pb-10 sm:pt-10 sm:pb-20"
                     : section.id === "programma"
                       ? "mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-20 pb-0 sm:pt-24 sm:pb-0"
                       : "mx-auto flex max-w-6xl flex-col gap-3 px-6 py-20 sm:py-24"
