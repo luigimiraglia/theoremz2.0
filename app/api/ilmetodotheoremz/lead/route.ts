@@ -60,6 +60,21 @@ export async function POST(req: Request) {
       );
     }
 
+    const fromUser = process.env.GMAIL_USER || "";
+    const appPass = process.env.GMAIL_APP_PASS || "";
+    const toEmail =
+      process.env.ILMETODOLEADS_TO ||
+      process.env.CONTACT_TO ||
+      process.env.GMAIL_USER ||
+      "theoremz.team@gmail.com";
+
+    if (!fromUser || !appPass || !toEmail) {
+      return NextResponse.json(
+        { ok: false, error: "missing_mail_config" },
+        { status: 500 }
+      );
+    }
+
     const fullName = `${firstName} ${lastName}`.trim();
     const referer = req.headers.get("referer");
     const pageUrl = referer ? cleanText(referer, 500) : null;
@@ -79,73 +94,66 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "insert_failed" }, { status: 500 });
     }
 
-    const fromUser = process.env.GMAIL_USER || "";
-    const appPass = process.env.GMAIL_APP_PASS || "";
-    const toEmail =
-      process.env.ILMETODOLEADS_TO || "theoremz.team@gmail.com";
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: { user: fromUser, pass: appPass },
+    });
 
-    let emailStatus: "sent" | "failed" | "skipped" = "skipped";
+    const fullPhone = `${phonePrefix}${phone}`;
+    const whatsappDigits = fullPhone.replace(/\D/g, "");
+    const whatsappLink = whatsappDigits
+      ? `https://wa.me/${whatsappDigits}`
+      : null;
+    const safeName = escapeHtml(fullName);
+    const safeEmail = escapeHtml(email);
+    const safePhone = escapeHtml(fullPhone);
+    const safePage = pageUrl ? escapeHtml(pageUrl) : null;
 
-    if (fromUser && appPass) {
-      const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: true,
-        auth: { user: fromUser, pass: appPass },
+    const subject = `[Lead Metodo Theoremz] ${fullName}`;
+    const text = [
+      `Nome: ${fullName}`,
+      `Telefono: ${fullPhone}`,
+      `Email: ${email}`,
+      whatsappLink ? `WhatsApp: ${whatsappLink}` : "WhatsApp: -",
+      safePage ? `Pagina: ${pageUrl}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const html = `
+      <div style="font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;line-height:1.5">
+        <p><strong>Nome:</strong> ${safeName}</p>
+        <p><strong>Telefono:</strong> <a href="tel:${safePhone}">${safePhone}</a></p>
+        <p><strong>Email:</strong> <a href="mailto:${safeEmail}">${safeEmail}</a></p>
+        ${safePage ? `<p><strong>Pagina:</strong> <a href="${safePage}">${safePage}</a></p>` : ""}
+        ${
+          whatsappLink
+            ? `<a href="${whatsappLink}" style="display:inline-block;margin-top:12px;padding:12px 18px;background:#25D366;color:#fff;text-decoration:none;border-radius:999px;font-weight:700">Apri WhatsApp</a>`
+            : ""
+        }
+      </div>
+    `.trim();
+
+    try {
+      await transporter.sendMail({
+        from: `"Theoremz Lead" <${fromUser}>`,
+        to: toEmail,
+        subject,
+        text,
+        html,
+        replyTo: email,
       });
-
-      const fullPhone = `${phonePrefix}${phone}`;
-      const whatsappDigits = fullPhone.replace(/\D/g, "");
-      const whatsappLink = whatsappDigits
-        ? `https://wa.me/${whatsappDigits}`
-        : null;
-      const safeName = escapeHtml(fullName);
-      const safeEmail = escapeHtml(email);
-      const safePhone = escapeHtml(fullPhone);
-      const safePage = pageUrl ? escapeHtml(pageUrl) : null;
-
-      const subject = `[Lead Metodo Theoremz] ${fullName}`;
-      const text = [
-        `Nome: ${fullName}`,
-        `Telefono: ${fullPhone}`,
-        `Email: ${email}`,
-        whatsappLink ? `WhatsApp: ${whatsappLink}` : "WhatsApp: -",
-        safePage ? `Pagina: ${pageUrl}` : null,
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      const html = `
-        <div style="font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;line-height:1.5">
-          <p><strong>Nome:</strong> ${safeName}</p>
-          <p><strong>Telefono:</strong> <a href="tel:${safePhone}">${safePhone}</a></p>
-          <p><strong>Email:</strong> <a href="mailto:${safeEmail}">${safeEmail}</a></p>
-          ${safePage ? `<p><strong>Pagina:</strong> <a href="${safePage}">${safePage}</a></p>` : ""}
-          ${
-            whatsappLink
-              ? `<a href="${whatsappLink}" style="display:inline-block;margin-top:12px;padding:12px 18px;background:#25D366;color:#fff;text-decoration:none;border-radius:999px;font-weight:700">Apri WhatsApp</a>`
-              : ""
-          }
-        </div>
-      `.trim();
-
-      try {
-        await transporter.sendMail({
-          from: `"Theoremz Lead" <${fromUser}>`,
-          to: toEmail,
-          subject,
-          text,
-          html,
-          replyTo: email,
-        });
-        emailStatus = "sent";
-      } catch (mailErr) {
-        console.error("[ilmetodotheoremz lead] mail error", mailErr);
-        emailStatus = "failed";
-      }
+    } catch (mailErr) {
+      console.error("[ilmetodotheoremz lead] mail error", mailErr);
+      return NextResponse.json(
+        { ok: false, error: "mail_failed" },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ ok: true, emailStatus });
+    return NextResponse.json({ ok: true, emailStatus: "sent" });
   } catch (err: any) {
     return NextResponse.json(
       { ok: false, error: err?.message || "server_error" },
