@@ -23,6 +23,29 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.crt
+*.cert
+*.jks
+*.keystore
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+*.mobileprovision
+.netrc
+.npmrc
+
+# service account / cloud credentials
+*service-account*.json
+*serviceAccount*.json
+firebase-adminsdk*.json
+google-application-credentials*.json
+credentials.local.json
+secrets.json
 
 # debug
 npm-debug.log*
@@ -48,6 +71,19 @@ lighthouse-*.html
 *.db
 *.sqlite
 *.sqlite3
+*.dump
+*.backup
+*.sql.gz
+
+# supabase local CLI state
+supabase/.temp/
+
+# generated live Supabase snapshots
+supabase/schema-live.sql
+supabase/schema-live-openapi.json
+docs/supabase-live-inventory.md
+supabase/*dump*.sql
+supabase/*backup*.sql
 
 # temporary files and scripts
 /tmp/
