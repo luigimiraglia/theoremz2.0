@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import CtaModalButton from "./CtaModalButton";
 
 export const metadata: Metadata = {
   title: "Il Metodo Theoremz",
@@ -87,14 +88,14 @@ export default function MetodoTheoremzPage() {
                   risultati concreti e autonomia.
                 </p>
                 <div className="relative z-20 mt-4 flex flex-wrap items-center gap-4">
-                  <button className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
+                  <CtaModalButton className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
                     <span className="text-base font-bold">
                       Candidati gratuitamente
                     </span>
                     <span className="mt-1 block text-sm font-bold text-white/90">
                       E svolta il percorso scolastico di tuo figlio
                     </span>
-                  </button>
+                  </CtaModalButton>
                 </div>
               </div>
               <div
@@ -228,14 +229,14 @@ export default function MetodoTheoremzPage() {
                 `}</style>
               </div>
               <div className="flex justify-center">
-                <button className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
+                <CtaModalButton className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
                   <span className="text-base font-bold">
                     Candidati gratuitamente
                   </span>
                   <span className="mt-1 block text-sm font-bold text-white/90">
                     E svolta il percorso scolastico di tuo figlio
                   </span>
-                </button>
+                </CtaModalButton>
               </div>
             </div>
           );
@@ -478,14 +479,14 @@ export default function MetodoTheoremzPage() {
                     <p>&Egrave; qui che nasce il Metodo Theoremz.</p>
                   </div>
                   <div className="mt-6 flex justify-center">
-                    <button className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
+                    <CtaModalButton className="rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
                       <span className="text-base font-bold">
                         Candidati gratuitamente
                       </span>
                       <span className="mt-1 block text-sm font-bold text-white/90">
                         E svolta il percorso scolastico di tuo figlio
                       </span>
-                    </button>
+                    </CtaModalButton>
                   </div>
                 </div>
               </div>
@@ -699,14 +700,14 @@ export default function MetodoTheoremzPage() {
                         </li>
                       ))}
                     </ul>
-                    <button className="mt-2 rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
+                    <CtaModalButton className="mt-2 rounded-2xl bg-[#336DFD] px-6 py-3 text-center text-white">
                       <span className="text-base font-bold">
                         Candidati gratuitamente
                       </span>
                       <span className="mt-1 block text-sm font-bold text-white/90">
                         E svolta il percorso scolastico di tuo figlio
                       </span>
-                    </button>
+                    </CtaModalButton>
                   </div>
                 </div>
               </div>
@@ -859,9 +860,9 @@ export default function MetodoTheoremzPage() {
                         ))}
                       </div>
                     </div>
-                    <button className="mt-8 inline-flex w-full items-center justify-center rounded-2xl bg-[#336DFD] px-6 py-3 text-base font-bold text-white">
+                    <CtaModalButton className="mt-8 inline-flex w-full items-center justify-center rounded-2xl bg-[#336DFD] px-6 py-3 text-base font-bold text-white">
                       {offer.cta}
-                    </button>
+                    </CtaModalButton>
                   </div>
                 ))}
               </div>

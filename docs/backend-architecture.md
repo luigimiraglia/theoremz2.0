@@ -2,6 +2,8 @@
 
 This document summarizes the current server-side architecture so that we can keep Supabase, Firestore, and the bot in sync without “losing” tables, constraints, or values.
 
+Note: a new additive migration introduces `students` as the application-level source of truth for student identity. See [students-source-of-truth.md](./students-source-of-truth.md).
+
 ---
 
 ## 1. Data sources

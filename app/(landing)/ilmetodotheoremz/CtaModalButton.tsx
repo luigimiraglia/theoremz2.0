@@ -115,7 +115,7 @@ export default function CtaModalButton({
 
       form.reset();
       setStatus("success");
-    } catch (err) {
+    } catch {
       setStatus("error");
       setErrorMessage("Errore durante l'invio.");
     }

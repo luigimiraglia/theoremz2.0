@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { ensureStudentRecord } from "@/lib/students";
 
 export const runtime = "nodejs";
 
@@ -53,6 +54,16 @@ export async function POST(req: Request) {
       firestoreMeta?.full_name ||
       firestoreMeta?.parent_name ||
       null;
+    const studentRecord = await ensureStudentRecord(
+      {
+        authUid: body.userId,
+        email: resolvedEmail,
+        fullName: resolvedFullName,
+        phone: firestoreMeta?.student_phone || firebaseUser?.phoneNumber || null,
+        source: "black_activity",
+      },
+      db,
+    );
 
     await upsertProfile(db, {
       userId: body.userId,
@@ -63,12 +74,11 @@ export async function POST(req: Request) {
       updatedAt: now,
     });
 
-    if (studentRow && firestoreMeta) {
-      const studentUpdate = buildStudentUpdate(firestoreMeta);
-      if (Object.keys(studentUpdate).length) {
-        studentUpdate.updated_at = now;
-        await db.from("black_students").update(studentUpdate).eq("user_id", body.userId);
-      }
+    if (studentRow) {
+      const studentUpdate = firestoreMeta ? buildStudentUpdate(firestoreMeta) : {};
+      studentUpdate.student_id = studentRecord.id;
+      studentUpdate.updated_at = now;
+      await db.from("black_students").update(studentUpdate).eq("user_id", body.userId);
     }
 
     await upsertAccessLog(db, {

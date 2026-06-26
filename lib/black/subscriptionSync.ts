@@ -4,6 +4,8 @@ import type { UserRecord } from "firebase-admin/auth";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
 import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
+import { ensureStudentRecord } from "@/lib/students";
+import { hasActiveBlackAccess } from "@/lib/billingStatus";
 
 const HAS_SUPABASE_ENV = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -16,8 +18,6 @@ type StripeSubscriptionCompat = Stripe.Subscription & {
   start_date?: number | null;
 };
 
-export const PREMIUM_SUB_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
-
 type ProfilePayload = {
   id: string;
   full_name: string | null;
@@ -26,6 +26,8 @@ type ProfilePayload = {
   subscription_tier: string;
   stripe_customer_id: string | null;
   stripe_subscription_status: string | null;
+  stripe_cancel_at_period_end: boolean;
+  stripe_canceled_at: string | null;
   stripe_price_id: string | null;
   stripe_current_period_end: string | null;
   created_at: string;
@@ -33,6 +35,7 @@ type ProfilePayload = {
 };
 
 type BlackStudentPayload = {
+  student_id: string | null;
   user_id: string;
   year_class: string | null;
   track: string;
@@ -262,6 +265,8 @@ export async function syncBlackSubscriptionRecord({
       stripeCustomer?.id ||
       (typeof subscription?.customer === "string" ? subscription.customer : null),
     stripe_subscription_status: subscription?.status ?? null,
+    stripe_cancel_at_period_end: Boolean(subscription?.cancel_at_period_end),
+    stripe_canceled_at: toIsoStringFromSeconds(subscription?.canceled_at),
     stripe_price_id:
       subscription?.items?.data?.[0]?.price?.id || lineItem?.price?.id || null,
     stripe_current_period_end: toIsoStringFromSeconds(subscription?.current_period_end),
@@ -306,8 +311,19 @@ export async function syncBlackSubscriptionRecord({
       firebaseUser.phoneNumber,
     ) || null;
   const studentEmail = studentEmailCandidate || firebaseUser.email;
+  const studentRecord = await ensureStudentRecord(
+    {
+      authUid: firebaseUser.uid,
+      fullName: profilePayload.full_name,
+      email: studentEmail || parentEmail,
+      phone: studentPhone || parentPhone,
+      source: source ? `stripe:${source}` : "stripe",
+    },
+    supabase,
+  );
 
   const studentPayload: BlackStudentPayload = {
+    student_id: studentRecord.id,
     user_id: firebaseUser.uid,
     year_class: mapYear(firestoreMeta) || mapYear(meta) || stringOrNull(meta.year_class),
     track:
@@ -368,7 +384,7 @@ async function ensureProfile(payload: ProfilePayload) {
   const existing = await supabase
     .from("profiles")
     .select(
-      "id, full_name, role, email, subscription_tier, stripe_customer_id, stripe_subscription_status, stripe_price_id, stripe_current_period_end, created_at"
+      "id, full_name, role, email, subscription_tier, stripe_customer_id, stripe_subscription_status, stripe_cancel_at_period_end, stripe_canceled_at, stripe_price_id, stripe_current_period_end, created_at"
     )
     .eq("id", payload.id)
     .maybeSingle();
@@ -396,13 +412,7 @@ async function ensureProfile(payload: ProfilePayload) {
 
 async function upsertBlackStudent(payload: BlackStudentPayload) {
   if (!supabase) return null;
-  const existing = await supabase
-    .from("black_students")
-    .select(
-      "id, year_class, track, start_date, goal, difficulty_focus, parent_name, parent_phone, parent_email, student_phone, student_email, tutor_id, status, initial_avg, readiness, risk_level, ai_description, next_assessment_subject, next_assessment_date"
-    )
-    .eq("user_id", payload.user_id)
-    .maybeSingle();
+  const existing = await findExistingBlackStudent(payload);
   if (existing.error) {
     throw new Error(`[black-sync] Student lookup failed: ${existing.error.message}`);
   }
@@ -424,6 +434,62 @@ async function upsertBlackStudent(payload: BlackStudentPayload) {
     .single();
   if (insert.error) throw new Error(`[black-sync] Student insert failed: ${insert.error.message}`);
   return insert.data?.id ?? null;
+}
+
+async function findExistingBlackStudent(payload: BlackStudentPayload) {
+  if (!supabase) {
+    return { data: null, error: null };
+  }
+
+  const selectClause =
+    "id, user_id, student_id, year_class, track, start_date, goal, difficulty_focus, parent_name, parent_phone, parent_email, student_phone, student_email, tutor_id, status, initial_avg, readiness, risk_level, ai_description, next_assessment_subject, next_assessment_date";
+
+  const tryQuery = async (column: string, value?: string | null) => {
+    const normalized = stringOrNull(value);
+    if (!normalized) return { data: null, error: null as any };
+    return await supabase
+      .from("black_students")
+      .select(selectClause)
+      .eq(column, normalized)
+      .limit(1)
+      .maybeSingle();
+  };
+
+  const byUserId = await tryQuery("user_id", payload.user_id);
+  if (byUserId.error) return byUserId;
+  if (byUserId.data?.id) return byUserId;
+
+  const byStudentId = await tryQuery("student_id", payload.student_id);
+  if (byStudentId.error) return byStudentId;
+  if (byStudentId.data?.id) return byStudentId;
+
+  const candidateEmails = Array.from(
+    new Set([payload.student_email, payload.parent_email].map((value) => stringOrNull(value)).filter(Boolean)),
+  );
+  for (const email of candidateEmails) {
+    const byStudentEmail = await tryQuery("student_email", email);
+    if (byStudentEmail.error) return byStudentEmail;
+    if (byStudentEmail.data?.id) return byStudentEmail;
+
+    const byParentEmail = await tryQuery("parent_email", email);
+    if (byParentEmail.error) return byParentEmail;
+    if (byParentEmail.data?.id) return byParentEmail;
+  }
+
+  const candidatePhones = Array.from(
+    new Set([payload.student_phone, payload.parent_phone].map((value) => stringOrNull(value)).filter(Boolean)),
+  );
+  for (const phone of candidatePhones) {
+    const byStudentPhone = await tryQuery("student_phone", phone);
+    if (byStudentPhone.error) return byStudentPhone;
+    if (byStudentPhone.data?.id) return byStudentPhone;
+
+    const byParentPhone = await tryQuery("parent_phone", phone);
+    if (byParentPhone.error) return byParentPhone;
+    if (byParentPhone.data?.id) return byParentPhone;
+  }
+
+  return { data: null, error: null };
 }
 
 async function upsertStudentBrief(studentId: string, brief: string) {
@@ -525,17 +591,17 @@ function fallbackName(
 
 function determineSubscriptionTier(status?: string | null) {
   if (!status) return "free";
-  return PREMIUM_SUB_STATUSES.has(status) ? "black" : "free";
+  return hasActiveBlackAccess(status) ? "black" : "free";
 }
 
 function buildBrief(student: BriefSource) {
   const statusLabel = !student.status
     ? "active"
-    : PREMIUM_SUB_STATUSES.has(student.status)
+    : hasActiveBlackAccess(student.status)
       ? student.status
       : `❌ Disdetto (${student.status})`;
   const subscribedFlag =
-    !student.status || PREMIUM_SUB_STATUSES.has(student.status) ? "true" : "false";
+    !student.status || hasActiveBlackAccess(student.status) ? "true" : "false";
   return [
     `${student.full_name || "Studente"} — Theoremz Black`,
     "",

@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { supabaseServer } from "@/lib/supabase";
+import { ensureStudentRecord } from "@/lib/students";
 
 type Nullable<T> = { [K in keyof T]?: T[K] | null | undefined };
 
@@ -31,10 +32,14 @@ function deterministicUuid(prefix: string, userId: string, seed?: string | null)
   );
 }
 
-async function ensureProfileRow(db: ReturnType<typeof supabaseServer>, userId: string) {
-  const { error } = await db
-    .from("student_profiles")
-    .upsert({ user_id: userId }, { onConflict: "user_id" });
+async function ensureProfileRow(
+  db: ReturnType<typeof supabaseServer>,
+  userId: string,
+  studentId?: string | null,
+) {
+  const payload: Record<string, unknown> = { user_id: userId };
+  if (studentId) payload.student_id = studentId;
+  const { error } = await db.from("student_profiles").upsert(payload, { onConflict: "user_id" });
   if (error) throw error;
 }
 
@@ -59,9 +64,22 @@ export async function syncLiteProfilePatch(
   }>
 ) {
   const db = supabaseServer();
-  await ensureProfileRow(db, userId);
+  const student = await ensureStudentRecord(
+    {
+      authUid: userId,
+      fullName: typeof patch?.full_name === "string" ? patch.full_name : null,
+      email: typeof patch?.email === "string" ? patch.email : null,
+      phone: typeof patch?.phone === "string" ? patch.phone : null,
+      source: "auth",
+    },
+    db,
+  );
+  await ensureProfileRow(db, userId, student.id);
 
-  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const payload: Record<string, unknown> = {
+    student_id: student.id,
+    updated_at: new Date().toISOString(),
+  };
   for (const [key, value] of Object.entries(patch || {})) {
     if (value === undefined) continue;
     if (key === "cycle") {
@@ -103,11 +121,13 @@ export async function recordStudentAssessmentLite({
 }) {
   if (!date) return;
   const db = supabaseServer();
-  await ensureProfileRow(db, userId);
+  const student = await ensureStudentRecord({ authUid: userId, source: "auth" }, db);
+  await ensureProfileRow(db, userId, student.id);
 
   const id = deterministicUuid("assessment", userId, seed ?? `${date}:${subject ?? ""}:${kind}`);
   const payload = {
     id,
+    student_id: student.id,
     user_id: userId,
     kind: kind || "verifica",
     date,
@@ -142,11 +162,13 @@ export async function recordStudentGradeLite({
   const normalized = sanitizeGrade(grade);
   if (!date || normalized === null) return;
   const db = supabaseServer();
-  await ensureProfileRow(db, userId);
+  const student = await ensureStudentRecord({ authUid: userId, source: "auth" }, db);
+  await ensureProfileRow(db, userId, student.id);
 
   const id = deterministicUuid("grade", userId, seed);
   const payload = {
     id,
+    student_id: student.id,
     user_id: userId,
     subject: subject ?? null,
     grade: normalized,
@@ -178,10 +200,12 @@ export async function upsertSavedLessonLite({
 }) {
   if (!slug) return;
   const db = supabaseServer();
-  await ensureProfileRow(db, userId);
+  const student = await ensureStudentRecord({ authUid: userId, source: "auth" }, db);
+  await ensureProfileRow(db, userId, student.id);
   const id = deterministicUuid("lesson", userId, `${slug}:${status}`);
   const payload = {
     id,
+    student_id: student.id,
     user_id: userId,
     slug,
     status,
@@ -221,16 +245,18 @@ export async function logStudentAccessLite({
   userAgent?: string | null;
 }) {
   const db = supabaseServer();
-  await ensureProfileRow(db, userId);
+  const student = await ensureStudentRecord({ authUid: userId, source: "auth" }, db);
+  await ensureProfileRow(db, userId, student.id);
   const now = new Date().toISOString();
 
   await db
     .from("student_profiles")
-    .update({ last_access_at: now, updated_at: now })
+    .update({ student_id: student.id, last_access_at: now, updated_at: now })
     .eq("user_id", userId);
 
   try {
     await db.from("student_access_logs").insert({
+      student_id: student.id,
       user_id: userId,
       accessed_at: now,
       session_id: sessionId || null,

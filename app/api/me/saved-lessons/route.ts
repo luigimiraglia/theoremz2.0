@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
 import { upsertSavedLessonLite } from "@/lib/studentLiteSync";
+import { ensureStudentRecord } from "@/lib/students";
 
 // helper: verifica Bearer token
 async function getUidFromRequest(req: Request) {
@@ -67,8 +68,10 @@ export async function POST(req: Request) {
 
   const savedAt = Date.now();
   const db = supabaseServer();
+  const student = await ensureStudentRecord({ authUid: uid, source: "auth" }, db);
   const { error } = await db.from("student_saved_lessons").upsert(
     {
+      student_id: student.id,
       user_id: uid,
       lesson_id: lessonId,
       lesson_slug: slug,
