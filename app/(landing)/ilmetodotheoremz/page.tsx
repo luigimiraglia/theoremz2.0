@@ -60,6 +60,19 @@ const sections = [
   },
 ];
 
+const testimonianzeImages = [
+  "/images/test1.jpeg",
+  "/images/test2.jpeg",
+  "/images/test3.PNG",
+  "/images/test4.PNG",
+  "/images/test6.PNG",
+  "/images/test7.PNG",
+  "/images/test8.PNG",
+  "/images/test9.PNG",
+  "/images/test10.PNG",
+  "/images/test11.PNG",
+];
+
 export default function MetodoTheoremzPage() {
   return (
     <main className="bg-white text-[#232323] font-semibold">
@@ -106,18 +119,6 @@ export default function MetodoTheoremzPage() {
             </div>
           );
         } else if (section.id === "problema") {
-          const testimonianze = [
-            "/images/test1.jpeg",
-            "/images/test2.jpeg",
-            "/images/test3.png",
-            "/images/test4.png",
-            "/images/test6.png",
-            "/images/test7.png",
-            "/images/test8.png",
-            "/images/test9.png",
-            "/images/test10.png",
-            "/images/test11.png",
-          ];
           content = (
             <div className="mx-auto flex max-w-4xl flex-col items-center gap-10 text-center">
               <h2 className="max-w-3xl text-[1.85rem] font-extrabold leading-[1.05] tracking-[-0.01em] sm:text-3xl lg:text-[2.7rem]">
@@ -128,7 +129,7 @@ export default function MetodoTheoremzPage() {
               <div className="w-full overflow-hidden testimonianze-fade">
                 <div className="flex w-max items-center testimonianze-track">
                   <div className="flex gap-[10vw] pr-[10vw] sm:gap-4 sm:pr-4">
-                    {testimonianze.map((src, idx) => (
+                    {testimonianzeImages.map((src, idx) => (
                       <img
                         key={`testimonianza-${idx}`}
                         src={src}
@@ -141,7 +142,7 @@ export default function MetodoTheoremzPage() {
                     className="flex gap-[10vw] pr-[10vw] sm:gap-4 sm:pr-4"
                     aria-hidden="true"
                   >
-                    {testimonianze.map((src, idx) => (
+                    {testimonianzeImages.map((src, idx) => (
                       <img
                         key={`testimonianza-dup-${idx}`}
                         src={src}
@@ -1138,11 +1139,18 @@ export default function MetodoTheoremzPage() {
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, idx) => (
-                  <div
-                    key={`gallery-${idx}`}
-                    className={`aspect-[4/3] w-full rounded-2xl border ${panelClass}`}
-                  />
+                {testimonianzeImages.map((src, idx) => (
+                  <figure
+                    key={`gallery-${src}`}
+                    className={`overflow-hidden rounded-2xl border ${panelClass}`}
+                  >
+                    <img
+                      src={src}
+                      alt={`Testimonianza risultato reale ${idx + 1}`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  </figure>
                 ))}
               </div>
             </div>
