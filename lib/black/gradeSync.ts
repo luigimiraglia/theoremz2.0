@@ -1,4 +1,5 @@
 import { supabaseServer } from "@/lib/supabase";
+import { resolveBlackStudentIdentity } from "@/lib/black/studentIdentity";
 
 export async function syncBlackGrade({
   uid,
@@ -18,23 +19,20 @@ export async function syncBlackGrade({
   examSubject?: string | null;
 }) {
   const db = supabaseServer();
-  let studentId = providedStudentId || null;
-  if (!studentId && uid) {
-    const { data, error } = await db
-      .from("black_students")
-      .select("id")
-      .eq("user_id", uid)
-      .maybeSingle();
-    if (error) {
-      console.error("[grade-sync] student lookup failed", error);
-    }
-    studentId = data?.id || null;
+  let identity = null;
+  try {
+    identity = await resolveBlackStudentIdentity(db, {
+      authUid: uid,
+      legacyBlackStudentId: providedStudentId,
+    });
+  } catch (error) {
+    console.error("[grade-sync] student lookup failed", error);
   }
-  if (!studentId) return;
+  if (!identity?.canonicalStudentId) return;
 
   const resolvedSubject = subject || examSubject || null;
   const { error: gradeError } = await db.from("black_grades").insert({
-    student_id: studentId,
+    student_id: identity.canonicalStudentId,
     subject: resolvedSubject,
     score: grade,
     max_score: 10,
@@ -46,7 +44,7 @@ export async function syncBlackGrade({
 
   const assessmentRow = await findAssessment({
     db,
-    studentId,
+    studentId: identity.canonicalStudentId,
     date,
     assessmentId,
     subject: examSubject || subject || null,
@@ -67,7 +65,7 @@ export async function syncBlackGrade({
     }
   }
 
-  await refreshBriefSafe(db, studentId);
+  await refreshBriefSafe(db, identity.canonicalStudentId);
 }
 
 async function findAssessment({
@@ -96,16 +94,17 @@ async function findAssessment({
     .select("id, subject, topics")
     .eq("student_id", studentId)
     .eq("when_at", date);
-  if (!data?.length) return null;
-  if (data.length === 1) return data[0];
+  const rows = data || [];
+  if (!rows.length) return null;
+  if (rows.length === 1) return rows[0];
   if (subject) {
     const normalized = subject.toLowerCase();
     return (
-      data.find((row) => (row.subject || "").toLowerCase() === normalized) ||
-      data[0]
+      rows.find((row) => (row.subject || "").toLowerCase() === normalized) ||
+      rows[0]
     );
   }
-  return data[0];
+  return rows[0];
 }
 
 export function buildAssessmentResultLine({

@@ -159,7 +159,7 @@ async function findBlackStudentByEmail(
   const columns =
     "id, preferred_name, student_name, student_email, parent_email, student_phone, parent_phone";
   const { data: studentMatches, error: studentErr } = await db
-    .from("black_students")
+    .from("students")
     .select(columns)
     .ilike("student_email", normalized)
     .limit(1);
@@ -168,7 +168,7 @@ async function findBlackStudentByEmail(
     return studentMatches[0];
   }
   const { data: parentMatches, error: parentErr } = await db
-    .from("black_students")
+    .from("students")
     .select(columns)
     .ilike("parent_email", normalized)
     .limit(1);
@@ -189,7 +189,7 @@ async function findBlackStudentByPhone(
     "id, preferred_name, student_name, student_email, parent_email, student_phone, parent_phone";
   const pattern = `%${digits}%`;
   const { data, error } = await db
-    .from("black_students")
+    .from("students")
     .select(columns)
     .or(`student_phone.ilike.${pattern},parent_phone.ilike.${pattern}`)
     .limit(1);

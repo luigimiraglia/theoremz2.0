@@ -46,7 +46,8 @@ async function resolveViewer(
   db: ReturnType<typeof supabaseServer>,
 ): Promise<{ error?: NextResponse; viewer?: Viewer }> {
   if (process.env.NODE_ENV === "development") {
-    // In dev prova comunque a leggere il token per derivare tutorId/email reali.
+    // In dev, if a real user token is present, preserve the real role.
+    // Falling back to admin is only for local unauthenticated admin testing.
     let email: string | null = null;
     let tutorId: string | null = null;
     const authHeader = request.headers.get("authorization");
@@ -69,6 +70,13 @@ async function resolveViewer(
           console.warn("[admin/bookings] dev token decode failed", err);
         }
       }
+      if (email && isAdminEmail(email)) {
+        return { viewer: { isAdmin: true, tutorId, email } };
+      }
+      if (email && tutorId) {
+        return { viewer: { isAdmin: false, tutorId, email } };
+      }
+      return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
     }
     return { viewer: { isAdmin: true, tutorId, email } };
   }
@@ -335,7 +343,7 @@ async function ensureBookableSlot(
 
   if (opts.requireRemaining && opts.studentId) {
     const { data: remainingRow, error: remainingErr } = await db
-      .from("black_students")
+      .from("students")
       .select("hours_paid, hours_consumed")
       .eq("id", opts.studentId)
       .maybeSingle();
@@ -480,7 +488,7 @@ async function applyBookingCompletion(opts: {
   let hoursConsumed = 0;
   if (studentId) {
     const { data: student, error: studentErr } = await db
-      .from("black_students")
+      .from("students")
       .select("id, hours_paid, hours_consumed, videolesson_tutor_id")
       .eq("id", studentId)
       .maybeSingle();
@@ -499,7 +507,7 @@ async function applyBookingCompletion(opts: {
   } else if (booking.email) {
     const normalizedEmail = String(booking.email || "").toLowerCase();
     const { data: student, error: studentErr } = await db
-      .from("black_students")
+      .from("students")
       .select("id, hours_paid, hours_consumed, videolesson_tutor_id")
       .or(`student_email.ilike.${normalizedEmail},parent_email.ilike.${normalizedEmail}`)
       .maybeSingle();
@@ -530,7 +538,7 @@ async function applyBookingCompletion(opts: {
       }
     >();
     const { data: direct } = await db
-      .from("black_students")
+      .from("students")
       .select("id, hours_paid, hours_consumed, videolesson_tutor_id")
       .eq("videolesson_tutor_id", booking.tutor_id);
     (direct || []).forEach((s: any) => {
@@ -546,11 +554,11 @@ async function applyBookingCompletion(opts: {
     const { data: assigned } = await db
       .from("tutor_assignments")
       .select(
-        "student_id, black_students!inner(id, hours_paid, hours_consumed, videolesson_tutor_id)",
+        "student_id, student:students!inner(id, hours_paid, hours_consumed, videolesson_tutor_id)",
       )
       .eq("tutor_id", booking.tutor_id);
     (assigned || []).forEach((row: any) => {
-      const s = row?.black_students;
+      const s = row?.student;
       if (s?.id && !candidatesMap.has(s.id)) {
         candidatesMap.set(s.id, {
           id: s.id,
@@ -604,7 +612,7 @@ async function applyBookingCompletion(opts: {
   if (tutorUpdateErr) throw new Error(tutorUpdateErr.message);
 
   const { error: studentUpdateErr } = await db
-    .from("black_students")
+    .from("students")
     .update({
       hours_consumed: hoursConsumed + hoursToDeduct,
       hours_paid: Math.max(0, hoursPaid - hoursToDeduct),
@@ -744,9 +752,9 @@ export async function GET(request: NextRequest) {
             const [tutorRes, studentsRes, assignedRes] = await Promise.all([
               db.from("tutors").select("hours_due").eq("id", effectiveTutorId || "").maybeSingle(),
               db
-                .from("black_students")
+                .from("students")
                 .select(
-                  "id, student_email, parent_email, student_phone, parent_phone, whatsapp_group_link, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id)"
+                  "id, student_email, parent_email, student_phone, parent_phone, whatsapp_group_link, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!students_auth_uid_profiles_fkey(full_name, stripe_price_id)"
                 )
                 .eq("videolesson_tutor_id", effectiveTutorId || "")
                 .order("start_date", { ascending: true })
@@ -754,7 +762,7 @@ export async function GET(request: NextRequest) {
               db
                 .from("tutor_assignments")
                 .select(
-                  "student_id, hourly_rate, consumed_baseline, black_students!inner(id, student_email, parent_email, student_phone, parent_phone, whatsapp_group_link, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))"
+                  "student_id, hourly_rate, consumed_baseline, student:students!inner(id, student_email, parent_email, student_phone, parent_phone, whatsapp_group_link, hours_paid, hours_consumed, preferred_name, status, profiles:profiles!students_auth_uid_profiles_fkey(full_name, stripe_price_id))"
                 )
                 .eq("tutor_id", effectiveTutorId || "")
                 .limit(300),
@@ -767,7 +775,7 @@ export async function GET(request: NextRequest) {
               if (s?.id) map.set(s.id, s);
             });
             (assignedRes.data || []).forEach((row: any) => {
-              const s = row?.black_students;
+              const s = row?.student;
               if (s?.id && !map.has(s.id)) {
                 map.set(s.id, s);
               }
@@ -858,6 +866,7 @@ export async function GET(request: NextRequest) {
       tutors: tutors || [],
       currentTutorId: effectiveTutorId || null,
       viewerIsAdmin: Boolean(viewer?.isAdmin),
+      viewerIsTutor: Boolean(viewer?.tutorId),
       tutorSummary,
     });
   } catch (err: any) {

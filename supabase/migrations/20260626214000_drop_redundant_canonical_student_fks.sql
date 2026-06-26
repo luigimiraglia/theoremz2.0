@@ -1,0 +1,11 @@
+alter table public.black_assessments drop constraint if exists black_assessments_canonical_student_id_fkey;
+alter table public.black_grades drop constraint if exists black_grades_canonical_student_id_fkey;
+alter table public.black_notes drop constraint if exists black_notes_canonical_student_id_fkey;
+alter table public.black_contact_logs drop constraint if exists black_contact_logs_canonical_student_id_fkey;
+alter table public.black_student_brief drop constraint if exists black_student_brief_canonical_student_id_fkey;
+alter table public.black_stripe_signups drop constraint if exists black_stripe_signups_canonical_student_id_fkey;
+alter table public.black_whatsapp_conversations drop constraint if exists black_whatsapp_conversations_canonical_student_id_fkey;
+alter table public.black_whatsapp_messages drop constraint if exists black_whatsapp_messages_canonical_student_id_fkey;
+alter table public.black_followups drop constraint if exists black_followups_canonical_student_id_fkey;
+alter table public.tutor_assignments drop constraint if exists tutor_assignments_canonical_student_id_fkey;
+alter table public.tutor_sessions drop constraint if exists tutor_sessions_canonical_student_id_fkey;

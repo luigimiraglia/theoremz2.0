@@ -187,6 +187,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       sessionId: session.id,
       subscriptionId: subscription?.id || null,
       studentId: syncResult.studentId,
+      canonicalStudentId: syncResult.canonicalStudentId,
       studentUserId: syncResult.userId,
       status: "synced",
     });
@@ -1565,7 +1566,7 @@ async function findBlackStudentByEmail(
   const columns =
     "id, preferred_name, student_name, student_email, parent_email, student_phone, parent_phone";
   const { data: studentMatches, error: studentErr } = await db
-    .from("black_students")
+    .from("students")
     .select(columns)
     .ilike("student_email", normalized)
     .limit(1);
@@ -1573,7 +1574,7 @@ async function findBlackStudentByEmail(
     return studentMatches[0];
   }
   const { data: parentMatches, error: parentErr } = await db
-    .from("black_students")
+    .from("students")
     .select(columns)
     .ilike("parent_email", normalized)
     .limit(1);
@@ -1610,7 +1611,7 @@ async function ensureBlackLeadFromActivation({
 
   if (leadStudentId && (!leadName || !leadPhone || !leadEmail)) {
     const { data: student, error } = await db
-      .from("black_students")
+      .from("students")
       .select("preferred_name, student_name, student_email, parent_email, student_phone, parent_phone")
       .eq("id", leadStudentId)
       .maybeSingle();
@@ -1737,7 +1738,7 @@ async function ensureBlackLeadFromCancellation({
 
   if (leadStudentId && (!leadName || !leadContact || !leadEmail || !leadPhone)) {
     const { data: student, error } = await db
-      .from("black_students")
+      .from("students")
       .select("preferred_name, student_name, student_email, parent_email, student_phone, parent_phone")
       .eq("id", leadStudentId)
       .maybeSingle();

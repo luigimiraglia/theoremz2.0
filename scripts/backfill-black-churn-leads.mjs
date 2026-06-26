@@ -114,7 +114,7 @@ async function findBlackStudentByEmail(email) {
   const columns =
     "id, preferred_name, student_name, student_email, parent_email, student_phone, parent_phone";
   const { data: studentMatches, error: studentErr } = await supabase
-    .from("black_students")
+    .from("students")
     .select(columns)
     .ilike("student_email", normalized)
     .limit(1);
@@ -122,7 +122,7 @@ async function findBlackStudentByEmail(email) {
     return studentMatches[0];
   }
   const { data: parentMatches, error: parentErr } = await supabase
-    .from("black_students")
+    .from("students")
     .select(columns)
     .ilike("parent_email", normalized)
     .limit(1);

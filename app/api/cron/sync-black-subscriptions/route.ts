@@ -76,6 +76,7 @@ async function handle(req: Request) {
               await linkStripeSignupToStudent({
                 subscriptionId: sub.id,
                 studentId: result.studentId,
+                canonicalStudentId: result.canonicalStudentId,
                 studentUserId: result.userId,
                 status: "synced",
               });

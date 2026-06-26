@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { adminAuth } from "@/lib/firebaseAdmin";
 import { hasTempAccess } from "@/lib/temp-access";
+import { supabaseServer } from "@/lib/supabase";
+import { ensureStudentRecord } from "@/lib/students";
+import { syncStudentSubscriptionState } from "@/lib/studentSubscription";
 
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || "";
 const stripe = STRIPE_KEY
@@ -24,7 +27,25 @@ const ALL_OVERRIDES = new Set(
   [...LOCAL_SUB_OVERRIDES, ...ENV_SUB_OVERRIDES].map((e) => e.toLowerCase())
 );
 
-type CacheEntry = { value: boolean; ts: number; ttl: number };
+type PremiumAccessSource = "stripe" | "temp_access" | "override";
+type PremiumPlanTier = "Essential" | "Black";
+export type PremiumAccessResult = {
+  isSubscribed: boolean;
+  source: PremiumAccessSource;
+  stripe?: {
+    customerId: string | null;
+    subscriptionId: string | null;
+    status: string | null;
+    priceId: string | null;
+    startDate: string | null;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    canceledAt: string | null;
+    planLabel: string | null;
+    planTier: PremiumPlanTier;
+  };
+};
+type CacheEntry = { value: PremiumAccessResult | boolean; ts: number; ttl: number };
 const globalScope = globalThis as typeof globalThis & {
   __premiumSubCache?: Map<string, CacheEntry>;
 };
@@ -36,24 +57,54 @@ if (!globalScope.__premiumSubCache) {
 const TTL_TRUE_MS = 10 * 60 * 1000;
 const TTL_FALSE_MS = 2 * 60 * 1000;
 
+const PLAN_LABELS: Record<string, string> = {
+  price_1SQIy3HuThKalaHI4pli489T: "Black Standard",
+  price_1SGtQvHuThKalaHIr1d9ua0D: "Black Standard",
+  price_1Ptv7qHuThKalaHIO45IqjKL: "Black Essential",
+  price_1SII2UHuThKalaHI1g3CgFSb: "Black Annuale",
+};
+
+const ESSENTIAL_PRICE_IDS = new Set(
+  (process.env.ESSENTIAL_PRICE_IDS || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean),
+);
+ESSENTIAL_PRICE_IDS.add("price_1Ptv7qHuThKalaHIO45IqjKL");
+
+const ESSENTIAL_PRODUCT_IDS = new Set(
+  (process.env.ESSENTIAL_PRODUCT_IDS || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean),
+);
+ESSENTIAL_PRODUCT_IDS.add("prod_PIm5hK5Fvbov68");
+
 function normalizeEmail(email?: string | null) {
   const normalized = email?.toLowerCase().trim() || "";
   return normalized.length ? normalized : null;
 }
 
+function normalizeCachedValue(value: CacheEntry["value"]): PremiumAccessResult {
+  if (typeof value === "boolean") {
+    return { isSubscribed: value, source: "stripe" };
+  }
+  return value;
+}
+
 function getCached(email: string) {
   const entry = SUB_CACHE.get(email);
   if (!entry) return null;
-  if (Date.now() - entry.ts < entry.ttl) return entry.value;
+  if (Date.now() - entry.ts < entry.ttl) return normalizeCachedValue(entry.value);
   SUB_CACHE.delete(email);
   return null;
 }
 
-function setCached(email: string, value: boolean) {
+function setCached(email: string, value: PremiumAccessResult) {
   SUB_CACHE.set(email, {
     value,
     ts: Date.now(),
-    ttl: value ? TTL_TRUE_MS : TTL_FALSE_MS,
+    ttl: value.isSubscribed ? TTL_TRUE_MS : TTL_FALSE_MS,
   });
 }
 
@@ -83,12 +134,81 @@ export async function requireAuth(
   return { user };
 }
 
-export async function isPremiumEmail(email: string): Promise<boolean> {
-  const normalized = normalizeEmail(email);
-  if (!normalized) return false;
+function stripeDateFromSeconds(value?: number | null) {
+  return typeof value === "number" ? new Date(value * 1000).toISOString() : null;
+}
 
-  if (hasTempAccess(normalized) || ALL_OVERRIDES.has(normalized)) {
-    return true;
+function resolvePlan(price: Stripe.Price | null | undefined) {
+  const priceId = price?.id || null;
+  const lookup = price?.lookup_key?.toLowerCase?.() || "";
+  const nickname = price?.nickname?.toLowerCase?.() || "";
+  const productName =
+    typeof price?.product === "object" &&
+    price.product &&
+    (price.product as any).name
+      ? String((price.product as any).name).toLowerCase()
+      : "";
+  const productId =
+    typeof price?.product === "string" ? price.product : price?.product?.id;
+
+  const label =
+    (priceId && PLAN_LABELS[priceId]) ||
+    price?.nickname ||
+    price?.lookup_key ||
+    productName ||
+    "Black";
+
+  const isEssential =
+    (priceId && ESSENTIAL_PRICE_IDS.has(priceId)) ||
+    (productId && ESSENTIAL_PRODUCT_IDS.has(productId)) ||
+    lookup.includes("essential") ||
+    nickname.includes("essential") ||
+    productName.includes("essential") ||
+    (label || "").toLowerCase().includes("essential");
+
+  return {
+    label: isEssential ? "Essential" : label || "Black",
+    tier: (isEssential ? "Essential" : "Black") as PremiumPlanTier,
+  };
+}
+
+function resultFromSubscription(
+  customer: Stripe.Customer,
+  subscription: Stripe.Subscription,
+  isSubscribed = true,
+): PremiumAccessResult {
+  const price = subscription.items?.data?.[0]?.price || null;
+  const plan = resolvePlan(price);
+  return {
+    isSubscribed,
+    source: "stripe",
+    stripe: {
+      customerId: customer.id,
+      subscriptionId: subscription.id,
+      status: subscription.status || null,
+      priceId: price?.id || null,
+      startDate: stripeDateFromSeconds(subscription.created),
+      currentPeriodEnd: stripeDateFromSeconds(
+        (subscription as Stripe.Subscription & { current_period_end?: number | null })
+          .current_period_end,
+      ),
+      cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
+      canceledAt: stripeDateFromSeconds(subscription.canceled_at),
+      planLabel: plan.label,
+      planTier: plan.tier,
+    },
+  };
+}
+
+async function getPremiumAccessByEmail(email: string): Promise<PremiumAccessResult> {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return { isSubscribed: false, source: "stripe" };
+
+  if (hasTempAccess(normalized)) {
+    return { isSubscribed: true, source: "temp_access" };
+  }
+  if (ALL_OVERRIDES.has(normalized)) {
+    return { isSubscribed: true, source: "override" };
   }
 
   const cached = getCached(normalized);
@@ -100,9 +220,13 @@ export async function isPremiumEmail(email: string): Promise<boolean> {
 
   const customers = await stripe.customers.list({ email: normalized, limit: 100 });
   if (!customers.data.length) {
-    setCached(normalized, false);
-    return false;
+    const result: PremiumAccessResult = { isSubscribed: false, source: "stripe" };
+    setCached(normalized, result);
+    return result;
   }
+
+  let latestInactiveResult: PremiumAccessResult | null = null;
+  let latestInactiveCreated = 0;
 
   for (const customer of customers.data) {
     const subs = await stripe.subscriptions.list({
@@ -110,14 +234,75 @@ export async function isPremiumEmail(email: string): Promise<boolean> {
       status: "all",
       limit: 100,
     });
-    if (subs.data.some((s) => ACTIVE.has(s.status))) {
-      setCached(normalized, true);
-      return true;
+    const activeSubscription = subs.data.find((s) => ACTIVE.has(s.status));
+    if (activeSubscription) {
+      const result = resultFromSubscription(customer, activeSubscription);
+      setCached(normalized, result);
+      return result;
+    }
+
+    const latestSubscription = subs.data
+      .slice()
+      .sort((a, b) => (b.created || 0) - (a.created || 0))[0];
+    if (latestSubscription) {
+      const candidate = resultFromSubscription(customer, latestSubscription, false);
+      if (!latestInactiveResult || latestSubscription.created > latestInactiveCreated) {
+        latestInactiveResult = candidate;
+        latestInactiveCreated = latestSubscription.created || 0;
+      }
     }
   }
 
-  setCached(normalized, false);
-  return false;
+  const result: PremiumAccessResult = latestInactiveResult || {
+    isSubscribed: false,
+    source: "stripe",
+  };
+  setCached(normalized, result);
+  return result;
+}
+
+async function mirrorStripeAccessToStudent(user: AuthUser, access: PremiumAccessResult) {
+  if (access.source !== "stripe") return;
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return;
+
+  try {
+    const db = supabaseServer();
+    const student = await ensureStudentRecord(
+      {
+        authUid: user.uid,
+        email: user.email,
+        source: "premium_access",
+      },
+      db,
+    );
+    await syncStudentSubscriptionState(db, student.id, {
+      subscriptionTier: access.isSubscribed ? "black" : "free",
+      subscriptionStatus: access.stripe?.status ?? null,
+      ...(access.stripe
+        ? {
+            stripeCustomerId: access.stripe.customerId,
+            stripeSubscriptionId: access.stripe.subscriptionId,
+            stripePriceId: access.stripe.priceId,
+            stripeCurrentPeriodEnd: access.stripe.currentPeriodEnd,
+            stripeCancelAtPeriodEnd: access.stripe.cancelAtPeriodEnd,
+            stripeCanceledAt: access.stripe.canceledAt,
+          }
+        : {}),
+    });
+  } catch (error) {
+    console.warn("[premium-access] failed to mirror Stripe access to students", error);
+  }
+}
+
+export async function getPremiumAccessForUser(user: AuthUser): Promise<PremiumAccessResult> {
+  const access = await getPremiumAccessByEmail(user.email);
+  await mirrorStripeAccessToStudent(user, access);
+  return access;
+}
+
+export async function isPremiumEmail(email: string): Promise<boolean> {
+  const access = await getPremiumAccessByEmail(email);
+  return access.isSubscribed;
 }
 
 export async function requirePremium(
@@ -126,8 +311,8 @@ export async function requirePremium(
   const auth = await requireAuth(req);
   if (!("user" in auth)) return auth;
   try {
-    const ok = await isPremiumEmail(auth.user.email);
-    if (!ok) {
+    const access = await getPremiumAccessForUser(auth.user);
+    if (!access.isSubscribed) {
       return NextResponse.json(
         { error: "subscription_required" },
         { status: 403 }

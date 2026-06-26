@@ -238,7 +238,7 @@ async function maybeSendPreExamTips(db: ReturnType<typeof supabaseServer>) {
   }
 
   const { data: students, error: studentsError } = await db
-    .from("black_students")
+    .from("students")
     .select(
       "id, parent_email, parent_name, goal, difficulty_focus, readiness, next_assessment_subject, next_assessment_date"
     )

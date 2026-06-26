@@ -28,7 +28,7 @@ export async function GET() {
   } catch (error) {
     console.error("[telegram-digest] readiness decay failed", error);
   }
-  const { data: cards } = await db.from("black_student_card").select("*");
+  const { data: cards } = await db.from("students").select("*");
 
   if (!cards?.length) {
     await Promise.all(TARGETS.map((id) => send(id, "Nessuno studente.")));
@@ -63,9 +63,9 @@ export async function GET() {
     .toISOString()
     .slice(0, 10);
   const { data: recentSignups } = await db
-    .from("black_students")
+    .from("students")
     .select(
-      "id, start_date, student_email, parent_email, profiles:profiles!black_students_user_id_fkey(full_name)"
+      "id, start_date, student_email, parent_email, profiles:profiles!students_auth_uid_profiles_fkey(full_name)"
     )
     .gte("start_date", threeDaysAgo)
     .is("last_contacted_at", null)
@@ -112,7 +112,7 @@ async function fetchAssessmentsNext7Days(db: ReturnType<typeof supabaseServer>) 
   const { data, error } = await db
     .from("black_assessments")
     .select(
-      "student_id, subject, when_at, readiness, black_students!inner(user_id, student_email, parent_email, profiles:profiles!black_students_user_id_fkey(full_name))"
+      "student_id, subject, when_at, readiness, student:students!inner(auth_uid, student_email, parent_email, profiles:profiles!students_auth_uid_profiles_fkey(full_name))"
     )
     .gte("when_at", from)
     .lte("when_at", to)
@@ -127,15 +127,15 @@ async function fetchAssessmentsNext7Days(db: ReturnType<typeof supabaseServer>) 
 function formatAssessments(rows: any[]) {
   return rows
     .map((row: any) => {
-      const studentProfile = Array.isArray(row.black_students?.profiles)
-        ? row.black_students.profiles[0]
-        : row.black_students?.profiles;
+      const studentProfile = Array.isArray(row.student?.profiles)
+        ? row.student.profiles[0]
+        : row.student?.profiles;
       const name = resolveContactLabel({
-        student_email: row.black_students?.student_email,
-        parent_email: row.black_students?.parent_email,
+        student_email: row.student?.student_email,
+        parent_email: row.student?.parent_email,
         student_name:
           studentProfile?.full_name ||
-          row.black_students?.user_id ||
+          row.student?.auth_uid ||
           row.student_id,
       });
       const when = row.when_at
@@ -144,7 +144,7 @@ function formatAssessments(rows: any[]) {
             month: "2-digit",
           })
         : "—";
-      const readiness = Number(row.readiness ?? row.black_students?.readiness ?? 0);
+      const readiness = Number(row.readiness ?? row.student?.readiness ?? 0);
       return `• ${when} — ${name} (${row.subject || "materia"}) · readiness ${readiness}/100`;
     })
     .join("\n");

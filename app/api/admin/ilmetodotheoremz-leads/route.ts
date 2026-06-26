@@ -249,7 +249,7 @@ export async function GET(request: NextRequest) {
   const leads = (data || []).map((row) => mapMetodoLead(row as MetodoLeadRow));
 
   const { data: churnedRows, error: churnedErr } = await db
-    .from("black_students")
+    .from("students")
     .select(
       "id, preferred_name, student_name, student_email, parent_email, student_phone, parent_phone, year_class, track, status, response_status, responded_at, no_response_at, paused_at, updated_at",
     )
@@ -301,7 +301,7 @@ export async function GET(request: NextRequest) {
   });
 
   const { data: blackContacts, error: blackContactsErr } = await db
-    .from("black_students")
+    .from("students")
     .select("responded_at, no_response_at, status")
     .not("status", "in", ACTIVE_SUB_STATUS_FILTER)
     .not("status", "is", null)
@@ -416,7 +416,7 @@ export async function POST(request: NextRequest) {
   if (normalizedSource === "black") {
     const blackPatch = { ...patch, updated_at: now };
     const { data: blackData, error: blackError } = await db
-      .from("black_students")
+      .from("students")
       .update(blackPatch)
       .eq("id", id)
       .select(

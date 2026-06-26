@@ -31,7 +31,7 @@ try {
 async function verifyDatabaseSchema(): Promise<void> {
   console.log('[Analytics DB] Verifying PostgreSQL database schema...')
   
-  const tables = ['events', 'sessions', 'conversions', 'daily_stats']
+  const tables = ['events', 'sessions', 'conversions']
   
   for (const table of tables) {
     try {
@@ -136,58 +136,13 @@ export const analyticsDB = {
     return data;
   },
 
-  // Update daily stats - versione semplificata per Supabase
+  // Deprecated: daily_stats was an unused aggregate table. Analytics now reads
+  // directly from events/sessions/conversions.
   updateDailyStats: async (date: string, field: string, increment: number = 1) => {
-    try {
-      // Controlla se esiste già un record per questa data
-      const { data: existingData, error: selectError } = await supabase
-        .from('daily_stats')
-        .select('*')
-        .eq('date', date)
-        .single();
-      
-      if (selectError && selectError.code !== 'PGRST116') {
-        console.error(`[Analytics DB] Failed to check daily stats:`, selectError);
-        return null;
-      }
-      
-      if (existingData) {
-        // Update record esistente
-        const newValue = (existingData[field] || 0) + increment;
-        const { data: updateData, error: updateError } = await supabase
-          .from('daily_stats')
-          .update({ 
-            [field]: newValue,
-            updated_at: new Date().toISOString()
-          })
-          .eq('date', date)
-          .select();
-        
-        if (updateError) {
-          console.error(`[Analytics DB] Failed to update daily stats:`, updateError);
-          return null;
-        }
-        return updateData;
-      } else {
-        // Inserisci nuovo record
-        const { data: insertData, error: insertError } = await supabase
-          .from('daily_stats')
-          .insert({
-            date: date,
-            [field]: increment
-          })
-          .select();
-        
-        if (insertError) {
-          console.error(`[Analytics DB] Failed to insert daily stats:`, insertError);
-          return null;
-        }
-        return insertData;
-      }
-    } catch (error) {
-      console.error(`[Analytics DB] Daily stats operation failed:`, error);
-      return null;
-    }
+    void date;
+    void field;
+    void increment;
+    return null;
   },
 
   // Get conversion funnel
@@ -299,27 +254,15 @@ export const analyticsDB = {
 
   // Get daily stats
   getDailyStats: async (date: string) => {
-    const { data, error } = await supabase
-      .from('daily_stats')
-      .select('*')
-      .eq('date', date)
-      .limit(1);
-    
-    if (error) throw error;
-    return data || [];
+    void date;
+    return [];
   },
 
   // Get daily stats range
   getDailyStatsRange: async (startDate: string, endDate: string) => {
-    const { data, error } = await supabase
-      .from('daily_stats')
-      .select('*')
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: true });
-    
-    if (error) throw error;
-    return data || [];
+    void startDate;
+    void endDate;
+    return [];
   },
 
   // Get funnel entries daily
@@ -429,8 +372,7 @@ export const analyticsDB = {
         tables: [
           { name: 'events', accessible: !eventsError, count: eventsCount },
           { name: 'sessions', accessible: !sessionsError, count: sessionsCount },
-          { name: 'conversions', accessible: true },
-          { name: 'daily_stats', accessible: true }
+          { name: 'conversions', accessible: true }
         ]
       };
     } catch (error) {

@@ -44,7 +44,7 @@ export async function GET(request: Request) {
   ] = await Promise.all([
     db.from("tutors").select("id, display_name, full_name, email, phone, notes, hours_due").order("display_name", { ascending: true }),
     db
-      .from("black_students")
+      .from("students")
       .select(
         "id, preferred_name, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, status, videolesson_tutor_id",
       )
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     db
       .from("tutor_assignments")
       .select(
-        "tutor_id, student:black_students!inner(id, preferred_name, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, status)",
+        "tutor_id, student:student:students!inner(id, preferred_name, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, status)",
       ),
     db.from("tutor_assignments").select("tutor_id, student_id, hourly_rate, consumed_baseline"),
   ]);

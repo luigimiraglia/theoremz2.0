@@ -82,7 +82,7 @@ export async function GET(
             "last_message_preview",
             "updated_at",
             "student_id",
-            "black_students(id, user_id, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, parent_name, goal, difficulty_focus, next_assessment_subject, next_assessment_date, ai_description, last_contacted_at, start_date, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))",
+            "student:students(id, auth_uid, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, parent_name, goal, difficulty_focus, next_assessment_subject, next_assessment_date, ai_description, last_contacted_at, start_date, profiles:profiles!students_auth_uid_profiles_fkey(full_name, stripe_price_id))",
           ].join(",")
         )
         .eq("phone_tail", tail)
@@ -99,7 +99,7 @@ export async function GET(
     if (!conversation) {
       // Prova a trovare lo studente per phone tail e crea una conversazione placeholder
       const { data: studentMatch } = await db
-        .from("black_students")
+        .from("students")
         .select("id")
         .or(`student_phone.ilike.%${tail},parent_phone.ilike.%${tail}`)
         .limit(1)
@@ -116,7 +116,7 @@ export async function GET(
           updated_at: new Date().toISOString(),
         })
         .select(
-          "id, phone_tail, phone_e164, status, type, bot, last_message_at, last_message_preview, updated_at, student_id, black_students(id, user_id, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, parent_name, goal, difficulty_focus, next_assessment_subject, next_assessment_date, ai_description, last_contacted_at, start_date, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))"
+          "id, phone_tail, phone_e164, status, type, bot, last_message_at, last_message_preview, updated_at, student_id, student:students(id, auth_uid, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, parent_name, goal, difficulty_focus, next_assessment_subject, next_assessment_date, ai_description, last_contacted_at, start_date, profiles:profiles!students_auth_uid_profiles_fkey(full_name, stripe_price_id))"
         )
         .maybeSingle();
 
@@ -139,7 +139,7 @@ export async function GET(
     }
     const messagesRes = await messagesQuery;
 
-    const student = conversation.black_students;
+    const student = conversation.student;
     const profile =
       student?.profiles && Array.isArray(student.profiles)
         ? student.profiles[0]
@@ -247,7 +247,7 @@ export async function POST(
       }
       const now = new Date().toISOString();
       const { error: updateStudentErr } = await db
-        .from("black_students")
+        .from("students")
         .update({ last_contacted_at: now, updated_at: now })
         .eq("id", convo.student_id);
       if (updateStudentErr) {
@@ -263,7 +263,7 @@ export async function POST(
         return NextResponse.json({ error: "invalid_phone" }, { status: 400 });
       }
       const { data: studentRow, error: studentErr } = await db
-        .from("black_students")
+        .from("students")
         .select("id, student_phone, parent_phone")
         .or(`student_email.ilike.${linkEmail},parent_email.ilike.${linkEmail}`)
         .limit(1)
@@ -280,7 +280,7 @@ export async function POST(
         studentRow[targetColumn as "student_phone" | "parent_phone"] || null;
       if (currentValue !== normalizedPhone) {
         const { error: updateStudentErr } = await db
-          .from("black_students")
+          .from("students")
           .update({ [targetColumn]: normalizedPhone, updated_at: new Date().toISOString() })
           .eq("id", studentRow.id);
         if (updateStudentErr) {
@@ -310,7 +310,7 @@ export async function POST(
         return NextResponse.json({ error: "student_not_linked" }, { status: 400 });
       }
       const { data: studentRow, error: studentErr } = await db
-        .from("black_students")
+        .from("students")
         .select("id, user_id")
         .eq("id", convo.student_id)
         .maybeSingle();
@@ -342,7 +342,7 @@ export async function POST(
 
       if (Object.keys(studentUpdate).length) {
         const { error: updateStudentErr } = await db
-          .from("black_students")
+          .from("students")
           .update(studentUpdate)
           .eq("id", convo.student_id);
         if (updateStudentErr) {

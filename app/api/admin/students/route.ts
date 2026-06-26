@@ -176,12 +176,15 @@ export async function GET(request: NextRequest) {
   try {
     const today = todayDateString();
     const { data, error } = await db
-      .from("black_students")
+      .from("students")
       .select(
         `
         id,
-        student_id,
         user_id,
+        full_name,
+        email,
+        phone,
+        current_average,
         preferred_name,
         program_kind,
         start_date,
@@ -199,7 +202,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     const studentIds = Array.from(
-      new Set((data || []).map((row: any) => row?.student_id).filter((value): value is string => typeof value === "string" && value.length > 0)),
+      new Set((data || []).map((row: any) => row?.id).filter((value): value is string => typeof value === "string" && value.length > 0)),
     );
     const userIds = Array.from(
       new Set((data || []).map((row: any) => row?.user_id).filter((value): value is string => typeof value === "string" && value.length > 0)),
@@ -234,7 +237,7 @@ export async function GET(request: NextRequest) {
       new Set(
         (data || [])
           .map((row: any) => {
-            const canonicalStudent = row?.student_id ? studentMap.get(row.student_id) : null;
+            const canonicalStudent = row?.id ? studentMap.get(row.id) : null;
             return (
               normalizeEmail(canonicalStudent?.email) ||
               normalizeEmail(row?.student_email) ||
@@ -366,9 +369,9 @@ export async function GET(request: NextRequest) {
     }
 
     const students = (data || []).map((s: any) => {
-      const canonicalStudent = s?.student_id ? studentMap.get(s.student_id) : null;
+      const canonicalStudent = s?.id ? studentMap.get(s.id) : null;
       const studentProfile =
-        (s?.student_id ? profileByStudentId.get(s.student_id) : null) ||
+        (s?.id ? profileByStudentId.get(s.id) : null) ||
         (s?.user_id ? profileByUserId.get(s.user_id) : null) ||
         null;
       const fallbackEmail =
@@ -390,11 +393,11 @@ export async function GET(request: NextRequest) {
       const desiredAverage =
         studentProfile?.goal_grade != null ? Number(studentProfile.goal_grade) : null;
       const lastAssessmentAt =
-        (s?.student_id ? latestAssessmentByStudentId.get(s.student_id) : null) ||
+        (s?.id ? latestAssessmentByStudentId.get(s.id) : null) ||
         (s?.user_id ? latestAssessmentByUserId.get(s.user_id) : null) ||
         null;
       const upcomingAssessmentAt =
-        (s?.student_id ? upcomingAssessmentByStudentId.get(s.student_id) : null) ||
+        (s?.id ? upcomingAssessmentByStudentId.get(s.id) : null) ||
         (s?.user_id ? upcomingAssessmentByUserId.get(s.user_id) : null) ||
         nextAssessmentDate ||
         null;
@@ -409,7 +412,7 @@ export async function GET(request: NextRequest) {
       });
       return {
         id: s?.id as string,
-        studentId: s?.student_id || null,
+        studentId: s?.id || null,
         programKind: s?.program_kind || "subscription",
         fullName:
           canonicalStudent?.full_name ||
@@ -492,7 +495,7 @@ export async function POST(request: NextRequest) {
 
       if (candidateEmails.length > 0) {
         const { data: emailMatches, error: emailMatchesError } = await db
-          .from("black_students")
+          .from("students")
           .select("id, student_email, parent_email")
           .in("student_email", candidateEmails);
         if (emailMatchesError) {
@@ -505,7 +508,7 @@ export async function POST(request: NextRequest) {
 
       if (!duplicateBlackId && candidateEmails.length > 0) {
         const { data: parentEmailMatches, error: parentEmailMatchesError } = await db
-          .from("black_students")
+          .from("students")
           .select("id, student_email, parent_email")
           .in("parent_email", candidateEmails);
         if (parentEmailMatchesError) {
@@ -519,7 +522,7 @@ export async function POST(request: NextRequest) {
       const phoneDigits = normalizeDigits(studentPhone || parentPhone);
       if (!duplicateBlackId && phoneDigits) {
         const { data: studentPhoneMatches, error: studentPhoneMatchesError } = await db
-          .from("black_students")
+          .from("students")
           .select("id, student_phone")
           .ilike("student_phone", `%${phoneDigits}%`)
           .limit(20);
@@ -533,7 +536,7 @@ export async function POST(request: NextRequest) {
 
       if (!duplicateBlackId && phoneDigits) {
         const { data: parentPhoneMatches, error: parentPhoneMatchesError } = await db
-          .from("black_students")
+          .from("students")
           .select("id, parent_phone")
           .ilike("parent_phone", `%${phoneDigits}%`)
           .limit(20);
@@ -556,19 +559,7 @@ export async function POST(request: NextRequest) {
         db,
       );
 
-      if (!duplicateBlackId) {
-        const { data: existingByStudent, error: existingByStudentError } = await db
-          .from("black_students")
-          .select("id")
-          .eq("student_id", studentRecord.id)
-          .maybeSingle();
-        if (existingByStudentError) {
-          return NextResponse.json({ error: existingByStudentError.message }, { status: 500 });
-        }
-        duplicateBlackId = existingByStudent?.id || null;
-      }
-
-      if (duplicateBlackId) {
+      if (duplicateBlackId && duplicateBlackId !== studentRecord.id) {
         return NextResponse.json(
           { error: "Esiste già una scheda Black per questo studente" },
           { status: 409 },
@@ -610,8 +601,7 @@ export async function POST(request: NextRequest) {
         profileId = profilePayload.id;
       }
 
-      const insertPayload: Record<string, any> = {
-        student_id: studentRecord.id,
+      const studentPatch: Record<string, any> = {
         user_id: profileId,
         preferred_name: fullName,
         student_email: studentEmail || null,
@@ -628,8 +618,9 @@ export async function POST(request: NextRequest) {
       };
 
       const { data: created, error: createErr } = await db
-        .from("black_students")
-        .insert(insertPayload)
+        .from("students")
+        .update(studentPatch)
+        .eq("id", studentRecord.id)
         .select("id")
         .maybeSingle();
       if (createErr) {
@@ -649,7 +640,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ore non valide" }, { status: 400 });
     }
     const { data: student, error: studentErr } = await db
-      .from("black_students")
+      .from("students")
       .select("id, hours_paid")
       .eq("id", studentId)
       .maybeSingle();
@@ -657,7 +648,7 @@ export async function POST(request: NextRequest) {
     if (!student) return NextResponse.json({ error: "Studente non trovato" }, { status: 404 });
     const nextPaid = Number(student.hours_paid ?? 0) + hours;
     const { error: updErr, data: updated } = await db
-      .from("black_students")
+      .from("students")
       .update({ hours_paid: nextPaid })
       .eq("id", studentId)
       .select("id, hours_paid, hours_consumed")
@@ -687,7 +678,7 @@ export async function PATCH(request: NextRequest) {
     if (!studentId) return NextResponse.json({ error: "studentId mancante" }, { status: 400 });
 
     const { data: existing, error: existingErr } = await db
-      .from("black_students")
+      .from("students")
       .select("id, hours_paid, hours_consumed, videolesson_tutor_id")
       .eq("id", studentId)
       .maybeSingle();
@@ -767,7 +758,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const { data: updated, error: updErr } = await db
-      .from("black_students")
+      .from("students")
       .update(updates)
       .eq("id", studentId)
       .select(
@@ -784,7 +775,7 @@ export async function PATCH(request: NextRequest) {
         hours_consumed,
         status,
         videolesson_tutor_id,
-        tutor:tutors!black_students_videolesson_tutor_id_fkey(id, display_name, full_name, email)
+        tutor:tutors!students_videolesson_tutor_id_fkey(id, display_name, full_name, email)
       `,
       )
       .maybeSingle();

@@ -12,7 +12,10 @@ type BaseOptions = {
 export async function resetReadiness(options: BaseOptions = {}) {
   const db = options.db ?? supabaseServer();
   const stamp = options.stamp || new Date().toISOString();
-  const { data, error } = await db.from("black_students").select("id");
+  const { data, error } = await db
+    .from("students")
+    .select("id")
+    .eq("black_active", true);
   if (error) throw new Error(`readiness_reset_fetch_failed: ${error.message}`);
   if (!data?.length) return { updated: 0 };
   const updates = data.map((row) => ({
@@ -27,7 +30,10 @@ export async function resetReadiness(options: BaseOptions = {}) {
 export async function decayReadiness(options: BaseOptions = {}) {
   const db = options.db ?? supabaseServer();
   const stamp = options.stamp || new Date().toISOString();
-  const { data, error } = await db.from("black_students").select("id, readiness");
+  const { data, error } = await db
+    .from("students")
+    .select("id, readiness")
+    .eq("black_active", true);
   if (error) throw new Error(`readiness_decay_fetch_failed: ${error.message}`);
   if (!data?.length) return { processed: 0, decreased: 0 };
   const updates = data
@@ -54,9 +60,10 @@ async function applyChunks(
   const chunks = chunk(rows, CHUNK_SIZE);
   for (const part of chunks) {
     const { error } = await db
-      .from("black_students")
+      .from("students")
       .upsert(part, { onConflict: "id" });
     if (error) throw new Error(`readiness_upsert_failed: ${error.message}`);
+
   }
 }
 

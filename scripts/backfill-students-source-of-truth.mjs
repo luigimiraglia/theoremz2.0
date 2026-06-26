@@ -3,9 +3,10 @@
  * Backfill additive per introdurre `students` come source of truth applicativa.
  *
  * Cosa fa:
- * - crea/aggiorna righe in `students` partendo da `student_profiles`, `profiles` e `black_students`
+ * - crea/aggiorna righe in `students` partendo da `student_profiles` e `profiles`
  * - collega `student_id` alle tabelle account (`student_*`, `student_saved_lessons`)
- * - collega `student_id` a `black_students`
+ * La vecchia fase di backfill da tabelle Black separate e' stata rimossa:
+ * `students` e' ora la source of truth.
  *
  * Usa: node scripts/backfill-students-source-of-truth.mjs
  */
@@ -32,8 +33,6 @@ const ACCOUNT_TABLES = [
   "student_assessments",
   "student_grades",
   "student_lessons_progress",
-  "student_exercises_progress",
-  "student_difficulties",
   "student_access_logs",
   "student_saved_lessons",
 ];
@@ -269,52 +268,9 @@ async function backfillProfilesWithoutStudentProfile(profileMap, summary, indexe
   }
 }
 
-async function backfillBlackStudents(profileMap, summary, indexes, pendingByTable) {
-  console.log("• Carico black_students...");
-  const rows = await fetchAll(
-    "black_students",
-    "id, user_id, student_id, preferred_name, student_email, parent_email, student_phone, parent_phone, created_at",
-  );
-
-  for (let i = 0; i < rows.length; i += 1) {
-    const row = rows[i];
-    const authUid = profileMap.has(row.user_id)
-      ? row.user_id
-      : isUuidLike(row.user_id)
-        ? null
-        : row.user_id;
-
-    const student = await ensureStudent(indexes, {
-      authUid,
-      fullName: row.preferred_name,
-      email: row.student_email || row.parent_email || null,
-      phone: row.student_phone || row.parent_phone || null,
-      source: "black_student_backfill",
-    });
-
-    if (row.student_id !== student.id) {
-      const { error } = await supabase
-        .from("black_students")
-        .update({ student_id: student.id })
-        .eq("id", row.id);
-      if (error) throw error;
-    }
-
-    if (authUid) {
-      await setAccountTableStudentId(authUid, student.id, pendingByTable);
-    }
-
-    summary.blackLinked += 1;
-    if ((i + 1) % PROGRESS_EVERY === 0 || i === rows.length - 1) {
-      console.log(`• black_students: ${i + 1}/${rows.length}`);
-    }
-  }
-}
-
 async function main() {
   const summary = {
     studentsLinked: 0,
-    blackLinked: 0,
   };
 
   console.log("▶ Backfilling students source of truth");
@@ -325,9 +281,6 @@ async function main() {
   const profileMap = await backfillStudentProfiles(summary, indexes, pendingByTable);
   console.log("• Inizio backfill profiles senza student_profile");
   await backfillProfilesWithoutStudentProfile(profileMap, summary, indexes);
-  console.log("• Inizio backfill black_students");
-  await backfillBlackStudents(profileMap, summary, indexes, pendingByTable);
-
   console.log("✅ Backfill completed");
   console.log(summary);
 }

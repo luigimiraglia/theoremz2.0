@@ -1,4 +1,4 @@
-const ACCESS_ACTIVE_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
+const ACCESS_ACTIVE_STATUSES = new Set(["active", "trialing", "past_due"]);
 const DISPLAY_ACTIVE_STATUSES = new Set(["active", "trialing"]);
 
 export function normalizeStripeStatus(value?: string | null) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
 import { refreshBriefSafe } from "@/lib/black/gradeSync";
+import { resolveBlackStudentIdentity } from "@/lib/black/studentIdentity";
 import { recordStudentAssessmentLite } from "@/lib/studentLiteSync";
 
 async function getUid(req: Request) {
@@ -125,23 +126,19 @@ async function syncBlackAssessment({
   notes: string | null;
 }) {
   const db = supabaseServer();
-  const { data: student, error } = await db
-    .from("black_students")
-    .select("id")
-    .eq("user_id", uid)
-    .maybeSingle();
-  if (error) {
+  let identity = null;
+  try {
+    identity = await resolveBlackStudentIdentity(db, { authUid: uid });
+  } catch (error) {
     console.error("[me-exams] black student lookup failed", error);
     return null;
   }
-  if (!student?.id) return null;
-
-  const studentId = student.id;
+  if (!identity?.canonicalStudentId) return null;
 
   const { data: existing, error: existingError } = await db
     .from("black_assessments")
     .select("id")
-    .eq("student_id", studentId)
+    .eq("student_id", identity.canonicalStudentId)
     .eq("when_at", date)
     .limit(1)
     .maybeSingle();
@@ -160,14 +157,14 @@ async function syncBlackAssessment({
     if (updateError) {
       console.error("[me-exams] assessment update failed", updateError);
     }
-    await refreshBriefSafe(db, studentId);
+    await refreshBriefSafe(db, identity.canonicalStudentId);
     return existing.id;
   }
 
   const { data: insertData, error: insertError } = await db
     .from("black_assessments")
     .insert({
-      student_id: studentId,
+      student_id: identity.canonicalStudentId,
       subject: subject || null,
       topics: notes || null,
       when_at: date,
@@ -179,6 +176,6 @@ async function syncBlackAssessment({
     return null;
   }
 
-  await refreshBriefSafe(db, studentId);
+  await refreshBriefSafe(db, identity.canonicalStudentId);
   return insertData?.id ?? null;
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Syncs student_profiles.is_black with the current black_students statuses.
+ * Syncs student_profiles.is_black with the current students subscription state.
  * Usage: node scripts/update-lite-is-black.mjs
  */
 
@@ -31,7 +31,7 @@ async function fetchBlackStudents() {
   let from = 0;
   while (true) {
     const { data, error } = await supabase
-      .from("black_students")
+      .from("students")
       .select("user_id,status")
       .order("created_at", { ascending: true })
       .range(from, from + pageSize - 1);
@@ -60,7 +60,7 @@ async function chunkedUpdate(userIds, value) {
 async function main() {
   console.log("▶️  Syncing student_profiles.is_black");
   const students = await fetchBlackStudents();
-  console.log(`• Loaded ${students.length} black_students rows`);
+  console.log(`• Loaded ${students.length} student rows`);
 
   console.log("• Resetting all profiles to is_black=false");
   const { error: resetError } = await supabase

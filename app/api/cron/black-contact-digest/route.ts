@@ -29,9 +29,9 @@ async function handle() {
   const threeWeeksAgo = new Date(now.getTime() - 21 * 24 * 3600 * 1000).toISOString();
 
   const { data: students, error } = await db
-    .from("black_students")
+    .from("students")
     .select(
-      "id, student_name, student_email, parent_email, student_phone, parent_phone, start_date, last_contacted_at, profiles:profiles!black_students_user_id_fkey(full_name)",
+      "id, student_name, student_email, parent_email, student_phone, parent_phone, start_date, last_contacted_at, profiles:profiles!students_auth_uid_profiles_fkey(full_name)",
     )
     .order("last_contacted_at", { ascending: true });
 

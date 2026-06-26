@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     let hoursConsumed = 0;
     if (bodyStudentId) {
       const { data: student, error: studentErr } = await db
-        .from("black_students")
+        .from("students")
         .select("id, hours_paid, hours_consumed, videolesson_tutor_id")
         .eq("id", bodyStudentId)
         .maybeSingle();
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     } else if (booking.email) {
       const normalizedEmail = booking.email.toLowerCase();
       const { data: student, error: studentErr } = await db
-        .from("black_students")
+        .from("students")
         .select("id, hours_paid, hours_consumed, videolesson_tutor_id")
         .or(
           `student_email.ilike.${normalizedEmail},parent_email.ilike.${normalizedEmail}`
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     if (!studentId && booking.tutor_id) {
       const candidatesMap = new Map<string, { id: string; hours_paid: number; hours_consumed: number; videolesson_tutor_id: string | null }>();
       const { data: direct } = await db
-        .from("black_students")
+        .from("students")
         .select("id, hours_paid, hours_consumed, videolesson_tutor_id")
         .eq("videolesson_tutor_id", booking.tutor_id);
       (direct || []).forEach((s) => {
@@ -149,10 +149,10 @@ export async function POST(request: NextRequest) {
       });
       const { data: assigned } = await db
         .from("tutor_assignments")
-        .select("student_id, black_students!inner(id, hours_paid, hours_consumed, videolesson_tutor_id)")
+        .select("student_id, student:students!inner(id, hours_paid, hours_consumed, videolesson_tutor_id)")
         .eq("tutor_id", booking.tutor_id);
       (assigned || []).forEach((row: any) => {
-        const s = row?.black_students;
+        const s = row?.student;
         if (s?.id && !candidatesMap.has(s.id)) {
           candidatesMap.set(s.id, {
             id: s.id,
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
 
     // Scala ore allo studente
     const { error: studentUpdateErr } = await db
-      .from("black_students")
+      .from("students")
       .update({
         hours_consumed: hoursConsumed + hoursToDeduct,
         hours_paid: Math.max(0, hoursPaid - hoursToDeduct),

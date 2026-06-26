@@ -124,7 +124,7 @@ async function fetchStudentMap() {
   let from = 0;
   while (true) {
     const { data, error } = await supabase
-      .from("black_students")
+      .from("students")
       .select("id, user_id")
       .order("created_at", { ascending: true })
       .range(from, from + pageSize - 1);

@@ -16,7 +16,7 @@ type ConversationRow = {
   followup_sent_at?: string | null;
   updated_at?: string | null;
   student_id?: string | null;
-  black_students?: any;
+  student?: any;
 };
 
 const ALLOWED_EMAIL = "luigi.miraglia006@gmail.com";
@@ -85,9 +85,9 @@ export async function GET(request: NextRequest) {
       const threeWeeksAgo = new Date(now.getTime() - 21 * 24 * 3600 * 1000).toISOString();
 
       const { data, error } = await db
-        .from("black_students")
+        .from("students")
         .select(
-          "id, student_name, student_email, parent_email, student_phone, parent_phone, start_date, last_contacted_at, profiles:profiles!black_students_user_id_fkey(full_name)",
+          "id, student_name, student_email, parent_email, student_phone, parent_phone, start_date, last_contacted_at, profiles:profiles!students_auth_uid_profiles_fkey(full_name)",
         )
         .order("last_contacted_at", { ascending: true });
 
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
         "last_message_preview",
         "updated_at",
         "student_id",
-        "black_students(id, user_id, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, parent_name, goal, difficulty_focus, next_assessment_subject, next_assessment_date, ai_description, last_contacted_at, start_date, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id))",
+        "student:students(id, auth_uid, status, readiness, risk_level, year_class, track, student_email, parent_email, student_phone, parent_phone, parent_name, goal, difficulty_focus, next_assessment_subject, next_assessment_date, ai_description, last_contacted_at, start_date, profiles:profiles!students_auth_uid_profiles_fkey(full_name, stripe_price_id))",
       ].join(",")
     )
       .order("updated_at", { ascending: false })
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
     const conversations = rows
       .filter((row) => row && typeof row === "object" && !row.error)
       .map((row: ConversationRow) => {
-        const student = (row as any).black_students;
+        const student = (row as any).student;
         const profile =
           student?.profiles && Array.isArray(student.profiles)
             ? student.profiles[0]

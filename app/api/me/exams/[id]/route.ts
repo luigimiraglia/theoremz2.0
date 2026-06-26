@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
+import { resolveBlackStudentIdentity } from "@/lib/black/studentIdentity";
 
 async function getUid(req: Request) {
   const h = req.headers.get("authorization") || "";
@@ -51,30 +52,31 @@ async function deleteBlackAssessment({
   date: string | null;
 }) {
   const db = supabaseServer();
-  const { data: student, error } = await db
-    .from("black_students")
-    .select("id")
-    .eq("user_id", uid)
-    .maybeSingle();
-  if (error) {
+  let identity = null;
+  try {
+    identity = await resolveBlackStudentIdentity(db, { authUid: uid });
+  } catch (error) {
     console.error("[me-exams] delete lookup failed", error);
     return;
   }
-  if (!student?.id) return;
-  const studentId = student.id;
+  if (!identity?.canonicalStudentId) return;
 
   if (assessmentId) {
-    await db.from("black_assessments").delete().eq("id", assessmentId).eq("student_id", studentId);
+    await db
+      .from("black_assessments")
+      .delete()
+      .eq("id", assessmentId)
+      .eq("student_id", identity.canonicalStudentId);
   } else if (date) {
     await db
       .from("black_assessments")
       .delete()
-      .eq("student_id", studentId)
+      .eq("student_id", identity.canonicalStudentId)
       .eq("when_at", date);
   }
 
   try {
-    await db.rpc("refresh_black_brief", { _student: studentId });
+    await db.rpc("refresh_black_brief", { _student: identity.canonicalStudentId });
   } catch (err) {
     console.warn("[me-exams] delete refresh brief failed", err);
   }

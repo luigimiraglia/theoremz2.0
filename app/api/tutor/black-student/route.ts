@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { adminAuth } from "@/lib/firebaseAdmin";
 import { deriveOperationalStatus } from "@/lib/billingStatus";
-import { ensureStudentRecord, normalizeStudentPhone } from "@/lib/students";
+import { normalizeStudentPhone } from "@/lib/students";
 import { supabaseServer } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -18,7 +18,6 @@ type DbClient = ReturnType<typeof supabaseServer>;
 
 type BlackStudentRow = {
   id: string;
-  student_id: string | null;
   user_id: string | null;
   year_class: string | null;
   track: string | null;
@@ -212,11 +211,10 @@ function extractAssignmentTutorId(student: BlackStudentRow) {
 
 async function fetchBlackStudent(db: DbClient, studentId: string) {
   const { data, error } = await db
-    .from("black_students")
+    .from("students")
     .select(
       `
       id,
-      student_id,
       user_id,
       year_class,
       track,
@@ -252,27 +250,7 @@ async function fetchBlackStudent(db: DbClient, studentId: string) {
 }
 
 async function ensureLinkedStudent(db: DbClient, student: BlackStudentRow) {
-  if (student.student_id) {
-    return { id: student.student_id };
-  }
-  const record = await ensureStudentRecord(
-    {
-      authUid: null,
-      fullName: student.preferred_name,
-      email: student.student_email || student.parent_email,
-      phone: student.student_phone || student.parent_phone,
-      source: "black_runtime",
-    },
-    db,
-  );
-
-  const { error } = await db
-    .from("black_students")
-    .update({ student_id: record.id, updated_at: new Date().toISOString() })
-    .eq("id", student.id);
-  if (error) throw error;
-
-  return record;
+  return { id: student.id };
 }
 
 async function loadCanonicalStudent(db: DbClient, studentId?: string | null) {
@@ -672,7 +650,6 @@ export async function PATCH(request: NextRequest) {
     const linkedStudent = await ensureLinkedStudent(db, blackStudent);
     const currentSheet = await serializeStudentSheet(db, {
       ...blackStudent,
-      student_id: linkedStudent.id,
     });
 
     const studentNameProvided = hasOwn(body, "studentName") || hasOwn(body, "name");
@@ -933,7 +910,7 @@ export async function PATCH(request: NextRequest) {
 
     if (Object.keys(blackPatch).length > 0) {
       blackPatch.updated_at = new Date().toISOString();
-      const { error } = await db.from("black_students").update(blackPatch).eq("id", studentId);
+      const { error } = await db.from("students").update(blackPatch).eq("id", studentId);
       if (error) throw error;
     }
 
@@ -1014,7 +991,7 @@ export async function POST(request: NextRequest) {
       const updatedAt = new Date().toISOString();
 
       const { error: updateError } = await db
-        .from("black_students")
+        .from("students")
         .update({
           ai_description: overview,
           updated_at: updatedAt,
@@ -1049,7 +1026,7 @@ export async function POST(request: NextRequest) {
     );
 
     const { error: updateError } = await db
-      .from("black_students")
+      .from("students")
       .update({
         last_contacted_at: contactAt,
         updated_at: contactAt,

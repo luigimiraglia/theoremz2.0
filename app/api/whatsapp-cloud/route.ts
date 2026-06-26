@@ -593,7 +593,7 @@ async function fetchBlackStudentWithContext(phoneTail: string | null): Promise<{
   if (!phoneTail || !supabase) return null;
   try {
     const { data, error } = await supabase
-      .from("black_students")
+      .from("students")
       .select(
         "id, student_name, student_email, parent_email, year_class, track, goal, difficulty_focus, readiness, ai_description, next_assessment_subject, next_assessment_date"
       )
@@ -1004,7 +1004,7 @@ async function linkEmailToPhone(email: string, rawPhone: string | null) {
   if (!normalizedPhone) return false;
   try {
     const { data, error } = await supabase
-      .from("black_students")
+      .from("students")
       .select("id, student_phone, parent_phone")
       .or(`student_email.ilike.${email},parent_email.ilike.${email}`)
       .limit(1)
@@ -1019,7 +1019,7 @@ async function linkEmailToPhone(email: string, rawPhone: string | null) {
       return true;
     }
     const { error: updateErr } = await supabase
-      .from("black_students")
+      .from("students")
       .update({ [targetColumn]: normalizedPhone, updated_at: new Date().toISOString() })
       .eq("id", data.id);
     if (updateErr) {
@@ -1347,7 +1347,7 @@ async function summarizeAndPrune(studentId: string) {
     const summary = completion.choices[0]?.message?.content?.trim();
     if (summary) {
       await supabase
-        .from("black_students")
+        .from("students")
         .update({ ai_description: summary, updated_at: new Date().toISOString() })
         .eq("id", studentId);
     }

@@ -4,7 +4,7 @@
  * - Pulls Stripe subscriptions to discover active customers
  * - Resolves the corresponding Firebase Auth UID via email
  * - Ensures a Supabase profile exists for each UID
- * - Inserts/updates an entry in black_students with basic contact info
+ * - Inserts/updates the canonical students row with basic contact info
  * - Generates a basic Markdown brief so the Telegram bot can respond
  *
  * Usage: node scripts/seed-black-students.mjs
@@ -227,7 +227,7 @@ async function main() {
 
     let studentId;
     const existingStudent = await supabase
-      .from("black_students")
+      .from("students")
       .select("id")
       .eq("user_id", uid)
       .maybeSingle();
@@ -238,7 +238,7 @@ async function main() {
     }
     if (existingStudent.data?.id) {
       const updateRes = await supabase
-        .from("black_students")
+        .from("students")
         .update(studentPayload)
         .eq("id", existingStudent.data.id)
         .select("id")
@@ -250,7 +250,7 @@ async function main() {
       }
       studentId = updateRes.data.id;
     } else {
-      const insertRes = await supabase.from("black_students").insert(studentPayload).select("id").single();
+      const insertRes = await supabase.from("students").insert(studentPayload).select("id").single();
       if (insertRes.error) {
         console.warn(`Insert failed for ${parentEmail}: ${insertRes.error.message}`);
         SUMMARY.skipped += 1;

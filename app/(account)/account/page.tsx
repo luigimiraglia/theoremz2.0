@@ -593,7 +593,7 @@ export default function AccountPage() {
         cache: "no-store",
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && Array.isArray(data?.bookings)) {
+      if (res.ok && Array.isArray(data?.bookings) && data?.viewerIsTutor === true) {
         const normalizeHours = (v: any) => {
           const n = Number(v);
           return Number.isFinite(n) ? n : 0;

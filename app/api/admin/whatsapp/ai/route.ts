@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         "status",
         "type",
         "bot",
-        "black_students(id, student_name, student_email, parent_email, year_class, track, goal, difficulty_focus, readiness, ai_description, next_assessment_subject, next_assessment_date)",
+        "student:students(id, student_name, student_email, parent_email, year_class, track, goal, difficulty_focus, readiness, ai_description, next_assessment_subject, next_assessment_date)",
       ].join(",")
     )
     .eq("phone_tail", phoneTail)
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     content: sanitizeContent(m.content),
   }));
 
-  const student = (convo as any)?.black_students;
+  const student = (convo as any)?.student;
   const studentContext = buildStudentContext(student);
 
   const targetImageUrl =

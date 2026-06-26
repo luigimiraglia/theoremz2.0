@@ -12,10 +12,15 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/blob-report/
 
 # next.js
 /.next/
 /out/
+.next*/
+.turbo/
 
 # production
 /build
@@ -55,6 +60,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!.env.local.example
 
 # vercel
 .vercel
@@ -72,21 +79,46 @@ lighthouse-*.html
 *.sqlite
 *.sqlite3
 *.dump
+*.dmp
 *.backup
+*.backup.*
+*.dump.*
 *.sql.gz
+*.sql.zip
+*.tar.gz
+*.tgz
+*.bak
+*.tmp
+*.tmp.*
 
 # supabase local CLI state
 supabase/.temp/
+supabase/.branches/
+supabase/.env
 
 # generated live Supabase snapshots
 supabase/schema-live.sql
 supabase/schema-live-openapi.json
 docs/supabase-live-inventory.md
+docs/full-supabase-schema.sql
+docs/black-schema.sql
+docs/*schema*.sql
+docs/*supabase*schema*.md
 supabase/*dump*.sql
 supabase/*backup*.sql
+supabase/*.dump
+supabase/*.backup
 
 # temporary files and scripts
 /tmp/
+/temp/
 create-tables.js
 create-tables.sql
 performance-test.js
+
+# generated local reports / data exports
+image-rename-undo-*.csv
+*-export.csv
+*-report.csv
+*-snapshot.csv
+*.local.json

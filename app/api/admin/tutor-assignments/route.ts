@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
     let student: any = null;
     if (studentId) {
       const { data, error } = await db
-        .from("black_students")
-        .select("id, student_id, user_id, student_email, parent_email, student_phone, parent_phone, preferred_name")
+        .from("students")
+        .select("id, user_id, student_email, parent_email, student_phone, parent_phone, preferred_name")
         .eq("id", studentId)
         .maybeSingle();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
 
     if (!student && studentEmail) {
       const { data, error } = await db
-        .from("black_students")
-        .select("id, student_id, user_id, student_email, parent_email, student_phone, parent_phone, preferred_name")
+        .from("students")
+        .select("id, user_id, student_email, parent_email, student_phone, parent_phone, preferred_name")
         .or(`student_email.ilike.${studentEmail},parent_email.ilike.${studentEmail}`)
         .limit(1)
         .maybeSingle();
@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
       linkedProfile = profile || null;
       if (profile?.id) {
         const { data: bs, error: bsErr } = await db
-          .from("black_students")
-          .select("id, student_id, user_id, student_email, parent_email, student_phone, parent_phone, preferred_name")
+          .from("students")
+          .select("id, user_id, student_email, parent_email, student_phone, parent_phone, preferred_name")
           .eq("user_id", profile.id)
           .limit(1)
           .maybeSingle();
@@ -120,8 +120,8 @@ export async function POST(request: NextRequest) {
 
     if (!student && studentPhone) {
       const { data, error } = await db
-        .from("black_students")
-        .select("id, student_id, user_id, student_email, parent_email, student_phone, parent_phone, preferred_name")
+        .from("students")
+        .select("id, user_id, student_email, parent_email, student_phone, parent_phone, preferred_name")
         .or(`student_phone.ilike.%${studentPhone},parent_phone.ilike.%${studentPhone}`)
         .limit(1)
         .maybeSingle();
@@ -129,10 +129,7 @@ export async function POST(request: NextRequest) {
       student = data;
     }
 
-    let studentRecord =
-      student?.student_id && typeof student.student_id === "string"
-        ? { id: student.student_id }
-        : null;
+    let studentRecord = student?.id ? { id: student.id } : null;
 
     if (!studentRecord) {
       studentRecord = await ensureStudentRecord(
@@ -173,8 +170,7 @@ export async function POST(request: NextRequest) {
         profileId = profilePayload.id;
       }
 
-      const insertPayload: Record<string, any> = {
-        student_id: studentRecord.id,
+      const studentPatch: Record<string, any> = {
         user_id: profileId,
         student_email: studentEmailRaw || studentEmail || null,
         parent_email: studentEmailRaw || studentEmail || null,
@@ -187,8 +183,9 @@ export async function POST(request: NextRequest) {
       };
 
       const { data: created, error: createErr } = await db
-        .from("black_students")
-        .insert(insertPayload)
+        .from("students")
+        .update(studentPatch)
+        .eq("id", studentRecord.id)
         .select("id, student_email, parent_email")
         .maybeSingle();
       if (createErr) {
@@ -214,9 +211,8 @@ export async function POST(request: NextRequest) {
     if (assignErr) return NextResponse.json({ error: assignErr.message }, { status: 500 });
 
     const { error: updateErr } = await db
-      .from("black_students")
+      .from("students")
       .update({
-        student_id: studentRecord.id,
         videolesson_tutor_id: tutorId,
         updated_at: new Date().toISOString(),
         ...(studentName ? { preferred_name: studentName } : {}),

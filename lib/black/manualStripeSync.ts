@@ -118,6 +118,7 @@ export async function syncPendingStripeSignups(
           sessionId: row.session_id,
           subscriptionId: context.subscription?.id || row.subscription_id,
           studentId: result.studentId,
+          canonicalStudentId: result.canonicalStudentId,
           studentUserId: result.userId,
           status: "synced",
         });

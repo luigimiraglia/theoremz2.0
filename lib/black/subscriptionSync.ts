@@ -5,6 +5,7 @@ import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
 import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
 import { ensureStudentRecord } from "@/lib/students";
+import { syncStudentSubscriptionState } from "@/lib/studentSubscription";
 import { hasActiveBlackAccess } from "@/lib/billingStatus";
 
 const HAS_SUPABASE_ENV = Boolean(
@@ -35,7 +36,6 @@ type ProfilePayload = {
 };
 
 type BlackStudentPayload = {
-  student_id: string | null;
   user_id: string;
   year_class: string | null;
   track: string;
@@ -93,6 +93,8 @@ export type StripeSignupLinkInput = {
   subscriptionId?: string | null;
   studentUserId?: string | null;
   studentId?: string | null;
+  /** @deprecated studentId is already canonical students.id. */
+  canonicalStudentId?: string | null;
   status?: StripeSignupStatus;
 };
 
@@ -107,7 +109,7 @@ export type SyncRecordInput = {
 };
 
 type SyncBlackSubscriptionResult =
-  | { status: "synced"; studentId: string; userId: string }
+  | { status: "synced"; studentId: string; userId: string; canonicalStudentId: string }
   | {
       status: "skipped";
       reason: "missing_supabase" | "missing_firebase" | "missing_student";
@@ -322,8 +324,19 @@ export async function syncBlackSubscriptionRecord({
     supabase,
   );
 
+  await syncStudentSubscriptionState(supabase, studentRecord.id, {
+    subscriptionTier,
+    subscriptionStatus: subscription?.status ?? null,
+    stripeCustomerId: profilePayload.stripe_customer_id,
+    stripeSubscriptionId: subscription?.id ?? null,
+    stripePriceId: profilePayload.stripe_price_id,
+    stripeCurrentPeriodEnd: profilePayload.stripe_current_period_end,
+    stripeCancelAtPeriodEnd: profilePayload.stripe_cancel_at_period_end,
+    stripeCanceledAt: profilePayload.stripe_canceled_at,
+    blackSince: toDateStringFromSeconds(subscription?.start_date) || null,
+  });
+
   const studentPayload: BlackStudentPayload = {
-    student_id: studentRecord.id,
     user_id: firebaseUser.uid,
     year_class: mapYear(firestoreMeta) || mapYear(meta) || stringOrNull(meta.year_class),
     track:
@@ -376,7 +389,12 @@ export async function syncBlackSubscriptionRecord({
   });
   await upsertStudentBrief(studentId, brief);
 
-  return { status: "synced" as const, studentId, userId: firebaseUser.uid };
+  return {
+    status: "synced" as const,
+    studentId,
+    userId: firebaseUser.uid,
+    canonicalStudentId: studentRecord.id,
+  };
 }
 
 async function ensureProfile(payload: ProfilePayload) {
@@ -419,7 +437,7 @@ async function upsertBlackStudent(payload: BlackStudentPayload) {
   if (existing.data?.id) {
     const merged = mergeRecords(payload, existing.data);
     const { error, data } = await supabase
-      .from("black_students")
+      .from("students")
       .update(merged)
       .eq("id", existing.data.id)
       .select("id")
@@ -428,7 +446,7 @@ async function upsertBlackStudent(payload: BlackStudentPayload) {
     return data?.id ?? existing.data.id;
   }
   const insert = await supabase
-    .from("black_students")
+    .from("students")
     .insert(payload)
     .select("id")
     .single();
@@ -442,13 +460,13 @@ async function findExistingBlackStudent(payload: BlackStudentPayload) {
   }
 
   const selectClause =
-    "id, user_id, student_id, year_class, track, start_date, goal, difficulty_focus, parent_name, parent_phone, parent_email, student_phone, student_email, tutor_id, status, initial_avg, readiness, risk_level, ai_description, next_assessment_subject, next_assessment_date";
+    "id, user_id, year_class, track, start_date, goal, difficulty_focus, parent_name, parent_phone, parent_email, student_phone, student_email, tutor_id, status, initial_avg, readiness, risk_level, ai_description, next_assessment_subject, next_assessment_date";
 
   const tryQuery = async (column: string, value?: string | null) => {
     const normalized = stringOrNull(value);
     if (!normalized) return { data: null, error: null as any };
     return await supabase
-      .from("black_students")
+      .from("students")
       .select(selectClause)
       .eq(column, normalized)
       .limit(1)
@@ -458,10 +476,6 @@ async function findExistingBlackStudent(payload: BlackStudentPayload) {
   const byUserId = await tryQuery("user_id", payload.user_id);
   if (byUserId.error) return byUserId;
   if (byUserId.data?.id) return byUserId;
-
-  const byStudentId = await tryQuery("student_id", payload.student_id);
-  if (byStudentId.error) return byStudentId;
-  if (byStudentId.data?.id) return byStudentId;
 
   const candidateEmails = Array.from(
     new Set([payload.student_email, payload.parent_email].map((value) => stringOrNull(value)).filter(Boolean)),

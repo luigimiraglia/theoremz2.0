@@ -94,7 +94,7 @@ async function updateBlackStudentSafe(
 
   while (Object.keys(current).length && attempts < 6) {
     const { error } = await db
-      .from("black_students")
+      .from("students")
       .update(current)
       .eq("id", studentId);
     if (!error) return null;
@@ -118,7 +118,7 @@ async function updateBlackStudentSafe(
 
 function mapRow(row: any) {
   if (!row) return null;
-  const student = (row as any).student || (row as any).black_students;
+  const student = (row as any).student || (row as any).student;
   return {
     id: row.id as string,
     studentId: row.student_id || student?.id || null,
@@ -186,7 +186,7 @@ async function attachStudents(
   }
   if (uniqueIds.length) {
     const { data, error } = await db
-      .from("black_students")
+      .from("students")
       .select(
         "id, preferred_name, student_name, student_email, parent_email, student_phone, parent_phone, year_class, track",
       )
@@ -225,7 +225,7 @@ export async function GET(request: NextRequest) {
       const safeLookup = lookup.replace(/[^\w@\.\+\-\s]/g, "").trim();
       if (!safeLookup) return NextResponse.json({ students: [] });
       const { data, error } = await db
-        .from("black_students")
+        .from("students")
         .select(
           "id, preferred_name, student_name, student_email, parent_email, student_phone, parent_phone, year_class, track",
         )
@@ -290,7 +290,7 @@ export async function GET(request: NextRequest) {
       );
 
       const { data: candidates, error: candErr } = await db
-        .from("black_students")
+        .from("students")
         .select(
           "id, preferred_name, student_name, student_phone, parent_phone, student_email, parent_email, year_class, track, last_contacted_at, start_date",
         )
@@ -384,7 +384,7 @@ export async function GET(request: NextRequest) {
     let churned: any[] = [];
     try {
       const { data: churnedRows, error: churnedErr } = await db
-        .from("black_students")
+        .from("students")
         .select(
           "id, preferred_name, student_name, student_email, parent_email, student_phone, parent_phone, year_class, track, last_contacted_at, start_date, status, updated_at",
         )
@@ -465,7 +465,7 @@ export async function POST(request: NextRequest) {
 
   if (!whatsappPhone && studentId) {
     const { data, error: studErr } = await db
-      .from("black_students")
+      .from("students")
       .select("student_phone, parent_phone, preferred_name, student_name, student_email, parent_email, year_class, track")
       .eq("id", studentId)
       .maybeSingle();
@@ -539,7 +539,7 @@ export async function POST(request: NextRequest) {
     if (Object.keys(studentPatch).length) {
       studentPatch.updated_at = new Date().toISOString();
       const { error: updateErr } = await db
-        .from("black_students")
+        .from("students")
         .update(studentPatch)
         .eq("id", studentId);
       if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
@@ -687,7 +687,7 @@ export async function PATCH(request: NextRequest) {
 
     if (existing.student_id) {
       await db
-        .from("black_students")
+        .from("students")
         .update({
           last_contacted_at: now.toISOString(),
           updated_at: now.toISOString(),

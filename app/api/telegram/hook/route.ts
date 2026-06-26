@@ -91,9 +91,9 @@ async function send(
 
 async function cmdDARIATTIVARE({ db, chatId }: CmdCtx) {
   const { data, error } = await db
-    .from("black_students")
+    .from("students")
     .select(
-      "id, user_id, year_class, student_email, parent_email, student_phone, parent_phone, last_active_at, profiles:profiles!black_students_user_id_fkey(full_name)"
+      "id, user_id, year_class, student_email, parent_email, student_phone, parent_phone, last_active_at, profiles:profiles!students_auth_uid_profiles_fkey(full_name)"
     )
     .eq("status", "active")
     .is("last_contacted_at", null)
@@ -160,7 +160,7 @@ async function cmdOREPAGATE({ db, chatId, text }: CmdCtx) {
   const { id, name } = resolved as any;
 
   const { data, error } = await db
-    .from("black_students")
+    .from("students")
     .select("hours_paid")
     .eq("id", id)
     .maybeSingle();
@@ -168,7 +168,7 @@ async function cmdOREPAGATE({ db, chatId, text }: CmdCtx) {
   const current = Number(data?.hours_paid ?? 0);
   const updated = current + hours;
   const { error: updateErr } = await db
-    .from("black_students")
+    .from("students")
     .update({ hours_paid: updated })
     .eq("id", id);
   if (updateErr) return send(chatId, `❌ Errore update: ${updateErr.message}`);
@@ -192,7 +192,7 @@ async function cmdASSEGNA_TUTOR({ db, chatId, text }: CmdCtx) {
   const { id: tutorId, name: tutorName } = tutor as any;
 
   const { error: studentUpdate } = await db
-    .from("black_students")
+    .from("students")
     .update({ videolesson_tutor_id: tutorId })
     .eq("id", id);
   if (studentUpdate)
@@ -228,7 +228,7 @@ async function cmdLOGLEZIONE({ db, chatId, text }: CmdCtx) {
   const { id, name } = resolved as any;
 
   const { data: studentRow, error: studentErr } = await db
-    .from("black_students")
+    .from("students")
     .select("videolesson_tutor_id, hours_consumed, hours_paid")
     .eq("id", id)
     .maybeSingle();
@@ -256,7 +256,7 @@ async function cmdLOGLEZIONE({ db, chatId, text }: CmdCtx) {
   const currentPaid = Number(studentRow?.hours_paid ?? 0);
   const remainingPaid = Math.max(0, currentPaid - hours);
   await db
-    .from("black_students")
+    .from("students")
     .update({
       hours_consumed: currentConsumed + hours,
       hours_paid: remainingPaid,
@@ -338,9 +338,9 @@ async function cmdDASHORE({ db, chatId }: CmdCtx) {
       .gt("hours_due", 0)
       .order("hours_due", { ascending: false }),
     db
-      .from("black_students")
+      .from("students")
       .select(
-        "id, student_email, parent_email, hours_paid, profiles:profiles!black_students_user_id_fkey(full_name)"
+        "id, student_email, parent_email, hours_paid, profiles:profiles!students_auth_uid_profiles_fkey(full_name)"
       )
       .eq("status", "active")
       .gt("hours_paid", 0)
@@ -468,10 +468,10 @@ async function lookupStudentByName(db: any, query: string) {
 async function lookupStudentByEmail(db: any, email: string) {
   const normalized = email.trim().toLowerCase();
   const selectFields =
-    "id, user_id, student_email, parent_email, year_class, profiles:profiles!black_students_user_id_fkey(full_name)";
+    "id, user_id, student_email, parent_email, year_class, profiles:profiles!students_auth_uid_profiles_fkey(full_name)";
 
   const { data: directMatches, error: directError } = await db
-    .from("black_students")
+    .from("students")
     .select(selectFields)
     .or(
       `student_email.ilike.${escapeOrValue(normalized)},parent_email.ilike.${escapeOrValue(
@@ -493,7 +493,7 @@ async function lookupStudentByEmail(db: any, email: string) {
     const userIds = (profiles ?? []).map((p: any) => p.id);
     if (userIds.length) {
       const { data: viaUid, error: viaUidError } = await db
-        .from("black_students")
+        .from("students")
         .select(selectFields)
         .in("user_id", userIds)
         .limit(6);
@@ -608,7 +608,7 @@ async function resolveConversationTarget(
   }
 
   const { data, error } = await db
-    .from("black_students")
+    .from("students")
     .select("student_phone, parent_phone")
     .eq("id", studentId)
     .maybeSingle();
@@ -819,7 +819,7 @@ async function fetchStudentUserId(
   studentId: string
 ) {
   const { data, error } = await db
-    .from("black_students")
+    .from("students")
     .select("user_id")
     .eq("id", studentId)
     .maybeSingle();
@@ -1106,7 +1106,7 @@ async function cmdS({ db, chatId, text }: CmdCtx) {
       .maybeSingle());
   }
   const { data: studentMeta } = await db
-    .from("black_students")
+    .from("students")
     .select(
       "last_contacted_at, last_active_at, readiness, year_class, track, next_assessment_subject, next_assessment_date, goal, difficulty_focus, student_phone, parent_phone"
     )
@@ -1205,7 +1205,7 @@ async function cmdDESC({ db, chatId, text }: CmdCtx) {
   const { id, name } = r as any;
 
   const { error } = await db
-    .from("black_students")
+    .from("students")
     .update({ ai_description: body, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return send(chatId, `❌ Errore overview: ${error.message}`);
@@ -1242,7 +1242,7 @@ async function cmdTELEFONO({ db, chatId, text }: CmdCtx) {
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await db.from("black_students").update(payload).eq("id", id);
+  const { error } = await db.from("students").update(payload).eq("id", id);
   if (error)
     return send(chatId, `❌ Errore aggiornamento telefono: ${error.message}`);
 
@@ -1278,7 +1278,7 @@ async function cmdNOME({ db, chatId, text }: CmdCtx) {
   const { id, name } = lookup as any;
 
   const { data: studentRow, error: studentFetchErr } = await db
-    .from("black_students")
+    .from("students")
     .select("user_id")
     .eq("id", id)
     .maybeSingle();
@@ -1859,7 +1859,7 @@ async function cmdNOMEBREVE({ db, chatId, text }: CmdCtx) {
   const { id, name } = resolved as any;
 
   const { error } = await db
-    .from("black_students")
+    .from("students")
     .update({
       preferred_name: preferred,
       preferred_name_updated_at: new Date().toISOString(),
@@ -1901,7 +1901,7 @@ async function cmdVOTOINIZIALE({ db, chatId, text }: CmdCtx) {
   const { id, name } = resolved as any;
 
   const { error } = await db
-    .from("black_students")
+    .from("students")
     .update({ initial_avg: gradeValue })
     .eq("id", id);
   if (error) return send(chatId, `❌ Errore salvataggio: ${error.message}`);
@@ -1929,7 +1929,7 @@ async function cmdOGGI({ db, chatId }: CmdCtx) {
   endOfWeek.setDate(startOfWeek.getDate() + 6);
   const startIso = startOfWeek.toISOString().slice(0, 10);
   const endIso = endOfWeek.toISOString().slice(0, 10);
-  const { data: cards } = await db.from("black_student_card").select("*");
+  const { data: cards } = await db.from("students").select("*");
 
   if (!cards?.length) return send(chatId, "Nessuno studente.");
 
@@ -1994,9 +1994,9 @@ async function cmdNUOVI({ db, chatId }: CmdCtx) {
 
   const [studentsRes, signupsRes] = await Promise.all([
     db
-      .from("black_students")
+      .from("students")
       .select(
-        "id, user_id, year_class, start_date, parent_email, parent_phone, parent_name, student_email, student_phone, status, profiles:profiles!black_students_user_id_fkey(full_name, stripe_price_id)"
+        "id, user_id, year_class, start_date, parent_email, parent_phone, parent_name, student_email, student_phone, status, profiles:profiles!students_auth_uid_profiles_fkey(full_name, stripe_price_id)"
       )
       .eq("status", "active")
       .gte("start_date", sinceDay)
@@ -2182,7 +2182,7 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     const { id, name } = resolved as any;
 
     const { data, error } = await db
-      .from("black_students")
+      .from("students")
       .select("readiness")
       .eq("id", id)
       .maybeSingle();
@@ -2191,7 +2191,7 @@ async function cmdCHECKED({ db, chatId, text }: CmdCtx) {
     const updated = Math.min(100, current + 5);
     const contactAt = new Date().toISOString();
     const { error: updErr } = await db
-      .from("black_students")
+      .from("students")
       .update({
         readiness: updated,
         last_contacted_at: contactAt,
@@ -2262,9 +2262,9 @@ async function cmdDaContattare({ db, chatId }: CmdCtx) {
     .toISOString()
     .slice(0, 10);
   const { data, error } = await db
-    .from("black_students")
+    .from("students")
     .select(
-      "id, user_id, readiness, parent_email, parent_phone, student_email, student_phone, year_class, last_contacted_at, profiles:profiles!black_students_user_id_fkey(full_name)"
+      "id, user_id, readiness, parent_email, parent_phone, student_email, student_phone, year_class, last_contacted_at, profiles:profiles!students_auth_uid_profiles_fkey(full_name)"
     )
     .eq("status", "active")
     .lte("last_contacted_at", threshold)

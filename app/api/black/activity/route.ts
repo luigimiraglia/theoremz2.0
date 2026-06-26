@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { ensureStudentRecord } from "@/lib/students";
+import { resolveBlackStudentIdentity } from "@/lib/black/studentIdentity";
+import { resolveStudentBlackActive, touchStudentBlackActivity } from "@/lib/studentSubscription";
 
 export const runtime = "nodejs";
 
@@ -31,19 +33,6 @@ export async function POST(req: Request) {
       null;
     const userAgent = req.headers.get("user-agent") || null;
 
-    const { data: studentRow } = await db
-      .from("black_students")
-      .select("id")
-      .eq("user_id", body.userId)
-      .maybeSingle();
-
-    if (studentRow) {
-      await db
-        .from("black_students")
-        .update({ last_active_at: now })
-        .eq("user_id", body.userId);
-    }
-
     const firebaseUser = await fetchFirebaseUser(body.userId);
     const firestoreMeta = body.meta || (await fetchFirestoreMeta(body.userId));
     const resolvedEmail =
@@ -64,21 +53,40 @@ export async function POST(req: Request) {
       },
       db,
     );
+    const identity = await resolveBlackStudentIdentity(db, {
+      authUid: body.userId,
+      canonicalStudentId: studentRecord.id,
+    });
+    const isBlackActive = await resolveStudentBlackActive(db, {
+      studentId: studentRecord.id,
+      authUid: body.userId,
+    });
 
     await upsertProfile(db, {
       userId: body.userId,
       email: resolvedEmail,
       fullName: resolvedFullName,
-      isBlack: Boolean(studentRow),
+      isBlack: isBlackActive,
       firebaseCreatedAt: firebaseUser?.metadata?.creationTime || null,
       updatedAt: now,
     });
 
-    if (studentRow) {
+    if (isBlackActive) {
+      await touchStudentBlackActivity(db, studentRecord.id, now);
+    }
+
+    if (identity?.legacyBlackStudentId) {
+      await db
+        .from("students")
+        .update({ last_active_at: now })
+        .eq("id", identity.legacyBlackStudentId);
+
       const studentUpdate = firestoreMeta ? buildStudentUpdate(firestoreMeta) : {};
-      studentUpdate.student_id = studentRecord.id;
       studentUpdate.updated_at = now;
-      await db.from("black_students").update(studentUpdate).eq("user_id", body.userId);
+      await db
+        .from("students")
+        .update(studentUpdate)
+        .eq("id", identity.legacyBlackStudentId);
     }
 
     await upsertAccessLog(db, {

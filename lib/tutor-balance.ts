@@ -26,12 +26,12 @@ export async function resetTutorBalance({
 
   const [directRes, assignedRes] = await Promise.all([
     client
-      .from("black_students")
+      .from("students")
       .select("id, hours_consumed")
       .eq("videolesson_tutor_id", resolvedTutorId),
     client
       .from("tutor_assignments")
-      .select("student_id, role, black_students!inner(id, hours_consumed)")
+      .select("student_id, role")
       .eq("tutor_id", resolvedTutorId),
   ]);
 
@@ -52,16 +52,31 @@ export async function resetTutorBalance({
     });
   });
 
-  (assignedRes.data || []).forEach((row: any) => {
-    const student = Array.isArray(row?.black_students)
-      ? row.black_students[0]
-      : row?.black_students;
-    if (!student?.id) return;
-    students.set(student.id, {
-      hoursConsumed: normalizeHours(student.hours_consumed),
-      role: typeof row?.role === "string" && row.role ? row.role : "videolezione",
+  const assignedStudentIds = Array.from(
+    new Set(
+      (assignedRes.data || [])
+        .map((row: any) => row?.student_id)
+        .filter(Boolean),
+    ),
+  );
+  if (assignedStudentIds.length) {
+    const { data: assignedStudents, error: assignedStudentsError } = await client
+      .from("students")
+      .select("id, hours_consumed")
+      .in("id", assignedStudentIds);
+    if (assignedStudentsError) {
+      throw new Error(assignedStudentsError.message);
+    }
+    const byId = new Map((assignedStudents || []).map((row: any) => [row.id, row]));
+    (assignedRes.data || []).forEach((row: any) => {
+      const student = byId.get(row?.student_id);
+      if (!student?.id) return;
+      students.set(student.id, {
+        hoursConsumed: normalizeHours(student.hours_consumed),
+        role: typeof row?.role === "string" && row.role ? row.role : "videolezione",
+      });
     });
-  });
+  }
 
   const assignments = Array.from(students.entries()).map(
     ([studentId, meta]) => ({

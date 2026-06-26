@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthUser, isPremiumEmail } from "@/lib/premium-access";
+import { getAuthUser, getPremiumAccessForUser } from "@/lib/premium-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,10 +24,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "email_mismatch" }, { status: 403 });
     }
 
-    const isSubscribed = await isPremiumEmail(auth.email);
+    const access = await getPremiumAccessForUser(auth);
     return NextResponse.json({
-      isSubscribed,
-      reason: isSubscribed ? "active" : "no_active_subscription",
+      isSubscribed: access.isSubscribed,
+      reason: access.isSubscribed ? "active" : "no_active_subscription",
+      source: access.source,
     });
   } catch (err: any) {
     console.error("[stripe] error:", err?.message || err);
