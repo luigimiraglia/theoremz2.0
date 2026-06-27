@@ -10,10 +10,35 @@ const FORMATS = ['webp']; // Possiamo aggiungere 'avif' se necessario
 const WIDTHS = [40, 80, 360, 480, 640, 768, 960, 1200, 1600, 2000];
 const QUALITY = 80;
 
+async function getOutputPaths(filePath) {
+  const dir = path.dirname(filePath);
+  const filename = path.basename(filePath, path.extname(filePath));
+
+  return FORMATS.flatMap((format) =>
+    WIDTHS.map((width) => path.join(dir, `${filename}-${width}.${format}`)),
+  );
+}
+
+async function shouldOptimize(filePath) {
+  const sourceStat = await fs.stat(filePath);
+  const outputs = await getOutputPaths(filePath);
+
+  for (const outputPath of outputs) {
+    try {
+      const outputStat = await fs.stat(outputPath);
+      if (outputStat.mtimeMs < sourceStat.mtimeMs) return true;
+    } catch {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 async function optimizeImage(filePath) {
   const dir = path.dirname(filePath);
   const filename = path.basename(filePath, path.extname(filePath));
-  
+
   for (const format of FORMATS) {
     for (const width of WIDTHS) {
       const outputPath = path.join(dir, `${filename}-${width}.${format}`);
@@ -32,13 +57,17 @@ async function optimizeImage(filePath) {
 
 async function processDirectory(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
-  
+
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
-    
+
     if (entry.isDirectory()) {
       await processDirectory(fullPath);
     } else if (/\.(jpg|jpeg|png)$/i.test(entry.name)) {
+      if (!(await shouldOptimize(fullPath))) {
+        console.log(`Già ottimizzato: ${fullPath}`);
+        continue;
+      }
       console.log(`Ottimizzando: ${fullPath}`);
       await optimizeImage(fullPath);
     }
@@ -49,7 +78,7 @@ async function main() {
   try {
     const publicDir = path.join(process.cwd(), 'public');
     const imagesDir = path.join(publicDir, 'images');
-    
+
     // Verifica che la directory esista
     try {
       await fs.access(imagesDir);

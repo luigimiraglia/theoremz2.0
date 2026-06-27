@@ -10,7 +10,6 @@ import {
   mapPlan,
   customerToDetails,
 } from "@/lib/black/subscriptionSync";
-import { adminDb } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
@@ -368,17 +367,17 @@ async function logSubscription({
   amount: string | null;
 }) {
   try {
-    await adminDb.collection("stripe_subscriptions").doc(sessionId).set(
-      {
-        planName,
-        email,
-        phone,
-        customerName: name,
-        amount,
-        createdAt: Date.now(),
-      },
-      { merge: true },
-    );
+    const db = supabaseServer();
+    const { error } = await db.from("stripe_subscription_logs").upsert({
+      session_id: sessionId,
+      plan_name: planName,
+      email,
+      phone,
+      customer_name: name,
+      amount,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
   } catch (error) {
     console.error("stripe subscription log error", error);
   }

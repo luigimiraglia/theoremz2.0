@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
 import { syncBlackGrade } from "@/lib/black/gradeSync";
 import { recordStudentGradeLite } from "@/lib/studentLiteSync";
@@ -36,26 +36,18 @@ export async function GET(req: Request) {
   const { data, error } = await query;
   if (error) {
     console.error("[me-grades] supabase query failed", error);
-  } else if ((data?.length ?? 0) > 0) {
-    const items = (data || []).map((row) => ({
-      id: row.id,
-      subject: row.subject,
-      grade: typeof row.grade === "number" ? row.grade : null,
-      date: row.taken_on,
-      source: row.source ?? null,
-      assessment_id: row.assessment_id ?? null,
-    }));
-    if (items.length) return NextResponse.json({ items });
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
 
-  // fallback to legacy Firestore collection
-  let legacyQuery = adminDb.collection(`users/${uid}/grades`).orderBy("date");
-  if (subject === "matematica" || subject === "fisica") {
-    legacyQuery = legacyQuery.where("subject", "==", subject);
-  }
-  const snap = await legacyQuery.get();
-  const legacyItems = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-  return NextResponse.json({ items: legacyItems });
+  const items = (data || []).map((row) => ({
+    id: row.id,
+    subject: row.subject,
+    grade: typeof row.grade === "number" ? row.grade : null,
+    date: row.taken_on,
+    source: row.source ?? null,
+    assessment_id: row.assessment_id ?? null,
+  }));
+  return NextResponse.json({ items });
 }
 
 // POST { date: YYYY-MM-DD, subject: matematica|fisica, grade: number }
@@ -72,89 +64,74 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const doc = await adminDb.collection(`users/${uid}/grades`).add({
-    date,
-    subject,
-    grade: Math.max(0, Math.min(10, grade)),
-    createdAt: Date.now(),
-    source: "account_app",
-  });
-
-  const linkInfo = await linkGradeToExam({
+  const normalizedGrade = Math.max(0, Math.min(10, grade));
+  const linkInfo = await linkGradeToAssessment({
     uid,
     date,
     subject,
-    grade: Math.max(0, Math.min(10, grade)),
-    gradeDocId: doc.id,
+    grade: normalizedGrade,
+  });
+
+  const gradeId = await recordStudentGradeLite({
+    userId: uid,
+    seed: `account:${date}:${subject}:${Date.now()}`,
+    date,
+    subject,
+    grade: normalizedGrade,
+    assessmentId: linkInfo?.assessmentId || null,
   });
 
   await syncBlackGrade({
     uid,
     date,
-    grade: Math.max(0, Math.min(10, grade)),
+    grade: normalizedGrade,
     subject,
-    assessmentId: linkInfo?.assessmentId || null,
     examSubject: linkInfo?.examSubject || null,
   });
 
-  try {
-    await recordStudentGradeLite({
-      userId: uid,
-      seed: doc.id,
-      date,
-      subject,
-      grade: Math.max(0, Math.min(10, grade)),
-      assessmentSeed:
-        linkInfo?.assessmentId || linkInfo?.firestoreId || null,
-    });
-  } catch (error) {
-    console.error("[me-grades] lite sync failed", error);
-  }
-
-  return NextResponse.json({ ok: true, id: doc.id });
+  return NextResponse.json({ ok: true, id: gradeId });
 }
 
-async function linkGradeToExam({
+async function linkGradeToAssessment({
   uid,
   date,
   subject,
   grade,
-  gradeDocId,
 }: {
   uid: string;
   date: string;
   subject: "matematica" | "fisica";
   grade: number;
-  gradeDocId: string;
 }) {
   try {
-    const exams = adminDb.collection(`users/${uid}/exams`);
-    const snap = await exams.where("date", "==", date).limit(10).get();
-    if (snap.empty) return null;
+    const db = supabaseServer();
+    const { data, error } = await db
+      .from("student_assessments")
+      .select("id, subject, grade")
+      .eq("user_id", uid)
+      .eq("date", date)
+      .eq("kind", "verifica")
+      .limit(10);
+    if (error) throw error;
+    if (!data?.length) return null;
+
     const target =
-      snap.docs.find((doc) => {
-        const data = doc.data() as any;
-        return typeof data?.grade !== "number";
-      }) || snap.docs[0];
-    await target.ref.set(
-      {
-        grade,
-        grade_subject: subject,
-        grade_id: gradeDocId,
-        grade_synced_at: Date.now(),
-        updatedAt: Date.now(),
-        source: "account_app",
-      },
-      { merge: true }
-    );
-    const data = target.data() as any;
+      data.find((row) => typeof row.grade !== "number" && row.subject === subject) ||
+      data.find((row) => typeof row.grade !== "number") ||
+      data[0];
+
+    const { error: updateError } = await db
+      .from("student_assessments")
+      .update({ grade, updated_at: new Date().toISOString() })
+      .eq("id", target.id);
+    if (updateError) throw updateError;
+
     return {
-      assessmentId: data?.blackAssessmentId || data?.black_assessment_id || null,
-      examSubject: data?.subject || null,
-      firestoreId: target.id,
+      assessmentId: target.id,
+      examSubject: target.subject || null,
     };
   } catch (error) {
-    console.error("[grades] failed linking grade to exam", error);
+    console.error("[grades] failed linking grade to assessment", error);
     return null;
   }
 }

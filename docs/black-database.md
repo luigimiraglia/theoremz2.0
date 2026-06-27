@@ -1,6 +1,6 @@
 # Theoremz Black – Database & Bot Reference
 
-Questa nota riassume lo schema dati usato dall’ecosistema Black (Supabase + Firebase) e i flussi principali per bot/cron. Mantienila allineata quando evolviamo le tabelle o le regole di calcolo.
+Questa nota riassume lo schema dati usato dall’ecosistema Black (Supabase + Firebase Auth) e i flussi principali per bot/cron. Mantienila allineata quando evolviamo le tabelle o le regole di calcolo.
 
 ---
 
@@ -37,10 +37,10 @@ Questa nota riassume lo schema dati usato dall’ecosistema Black (Supabase + Fi
 
 ### Identità e matching
 
-- Fonte unica per l’UID: Firebase Auth. Ogni sistema (Supabase `profiles`, Firestore `users`, tabelle Black) usa lo stesso UID testo.
+- Fonte unica per l’UID: Firebase Auth. I dati applicativi vivono in Supabase (`students`, `profiles`, `student_profiles`, tabelle Black) usando lo stesso UID testo.
 - `profiles.id` = Firebase UID. Sincronizza lì nome completo ed email per tutte le ricerche.
 - Stripe: conserva lo stesso UID nei metadata oppure in `black_students.stripe_customer_id`.
-- Firestore: se salvi meta extra, usa l’UID come ID documento.
+- Non salvare meta applicative in Firebase/Firestore: Firebase resta solo Auth.
 
 ### `brief_md`
 
@@ -98,7 +98,7 @@ Espone i campi necessari al digest e ai bot:
 - `current_avg`, `grades_count`: media e conteggio da `black_grades`. Normalizza i punteggi su scala 0–10 (`score / max_score * 10` se i massimi variano).
 - `next_assessment_*`: prima verifica futura in `black_assessments` (ordinata per data).
 - `readiness` (consiglio operativo):
-  - 35% engagement: attività negli ultimi 30 giorni (login/chat/consegne). Replica gli eventi Firestore in Supabase per query veloci.
+  - 35% engagement: attività negli ultimi 30 giorni (login/chat/consegne) da log Supabase.
   - 35% andamento: delta vs `initial_avg` oppure `current_avg/10*100`.
   - 15% recency: bonus se ci sono voti o note recenti.
   - 15% subscription: `active=100`, `trial=70`, `canceled=20`.
@@ -135,7 +135,7 @@ Inbox centralizzata per tutte le attivazioni Stripe, così il bot può mostrare 
 
 ### Flusso
 
-1. Il webhook Stripe (`checkout.session.completed`) salva sia su Firestore (`stripe_subscriptions`) sia su `black_stripe_signups` con `status=new`.
+1. Il webhook Stripe (`checkout.session.completed`) salva su Supabase (`black_stripe_signups` e subscription state studenti) con `status=new`.
 2. Quando `syncBlackSubscriptionRecord` riesce ad allineare `profiles`/`black_students`, la riga viene aggiornata (`status=synced`, `student_user_id`, `student_id`, `synced_at`).
 3. Il cron (`/api/cron/sync-black-subscriptions`) riprova la sincronizzazione e marca come `synced` anche gli storici.
 4. Il bot (`/nuovi`) legge questa tabella per elencare le attivazioni Stripe ancora da collegare.
@@ -151,14 +151,13 @@ Inbox centralizzata per tutte le attivazioni Stripe, così il bot può mostrare 
 
 ---
 
-## Seeding & Sync (Stripe ↔ Firestore ↔ Supabase)
+## Seeding & Sync (Stripe ↔ Supabase)
 
-1. **Stripe webhook (`app/api/stripe/webhook/route.ts`)** salva ogni attivazione in Firestore (`stripe_subscriptions`) e su Supabase (`black_stripe_signups`). Aggancia qui gli hook per creare/aggiornare `black_students`:
+1. **Stripe webhook (`app/api/stripe/webhook/route.ts`)** salva ogni attivazione su Supabase (`black_stripe_signups`, `students`, `student_profiles`, `profiles`). Aggancia qui gli hook per creare/aggiornare le viste operative Black:
    - Risali al Firebase UID (metadati Checkout o lookup email→UID).
    - Se l'UID non esiste ancora viene creato automaticamente in Firebase Admin partendo dall'email Stripe.
    - Popola i campi chiave (`subscription_status`, `stripe_customer_id`, contatti).
-2. **Firestore**: conserva attività (login, consegne, chat) indicizzate per UID. Replica i contatori necessari (ultimo accesso, messaggi ultimi 30 giorni) in Supabase o in una tabella `user_metrics`.
-3. **Cron giornaliero**:
+2. **Cron giornaliero**:
    - chiama `GET /api/cron/sync-black-subscriptions?secret=XYZ` (Vercel Cron `0 0 * * *`) per riallineare Stripe → Supabase e rigenerare i brief; imposta `BLACK_CRON_SECRET`/`CRON_SECRET` per autorizzare la chiamata.
    - per sincronie manuali usa `POST /api/cron/manual-sync-stripe-signups?secret=XYZ&limit=25`, che prende gli `black_stripe_signups` non `synced` e rilancia lo stesso flusso (`syncBlackSubscriptionRecord`).
    - chiama `GET /api/telegram/digest?secret=XYZ` (Vercel Cron `0 18 * * *`): oltre a inviare il digest, questo endpoint decrementa automaticamente la `readiness` di 1 (clamp 0–100).
@@ -166,7 +165,7 @@ Inbox centralizzata per tutte le attivazioni Stripe, così il bot può mostrare 
    - aggiorna readiness/risk/brief.
    - valida che la view `black_student_card` rifletta gli ultimi voti (`black_grades`) e verifiche (`black_assessments`).
 
-Tenendo UID Firebase come chiave unica, il bot, Stripe, Firestore e Supabase rimangono coerenti e il recupero schede via email o nome è immediato.
+Tenendo UID Firebase come chiave Auth e Supabase come fonte dati, bot e Stripe rimangono coerenti e il recupero schede via email o nome è immediato.
 
 ---
 
@@ -206,5 +205,5 @@ Log giornaliero automatico degli accessi per studenti Black (aggiornato dal clie
 
 > Quando un utente autenticato (Firebase) accede con un account Black, il client chiama `/api/black/activity` che:
 > - aggiorna `profiles` (nome/email/sottoscrizione),
-> - aggiorna `black_students.last_active_at` e sincronizza eventuali meta (classe, prossima verifica) dal documento Firestore `users/{uid}`,
+> - aggiorna `black_students.last_active_at` e sincronizza eventuali meta (classe, prossima verifica) da `student_profiles`/`students`,
 > - inserisce/aggiorna la riga corrispondente su `black_access_logs`.

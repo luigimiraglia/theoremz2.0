@@ -10,7 +10,6 @@
     "lint": "next lint",
     "sanity": "sanity dev",
     "optimize-images": "node scripts/optimize-images.mjs",
-    "migrate:saved-lessons": "node scripts/migrate-saved-lessons.mjs",
     "supabase:inventory": "node --env-file=.env.local scripts/export-supabase-inventory.mjs"
   },
   "dependencies": {

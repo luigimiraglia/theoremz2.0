@@ -208,21 +208,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Carica profilo/username/salvati quando inattivo
           runWhenIdle(async () => {
+            let hydratedUser = appUser;
             try {
-              const [{ getDoc, doc }, { db }] = await Promise.all([
-                import("firebase/firestore"),
-                import("./firebase"),
-              ]);
-              const snap = await getDoc(doc(db, "users", fbUser.uid));
-              if (snap.exists()) {
-                appUser.username = snap.data().username || null;
+              const token = await fbUser.getIdToken();
+              const res = await fetch("/api/me/profile", {
+                headers: { Authorization: `Bearer ${token}` },
+                cache: "no-store",
+              });
+              if (res.ok) {
+                const data = await res.json();
+                hydratedUser = {
+                  ...appUser,
+                  username: data?.profile?.username || null,
+                };
+                setUser(hydratedUser);
               }
             } catch (err) {
-              console.error("Errore Firestore", err);
+              console.error("Errore caricamento profilo Supabase", err);
             }
 
             // Stato abbonamento
-            await computeSubscription(appUser.email);
+            await computeSubscription(hydratedUser.email);
           });
         }
       );
@@ -311,16 +317,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         let meta: Record<string, any> | null = null;
         try {
-          const [{ getDoc, doc }, { db }] = await Promise.all([
-            import("firebase/firestore"),
-            import("./firebase"),
-          ]);
-          const snap = await getDoc(doc(db, "users", user.uid));
-          if (snap.exists()) {
-            meta = serializeFirestoreData(snap.data());
+          const [{ getAuth }] = await Promise.all([import("firebase/auth")]);
+          const token = await getAuth().currentUser?.getIdToken();
+          if (token) {
+            const res = await fetch("/api/me/profile", {
+              headers: { Authorization: `Bearer ${token}` },
+              cache: "no-store",
+            });
+            if (res.ok) {
+              const data = await res.json();
+              const profile = data?.profile || {};
+              meta = {
+                ...profile,
+                ...(profile.onboardingSegment || {}),
+              };
+            }
           }
         } catch (err) {
-          console.error("Errore lettura profilo Firestore:", err);
+          console.error("Errore lettura profilo Supabase:", err);
         }
 
         await fetch("/api/black/activity", {
@@ -679,27 +693,6 @@ const computeSubscription = async (emailNullable: string | null) => {
       {children}
     </AuthContext.Provider>
   );
-}
-
-function serializeFirestoreData(value: any): any {
-  if (value === null || value === undefined) return null;
-  if (Array.isArray(value)) return value.map((entry) => serializeFirestoreData(entry));
-  if (typeof value === "object") {
-    if (typeof (value as any).toDate === "function") {
-      try {
-        return (value as any).toDate().toISOString();
-      } catch {
-        return null;
-      }
-    }
-    return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [key, serializeFirestoreData(entry)])
-    );
-  }
-  if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") {
-    return value;
-  }
-  return null;
 }
 
 /* =========================

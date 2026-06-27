@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { supabaseServer } from "@/lib/supabase";
 
 export async function POST(
   req: Request,
@@ -27,22 +27,20 @@ export async function POST(
     const referer = headers.get("referer") || null;
     const ip = headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
 
-    const doc = {
+    const db = supabaseServer();
+    const { error } = await db.from("lesson_reviews").insert({
       lesson: lesson.toString().slice(0, 160),
       name: nm.slice(0, 120),
       email: em ? em.slice(0, 160) : null,
       rating: Math.round(rt),
       comment: cm.slice(0, 2000),
-      ts: Date.now(),
-      ua,
+      user_agent: ua,
       referer,
       ip,
-    } as const;
-
-    await adminDb.collection("lesson_reviews").add(doc);
+    });
+    if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || "server_error" }, { status: 500 });
   }
 }
-

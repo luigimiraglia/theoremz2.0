@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { adminDb } from "@/lib/firebaseAdmin";
 import { upsertCanonicalLead } from "@/lib/canonicalLeads";
 
 export const runtime = "nodejs";
@@ -386,40 +385,6 @@ async function logQuizLead({
   responses: QuizResponse[];
   submittedAtIso: string;
 }) {
-  const phoneNormalized = normalizePhone(phone);
-  const phoneLookupCandidates = buildPhoneLookupCandidates(phone, phoneNormalized);
-  const nowMs = Date.now();
-  const baseDoc = {
-    quiz,
-    quizLabel,
-    phone,
-    phoneNormalized,
-    planName: plan.name ?? null,
-    planDescription: plan.description ?? null,
-    planHighlight: plan.highlight ?? null,
-    planPitch,
-    responses,
-    submittedAt: submittedAtIso,
-    updatedAt: nowMs,
-    source: "quiz-report",
-  };
-
-  const existingRef = await findExistingQuizLead({
-    quiz,
-    phone,
-    phoneNormalized,
-    candidates: phoneLookupCandidates,
-  });
-
-  if (existingRef) {
-    await existingRef.set(baseDoc, { merge: true });
-  } else {
-    await adminDb.collection("quiz_leads").add({
-      ...baseDoc,
-      createdAt: nowMs,
-    });
-  }
-
   try {
     await upsertCanonicalLeadFromQuiz({
       quiz,
@@ -480,9 +445,6 @@ async function upsertCanonicalLeadFromQuiz({
       planPitch,
       responses,
     },
-    legacyRefs: {
-      firestore_quiz_leads: `${quiz}:${normalizePhone(phone) || phone}`,
-    },
     fallbackKey: `quiz:${quiz}:${normalizePhone(phone) || phone}:${submittedAtIso}`,
   });
 }
@@ -507,65 +469,6 @@ function normalizePhoneDigits(raw?: string | null) {
     digits = digits.replace(/^0+/, "");
   }
   return digits || null;
-}
-
-function buildPhoneLookupCandidates(raw: string, normalized: string | null) {
-  const digits = normalizePhoneDigits(raw);
-  if (!digits) {
-    return normalized ? [normalized] : [];
-  }
-  const candidates = new Set<string>();
-  candidates.add(`+${digits}`);
-  if (!digits.startsWith("39") && digits.length === 10) {
-    candidates.add(`+39${digits}`);
-  }
-  if (digits.startsWith("39") && digits.length > 10) {
-    candidates.add(`+${digits.slice(2)}`);
-  }
-  if (normalized) candidates.add(normalized);
-  return Array.from(candidates);
-}
-
-async function findExistingQuizLead({
-  quiz,
-  phone,
-  phoneNormalized,
-  candidates,
-}: {
-  quiz: QuizKind;
-  phone: string;
-  phoneNormalized: string | null;
-  candidates: string[];
-}) {
-  const collection = adminDb.collection("quiz_leads");
-  if (phoneNormalized) {
-    const byNormalized = await collection
-      .where("phoneNormalized", "==", phoneNormalized)
-      .where("quiz", "==", quiz)
-      .limit(1)
-      .get();
-    if (!byNormalized.empty) return byNormalized.docs[0].ref;
-  }
-
-  if (phone) {
-    const byRaw = await collection
-      .where("phone", "==", phone)
-      .where("quiz", "==", quiz)
-      .limit(1)
-      .get();
-    if (!byRaw.empty) return byRaw.docs[0].ref;
-  }
-
-  for (const candidate of candidates) {
-    const byCandidate = await collection
-      .where("phone", "==", candidate)
-      .where("quiz", "==", quiz)
-      .limit(1)
-      .get();
-    if (!byCandidate.empty) return byCandidate.docs[0].ref;
-  }
-
-  return null;
 }
 
 function addDays(base: Date, days: number) {

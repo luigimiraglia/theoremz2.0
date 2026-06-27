@@ -67,7 +67,7 @@ type TutorStudent = {
 };
 
 /* ───────────────── helpers data ───────────────── */
-// Normalizza in millisecondi: accetta Date | string ISO | number (ms/sec) | Firestore Timestamp
+// Normalizza in millisecondi: accetta Date | string ISO | number (ms/sec) | timestamp compatibile.
 function toMs(x: any): number | null {
   if (!x) return null;
   if (x instanceof Date) return x.getTime();
@@ -79,7 +79,7 @@ function toMs(x: any): number | null {
     // se è in secondi (tipico di alcuni backend), portalo a ms
     return x < 1e12 ? x * 1000 : x;
   }
-  // Firestore Timestamp
+  // Timestamp compatibile con vecchie librerie server.
   if (typeof x.toDate === "function") return x.toDate().getTime();
   return null;
 }
@@ -3202,12 +3202,24 @@ function Trash(props: React.SVGProps<SVGSVGElement>) {
 }
 
 function formatClass(
-  p?: { cycle?: string; year?: number; indirizzo?: string } | null
+  p?: {
+    cycle?: string;
+    year?: number;
+    indirizzo?: string;
+    onboardingSegment?: {
+      cycle?: string;
+      schoolYear?: number;
+      schoolTrackLabel?: string;
+    } | null;
+  } | null
 ) {
-  if (!p?.year) return "";
-  const ord = `${p.year}º`;
-  if (p.cycle === "medie") return `${ord} Media`;
-  const indir = (p.indirizzo || "").trim() || "Liceo";
+  const segment = p?.onboardingSegment || null;
+  const year = segment?.schoolYear ?? p?.year ?? null;
+  if (!year) return "";
+  const ord = `${year}º`;
+  const cycle = (segment?.cycle || p?.cycle || "").toLowerCase();
+  if (cycle === "medie") return `${ord} Media`;
+  const indir = (segment?.schoolTrackLabel || p?.indirizzo || "").trim() || "Liceo";
   return `${ord} ${indir}`;
 }
 
@@ -3222,13 +3234,34 @@ function ProfileSection(props: {
   onProfileChange?: (patch: any) => void;
 }) {
   const { userId, onProfileChange } = props;
-  // classe / indirizzo / obiettivo (persistiti su Firestore)
+  // classe / indirizzo / obiettivo (persistiti su Supabase)
   type ProfilePrefs = {
     cycle?: "medie" | "liceo" | "altro";
     year?: number; // 1..5 o 1..3
     indirizzo?: string;
     goalMin?: number; // 5..120
     showBadges?: boolean;
+    onboardingSegment?: {
+      cycle?: string;
+      schoolYear?: number;
+      schoolTrackCode?: string;
+      schoolTrackLabel?: string;
+      subjectCode?: string;
+      subjectLabel?: string;
+      topicCode?: string;
+      topic?: string;
+      needCode?: string;
+      needLabel?: string;
+      urgencyCode?: string;
+      urgencyLabel?: string;
+      hasPhone?: boolean;
+      wantsTutorHelp?: boolean;
+    } | null;
+    currentFocusSubject?: string | null;
+    currentFocusTopic?: string | null;
+    currentFocusTopicCode?: string | null;
+    currentFocusNeed?: string | null;
+    helpUrgency?: string | null;
   };
   const [prefs, setPrefs] = useState<ProfilePrefs>({
     cycle: "liceo",
@@ -3280,6 +3313,7 @@ function ProfileSection(props: {
     "Linguistico",
     "Altro",
   ];
+  const onboardingSegment = prefs.onboardingSegment || null;
 
   return (
     <div className="space-y-3">
@@ -3294,6 +3328,32 @@ function ProfileSection(props: {
           {open ? "Chiudi" : "Aggiorna classe"}
         </button>
       </div>
+
+      {onboardingSegment && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 [.dark_&]:border-white/10 [.dark_&]:bg-white/5 [.dark_&]:text-white/80">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 [.dark_&]:text-white/50">
+            Segmentazione salvata
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <ProfileMeta
+              label="Materia"
+              value={onboardingSegment.subjectLabel || onboardingSegment.subjectCode || "—"}
+            />
+            <ProfileMeta
+              label="Argomento"
+              value={onboardingSegment.topic || onboardingSegment.topicCode || "—"}
+            />
+            <ProfileMeta
+              label="Bisogno"
+              value={onboardingSegment.needLabel || onboardingSegment.needCode || "—"}
+            />
+            <ProfileMeta
+              label="Urgenza"
+              value={onboardingSegment.urgencyLabel || onboardingSegment.urgencyCode || "—"}
+            />
+          </div>
+        </div>
+      )}
 
       {open && (
         <div className="rounded-2xl bg-white/80 [.dark_&]:bg-slate-900/60 backdrop-blur border border-slate-200 p-3">
@@ -3363,6 +3423,19 @@ function ProfileSection(props: {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ProfileMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 [.dark_&]:border-white/10 [.dark_&]:bg-slate-900/60">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 [.dark_&]:text-white/50">
+        {label}
+      </div>
+      <div className="mt-1 truncate text-sm font-semibold text-slate-900 [.dark_&]:text-white">
+        {value}
+      </div>
     </div>
   );
 }

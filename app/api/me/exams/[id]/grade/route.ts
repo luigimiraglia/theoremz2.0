@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth } from "@/lib/firebaseAdmin";
 import { syncBlackGrade } from "@/lib/black/gradeSync";
 import { getRomeTodayYmd } from "@/lib/rome-time";
+import { supabaseServer } from "@/lib/supabase";
+import { ensureStudentRecord } from "@/lib/students";
 
 async function getUid(req: Request) {
   const h = req.headers.get("authorization") || "";
@@ -37,12 +39,20 @@ export async function POST(
   }
   const boundedGrade = Math.max(0, Math.min(10, grade));
 
-  const ref = adminDb.doc(`users/${uid}/exams/${id}`);
-  const snap = await ref.get();
-  if (!snap.exists) {
+  const db = supabaseServer();
+  const { data, error: readError } = await db
+    .from("student_assessments")
+    .select("id, date, subject")
+    .eq("id", id)
+    .eq("user_id", uid)
+    .maybeSingle();
+  if (readError) {
+    console.error("[me-exam-grade] assessment read failed", readError);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
+  }
+  if (!data?.id) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
-  const data = snap.data() as any;
   const date = data?.date;
   if (!date) {
     return NextResponse.json({ error: "missing_date" }, { status: 400 });
@@ -56,58 +66,71 @@ export async function POST(
     );
   }
 
-  const gradesCollection = adminDb.collection(`users/${uid}/grades`);
-  const assessmentId = data?.blackAssessmentId || data?.black_assessment_id || null;
-  const existingGradeId = data?.grade_id || data?.gradeId || null;
-  let gradeDocId = existingGradeId;
-  if (!gradeDocId && assessmentId) {
-    const snap = await gradesCollection
-      .where("assessmentId", "==", assessmentId)
-      .limit(1)
-      .get();
-    if (!snap.empty) gradeDocId = snap.docs[0].id;
-  }
-  if (gradeDocId) {
-    await gradesCollection.doc(gradeDocId).set(
-      {
-        date,
-        subject,
-        grade: boundedGrade,
-        assessmentId,
-        updatedAt: Date.now(),
-        source: "account_app",
-      },
-      { merge: true }
-    );
-  } else {
-    const doc = await gradesCollection.add({
-      date,
-      subject,
-      grade: boundedGrade,
-      assessmentId,
-      createdAt: Date.now(),
-      source: "account_app",
-    });
-    gradeDocId = doc.id;
+  const student = await ensureStudentRecord({ authUid: uid, source: "auth" }, db);
+  const { data: existingGrade, error: existingGradeError } = await db
+    .from("student_grades")
+    .select("id")
+    .eq("user_id", uid)
+    .eq("assessment_id", id)
+    .maybeSingle();
+  if (existingGradeError) {
+    console.error("[me-exam-grade] existing grade read failed", existingGradeError);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
 
-  await ref.set(
-    {
-      grade: boundedGrade,
-      grade_subject: subject,
-      grade_id: gradeDocId,
-      grade_synced_at: Date.now(),
-    },
-    { merge: true }
-  );
+  let gradeDocId = existingGrade?.id || null;
+  if (gradeDocId) {
+    const { error } = await db
+      .from("student_grades")
+      .update({
+        subject,
+        grade: boundedGrade,
+        taken_on: date,
+        source: "account_app",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", gradeDocId)
+      .eq("user_id", uid);
+    if (error) {
+      console.error("[me-exam-grade] grade update failed", error);
+      return NextResponse.json({ error: "server_error" }, { status: 500 });
+    }
+  } else {
+    const { data: inserted, error } = await db
+      .from("student_grades")
+      .insert({
+        student_id: student.id,
+        user_id: uid,
+        subject,
+        grade: boundedGrade,
+        taken_on: date,
+        assessment_id: id,
+        source: "account_app",
+      })
+      .select("id")
+      .single();
+    if (error) {
+      console.error("[me-exam-grade] grade insert failed", error);
+      return NextResponse.json({ error: "server_error" }, { status: 500 });
+    }
+    gradeDocId = inserted.id;
+  }
+
+  const { error: assessmentUpdateError } = await db
+    .from("student_assessments")
+    .update({ grade: boundedGrade, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("user_id", uid);
+  if (assessmentUpdateError) {
+    console.error("[me-exam-grade] assessment update failed", assessmentUpdateError);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
+  }
 
   await syncBlackGrade({
     uid,
     date,
     grade: boundedGrade,
     subject,
-    assessmentId:
-      data?.blackAssessmentId || data?.black_assessment_id || null,
     examSubject: data?.subject || null,
   });
 

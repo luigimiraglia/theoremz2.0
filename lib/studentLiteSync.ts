@@ -36,10 +36,39 @@ async function ensureProfileRow(
   db: ReturnType<typeof supabaseServer>,
   userId: string,
   studentId?: string | null,
+  seed?: {
+    email?: string | null;
+    full_name?: string | null;
+    phone?: string | null;
+  },
 ) {
-  const payload: Record<string, unknown> = { user_id: userId };
+  const { data: existing, error: readError } = await db
+    .from("student_profiles")
+    .select("user_id, student_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (readError) throw readError;
+
+  if (existing) {
+    if (studentId && !existing.student_id) {
+      const { error } = await db
+        .from("student_profiles")
+        .update({ student_id: studentId, updated_at: new Date().toISOString() })
+        .eq("user_id", userId);
+      if (error) throw error;
+    }
+    return;
+  }
+
+  const payload: Record<string, unknown> = {
+    user_id: userId,
+    email: seed?.email || `${userId}@autogen.theoremz.local`,
+  };
   if (studentId) payload.student_id = studentId;
-  const { error } = await db.from("student_profiles").upsert(payload, { onConflict: "user_id" });
+  if (seed?.full_name) payload.full_name = seed.full_name;
+  if (seed?.phone) payload.phone = seed.phone;
+
+  const { error } = await db.from("student_profiles").insert(payload);
   if (error) throw error;
 }
 
@@ -61,6 +90,17 @@ export async function syncLiteProfilePatch(
     confidence_math: string;
     newsletter_opt_in: boolean;
     is_black: boolean;
+    onboarding_completed_at: string;
+    onboarding_version: string;
+    onboarding_return_to: string;
+    tutor_help_requested: boolean;
+    tutor_help_requested_at: string;
+    onboarding_segment: Record<string, unknown>;
+    current_focus_subject: string;
+    current_focus_topic: string;
+    current_focus_topic_code: string;
+    current_focus_need: string;
+    help_urgency: string;
   }>
 ) {
   const db = supabaseServer();
@@ -74,7 +114,11 @@ export async function syncLiteProfilePatch(
     },
     db,
   );
-  await ensureProfileRow(db, userId, student.id);
+  await ensureProfileRow(db, userId, student.id, {
+    email: typeof patch?.email === "string" ? patch.email : null,
+    full_name: typeof patch?.full_name === "string" ? patch.full_name : null,
+    phone: typeof patch?.phone === "string" ? patch.phone : null,
+  });
 
   const payload: Record<string, unknown> = {
     student_id: student.id,
@@ -96,6 +140,7 @@ export async function syncLiteProfilePatch(
     .update(payload)
     .eq("user_id", userId);
   if (error) throw error;
+  return student;
 }
 
 export async function recordStudentAssessmentLite({
@@ -150,6 +195,7 @@ export async function recordStudentGradeLite({
   date,
   subject,
   grade,
+  assessmentId,
   assessmentSeed,
 }: {
   userId: string;
@@ -157,6 +203,7 @@ export async function recordStudentGradeLite({
   date: string;
   subject?: string | null;
   grade: number;
+  assessmentId?: string | null;
   assessmentSeed?: string | null;
 }) {
   const normalized = sanitizeGrade(grade);
@@ -166,6 +213,8 @@ export async function recordStudentGradeLite({
   await ensureProfileRow(db, userId, student.id);
 
   const id = deterministicUuid("grade", userId, seed);
+  const targetAssessmentId =
+    assessmentId || (assessmentSeed ? deterministicUuid("assessment", userId, assessmentSeed) : null);
   const payload = {
     id,
     student_id: student.id,
@@ -173,18 +222,19 @@ export async function recordStudentGradeLite({
     subject: subject ?? null,
     grade: normalized,
     taken_on: date,
+    assessment_id: targetAssessmentId,
     updated_at: new Date().toISOString(),
   };
   const { error } = await db.from("student_grades").upsert(payload);
   if (error) throw error;
 
-  if (assessmentSeed) {
-    const assessmentId = deterministicUuid("assessment", userId, assessmentSeed);
+  if (targetAssessmentId) {
     await db
       .from("student_assessments")
       .update({ grade: normalized, updated_at: new Date().toISOString() })
-      .eq("id", assessmentId);
+      .eq("id", targetAssessmentId);
   }
+  return id;
 }
 
 export async function upsertSavedLessonLite({

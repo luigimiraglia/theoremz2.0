@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { supabaseServer } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ type Body = {
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Body;
-    const now = Date.now();
+    const now = new Date();
     const headers = new Headers(req.headers);
     const referer = headers.get("referer") || undefined;
     const ua = headers.get("user-agent") || undefined;
@@ -39,14 +40,26 @@ export async function POST(req: Request) {
       country: country ?? null,
     } as const;
 
-    // Try to persist in Firestore if admin envs are configured
     try {
-      const mod = await import("@/lib/firebaseAdmin");
-      const db = mod.adminDb;
-      const id = `${record.anonId || "anon"}_${now}`;
-      await db.collection("consent_logs").doc(id).set(record);
+      const db = supabaseServer();
+      const id = `${record.anonId || record.userId || "anon"}_${now.getTime()}`;
+      const { error } = await db.from("consent_logs").insert({
+        id,
+        recorded_at: now.toISOString(),
+        version: record.version,
+        action: record.action,
+        source: record.source,
+        categories: record.categories,
+        anon_id: record.anonId,
+        user_id: record.userId,
+        referer: record.referer,
+        user_agent: record.ua,
+        ip: record.ip,
+        country: record.country,
+      });
+      if (error) throw error;
     } catch (err) {
-      console.warn("[consent] Firestore log skipped:", (err as any)?.message || err);
+      console.warn("[consent] Supabase log skipped:", (err as any)?.message || err);
     }
 
     return NextResponse.json({ ok: true });

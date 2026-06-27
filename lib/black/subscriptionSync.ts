@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import crypto from "node:crypto";
 import type { UserRecord } from "firebase-admin/auth";
-import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
 import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
 import { ensureStudentRecord } from "@/lib/students";
@@ -283,7 +283,7 @@ export async function syncBlackSubscriptionRecord({
     console.error("[black-sync] lite profile sync failed", error);
   }
 
-  const firestoreMeta = await getFirestoreMeta(firebaseUser.uid);
+  const studentMeta = (await getSupabaseStudentMeta(firebaseUser.uid)) as Record<string, any> | null;
   const parentName =
     stringOrNull(meta.parent_name) ||
     stringOrNull(meta.parentName) ||
@@ -300,7 +300,7 @@ export async function syncBlackSubscriptionRecord({
     null;
   const parentEmail =
     parentEmailCandidate ||
-    stringOrNull(firestoreMeta?.parent_email) ||
+    stringOrNull(studentMeta?.parent_email) ||
     firebaseUser.email ||
     studentEmailCandidate ||
     null;
@@ -309,7 +309,8 @@ export async function syncBlackSubscriptionRecord({
       meta.student_phone,
       meta.studentPhone,
       meta.phone_student,
-      firestoreMeta?.studentPhone,
+      studentMeta?.studentPhone,
+      studentMeta?.student_phone,
       firebaseUser.phoneNumber,
     ) || null;
   const studentEmail = studentEmailCandidate || firebaseUser.email;
@@ -338,22 +339,23 @@ export async function syncBlackSubscriptionRecord({
 
   const studentPayload: BlackStudentPayload = {
     user_id: firebaseUser.uid,
-    year_class: mapYear(firestoreMeta) || mapYear(meta) || stringOrNull(meta.year_class),
+    year_class: mapYear(studentMeta) || mapYear(meta) || stringOrNull(meta.year_class),
     track:
       stringOrNull(meta.track) ||
       stringOrNull(meta.student_track) ||
-      stringOrNull(firestoreMeta?.track) ||
+      stringOrNull(studentMeta?.track) ||
       "entrambi",
     start_date:
       toDateStringFromSeconds(subscription?.start_date) || stringOrNull(meta.start_date),
     goal:
       stringOrNull(meta.goal) ||
       stringOrNull(meta.student_goal) ||
-      stringOrNull(firestoreMeta?.goal),
+      stringOrNull(studentMeta?.goal),
     difficulty_focus:
       stringOrNull(meta.difficulty_focus) ||
       stringOrNull(meta.difficulty) ||
-      stringOrNull(firestoreMeta?.difficulty),
+      stringOrNull(studentMeta?.difficulty) ||
+      stringOrNull(studentMeta?.difficulty_focus),
     parent_name: parentName,
     parent_phone: parentPhone,
     parent_email: parentEmail,
@@ -362,15 +364,15 @@ export async function syncBlackSubscriptionRecord({
     tutor_id:
       stringOrNull(meta.tutor_id) ||
       stringOrNull(meta.tutorId) ||
-      stringOrNull(firestoreMeta?.tutorId),
+      stringOrNull(studentMeta?.tutorId),
     status: subscription?.status ?? "active",
-    initial_avg: toNumberOrNull(firestoreMeta?.initial_avg),
-    readiness: clamp(toNumberOrNull(firestoreMeta?.readiness) ?? 95, 0, 100),
+    initial_avg: toNumberOrNull(studentMeta?.initial_avg),
+    readiness: clamp(toNumberOrNull(studentMeta?.readiness) ?? 95, 0, 100),
     risk_level:
-      stringOrNull(meta.risk_level) || stringOrNull(firestoreMeta?.risk_level) || "yellow",
-    ai_description: stringOrNull(firestoreMeta?.ai_description),
-    next_assessment_subject: stringOrNull(firestoreMeta?.next_assessment_subject),
-    next_assessment_date: stringOrNull(firestoreMeta?.next_assessment_date),
+      stringOrNull(meta.risk_level) || stringOrNull(studentMeta?.risk_level) || "yellow",
+    ai_description: stringOrNull(studentMeta?.ai_description),
+    next_assessment_subject: stringOrNull(studentMeta?.next_assessment_subject),
+    next_assessment_date: stringOrNull(studentMeta?.next_assessment_date),
   };
 
   const studentId = await upsertBlackStudent(studentPayload);
@@ -514,14 +516,57 @@ async function upsertStudentBrief(studentId: string, brief: string) {
   if (error) throw new Error(`[black-sync] Brief upsert failed: ${error.message}`);
 }
 
-async function getFirestoreMeta(uid: string) {
-  try {
-    const snap = await adminDb.collection("users").doc(uid).get();
-    return snap.exists ? snap.data() ?? null : null;
-  } catch (error) {
-    console.error(`[black-sync] Firestore meta fetch failed for ${uid}`, error);
+async function getSupabaseStudentMeta(uid: string) {
+  if (!supabase) return null;
+  const { data: profile, error } = await supabase
+    .from("student_profiles")
+    .select(
+      "full_name, email, phone, cycle, indirizzo, school_year, media_attuale, goal_grade, onboarding_segment, current_focus_subject, current_focus_topic, current_focus_need, help_urgency, student_id",
+    )
+    .eq("user_id", uid)
+    .maybeSingle();
+  if (error) {
+    console.error(`[black-sync] Supabase profile fetch failed for ${uid}`, error);
     return null;
   }
+
+  let student: Record<string, any> | null = null;
+  if (profile?.student_id) {
+    const { data: studentRow } = await supabase
+      .from("students")
+      .select("full_name, email, phone")
+      .eq("id", profile.student_id)
+      .maybeSingle();
+    student = studentRow || null;
+  }
+
+  const segment =
+    profile?.onboarding_segment && typeof profile.onboarding_segment === "object"
+      ? (profile.onboarding_segment as Record<string, any>)
+      : {};
+
+  return {
+    ...segment,
+    full_name: profile?.full_name || student?.full_name || null,
+    email: profile?.email || student?.email || null,
+    phone: profile?.phone || student?.phone || null,
+    student_email: profile?.email || student?.email || null,
+    student_phone: profile?.phone || student?.phone || null,
+    studentPhone: profile?.phone || student?.phone || null,
+    year: profile?.school_year ?? segment.schoolYear ?? null,
+    year_class: segment.yearClass || buildYearClass(profile?.school_year),
+    track: profile?.indirizzo || segment.schoolTrack || null,
+    goal: profile?.goal_grade ? `Obiettivo ${profile.goal_grade}` : segment.goal || null,
+    difficulty: profile?.current_focus_topic || segment.focusTopic || null,
+    difficulty_focus:
+      profile?.current_focus_topic ||
+      profile?.current_focus_need ||
+      segment.focusTopic ||
+      segment.focusNeed ||
+      null,
+    initial_avg: profile?.media_attuale ?? null,
+    next_assessment_subject: profile?.current_focus_subject || segment.focusSubject || null,
+  };
 }
 
 async function resolveFirebaseIdentity({
@@ -660,10 +705,17 @@ export function mapPlan(
 }
 
 function mapYear(doc: any) {
+  if (typeof doc?.year_class === "string" && doc.year_class.trim()) return doc.year_class;
   const year = Number(doc?.year);
   if (!Number.isFinite(year)) return null;
   const indirizzo = (doc?.indirizzo || "").toLowerCase();
   if (indirizzo.includes("liceo")) return `${year}°Liceo`;
+  return `${year}°Superiore`;
+}
+
+function buildYearClass(value: unknown) {
+  const year = Number(value);
+  if (!Number.isFinite(year)) return null;
   return `${year}°Superiore`;
 }
 

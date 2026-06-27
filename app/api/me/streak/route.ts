@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth } from "@/lib/firebaseAdmin";
 import { formatRomeYmd, romeDateToUtc } from "@/lib/rome-time";
+import { supabaseServer } from "@/lib/supabase";
+import { ensureStudentRecord } from "@/lib/students";
 
 async function getUid(req: Request) {
   const h = req.headers.get("authorization") || "";
@@ -26,10 +28,17 @@ function daysBetweenISO(a: string, b: string) {
 export async function GET(req: Request) {
   const uid = await getUid(req);
   if (!uid) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const ref = adminDb.doc(`users/${uid}/meta/streak`);
-  const snap = await ref.get();
-  const data = snap.exists ? snap.data()! : { lastDate: null, count: 0 };
-  return NextResponse.json({ lastDate: data.lastDate ?? null, count: data.count ?? 0 });
+  const db = supabaseServer();
+  const { data, error } = await db
+    .from("student_streaks")
+    .select("last_date, count")
+    .eq("user_id", uid)
+    .maybeSingle();
+  if (error) {
+    console.error("[me-streak] read failed", error);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
+  }
+  return NextResponse.json({ lastDate: data?.last_date ?? null, count: data?.count ?? 0 });
 }
 
 // POST → tick giornaliero
@@ -37,22 +46,38 @@ export async function POST(req: Request) {
   const uid = await getUid(req);
   if (!uid) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const ref = adminDb.doc(`users/${uid}/meta/streak`);
   const today = isoDay();
-  await adminDb.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const prev = snap.exists ? (snap.data() as any) : { lastDate: null, count: 0 };
-    let count = 1;
-    if (prev.lastDate === today) {
-      count = prev.count || 1;
-    } else if (prev.lastDate) {
-      const gap = daysBetweenISO(prev.lastDate, today);
-      count = gap === 1 ? (prev.count || 0) + 1 : 1;
-    }
-    tx.set(ref, { lastDate: today, count, updatedAt: Date.now() });
-  });
+  const db = supabaseServer();
+  const student = await ensureStudentRecord({ authUid: uid, source: "auth" }, db);
+  const { data: prev, error: readError } = await db
+    .from("student_streaks")
+    .select("last_date, count")
+    .eq("user_id", uid)
+    .maybeSingle();
+  if (readError) {
+    console.error("[me-streak] read before write failed", readError);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
+  }
 
-  const doc = await ref.get();
-  const data = doc.data() as any;
-  return NextResponse.json({ ok: true, lastDate: data.lastDate, count: data.count });
+  let count = 1;
+  if (prev?.last_date === today) {
+    count = prev.count || 1;
+  } else if (prev?.last_date) {
+    const gap = daysBetweenISO(prev.last_date, today);
+    count = gap === 1 ? (prev.count || 0) + 1 : 1;
+  }
+
+  const { error: writeError } = await db.from("student_streaks").upsert({
+    user_id: uid,
+    student_id: student.id,
+    last_date: today,
+    count,
+    updated_at: new Date().toISOString(),
+  });
+  if (writeError) {
+    console.error("[me-streak] write failed", writeError);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, lastDate: today, count });
 }

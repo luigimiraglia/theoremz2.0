@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
-import { adminDb } from "@/lib/firebaseAdmin";
 import {
   buildAssessmentResultLine,
   mergeAssessmentTopics,
@@ -830,7 +829,7 @@ async function fetchStudentUserId(
   return data?.user_id || null;
 }
 
-async function mirrorAssessmentToFirestore({
+async function mirrorAssessmentToAccount({
   db,
   studentId,
   assessmentId,
@@ -848,20 +847,6 @@ async function mirrorAssessmentToFirestore({
   const uid = await fetchStudentUserId(db, studentId);
   if (!uid) return;
   try {
-    await adminDb
-      .collection(`users/${uid}/exams`)
-      .doc(assessmentId)
-      .set(
-        {
-          date,
-          subject: subject || null,
-          notes: topics || null,
-          blackAssessmentId: assessmentId,
-          createdAt: Date.now(),
-          source: "telegram_bot",
-        },
-        { merge: true }
-      );
     await recordStudentAssessmentLite({
       userId: uid,
       seed: assessmentId,
@@ -871,7 +856,7 @@ async function mirrorAssessmentToFirestore({
       kind: "verifica",
     });
   } catch (error) {
-    console.error("[telegram-bot] firestore exam mirror failed", {
+    console.error("[telegram-bot] account assessment mirror failed", {
       studentId,
       assessmentId,
       error,
@@ -879,14 +864,13 @@ async function mirrorAssessmentToFirestore({
   }
 }
 
-async function mirrorGradeToFirestore({
+async function mirrorGradeToAccount({
   db,
   studentId,
   gradeId,
   date,
   subject,
   grade,
-  maxScore,
   assessmentId,
 }: {
   db: ReturnType<typeof supabaseServer>;
@@ -895,40 +879,11 @@ async function mirrorGradeToFirestore({
   date: string;
   subject?: string | null;
   grade: number;
-  maxScore: number;
   assessmentId?: string | null;
 }) {
   const uid = await fetchStudentUserId(db, studentId);
   if (!uid) return;
   try {
-    await adminDb
-      .collection(`users/${uid}/grades`)
-      .doc(gradeId)
-      .set(
-        {
-          date,
-          subject: subject || null,
-          grade,
-          maxScore,
-          source: "telegram_bot",
-          syncedAt: Date.now(),
-        },
-        { merge: true }
-      );
-    if (assessmentId) {
-      await adminDb
-        .collection(`users/${uid}/exams`)
-        .doc(assessmentId)
-        .set(
-          {
-            grade,
-            grade_subject: subject || null,
-            grade_id: gradeId,
-            grade_synced_at: Date.now(),
-          },
-          { merge: true }
-        );
-    }
     await recordStudentGradeLite({
       userId: uid,
       seed: gradeId,
@@ -1351,14 +1306,13 @@ async function cmdV({ db, chatId, text }: CmdCtx) {
       `❌ Errore voto: ${e1?.message || "inserimento fallito"}`
     );
 
-  await mirrorGradeToFirestore({
+  await mirrorGradeToAccount({
     db,
     studentId: id,
     gradeId: inserted.id,
     date: whenDate,
     subject,
     grade: Number(score),
-    maxScore: Number(max),
     assessmentId: null,
   });
 
@@ -1437,14 +1391,13 @@ async function cmdVDATE({ db, chatId, text }: CmdCtx) {
     .join("\n");
   await send(chatId, lines);
 
-  await mirrorGradeToFirestore({
+  await mirrorGradeToAccount({
     db,
     studentId: id,
     gradeId: gradeInsert.id,
     date: when,
     subject: finalSubject,
     grade: score,
-    maxScore: max,
     assessmentId: matchInfo.match?.id || null,
   });
 }
@@ -1475,7 +1428,7 @@ async function cmdASS({ db, chatId, text }: CmdCtx) {
 
   // aggiorna cache prossima verifica rigenerando brief
   await db.rpc("refresh_black_brief", { _student: id });
-  await mirrorAssessmentToFirestore({
+  await mirrorAssessmentToAccount({
     db,
     studentId: id,
     assessmentId: assessmentData?.id,
@@ -1530,7 +1483,7 @@ async function cmdVERIFICA({ db, chatId, text }: CmdCtx) {
     // best effort
   }
 
-  await mirrorAssessmentToFirestore({
+  await mirrorAssessmentToAccount({
     db,
     studentId: id,
     assessmentId: assessmentData2?.id,

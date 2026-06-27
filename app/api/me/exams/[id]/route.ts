@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
 import { resolveBlackStudentIdentity } from "@/lib/black/studentIdentity";
 
@@ -20,36 +20,56 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   if (!uid) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await ctx.params;
   if (!id) return NextResponse.json({ error: "bad_request" }, { status: 400 });
-  const ref = adminDb.doc(`users/${uid}/exams/${id}`);
-  const snap = await ref.get();
-  const data = (snap.exists ? snap.data() : null) as any;
-  await ref.delete();
-  const gradeId = data?.grade_id || data?.gradeId || null;
-  if (gradeId) {
-    try {
-      await adminDb.doc(`users/${uid}/grades/${gradeId}`).delete();
-    } catch (error) {
-      console.warn("[me-exams] failed to delete linked grade", error);
-    }
+  const db = supabaseServer();
+  const { data, error: readError } = await db
+    .from("student_assessments")
+    .select("id, date, subject")
+    .eq("id", id)
+    .eq("user_id", uid)
+    .maybeSingle();
+  if (readError) {
+    console.error("[me-exams] delete read failed", readError);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
-  if (data?.blackAssessmentId || data?.date) {
-    await deleteBlackAssessment({
-      uid,
-      assessmentId: data?.blackAssessmentId || null,
-      date: data?.date || null,
-    });
+  if (!data?.id) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
+
+  const { error: gradeDeleteError } = await db
+    .from("student_grades")
+    .delete()
+    .eq("user_id", uid)
+    .eq("assessment_id", id);
+  if (gradeDeleteError) {
+    console.warn("[me-exams] failed to delete linked grade", gradeDeleteError);
+  }
+
+  const { error: deleteError } = await db
+    .from("student_assessments")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", uid);
+  if (deleteError) {
+    console.error("[me-exams] delete failed", deleteError);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
+  }
+
+  await deleteBlackAssessment({
+    uid,
+    date: data.date || null,
+    subject: data.subject || null,
+  });
   return NextResponse.json({ ok: true });
 }
 
 async function deleteBlackAssessment({
   uid,
-  assessmentId,
   date,
+  subject,
 }: {
   uid: string;
-  assessmentId: string | null;
   date: string | null;
+  subject: string | null;
 }) {
   const db = supabaseServer();
   let identity = null;
@@ -61,19 +81,14 @@ async function deleteBlackAssessment({
   }
   if (!identity?.canonicalStudentId) return;
 
-  if (assessmentId) {
-    await db
-      .from("black_assessments")
-      .delete()
-      .eq("id", assessmentId)
-      .eq("student_id", identity.canonicalStudentId);
-  } else if (date) {
-    await db
-      .from("black_assessments")
-      .delete()
-      .eq("student_id", identity.canonicalStudentId)
-      .eq("when_at", date);
-  }
+  if (!date) return;
+  let query = db
+    .from("black_assessments")
+    .delete()
+    .eq("student_id", identity.canonicalStudentId)
+    .eq("when_at", date);
+  if (subject) query = query.eq("subject", subject);
+  await query;
 
   try {
     await db.rpc("refresh_black_brief", { _student: identity.canonicalStudentId });

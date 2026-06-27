@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
-import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth } from "@/lib/firebaseAdmin";
 import { ensureStudentRecord } from "@/lib/students";
 import { resolveBlackStudentIdentity } from "@/lib/black/studentIdentity";
 import { resolveStudentBlackActive, touchStudentBlackActivity } from "@/lib/studentSubscription";
@@ -34,21 +34,22 @@ export async function POST(req: Request) {
     const userAgent = req.headers.get("user-agent") || null;
 
     const firebaseUser = await fetchFirebaseUser(body.userId);
-    const firestoreMeta = body.meta || (await fetchFirestoreMeta(body.userId));
+    const profileMeta = (body.meta ||
+      (await fetchSupabaseProfileMeta(db, body.userId))) as Record<string, any> | null;
     const resolvedEmail =
-      body.email || firebaseUser?.email || firestoreMeta?.student_email || null;
+      body.email || firebaseUser?.email || profileMeta?.student_email || profileMeta?.email || null;
     const resolvedFullName =
       body.fullName ||
       firebaseUser?.displayName ||
-      firestoreMeta?.full_name ||
-      firestoreMeta?.parent_name ||
+      profileMeta?.full_name ||
+      profileMeta?.parent_name ||
       null;
     const studentRecord = await ensureStudentRecord(
       {
         authUid: body.userId,
         email: resolvedEmail,
         fullName: resolvedFullName,
-        phone: firestoreMeta?.student_phone || firebaseUser?.phoneNumber || null,
+        phone: profileMeta?.student_phone || profileMeta?.phone || firebaseUser?.phoneNumber || null,
         source: "black_activity",
       },
       db,
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
         .update({ last_active_at: now })
         .eq("id", identity.legacyBlackStudentId);
 
-      const studentUpdate = firestoreMeta ? buildStudentUpdate(firestoreMeta) : {};
+      const studentUpdate = profileMeta ? buildStudentUpdate(profileMeta) : {};
       studentUpdate.updated_at = now;
       await db
         .from("students")
@@ -109,16 +110,6 @@ async function fetchFirebaseUser(uid: string) {
     return await adminAuth.getUser(uid);
   } catch (error) {
     console.warn("[black-activity] firebase user lookup failed", error);
-    return null;
-  }
-}
-
-async function fetchFirestoreMeta(uid: string) {
-  try {
-    const snap = await adminDb.collection("users").doc(uid).get();
-    return snap.exists ? snap.data() ?? null : null;
-  } catch (error) {
-    console.warn("[black-activity] firestore meta fetch failed", error);
     return null;
   }
 }
@@ -186,6 +177,55 @@ async function upsertAccessLog(
   }
 }
 
+async function fetchSupabaseProfileMeta(db: ReturnType<typeof supabaseServer>, uid: string) {
+  const { data: profile, error } = await db
+    .from("student_profiles")
+    .select(
+      "full_name, email, phone, cycle, indirizzo, school_year, goal_grade, onboarding_segment, current_focus_subject, current_focus_topic, current_focus_need, help_urgency, student_id",
+    )
+    .eq("user_id", uid)
+    .maybeSingle();
+  if (error) {
+    console.warn("[black-activity] student profile fetch failed", error);
+    return null;
+  }
+
+  let student: Record<string, any> | null = null;
+  if (profile?.student_id) {
+    const { data: studentRow } = await db
+      .from("students")
+      .select("full_name, email, phone")
+      .eq("id", profile.student_id)
+      .maybeSingle();
+    student = studentRow || null;
+  }
+
+  const segment =
+    profile?.onboarding_segment && typeof profile.onboarding_segment === "object"
+      ? (profile.onboarding_segment as Record<string, any>)
+      : {};
+
+  return {
+    ...segment,
+    full_name: profile?.full_name || student?.full_name || null,
+    email: profile?.email || student?.email || null,
+    phone: profile?.phone || student?.phone || null,
+    student_email: profile?.email || student?.email || null,
+    student_phone: profile?.phone || student?.phone || null,
+    year_class: segment.yearClass || buildYearClass(profile?.school_year),
+    year: profile?.school_year ?? segment.schoolYear ?? null,
+    track: profile?.indirizzo || segment.schoolTrack || null,
+    goal: profile?.goal_grade ? `Obiettivo ${profile.goal_grade}` : segment.goal || null,
+    difficulty_focus:
+      profile?.current_focus_topic ||
+      profile?.current_focus_need ||
+      segment.focusTopic ||
+      segment.focusNeed ||
+      null,
+    next_assessment_subject: profile?.current_focus_subject || segment.focusSubject || null,
+  };
+}
+
 function buildStudentUpdate(meta: Record<string, any>) {
   const update: Record<string, any> = {};
   const yearClass = mapYear(meta) || meta.year_class || null;
@@ -222,6 +262,12 @@ function mapYear(meta: Record<string, any>) {
   if (!Number.isFinite(yearNum)) return null;
   const indirizzo = String(meta?.indirizzo || "").toLowerCase();
   if (indirizzo.includes("liceo")) return `${yearNum}°Liceo`;
+  return `${yearNum}°Superiore`;
+}
+
+function buildYearClass(value: unknown) {
+  const yearNum = Number(value);
+  if (!Number.isFinite(yearNum)) return null;
   return `${yearNum}°Superiore`;
 }
 

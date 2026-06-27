@@ -1,6 +1,7 @@
 // /app/api/account/username/route.ts
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth } from "@/lib/firebaseAdmin";
+import { supabaseServer } from "@/lib/supabase";
 import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
 
 /** Normalizza & valida */
@@ -17,8 +18,19 @@ export async function GET(req: Request) {
   const u = normalize(raw);
   if (!u) return NextResponse.json({ available: false, reason: "invalid" });
 
-  const snap = await adminDb.doc(`usernames/${u}`).get();
-  return NextResponse.json({ available: !snap.exists });
+  const db = supabaseServer();
+  const { data, error } = await db
+    .from("usernames")
+    .select("username")
+    .eq("username", u)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[username] availability check failed", error);
+    return NextResponse.json({ available: false, reason: "server_error" }, { status: 500 });
+  }
+
+  return NextResponse.json({ available: !data });
 }
 
 // POST /api/account/username  { username }
@@ -44,38 +56,47 @@ export async function POST(req: Request) {
   if (!u)
     return NextResponse.json({ error: "invalid_username" }, { status: 400 });
 
-  const usersRef = adminDb.doc(`users/${uid}`);
-  const unameRef = adminDb.doc(`usernames/${u}`);
+  const db = supabaseServer();
 
   try {
-    await adminDb.runTransaction(async (tx) => {
-      // leggi profilo utente (per vecchio username)
-      const userDoc = await tx.get(usersRef);
-      const prev = (userDoc.exists ? userDoc.data()?.username : null) as
-        | string
-        | null;
+    const { data: taken, error: takenError } = await db
+      .from("usernames")
+      .select("owner_auth_uid")
+      .eq("username", u)
+      .maybeSingle();
 
-      // se username già usato da altri -> 409
-      const unameDoc = await tx.get(unameRef);
-      if (unameDoc.exists && unameDoc.data()?.ownerUid !== uid) {
-        throw new Error("conflict");
+    if (takenError) throw takenError;
+    if (taken && taken.owner_auth_uid !== uid) {
+      return NextResponse.json({ error: "username_taken" }, { status: 409 });
+    }
+
+    const { data: current, error: currentError } = await db
+      .from("usernames")
+      .select("username")
+      .eq("owner_auth_uid", uid)
+      .maybeSingle();
+
+    if (currentError) throw currentError;
+
+    const now = new Date().toISOString();
+    if (current) {
+      if (current.username !== u) {
+        const { error } = await db
+          .from("usernames")
+          .update({ username: u, updated_at: now })
+          .eq("owner_auth_uid", uid);
+        if (error) throw error;
       }
+    } else {
+      const { error } = await db.from("usernames").insert({
+        username: u,
+        owner_auth_uid: uid,
+        updated_at: now,
+      });
+      if (error) throw error;
+    }
 
-      // libera il vecchio
-      if (prev && prev !== u) {
-        const prevRef = adminDb.doc(`usernames/${prev}`);
-        const prevDoc = await tx.get(prevRef);
-        if (prevDoc.exists && prevDoc.data()?.ownerUid === uid) {
-          tx.delete(prevRef);
-        }
-      }
-
-      // riserva quello nuovo
-      tx.set(unameRef, { ownerUid: uid, updatedAt: Date.now() });
-
-      // aggiorna profilo utente nel DB
-      tx.set(usersRef, { username: u, updatedAt: Date.now() }, { merge: true });
-    });
+    await syncLiteProfilePatch(uid, { nickname: u });
 
     // opzionale: aggiorna displayName in Firebase Auth
     try {
@@ -84,17 +105,12 @@ export async function POST(req: Request) {
       // non blocca l'operazione se fallisce
     }
 
-    try {
-      await syncLiteProfilePatch(uid, { nickname: u });
-    } catch (err) {
-      console.error("[username] lite sync failed", err);
-    }
-
     return NextResponse.json({ ok: true, username: u });
   } catch (e: any) {
-    if (e.message === "conflict") {
+    if (e?.code === "23505") {
       return NextResponse.json({ error: "username_taken" }, { status: 409 });
     }
+    console.error("[username] update failed", e);
     return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
 }

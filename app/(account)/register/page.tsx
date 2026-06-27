@@ -4,8 +4,11 @@ import { useState, useEffect, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   createUserWithEmailAndPassword,
+  getAdditionalUserInfo,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  type User,
+  type UserCredential,
 } from "firebase/auth";
 import { Check } from "lucide-react";
 import { auth } from "@/lib/firebase";
@@ -16,7 +19,12 @@ export default function Register() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const redirectTo = searchParams?.get("redirect") || "/account";
+  const rawRedirect = searchParams?.get("redirect");
+  const redirectTo = sanitizeLocalRedirect(rawRedirect, "/account");
+  const studyReturnTo = sanitizeLocalRedirect(rawRedirect, "/");
+  const onboardingHref = `/onboarding?redirect=${encodeURIComponent(
+    sanitizeLocalRedirect(studyReturnTo, "/"),
+  )}`;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,12 +32,13 @@ export default function Register() {
   const [subscribeNewsletter, setSubscribeNewsletter] = useState(false);
   const [isLogin, setIsLogin] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [authRedirectPaused, setAuthRedirectPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) router.replace(redirectTo);
-  }, [user, router, redirectTo]);
+    if (user && !authRedirectPaused) router.replace(redirectTo);
+  }, [user, authRedirectPaused, router, redirectTo]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -47,25 +56,16 @@ export default function Register() {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
+        setAuthRedirectPaused(true);
         const credential = await createUserWithEmailAndPassword(
           auth,
           email,
-          password
+          password,
         );
         createdUser = credential.user;
         if (createdUser) {
           try {
-            const token = await createdUser.getIdToken();
-            await fetch("/api/me/init-lite-profile", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                fullName: createdUser.displayName || null,
-              }),
-            });
+            await initLiteProfile(createdUser);
           } catch (initError) {
             console.warn("Lite profile init failed:", initError);
           }
@@ -89,12 +89,28 @@ export default function Register() {
           }
         }
       }
-      router.replace(redirectTo);
+      router.replace(createdUser ? onboardingHref : redirectTo);
     } catch (err: any) {
+      setAuthRedirectPaused(false);
       setError(err.message ?? "Qualcosa è andato storto.");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleGoogleSuccess(credential: UserCredential) {
+    const isNewUser = Boolean(getAdditionalUserInfo(credential)?.isNewUser);
+    if (isNewUser) {
+      try {
+        await initLiteProfile(credential.user);
+      } catch (initError) {
+        console.warn("Lite profile init failed:", initError);
+      }
+      router.replace(onboardingHref);
+      return;
+    }
+    setAuthRedirectPaused(false);
+    router.replace(redirectTo);
   }
 
   async function handleForgotPassword() {
@@ -118,7 +134,7 @@ export default function Register() {
         } else {
           setError(
             humanizeFirebaseError(apiResult.error) ||
-              "Non riesco a inviare l'email di reset."
+              "Non riesco a inviare l'email di reset.",
           );
           return;
         }
@@ -129,7 +145,7 @@ export default function Register() {
       setError(
         humanizeFirebaseError(code) ||
           err?.message ||
-          "Non riesco a inviare l'email di reset."
+          "Non riesco a inviare l'email di reset.",
       );
     } finally {
       setLoading(false);
@@ -143,7 +159,12 @@ export default function Register() {
           {isLogin ? "Accedi" : "Crea il tuo account"}
         </h1>
 
-        <GoogleButton disabled={loading} redirectTo="/account" />
+        <GoogleButton
+          disabled={loading}
+          onStart={() => setAuthRedirectPaused(true)}
+          onSuccess={handleGoogleSuccess}
+          onError={() => setAuthRedirectPaused(false)}
+        />
 
         <div className="my-4 flex items-center gap-2">
           <hr className="flex-grow border-slate-300" />
@@ -221,7 +242,7 @@ export default function Register() {
                   <Check className="pointer-events-none absolute h-3 w-3 text-white opacity-0 transition peer-checked:opacity-100" />
                 </span>
                 <span className="leading-tight flex-1">
-                  Ricevi consigli e materiale ogni settimana (opzionale).
+                  Ricevi guide e materiale di studio (opzionale)
                 </span>
               </label>
             </div>
@@ -274,16 +295,34 @@ export default function Register() {
   );
 }
 
+async function initLiteProfile(user: User) {
+  const token = await user.getIdToken();
+  await fetch("/api/me/init-lite-profile", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fullName: user.displayName || null,
+    }),
+  });
+}
+
+function sanitizeLocalRedirect(value: string | null | undefined, fallback: string) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return fallback;
+  return value;
+}
+
 function getPasswordResetUrl() {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
   return `${baseUrl.replace(/\/$/, "")}/reset-password`;
 }
 
 type ResetApiResult = { ok: true } | { ok: false; error: string };
 
 async function requestPasswordResetViaApi(
-  email: string
+  email: string,
 ): Promise<ResetApiResult> {
   try {
     const res = await fetch("/api/auth/password-reset", {

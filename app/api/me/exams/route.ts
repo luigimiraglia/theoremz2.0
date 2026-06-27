@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth } from "@/lib/firebaseAdmin";
 import { supabaseServer } from "@/lib/supabase";
 import { refreshBriefSafe } from "@/lib/black/gradeSync";
 import { resolveBlackStudentIdentity } from "@/lib/black/studentIdentity";
@@ -24,47 +24,54 @@ export async function GET(req: Request) {
   const db = supabaseServer();
   const { data, error } = await db
     .from("student_assessments")
-    .select("id, date, subject, notes, grade, grade_subject, grade_id, kind")
+    .select("id, date, subject, notes, grade, kind")
     .eq("user_id", uid)
     .order("date", { ascending: true });
   if (error) {
     console.error("[me-exams] supabase query failed", error);
-  } else if ((data?.length ?? 0) > 0) {
-    const items = (data || [])
-      .filter((row) => !row.kind || row.kind === "verifica")
-      .map((row) => ({
-        id: row.id,
-        date: row.date,
-        subject: row.subject ?? null,
-        notes: row.notes ?? null,
-        grade: typeof row.grade === "number" ? row.grade : null,
-        grade_subject: row.grade_subject ?? null,
-        grade_id: row.grade_id ?? null,
-      }));
-    if (items.length) return NextResponse.json({ items });
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
 
-  // fallback to legacy Firestore collection for users not yet migrated
-  const snap = await adminDb
-    .collection(`users/${uid}/exams`)
-    .orderBy("date")
-    .get();
-  const legacyItems = snap.docs.map((d) => {
-    const payload = d.data() as any;
+  const assessmentRows = (data || []).filter((row) => !row.kind || row.kind === "verifica");
+  const assessmentIds = assessmentRows.map((row) => row.id);
+  let gradesByAssessment = new Map<string, { id: string; subject: string | null; grade: number | null }>();
+  if (assessmentIds.length) {
+    const { data: grades, error: gradesError } = await db
+      .from("student_grades")
+      .select("id, assessment_id, subject, grade")
+      .eq("user_id", uid)
+      .in("assessment_id", assessmentIds);
+    if (gradesError) {
+      console.error("[me-exams] linked grades query failed", gradesError);
+    } else {
+      gradesByAssessment = new Map(
+        (grades || [])
+          .filter((row) => row.assessment_id)
+          .map((row) => [
+            row.assessment_id as string,
+            {
+              id: row.id,
+              subject: row.subject ?? null,
+              grade: typeof row.grade === "number" ? row.grade : null,
+            },
+          ]),
+      );
+    }
+  }
+
+  const items = assessmentRows.map((row) => {
+    const linkedGrade = gradesByAssessment.get(row.id);
     return {
-      id: d.id,
-      date: payload.date,
-      subject: payload.subject ?? null,
-      notes: payload.notes ?? null,
-      grade:
-        typeof payload.grade === "number"
-          ? payload.grade
-          : payload.gradeValue ?? null,
-      grade_subject: payload.grade_subject ?? null,
-      grade_id: payload.gradeId || payload.grade_id || null,
+      id: row.id,
+      date: row.date,
+      subject: row.subject ?? null,
+      notes: row.notes ?? null,
+      grade: typeof row.grade === "number" ? row.grade : linkedGrade?.grade ?? null,
+      grade_subject: linkedGrade?.subject ?? row.subject ?? null,
+      grade_id: linkedGrade?.id ?? null,
     };
   });
-  return NextResponse.json({ items: legacyItems });
+  return NextResponse.json({ items });
 }
 
 // POST { date: YYYY-MM-DD, subject?: string|null }
@@ -91,27 +98,15 @@ export async function POST(req: Request) {
     notes,
   });
 
-  const doc = await adminDb.collection(`users/${uid}/exams`).add({
+  const id = await recordStudentAssessmentLite({
+    userId: uid,
+    seed: blackAssessmentId || `account:${date}:${subject || ""}:${Date.now()}`,
     date,
     subject,
     notes,
-    blackAssessmentId: blackAssessmentId || null,
-    createdAt: Date.now(),
+    kind: "verifica",
   });
-
-  try {
-    await recordStudentAssessmentLite({
-      userId: uid,
-      seed: blackAssessmentId || doc.id,
-      date,
-      subject,
-      notes,
-      kind: "verifica",
-    });
-  } catch (error) {
-    console.error("[me-exams] lite sync failed", error);
-  }
-  return NextResponse.json({ ok: true, id: doc.id });
+  return NextResponse.json({ ok: true, id });
 }
 
 async function syncBlackAssessment({
