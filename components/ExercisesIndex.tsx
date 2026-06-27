@@ -32,7 +32,13 @@ export default function ExercisesIndex({
   }, [q, initialData]);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(1000px_600px_at_10%_-20%,rgba(59,130,246,.25),transparent)]">
+    <div
+      className="min-h-screen"
+      style={{
+        backgroundImage:
+          "radial-gradient(1000px 600px at 10% -20%, rgba(59,130,246,.25), transparent)",
+      }}
+    >
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 pt-10 pb-20">
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>

@@ -3,6 +3,7 @@ Allow: /
 Disallow: /api/
 Disallow: /_next/
 Disallow: /notes/
+Disallow: /studio/
 
 Sitemap: https://theoremz.com/sitemap.xml
 Sitemap: https://theoremz.com/video-sitemap.xml

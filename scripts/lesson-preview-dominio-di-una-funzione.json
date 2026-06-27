@@ -1,0 +1,1687 @@
+{
+  "_type": "lesson",
+  "title": "Dominio di una funzione",
+  "subtitle": "Comprendere il dominio delle funzioni",
+  "nomeAbbreviato": "Dominio delle funzioni",
+  "materia": "matematica",
+  "difficolta": "intermedia",
+  "slug": {
+    "_type": "slug",
+    "current": "dominio-di-una-funzione"
+  },
+  "categoria": [
+    "Studio di funzione",
+    "Algebra"
+  ],
+  "classe": [
+    "3º Scientifico",
+    "4º Scientifico",
+    "3º Classico",
+    "4º Classico",
+    "3º Linguistico",
+    "4º Linguistico"
+  ],
+  "content": [
+    {
+      "_type": "section",
+      "_key": "spuear1i3",
+      "heading": "Cos'è il dominio di una funzione",
+      "shortTitle": "Cos'è il dominio"
+    },
+    {
+      "_type": "block",
+      "_key": "6d050ejfx",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "8onq70y5j",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "l1036m4w6",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "ykim4hyx1",
+          "text": "Il ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "dzj55s342",
+          "text": "dominio ",
+          "marks": [
+            "blueBold"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "pf1lkmp5o",
+          "text": "di una funzione è l'insieme di tutti i numeri che puoi inserire nella funzione stessa senza causare errori matematici.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "bz0kpvtds",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "4gzahfasm",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "s0m3cqnle",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "czm9r9fum",
+          "_type": "inlineLatex",
+          "code": "f(x) = \\frac{1}{x}"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "zv7zradnm",
+          "text": "Ad esempio, per la funzione ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "ibgimk490",
+          "text": "f(x) = \\frac{1}{x}",
+          "marks": [
+            "czm9r9fum"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "pr9phy7ca",
+          "text": " il dominio è l'insieme di tutti i numeri reali eccetto zero, perché non puoi dividere per zero.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "yqy3nf7o9",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "t8e33ym94",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "9zhgkhz54",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "72b3vjaj5",
+          "text": "📌 [IMMAGINE: Un grafico di una funzione razionale che mostra un asintoto verticale a x = 0 con il dominio indicato]",
+          "marks": [
+            "redBold"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "0lq18pnx7",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "o1h1t5apc",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "0yhua5ylb",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "wlvb4w975",
+          "text": "Per comprendere meglio il dominio, pensa al dominio come al \"campo di esistenza\" della funzione, cioè dove la funzione è definita.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "262lpfwuq",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "8w5otremi",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "pv5nlpiej",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "6lkbhm8nm",
+          "_type": "inlineLatex",
+          "code": "p(x) = x^2 - 3x + 2"
+        },
+        {
+          "_key": "xgowcr0df",
+          "_type": "inlineLatex",
+          "code": ", il dominio è l'insieme di tutti i numeri reali \\(\\mathbb{R}\\), perché non ci sono restrizioni."
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "jm801v8mc",
+          "text": "Per le funzioni polinomiali, come ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "ja6hju710",
+          "text": "p(x) = x^2 - 3x + 2",
+          "marks": [
+            "6lkbhm8nm"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "vfa0ik74v",
+          "text": ", il dominio è l'insieme di tutti i numeri reali \\(\\mathbb{R}\\), perché non ci sono restrizioni.",
+          "marks": [
+            "xgowcr0df"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "u6e2x2fpj",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "1coe8h68x",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "4y5ydv633",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "91wuaog93",
+          "_type": "inlineLatex",
+          "code": "f(x) = \\sqrt{x-1}"
+        },
+        {
+          "_key": "f0t0qw2as",
+          "_type": "inlineLatex",
+          "code": "x \\geq 1"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "7knaip3ar",
+          "text": "Per le funzioni con radici quadrate, come ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "ydg0yqtxe",
+          "text": "f(x) = \\sqrt{x-1}",
+          "marks": [
+            "91wuaog93"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "sb9w00w4z",
+          "text": ", il dominio è l'insieme dei numeri reali per cui il radicando è maggiore o uguale a zero: ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "k2a86t37k",
+          "text": "x \\geq 1",
+          "marks": [
+            "f0t0qw2as"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "0hrru2e77",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "dmhazzs0q",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "section",
+      "_key": "9j6q2kikg",
+      "heading": "Spieghiamo con calma il calcolo del dominio",
+      "shortTitle": "Calcolo del dominio"
+    },
+    {
+      "_type": "block",
+      "_key": "y0xdvj4e2",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "kemsv11l6",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "4j2buz7ot",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "7dk6udq2g",
+          "text": "Calcolare il dominio di una funzione significa determinare i valori di \\(x\\) per cui la funzione è definita.",
+          "marks": [
+            "highlightBlue"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "w1eicsm5e",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "to5l5zdub",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "rjq2ab4xx",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "is45fn0eq",
+          "_type": "inlineLatex",
+          "code": "f(x) = \\frac{1}{x-2}"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "bo9467vt5",
+          "text": "Iniziamo con le funzioni razionali, come ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "h2v2yguqv",
+          "text": "f(x) = \\frac{1}{x-2}",
+          "marks": [
+            "is45fn0eq"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "046bp85lp",
+          "text": ". Qui il dominio è dato da tutti i numeri reali eccetto quelli che annullano il denominatore.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "ur0e63g1e",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "92czbj17a",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "jkp3hu2wf",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "252zem0hp",
+          "_type": "inlineLatex",
+          "code": "x - 2 \\neq 0"
+        },
+        {
+          "_key": "ule4xl6mo",
+          "_type": "inlineLatex",
+          "code": "x \\neq 2"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "dad56yrq2",
+          "text": "Per trovare il dominio, risolvi l'equazione ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "z4h7pdc52",
+          "text": "x - 2 \\neq 0",
+          "marks": [
+            "252zem0hp"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "eqeru80cy",
+          "text": ". La soluzione è ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "amz58pjoi",
+          "text": "x \\neq 2",
+          "marks": [
+            "ule4xl6mo"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "ivr64a3qp",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "6hcag0vk4",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "1j2olq5wc",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "61vdjf99r",
+          "_type": "inlineLatex",
+          "code": "f(x) = \\sqrt{3x + 9}"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "cjp21mzdd",
+          "text": "Passiamo alle funzioni con radici quadrate, come ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "5mtcj9hhc",
+          "text": "f(x) = \\sqrt{3x + 9}",
+          "marks": [
+            "61vdjf99r"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "dbgnx1e22",
+          "text": ". Il dominio è l'insieme di valori di \\(x\\) che rendono il radicando non negativo.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "9rwh76ba8",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "8bhqo1pgt",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "1orpn4s2i",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "imdlk24gt",
+          "_type": "inlineLatex",
+          "code": "3x + 9 \\geq 0"
+        },
+        {
+          "_key": "0797r3xv0",
+          "_type": "inlineLatex",
+          "code": "x \\geq -3"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "ssgwz5o6x",
+          "text": "Devi risolvere l'inequazione ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "gg88kw739",
+          "text": "3x + 9 \\geq 0",
+          "marks": [
+            "imdlk24gt"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "nfozbh20j",
+          "text": ", che si semplifica in ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "3y68v94ou",
+          "text": "x \\geq -3",
+          "marks": [
+            "0797r3xv0"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "hrj33xudd",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "nltnz8ivm",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "dn49fumu5",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "t2u9porss",
+          "_type": "inlineLatex",
+          "code": "f(x) = \\log(x-1)"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "t5ven9irl",
+          "text": "Infine, per i logaritmi come ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "kw6uw87cj",
+          "text": "f(x) = \\log(x-1)",
+          "marks": [
+            "t2u9porss"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "e67j8i8g4",
+          "text": ", il dominio è dato dai valori di \\(x\\) che rendono l'argomento del logaritmo positivo.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "95eg5d8hr",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "eq0cl4qph",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "ra4ekakb6",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "p3dutnf0i",
+          "_type": "inlineLatex",
+          "code": "x - 1 > 0"
+        },
+        {
+          "_key": "ejpgjv0sc",
+          "_type": "inlineLatex",
+          "code": "x > 1"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "p4j5i1ncm",
+          "text": "Risolvi l'inequazione ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "ljg1jk8vp",
+          "text": "x - 1 > 0",
+          "marks": [
+            "p3dutnf0i"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "8kos8jcv5",
+          "text": ", quindi il dominio è ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "fr8ucvv50",
+          "text": "x > 1",
+          "marks": [
+            "ejpgjv0sc"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "i9681efnk",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "rlgyvzghj",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "section",
+      "_key": "f3s3huiuu",
+      "heading": "Le formule per calcolare il dominio",
+      "shortTitle": "Formule del dominio"
+    },
+    {
+      "_type": "block",
+      "_key": "idk7uxojz",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "7a0vku3yn",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "latex",
+      "_key": "8ywlb7hyd",
+      "code": "D(f) = \\{ x \\in \\mathbb{R} \\mid x \\neq 0 \\}",
+      "display": false
+    },
+    {
+      "_type": "block",
+      "_key": "xaf2qkueg",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "977hg7eiv",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "ec95aqjd9",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "sdv5wj0f2",
+          "_type": "inlineLatex",
+          "code": "f(x) = \\frac{1}{x}"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "0z9nophxy",
+          "text": "Esempio: Per ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "v9ymdc4l2",
+          "text": "f(x) = \\frac{1}{x}",
+          "marks": [
+            "sdv5wj0f2"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "yakxln8ut",
+          "text": ", il dominio è tutti i numeri reali tranne zero.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "m79giign0",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "fw18grlu6",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "latex",
+      "_key": "cvzoddlwv",
+      "code": "D(f) = \\{ x \\in \\mathbb{R} \\mid x \\geq 1 \\}",
+      "display": false
+    },
+    {
+      "_type": "block",
+      "_key": "h4dgu3j2c",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "skr9qva5s",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "623su6tdb",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "q8577zlkc",
+          "_type": "inlineLatex",
+          "code": "f(x) = \\sqrt{x-1}"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "zuk1aw7a9",
+          "text": "Esempio: Per ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "yo36iod2r",
+          "text": "f(x) = \\sqrt{x-1}",
+          "marks": [
+            "q8577zlkc"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "p2nqn3z0e",
+          "text": ", il dominio è tutti i numeri reali maggiori o uguali a 1.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "7b5r01r25",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "2llz8ow1s",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "latex",
+      "_key": "jhgnojcia",
+      "code": "D(f) = \\{ x \\in \\mathbb{R} \\mid x > 1 \\}",
+      "display": false
+    },
+    {
+      "_type": "block",
+      "_key": "6cfz9jhdp",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "0e7lauxfb",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "9j9icl90j",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "qcquyhwca",
+          "_type": "inlineLatex",
+          "code": "f(x) = \\log(x-1)"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "bc7nlfvzj",
+          "text": "Esempio: Per ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "bz6bgtgqr",
+          "text": "f(x) = \\log(x-1)",
+          "marks": [
+            "qcquyhwca"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "64utdwdv9",
+          "text": ", il dominio è tutti i numeri reali maggiori di 1.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "6lncy5xoj",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "zaq66axcp",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "section",
+      "_key": "9efj0gkpk",
+      "heading": "Esempi svolti di calcolo del dominio",
+      "shortTitle": "Esempi svolti"
+    },
+    {
+      "_type": "block",
+      "_key": "f29h7fcuo",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "oszcm7rpf",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "15anq8gqw",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "7knuvasox",
+          "text": "📌 [IMMAGINE: Grafico di una funzione razionale con un asintoto a x = 3]",
+          "marks": [
+            "redBold"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "19grweu2j",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "i7emkmsri",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "2v6p1359v",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "h41uood0h",
+          "_type": "inlineLatex",
+          "code": "f(x) = \\frac{x+2}{x-3}"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "z3dhsqpy4",
+          "text": "Esempio 1: Trova il dominio di ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "ffhrzx11i",
+          "text": "f(x) = \\frac{x+2}{x-3}",
+          "marks": [
+            "h41uood0h"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "5p6jko5cm",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "sndz7asvo",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "9cttmcxgy",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "b2pjb36id",
+          "_type": "inlineLatex",
+          "code": "x - 3 = 0"
+        },
+        {
+          "_key": "5npib38ih",
+          "_type": "inlineLatex",
+          "code": "x \\neq 3"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "z9kcdo1rm",
+          "text": "Calcola dove il denominatore è zero: ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "6rnbjq651",
+          "text": "x - 3 = 0",
+          "marks": [
+            "b2pjb36id"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "onywxn1of",
+          "text": ", quindi ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "72tpun895",
+          "text": "x \\neq 3",
+          "marks": [
+            "5npib38ih"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "0ixwyxgzr",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "9gqva3m5i",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "ryezoso0g",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "k8rwubztt",
+          "_type": "inlineLatex",
+          "code": "\\mathbb{R} \\setminus \\{3\\}"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "yb96jr6o1",
+          "text": "Il dominio è ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "mnze5vjaz",
+          "text": "\\mathbb{R} \\setminus \\{3\\}",
+          "marks": [
+            "k8rwubztt"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "d1zpm8mnf",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "1o8br7l0x",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "jerboaqj1",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "p0pdd6fgt",
+          "text": "Errore comune: ",
+          "marks": [
+            "redBold"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "dc5tn7qx0",
+          "text": "non controllare il denominatore.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "grznzxo0m",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "wmg8jrw96",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "qhk2h6c04",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "sfju2f4fo",
+          "text": "📌 [IMMAGINE: Grafico di una funzione con radice quadrata che mostra la parte definita su x >= 0]",
+          "marks": [
+            "redBold"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "tbw35n47i",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "lvxcmvc6h",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "4qnlbffu0",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "ez5wav3iy",
+          "_type": "inlineLatex",
+          "code": "f(x) = \\sqrt{x^2 - 4}"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "i8o0fdf2u",
+          "text": "Esempio 2: Trova il dominio di ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "4dqak9q2l",
+          "text": "f(x) = \\sqrt{x^2 - 4}",
+          "marks": [
+            "ez5wav3iy"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "rxn433mar",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "swgaaiil8",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "vs94et6uc",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "efryjisk0",
+          "_type": "inlineLatex",
+          "code": "x^2 - 4 \\geq 0"
+        },
+        {
+          "_key": "fj94kc1ng",
+          "_type": "inlineLatex",
+          "code": "x \\leq -2 \\text{ o } x \\geq 2"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "z7qdgw6ai",
+          "text": "Risolvi l'inequazione ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "9qxrgr97q",
+          "text": "x^2 - 4 \\geq 0",
+          "marks": [
+            "efryjisk0"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "jrs2rknrz",
+          "text": ", quindi ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "kjteayy4i",
+          "text": "x \\leq -2 \\text{ o } x \\geq 2",
+          "marks": [
+            "fj94kc1ng"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "9ko4kjqlg",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "7056vuxs9",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "ugdo87ozj",
+      "style": "normal",
+      "markDefs": [
+        {
+          "_key": "txdgwd37k",
+          "_type": "inlineLatex",
+          "code": "(-\\infty, -2] \\cup [2, \\infty)"
+        }
+      ],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "kz6fn3y6l",
+          "text": "Il dominio è ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "3vyjj5qyw",
+          "text": "(-\\infty, -2] \\cup [2, \\infty)",
+          "marks": [
+            "txdgwd37k"
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "dm10df2ck",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "p3i8hlv9x",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "h2u2nj9u4",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "oanwmbmw6",
+          "text": "Errore comune: ",
+          "marks": [
+            "redBold"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "hnn07j22m",
+          "text": "non considerare entrambe le soluzioni dell'inequazione.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "y3lmfc0oi",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "g5hrd6se9",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "horizontalRule",
+      "_key": "mvn8rtmxv"
+    },
+    {
+      "_type": "block",
+      "_key": "au5sfk4wu",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "bkm24fh4g",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "section",
+      "_key": "zmish43ke",
+      "heading": "Errori comuni nel calcolo del dominio",
+      "shortTitle": "Errori comuni"
+    },
+    {
+      "_type": "block",
+      "_key": "1mjuij1c9",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "pyf4xhgav",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "qbdxhux2g",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "qihqtkpqv",
+          "text": "❌ ",
+          "marks": [
+            "redBold"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "m5ysxi37i",
+          "text": "Dimenticare di considerare i valori per cui il denominatore è zero → ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "7ercy41dp",
+          "text": "✅ ",
+          "marks": [
+            "bold"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "tiemfz6qg",
+          "text": "Calcolare sempre dove il denominatore si annulla.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "8redw7l9g",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "d194w3qu9",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "ijgj5z5rw",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "o46zmdfju",
+          "text": "❌ ",
+          "marks": [
+            "redBold"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "tn840t4fq",
+          "text": "Non risolvere correttamente le disequazioni per le radici → ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "wpnxjf0ok",
+          "text": "✅ ",
+          "marks": [
+            "bold"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "ysovurkvx",
+          "text": "Assicurarsi che il radicando sia non negativo.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "8st6jrl46",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "ncp0ot2b7",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "etn9lxo8b",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "k00ooubda",
+          "text": "❌ ",
+          "marks": [
+            "redBold"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "vlkxlb2fi",
+          "text": "Confondere dominio e codominio → ",
+          "marks": []
+        },
+        {
+          "_type": "span",
+          "_key": "chenr4spy",
+          "text": "✅ ",
+          "marks": [
+            "bold"
+          ]
+        },
+        {
+          "_type": "span",
+          "_key": "vllyjnujh",
+          "text": "Ricorda: il dominio riguarda i valori di input, il codominio i valori di output.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "amv0laoiw",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "0mgknsvz7",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "section",
+      "_key": "di264ile3",
+      "heading": "Domande veloci sul dominio",
+      "shortTitle": "Domande veloci"
+    },
+    {
+      "_type": "block",
+      "_key": "lz682nlse",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "lwr0f3uh2",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "rhlfos9a3",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "k584e13la",
+          "text": "Cos'è il dominio? Il dominio è l'insieme dei valori di input per cui la funzione è definita.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "jm1dzq2l1",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "g8z8br014",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "rvucfarez",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "tcij637nw",
+          "text": "Qual è il dominio di una funzione fratta? È l'insieme dei valori reali eccetto quelli che annullano il denominatore.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "tqfrfz235",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "t8y2w5aml",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "5vmim3rmb",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "iv1cw0vez",
+          "text": "Dominio di un logaritmo? Il dominio è dato dai valori di \\(x\\) per cui l'argomento del logaritmo è maggiore di zero.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "7etxctp06",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "0l7i0qozw",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "4m5499k07",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "5jyvx2bjn",
+          "text": "Dominio di una radice? Per una radice quadrata, il dominio è dato dai valori di \\(x\\) per cui il radicando è non negativo.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "z8r8kqbfe",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "92k89kgwr",
+          "text": "",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "g0o17ck7m",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "f91ipuopy",
+          "text": "Differenza tra dominio e codominio? Il dominio riguarda i possibili input della funzione, mentre il codominio i possibili output.",
+          "marks": []
+        }
+      ]
+    }
+  ]
+}

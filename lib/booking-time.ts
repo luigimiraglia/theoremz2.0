@@ -23,10 +23,6 @@ function parseTime(value: string) {
   return { hours, minutes } as TimeParts;
 }
 
-function pad(value: number) {
-  return String(value).padStart(2, "0");
-}
-
 function getTimeZoneOffset(date: Date, timeZone: string) {
   const dtf = new Intl.DateTimeFormat("en-GB", {
     timeZone,

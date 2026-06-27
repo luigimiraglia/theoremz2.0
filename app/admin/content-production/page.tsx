@@ -261,13 +261,6 @@ function stripHookFromScript(hook?: string | null, script?: string | null) {
   return rawScript;
 }
 
-function buildScriptText(hook?: string | null, script?: string | null) {
-  const hookLine = normalizeValue(hook);
-  const body = normalizeValue(stripHookFromScript(hookLine, script));
-  if (hookLine && body) return `${hookLine}\n${body}`;
-  return hookLine || body || "";
-}
-
 function getScriptPreview(script?: string | null, max = 140) {
   const cleaned = normalizeValue(script);
   if (!cleaned) return "Script non disponibile.";
@@ -791,8 +784,9 @@ export default function ContentProductionDashboard() {
     setWorkspaceItems((prev) => prev.filter((item) => item.key !== key));
     setWorkspaceErrors((prev) => {
       if (!(key in prev)) return prev;
-      const { [key]: _, ...rest } = prev;
-      return rest;
+      const next = { ...prev };
+      delete next[key];
+      return next;
     });
   }, []);
 
@@ -805,8 +799,9 @@ export default function ContentProductionDashboard() {
       );
       setWorkspaceErrors((prev) => {
         if (!(key in prev)) return prev;
-        const { [key]: _, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next[key];
+        return next;
       });
     },
     []
@@ -823,8 +818,9 @@ export default function ContentProductionDashboard() {
     );
     setWorkspaceErrors((prev) => {
       if (!(key in prev)) return prev;
-      const { [key]: _, ...rest } = prev;
-      return rest;
+      const next = { ...prev };
+      delete next[key];
+      return next;
     });
   }, []);
 
@@ -840,8 +836,9 @@ export default function ContentProductionDashboard() {
       );
       setWorkspaceErrors((prev) => {
         if (!(key in prev)) return prev;
-        const { [key]: _, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next[key];
+        return next;
       });
     },
     []
@@ -857,8 +854,9 @@ export default function ContentProductionDashboard() {
     );
     setWorkspaceErrors((prev) => {
       if (!(key in prev)) return prev;
-      const { [key]: _, ...rest } = prev;
-      return rest;
+      const next = { ...prev };
+      delete next[key];
+      return next;
     });
   }, []);
 
@@ -872,8 +870,9 @@ export default function ContentProductionDashboard() {
     );
     setWorkspaceErrors((prev) => {
       if (!(key in prev)) return prev;
-      const { [key]: _, ...rest } = prev;
-      return rest;
+      const next = { ...prev };
+      delete next[key];
+      return next;
     });
   }, []);
 
@@ -978,8 +977,9 @@ export default function ContentProductionDashboard() {
           });
           setWorkspaceErrors((prev) => {
             if (!(item.key in prev)) return prev;
-            const { [item.key]: _, ...rest } = prev;
-            return rest;
+            const next = { ...prev };
+            delete next[item.key];
+            return next;
           });
         } else {
           await fetchVideos();
@@ -1071,6 +1071,38 @@ export default function ContentProductionDashboard() {
     setPlanDirty(true);
   }, []);
 
+  const fetchCalendarStatuses = useCallback(async () => {
+    if (!hasAccess) return;
+    setCalendarStatusLoading(true);
+    try {
+      const headers = await buildHeaders();
+      const res = await fetch(
+        `/api/admin/content-editorial-calendar?start=${encodeURIComponent(
+          calendarRange.start
+        )}&end=${encodeURIComponent(calendarRange.end)}`,
+        { headers, cache: "no-store" }
+      );
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const details = [json?.error, json?.details].filter(Boolean).join(" · ");
+        throw new Error(details || `HTTP ${res.status}`);
+      }
+      const statuses: Record<string, string> = {};
+      const list = Array.isArray(json?.statuses) ? json.statuses : [];
+      for (const item of list) {
+        if (item?.date) statuses[String(item.date)] = String(item.status || "");
+      }
+      setCalendarStatuses(statuses);
+      if (typeof json?.trackingStart === "string") {
+        setCalendarTrackingStart(json.trackingStart);
+      }
+    } catch (err) {
+      console.warn("[content-production] calendar status fetch failed", err);
+    } finally {
+      setCalendarStatusLoading(false);
+    }
+  }, [calendarRange.end, calendarRange.start, hasAccess]);
+
   const handleSavePlan = useCallback(async () => {
     if (planSaving) return;
     const cleaned: Array<{ format: string; videoCount: number }> = [];
@@ -1112,45 +1144,13 @@ export default function ContentProductionDashboard() {
       );
       setPlanSavedAt(new Date().toISOString());
       setPlanDirty(false);
-      fetchCalendarStatuses();
+      void fetchCalendarStatuses();
     } catch (err: any) {
       setPlanError(err?.message || "Errore salvataggio programma");
     } finally {
       setPlanSaving(false);
     }
-  }, [planItems, planSaving]);
-
-  const fetchCalendarStatuses = useCallback(async () => {
-    if (!hasAccess) return;
-    setCalendarStatusLoading(true);
-    try {
-      const headers = await buildHeaders();
-      const res = await fetch(
-        `/api/admin/content-editorial-calendar?start=${encodeURIComponent(
-          calendarRange.start
-        )}&end=${encodeURIComponent(calendarRange.end)}`,
-        { headers, cache: "no-store" }
-      );
-      const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        const details = [json?.error, json?.details].filter(Boolean).join(" · ");
-        throw new Error(details || `HTTP ${res.status}`);
-      }
-      const statuses: Record<string, string> = {};
-      const list = Array.isArray(json?.statuses) ? json.statuses : [];
-      for (const item of list) {
-        if (item?.date) statuses[String(item.date)] = String(item.status || "");
-      }
-      setCalendarStatuses(statuses);
-      if (typeof json?.trackingStart === "string") {
-        setCalendarTrackingStart(json.trackingStart);
-      }
-    } catch (err) {
-      console.warn("[content-production] calendar status fetch failed", err);
-    } finally {
-      setCalendarStatusLoading(false);
-    }
-  }, [calendarRange.end, calendarRange.start, hasAccess]);
+  }, [fetchCalendarStatuses, planItems, planSaving]);
 
   const handleAddFormat = useCallback(async () => {
     const name = newFormat.trim();

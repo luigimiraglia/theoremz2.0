@@ -1559,7 +1559,10 @@ export default function AccountPage() {
     <main className="mx-auto max-w-6xl p-4 sm:p-6 space-y-6">
       {/* HERO */}
       <section className="relative overflow-hidden rounded-2xl border border-indigo-200/50 bg-gradient-to-br from-cyan-600 via-blue-600 to-sky-600 text-white shadow-[0_10px_40px_rgba(37,99,235,0.35)]">
-        <div className="absolute inset-0 opacity-25 mix-blend-overlay bg-[radial-gradient(circle_at_0%_0%,white,transparent_50%)]" />
+        <div
+          className="absolute inset-0 opacity-25 mix-blend-overlay"
+          style={{ backgroundImage: "radial-gradient(circle at 0% 0%, white, transparent 50%)" }}
+        />
         <div className="relative p-5 sm:p-8">
           {/* Badges in alto a sinistra - visibili solo su mobile */}
           <div className="sm:hidden mb-2 -mt-2 -ml-1">
@@ -3241,22 +3244,6 @@ function ProfileSection(props: {
     indirizzo?: string;
     goalMin?: number; // 5..120
     showBadges?: boolean;
-    onboardingSegment?: {
-      cycle?: string;
-      schoolYear?: number;
-      schoolTrackCode?: string;
-      schoolTrackLabel?: string;
-      subjectCode?: string;
-      subjectLabel?: string;
-      topicCode?: string;
-      topic?: string;
-      needCode?: string;
-      needLabel?: string;
-      urgencyCode?: string;
-      urgencyLabel?: string;
-      hasPhone?: boolean;
-      wantsTutorHelp?: boolean;
-    } | null;
     currentFocusSubject?: string | null;
     currentFocusTopic?: string | null;
     currentFocusTopicCode?: string | null;
@@ -3313,7 +3300,6 @@ function ProfileSection(props: {
     "Linguistico",
     "Altro",
   ];
-  const onboardingSegment = prefs.onboardingSegment || null;
 
   return (
     <div className="space-y-3">
@@ -3328,32 +3314,6 @@ function ProfileSection(props: {
           {open ? "Chiudi" : "Aggiorna classe"}
         </button>
       </div>
-
-      {onboardingSegment && (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 [.dark_&]:border-white/10 [.dark_&]:bg-white/5 [.dark_&]:text-white/80">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 [.dark_&]:text-white/50">
-            Segmentazione salvata
-          </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <ProfileMeta
-              label="Materia"
-              value={onboardingSegment.subjectLabel || onboardingSegment.subjectCode || "—"}
-            />
-            <ProfileMeta
-              label="Argomento"
-              value={onboardingSegment.topic || onboardingSegment.topicCode || "—"}
-            />
-            <ProfileMeta
-              label="Bisogno"
-              value={onboardingSegment.needLabel || onboardingSegment.needCode || "—"}
-            />
-            <ProfileMeta
-              label="Urgenza"
-              value={onboardingSegment.urgencyLabel || onboardingSegment.urgencyCode || "—"}
-            />
-          </div>
-        </div>
-      )}
 
       {open && (
         <div className="rounded-2xl bg-white/80 [.dark_&]:bg-slate-900/60 backdrop-blur border border-slate-200 p-3">

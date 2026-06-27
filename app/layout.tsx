@@ -139,20 +139,6 @@ export default async function RootLayout({
                   name: "Theoremz",
                   url: "https://theoremz.com",
                   inLanguage: "it-IT",
-                  potentialAction: [
-                    {
-                      "@type": "SearchAction",
-                      target:
-                        "https://theoremz.com/matematica?q={search_term_string}",
-                      "query-input": "required name=search_term_string",
-                    },
-                    {
-                      "@type": "SearchAction",
-                      target:
-                        "https://theoremz.com/fisica?q={search_term_string}",
-                      "query-input": "required name=search_term_string",
-                    },
-                  ],
                 },
               ],
             }),

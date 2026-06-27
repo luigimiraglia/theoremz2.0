@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 type TestimonianzeMobileFadeProps = {
   items: string[];
@@ -35,6 +36,7 @@ export default function TestimonianzeMobileFade({
       <div className="grid place-items-center">
         {items.map((src, idx) => {
           const isHorizontal = horizontalSet.has(src);
+          const size = getTestimonialSize(src);
 
           return (
             <div
@@ -44,9 +46,12 @@ export default function TestimonianzeMobileFade({
               }${isHorizontal ? " h-full rounded-2xl bg-black flex items-center justify-center" : ""}`}
               aria-hidden={idx !== active}
             >
-              <img
+              <Image
                 src={src}
                 alt="Testimonianza"
+                width={size.width}
+                height={size.height}
+                sizes="90vw"
                 className={
                   isHorizontal
                     ? "max-h-full w-full object-contain rounded-2xl"
@@ -59,4 +64,18 @@ export default function TestimonianzeMobileFade({
       </div>
     </div>
   );
+}
+
+function getTestimonialSize(src: string) {
+  switch (src) {
+    case "/images/test3.PNG":
+      return { width: 739, height: 190 };
+    case "/images/test11.jpeg":
+      return { width: 739, height: 1600 };
+    case "/images/test1.jpeg":
+    case "/images/test2.jpeg":
+      return { width: 946, height: 2048 };
+    default:
+      return { width: 1125, height: 2436 };
+  }
 }

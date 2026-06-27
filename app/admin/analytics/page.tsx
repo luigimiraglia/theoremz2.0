@@ -70,9 +70,6 @@ export default function AnalyticsDashboard() {
 
       // Controlla se la risposta ha la struttura corretta dei dati analytics
       if (result.period && result.summary) {
-        console.log("📊 API Response:", result);
-        console.log("📈 Summary Data:", result.summary);
-
         // Trasforma i dati API nella struttura che il frontend si aspetta
         const transformedData = {
           ...result,
@@ -133,11 +130,6 @@ export default function AnalyticsDashboard() {
           },
         };
         setData(transformedData);
-        console.log("🎯 Final Data Set to State:", transformedData);
-        console.log(
-          "🔢 Totals that will be displayed:",
-          transformedData.totals
-        );
         setError(null);
       } else {
         throw new Error("Invalid response format");

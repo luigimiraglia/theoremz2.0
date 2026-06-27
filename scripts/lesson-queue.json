@@ -1,0 +1,1900 @@
+[
+  {
+    "tier": 1,
+    "status": "done",
+    "title": "Dominio di una funzione",
+    "slug": "dominio-di-una-funzione",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Studio di funzione",
+      "Algebra"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "dominio di una funzione",
+      "campo di esistenza",
+      "come si calcola il dominio",
+      "dominio di una funzione esercizi svolti"
+    ],
+    "domandeVeloci": [
+      "cos'è il dominio",
+      "qual è il dominio di una funzione fratta",
+      "dominio di un logaritmo",
+      "dominio di una radice",
+      "differenza tra dominio e codominio"
+    ],
+    "argomenti": [
+      "cos'è il dominio (i numeri che puoi mettere dentro la funzione)",
+      "condizioni di esistenza: frazioni (denominatore ≠ 0), radici pari (radicando ≥ 0), logaritmi (argomento > 0)",
+      "polinomi: dominio sempre ℝ",
+      "casi con più condizioni insieme (sistema di disequazioni)",
+      "notazione del dominio con intervalli"
+    ],
+    "collegaA": [
+      "funzioni",
+      "studio di funzione",
+      "disequazioni-lineari",
+      "logaritmi-e-le-loro-propriet",
+      "radicali"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Asintoti di una funzione",
+    "slug": "asintoti",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "asintoti",
+      "asintoti verticali orizzontali e obliqui",
+      "come si trovano gli asintoti",
+      "asintoto obliquo formula",
+      "asintoti esercizi svolti"
+    ],
+    "domandeVeloci": [
+      "cos'è un asintoto",
+      "quando c'è l'asintoto obliquo",
+      "l'asintoto orizzontale e obliquo possono coesistere",
+      "come si trova l'asintoto verticale"
+    ],
+    "argomenti": [
+      "cos'è un asintoto (retta a cui la curva si avvicina all'infinito)",
+      "asintoto verticale: limite = ±∞ nei punti esclusi dal dominio",
+      "asintoto orizzontale: limite finito per x→±∞",
+      "asintoto obliquo: m = lim f(x)/x, q = lim (f(x)−mx); esiste solo se non c'è orizzontale",
+      "tabella riassuntiva dei tre tipi"
+    ],
+    "collegaA": [
+      "limite-di-una-funzione",
+      "dominio-di-una-funzione",
+      "studio-di-funzione",
+      "rette"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Continuità e punti di discontinuità",
+    "slug": "continuita-e-discontinuita",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "continuità di una funzione",
+      "punti di discontinuità",
+      "discontinuità di prima seconda e terza specie",
+      "funzione continua"
+    ],
+    "domandeVeloci": [
+      "cos'è una funzione continua",
+      "quando una funzione è continua in un punto",
+      "differenza tra le specie di discontinuità",
+      "discontinuità eliminabile"
+    ],
+    "argomenti": [
+      "definizione intuitiva: la disegni senza staccare la matita",
+      "definizione formale con i limiti: lim f(x) = f(x₀)",
+      "discontinuità di prima specie: salto (limite destro ≠ sinistro)",
+      "discontinuità di seconda specie: almeno un limite è ±∞ o non esiste",
+      "discontinuità di terza specie (eliminabile): limite esiste ma ≠ f(x₀)",
+      "funzioni continue per natura: polinomi, sin, cos, esponenziali nel loro dominio"
+    ],
+    "collegaA": [
+      "limite-di-una-funzione",
+      "dominio-di-una-funzione",
+      "asintoti",
+      "studio-di-funzione"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Cilindro",
+    "slug": "cilindro",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "cilindro",
+      "volume del cilindro",
+      "superficie del cilindro",
+      "area cilindro formula"
+    ],
+    "domandeVeloci": [
+      "come si calcola il volume di un cilindro",
+      "superficie laterale e totale del cilindro",
+      "formula area di base del cilindro"
+    ],
+    "argomenti": [
+      "cos'è un cilindro (solido di rotazione del rettangolo attorno a un lato)",
+      "superficie laterale: S_lat = 2πrh",
+      "superficie di base: S_base = πr²",
+      "superficie totale: S_tot = 2πr(r+h)",
+      "volume: V = πr²h",
+      "tabella formule con esempi numerici"
+    ],
+    "collegaA": [
+      "superficie-e-volume-dei-solidi",
+      "cerchio",
+      "circonferenza",
+      "cono",
+      "sfera"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Cono",
+    "slug": "cono",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "cono",
+      "volume del cono",
+      "superficie del cono",
+      "apotema del cono"
+    ],
+    "domandeVeloci": [
+      "come si calcola il volume di un cono",
+      "superficie laterale del cono",
+      "cos'è l'apotema del cono",
+      "differenza tra altezza e apotema del cono"
+    ],
+    "argomenti": [
+      "cos'è un cono (solido di rotazione del triangolo rettangolo)",
+      "apotema a, raggio r, altezza h: relazione a² = r² + h²",
+      "superficie laterale: S_lat = πra",
+      "superficie totale: S_tot = πr(r+a)",
+      "volume: V = (1/3)πr²h",
+      "tabella formule con esempi numerici"
+    ],
+    "collegaA": [
+      "cilindro",
+      "sfera",
+      "teorema-di-pitagora-e-i-due-teoremi-di-euclide",
+      "superficie-e-volume-dei-solidi"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Sfera",
+    "slug": "sfera",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "sfera",
+      "volume della sfera",
+      "superficie della sfera",
+      "area della sfera formula"
+    ],
+    "domandeVeloci": [
+      "come si calcola il volume di una sfera",
+      "superficie di una sfera",
+      "formula 4/3 pi greco r al cubo"
+    ],
+    "argomenti": [
+      "cos'è una sfera (solido di rotazione del semicerchio)",
+      "superficie: S = 4πr²",
+      "volume: V = (4/3)πr³",
+      "tabella formule + esempi numerici con r numerico"
+    ],
+    "collegaA": [
+      "cilindro",
+      "cono",
+      "cerchio",
+      "superficie-e-volume-dei-solidi"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Statistica descrittiva",
+    "slug": "statistica",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Probabilità e statistica"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "3º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "3º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Linguistico",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "statistica",
+      "media moda e mediana",
+      "indici di posizione",
+      "frequenza assoluta e relativa",
+      "statistica esercizi svolti"
+    ],
+    "domandeVeloci": [
+      "differenza tra media moda e mediana",
+      "come si calcola la mediana",
+      "cos'è la frequenza relativa",
+      "cos'è un istogramma"
+    ],
+    "argomenti": [
+      "dati statistici: frequenza assoluta, relativa, percentuale",
+      "media aritmetica: somma diviso numero di dati",
+      "moda: il valore che compare più spesso",
+      "mediana: il valore centrale dopo l'ordinamento",
+      "quartili (cenni)",
+      "rappresentazioni grafiche: istogramma, diagramma a barre",
+      "tabella riassuntiva degli indici di posizione"
+    ],
+    "collegaA": [
+      "medie",
+      "deviazione-standard-e-varianza",
+      "probabilit",
+      "percentuali"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Deviazione standard e varianza",
+    "slug": "deviazione-standard-e-varianza",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Probabilità e statistica"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "5º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "deviazione standard",
+      "varianza",
+      "come si calcola la deviazione standard",
+      "scarto quadratico medio"
+    ],
+    "domandeVeloci": [
+      "cos'è la deviazione standard",
+      "differenza tra varianza e deviazione standard",
+      "a cosa serve la deviazione standard",
+      "formula varianza"
+    ],
+    "argomenti": [
+      "cosa misurano: la dispersione dei dati intorno alla media",
+      "scarto dalla media: differenza tra ogni dato e la media",
+      "varianza: media degli scarti al quadrato σ² = Σ(xᵢ−x̄)²/n",
+      "deviazione standard: radice quadrata della varianza σ = √σ²",
+      "esempio numerico completo passo-passo con dataset reale"
+    ],
+    "collegaA": [
+      "statistica",
+      "medie"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Calcolo combinatorio",
+    "slug": "calcolo-combinatorio",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Probabilità e statistica",
+      "Algebra"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "5º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "calcolo combinatorio",
+      "permutazioni disposizioni combinazioni",
+      "fattoriale",
+      "coefficiente binomiale",
+      "calcolo combinatorio esercizi svolti"
+    ],
+    "domandeVeloci": [
+      "differenza tra disposizioni e combinazioni",
+      "cos'è il fattoriale",
+      "quando l'ordine conta nel calcolo combinatorio",
+      "cos'è il coefficiente binomiale"
+    ],
+    "argomenti": [
+      "principio del prodotto (scelte successive moltiplicabili)",
+      "fattoriale n! con esempi",
+      "permutazioni semplici n! e con ripetizione",
+      "disposizioni semplici D(n,k) e con ripetizione",
+      "combinazioni C(n,k) e coefficiente binomiale",
+      "tabella riassuntiva: quando uso cosa (ordine conta? si ripete?)"
+    ],
+    "collegaA": [
+      "probabilit",
+      "prodotti-notevoli",
+      "insiemi"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Lavoro di una forza",
+    "slug": "lavoro",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Dinamica"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "lavoro fisica",
+      "lavoro di una forza",
+      "lavoro formula",
+      "lavoro motore resistente e nullo",
+      "lavoro su piano inclinato"
+    ],
+    "domandeVeloci": [
+      "cos'è il lavoro in fisica",
+      "quando il lavoro è nullo",
+      "unità di misura del lavoro",
+      "lavoro con angolo tra forza e spostamento"
+    ],
+    "argomenti": [
+      "definizione: L = F·s·cosθ — forza per spostamento per coseno dell'angolo",
+      "lavoro motore: θ < 90° → L > 0",
+      "lavoro resistente: θ > 90° → L < 0",
+      "lavoro nullo: forza perpendicolare allo spostamento (θ = 90°)",
+      "lavoro su piano inclinato con componente lungo il piano",
+      "unità di misura: joule (J) = N·m"
+    ],
+    "collegaA": [
+      "i-tre-principi-della-dinamica",
+      "energia-cinetica",
+      "potenza",
+      "moto-su-piano-inclinato"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Energia cinetica",
+    "slug": "energia-cinetica",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Dinamica"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "energia cinetica",
+      "energia cinetica formula",
+      "teorema dell'energia cinetica",
+      "energia cinetica esercizi"
+    ],
+    "domandeVeloci": [
+      "cos'è l'energia cinetica",
+      "da cosa dipende l'energia cinetica",
+      "cosa afferma il teorema dell'energia cinetica",
+      "unità di misura dell'energia cinetica"
+    ],
+    "argomenti": [
+      "definizione: K = ½mv²",
+      "dipende dalla massa e dal quadrato della velocità",
+      "teorema dell'energia cinetica: L_tot = ΔK",
+      "esempi numerici con auto, pallone, persona",
+      "unità: joule (J)"
+    ],
+    "collegaA": [
+      "lavoro",
+      "energia-potenziale",
+      "energia-meccanica",
+      "i-tre-principi-della-dinamica"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Energia potenziale",
+    "slug": "energia-potenziale",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Dinamica"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "energia potenziale",
+      "energia potenziale gravitazionale",
+      "energia potenziale elastica",
+      "energia potenziale formula"
+    ],
+    "domandeVeloci": [
+      "cos'è l'energia potenziale",
+      "differenza tra energia cinetica e potenziale",
+      "formula U = mgh",
+      "energia potenziale di una molla"
+    ],
+    "argomenti": [
+      "cos'è: energia associata alla posizione, non al moto",
+      "energia potenziale gravitazionale: U = mgh (con h altezza rispetto al riferimento)",
+      "energia potenziale elastica: U = ½kx²",
+      "legame con il lavoro: forze conservative e non conservative",
+      "esempi numerici per entrambe le forme"
+    ],
+    "collegaA": [
+      "energia-cinetica",
+      "energia-meccanica",
+      "lavoro",
+      "moto-armonico"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Energia meccanica e conservazione dell'energia",
+    "slug": "energia-meccanica",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Dinamica"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "energia meccanica",
+      "conservazione dell'energia meccanica",
+      "principio di conservazione dell'energia",
+      "energia meccanica formula"
+    ],
+    "domandeVeloci": [
+      "quando si conserva l'energia meccanica",
+      "cosa succede all'energia meccanica con l'attrito",
+      "esempio di conservazione dell'energia (pendolo, montagne russe)"
+    ],
+    "argomenti": [
+      "energia meccanica totale: E = K + U",
+      "principio di conservazione: in assenza di forze dissipative E = costante",
+      "forze conservative (gravità, elastica) vs dissipative (attrito)",
+      "effetto dell'attrito: parte di E si converte in calore",
+      "esempi: caduta libera, pendolo, piano inclinato con e senza attrito"
+    ],
+    "collegaA": [
+      "energia-cinetica",
+      "energia-potenziale",
+      "lavoro",
+      "forza-di-attrito"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Potenza",
+    "slug": "potenza",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Dinamica"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "potenza fisica",
+      "potenza formula",
+      "potenza watt",
+      "differenza tra lavoro e potenza"
+    ],
+    "domandeVeloci": [
+      "cos'è la potenza in fisica",
+      "unità di misura della potenza",
+      "formula alternativa P = Fv",
+      "differenza tra lavoro e potenza"
+    ],
+    "argomenti": [
+      "definizione: P = L/t — lavoro diviso tempo",
+      "forma alternativa: P = F·v (forza per velocità)",
+      "unità di misura: watt (W) = J/s",
+      "cavallo vapore (HP) come unità non SI (cenno)",
+      "esempi numerici: motore auto, ascensore, atleta"
+    ],
+    "collegaA": [
+      "lavoro",
+      "energia-cinetica",
+      "i-tre-principi-della-dinamica"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Forza di attrito",
+    "slug": "forza-di-attrito",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Dinamica"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "3º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "3º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "forza di attrito",
+      "attrito statico e dinamico",
+      "coefficiente di attrito",
+      "forza di attrito formula"
+    ],
+    "domandeVeloci": [
+      "differenza tra attrito statico e dinamico",
+      "da cosa dipende la forza di attrito",
+      "l'attrito dipende dall'area di contatto",
+      "come si calcola l'attrito su piano inclinato"
+    ],
+    "argomenti": [
+      "cos'è l'attrito (forza che si oppone allo scorrimento)",
+      "attrito statico: impedisce il moto (fino a un massimo)",
+      "attrito dinamico (o cinematico): agisce durante il moto",
+      "formula: F_a = μN con μ coefficiente di attrito e N forza normale",
+      "μ_s > μ_d (attrito statico maggiore del dinamico)",
+      "attrito su piano inclinato: componente normale = mg·cosθ",
+      "l'attrito non dipende dall'area di contatto (errore comune)"
+    ],
+    "collegaA": [
+      "i-tre-principi-della-dinamica",
+      "equilibrio",
+      "energia-meccanica",
+      "moto-su-piano-inclinato"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Campo magnetico",
+    "slug": "campo-magnetico",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "campo magnetico",
+      "cos'è il campo magnetico",
+      "linee di campo magnetico",
+      "magneti e poli magnetici"
+    ],
+    "domandeVeloci": [
+      "cos'è un campo magnetico",
+      "differenza tra campo elettrico e campo magnetico",
+      "unità di misura del campo magnetico",
+      "cos'è l'esperienza di Oersted"
+    ],
+    "argomenti": [
+      "cos'è: regione in cui agiscono forze magnetiche su cariche in moto e su correnti",
+      "magneti naturali e artificiali, poli nord e sud",
+      "linee di campo: uscono dal polo nord, entrano nel polo sud, non si incrociano mai",
+      "esperienza di Oersted: una corrente genera un campo magnetico",
+      "unità di misura: tesla (T)",
+      "analogie e differenze con il campo elettrico"
+    ],
+    "collegaA": [
+      "forza-di-lorentz",
+      "campo-magnetico-filo-spira-solenoide",
+      "corrente-elettrica",
+      "cariche-elettriche"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Forza di Lorentz",
+    "slug": "forza-di-lorentz",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "forza di Lorentz",
+      "forza di Lorentz formula",
+      "moto di una carica in un campo magnetico",
+      "regola della mano destra"
+    ],
+    "domandeVeloci": [
+      "cos'è la forza di Lorentz",
+      "come si trova la direzione della forza di Lorentz",
+      "perché una carica in un campo magnetico fa moto circolare",
+      "la forza di Lorentz compie lavoro"
+    ],
+    "argomenti": [
+      "formula: F = qvBsinα — carica per velocità per campo per seno dell'angolo",
+      "caso α = 90°: F = qvB (massima)",
+      "direzione: perpendicolare sia a v sia a B (regola della mano destra)",
+      "la forza di Lorentz non compie lavoro (è sempre ⊥ allo spostamento)",
+      "moto circolare uniforme di una carica in campo magnetico uniforme",
+      "raggio della traiettoria: r = mv/(qB)"
+    ],
+    "collegaA": [
+      "campo-magnetico",
+      "moto-circolare",
+      "cariche-elettriche",
+      "energia-cinetica"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Induzione elettromagnetica",
+    "slug": "induzione-elettromagnetica",
+    "materia": "fisica",
+    "difficolta": "difficile",
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "induzione elettromagnetica",
+      "legge di Faraday-Neumann-Lenz",
+      "corrente indotta",
+      "flusso magnetico",
+      "forza elettromotrice indotta"
+    ],
+    "domandeVeloci": [
+      "cos'è l'induzione elettromagnetica",
+      "cosa dice la legge di Lenz sul verso della corrente",
+      "cos'è il flusso magnetico",
+      "come si genera una corrente indotta"
+    ],
+    "argomenti": [
+      "flusso magnetico: Φ = B·S·cosα, unità weber (Wb)",
+      "fenomeno: una variazione di flusso genera una forza elettromotrice indotta",
+      "legge di Faraday-Neumann: fem = −ΔΦ/Δt",
+      "legge di Lenz: il segno meno — la corrente si oppone alla variazione che la causa",
+      "i 3 modi di variare il flusso: cambiare B, cambiare S, cambiare α",
+      "errori comuni: dimenticare il segno, ignorare l'angolo, confondere fem media e istantanea"
+    ],
+    "collegaA": [
+      "campo-magnetico",
+      "forza-di-lorentz",
+      "corrente-elettrica",
+      "circuiti-elettrici"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Massimi e minimi di una funzione",
+    "slug": "massimi-e-minimi",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "massimi e minimi di una funzione",
+      "punti stazionari",
+      "derivata prima massimi e minimi",
+      "crescenza e decrescenza"
+    ],
+    "domandeVeloci": [
+      "come si trovano massimi e minimi con la derivata",
+      "cos'è un punto stazionario",
+      "differenza tra massimo relativo e assoluto",
+      "funzione crescente e decrescente"
+    ],
+    "argomenti": [
+      "funzione crescente (f′ > 0) e decrescente (f′ < 0)",
+      "punti stazionari: f′(x) = 0",
+      "massimo relativo: f′ cambia da + a −",
+      "minimo relativo: f′ cambia da − a +",
+      "flesso a tangente orizzontale: f′ = 0 ma non cambia segno",
+      "esempi grafici e numerici"
+    ],
+    "collegaA": [
+      "derivate",
+      "studio-di-funzione",
+      "concavita-e-flessi"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Concavità, convessità e punti di flesso",
+    "slug": "concavita-e-flessi",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "concavità e convessità",
+      "punti di flesso",
+      "derivata seconda",
+      "flesso a tangente orizzontale"
+    ],
+    "domandeVeloci": [
+      "come si usa la derivata seconda",
+      "cos'è un punto di flesso",
+      "differenza tra concavo e convesso",
+      "cos'è il flesso a tangente orizzontale"
+    ],
+    "argomenti": [
+      "funzione concava (f″ < 0): curva rivolta verso il basso",
+      "funzione convessa (f″ > 0): curva rivolta verso l'alto",
+      "punto di flesso: f″ cambia segno",
+      "flesso a tangente orizzontale: f′ = 0 e f″ = 0 contemporaneamente",
+      "esempi grafici con f, f′, f″ messe a confronto"
+    ],
+    "collegaA": [
+      "derivate",
+      "massimi-e-minimi",
+      "studio-di-funzione"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Funzioni pari e dispari",
+    "slug": "funzioni-pari-e-dispari",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Studio di funzione",
+      "Algebra"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "funzioni pari e dispari",
+      "simmetrie di una funzione",
+      "come capire se una funzione è pari o dispari"
+    ],
+    "domandeVeloci": [
+      "cos'è una funzione pari",
+      "cos'è una funzione dispari",
+      "come si verifica se una funzione è pari",
+      "simmetria rispetto all'asse y"
+    ],
+    "argomenti": [
+      "funzione pari: f(−x) = f(x) — simmetrica rispetto all'asse y",
+      "funzione dispari: f(−x) = −f(x) — simmetrica rispetto all'origine",
+      "come si verifica: sostituisci x con −x e semplifica",
+      "funzioni né pari né dispari (la maggioranza)",
+      "esempi: x² (pari), x³ (dispari), x²+x (né pari né dispari)"
+    ],
+    "collegaA": [
+      "funzioni",
+      "studio-di-funzione",
+      "piano-cartesiano"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Matrici e determinanti",
+    "slug": "matrici-e-determinanti",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Algebra"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "matrici",
+      "determinante di una matrice",
+      "regola di Sarrus",
+      "matrici esercizi svolti",
+      "prodotto tra matrici"
+    ],
+    "domandeVeloci": [
+      "cos'è una matrice",
+      "come si calcola il determinante di una matrice 3x3",
+      "come si moltiplica tra matrici",
+      "cos'è la matrice inversa"
+    ],
+    "argomenti": [
+      "cos'è una matrice: tabella di numeri a righe e colonne",
+      "somma di matrici (elemento per elemento)",
+      "prodotto scalare per matrice",
+      "prodotto tra matrici (righe per colonne)",
+      "determinante 2×2: ad − bc",
+      "determinante 3×3: regola di Sarrus",
+      "matrice inversa (cenni): A·A⁻¹ = I",
+      "regola di Cramer per sistemi lineari"
+    ],
+    "collegaA": [
+      "sistemi",
+      "vettori"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Circonferenza goniometrica e radianti",
+    "slug": "circonferenza-goniometrica",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Trigonometria"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "circonferenza goniometrica",
+      "radianti",
+      "misura degli angoli in radianti",
+      "da gradi a radianti",
+      "angoli notevoli"
+    ],
+    "domandeVeloci": [
+      "cos'è la circonferenza goniometrica",
+      "come si converte da gradi a radianti",
+      "cosa sono gli angoli notevoli",
+      "quanto vale π/2 in gradi"
+    ],
+    "argomenti": [
+      "la circonferenza goniometrica: raggio 1, centro nell'origine",
+      "misura degli angoli in gradi e in radianti",
+      "conversione: rad = gradi × π/180, gradi = rad × 180/π",
+      "seno e coseno come coordinate del punto sulla circonferenza",
+      "tabella angoli notevoli: 0°, 30°, 45°, 60°, 90° con sin e cos",
+      "quadranti e segno di sin e cos"
+    ],
+    "collegaA": [
+      "funzioni-goniometriche",
+      "archi-associati",
+      "formule-trigonometriche"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Forza peso",
+    "slug": "forza-peso",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Dinamica"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "forza peso",
+      "differenza tra peso e massa",
+      "forza peso formula"
+    ],
+    "domandeVeloci": [
+      "cos'è la forza peso",
+      "qual è la differenza tra peso e massa",
+      "come si calcola il peso di un oggetto",
+      "perché il peso cambia sulla Luna"
+    ],
+    "argomenti": [
+      "cos'è la forza peso: forza gravitazionale che la Terra esercita su un corpo",
+      "formula: P = mg con g = 9.81 m/s² (sulla Terra)",
+      "differenza fondamentale: massa è una proprietà del corpo (kg), peso è una forza (N)",
+      "g varia da pianeta a pianeta (valori di esempio: Luna, Marte)",
+      "direzione e verso: sempre verso il centro della Terra"
+    ],
+    "collegaA": [
+      "i-tre-principi-della-dinamica",
+      "forza-di-attrito",
+      "energia-potenziale",
+      "equilibrio"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Forza elastica e legge di Hooke",
+    "slug": "forza-elastica",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Dinamica"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "forza elastica",
+      "legge di Hooke",
+      "costante elastica",
+      "molla formula"
+    ],
+    "domandeVeloci": [
+      "cos'è la legge di Hooke",
+      "cosa significa la costante elastica k",
+      "perché la forza elastica ha il segno meno",
+      "quando si usa la forza elastica"
+    ],
+    "argomenti": [
+      "legge di Hooke: F = −kx (forza proporzionale all'allungamento, verso opposto)",
+      "costante elastica k: misura la rigidità della molla (N/m)",
+      "allungamento x rispetto alla posizione di equilibrio",
+      "il segno negativo: la forza riporta verso l'equilibrio",
+      "energia potenziale elastica: U = ½kx²",
+      "limiti: la legge vale solo nella zona elastica"
+    ],
+    "collegaA": [
+      "energia-potenziale",
+      "moto-armonico",
+      "i-tre-principi-della-dinamica"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Gravitazione universale",
+    "slug": "gravitazione-universale",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Gravitazione"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "legge di gravitazione universale",
+      "forza di gravità",
+      "costante gravitazionale G",
+      "gravitazione Newton"
+    ],
+    "domandeVeloci": [
+      "cosa afferma la legge di gravitazione universale",
+      "cos'è la costante G",
+      "come cambia la forza di gravità con la distanza",
+      "legame tra gravitazione e leggi di Keplero"
+    ],
+    "argomenti": [
+      "legge di Newton: F = G·m₁m₂/r²",
+      "costante gravitazionale G = 6.674×10⁻¹¹ N·m²/kg²",
+      "forza inversamente proporzionale al quadrato della distanza",
+      "campo gravitazionale g = GM/r²",
+      "legame con le leggi di Keplero (cenni)",
+      "esempio: calcolo della forza Terra-Luna"
+    ],
+    "collegaA": [
+      "leggi-di-keplero",
+      "forza-peso",
+      "energia-potenziale",
+      "moto-circolare"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Pressione",
+    "slug": "pressione",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Fluidi"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "pressione fisica",
+      "pressione formula",
+      "unità di misura pressione",
+      "pascal"
+    ],
+    "domandeVeloci": [
+      "cos'è la pressione in fisica",
+      "come si calcola la pressione",
+      "differenza tra pascal e atmosfera",
+      "la pressione dipende dall'area"
+    ],
+    "argomenti": [
+      "definizione: p = F/S — forza perpendicolare divisa per l'area",
+      "unità di misura: pascal (Pa) = N/m²",
+      "altre unità: atmosfera (atm), bar, mmHg (cenni)",
+      "pressione nei solidi: dipende dall'area di contatto",
+      "pressione nei fluidi: trasmessa in tutte le direzioni (principio di Pascal)"
+    ],
+    "collegaA": [
+      "legge-di-stevino",
+      "principio-di-archimede",
+      "meccanica-dei-fluidi"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Legge di Stevino",
+    "slug": "legge-di-stevino",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Fluidi"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "legge di Stevino",
+      "pressione idrostatica",
+      "pressione in un liquido"
+    ],
+    "domandeVeloci": [
+      "cosa dice la legge di Stevino",
+      "perché la pressione aumenta in profondità",
+      "cosa sono i vasi comunicanti",
+      "formula della pressione idrostatica"
+    ],
+    "argomenti": [
+      "legge di Stevino: p = p₀ + ρgh (pressione aumenta con la profondità)",
+      "ρ = densità del liquido, h = profondità",
+      "la pressione dipende solo dalla profondità, non dalla forma del contenitore",
+      "vasi comunicanti: stesso liquido, stessa quota → stessa pressione",
+      "esempi: subacquei, dighe"
+    ],
+    "collegaA": [
+      "pressione",
+      "principio-di-archimede",
+      "meccanica-dei-fluidi"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Principio di Archimede",
+    "slug": "principio-di-archimede",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Fluidi"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "principio di Archimede",
+      "spinta di Archimede",
+      "galleggiamento",
+      "spinta idrostatica formula"
+    ],
+    "domandeVeloci": [
+      "cosa dice il principio di Archimede",
+      "quando un corpo galleggia",
+      "formula della spinta di Archimede",
+      "perché le navi galleggiano"
+    ],
+    "argomenti": [
+      "enunciato: ogni corpo immerso in un fluido riceve una spinta verticale verso l'alto",
+      "formula: F_A = ρ_fluido·g·V_immerso",
+      "galleggiamento: F_A = Peso → ρ_corpo = ρ_fluido",
+      "affonda se ρ_corpo > ρ_fluido, galleggia se ρ_corpo < ρ_fluido",
+      "esempio: nave in acciaio che galleggia (forma che include aria)",
+      "esempio numerico con oggetto parzialmente immerso"
+    ],
+    "collegaA": [
+      "pressione",
+      "legge-di-stevino",
+      "meccanica-dei-fluidi"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Leggi dei gas ed equazione di stato",
+    "slug": "leggi-dei-gas",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Termodinamica"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "leggi dei gas",
+      "legge di Boyle",
+      "leggi di Gay-Lussac",
+      "equazione di stato dei gas perfetti",
+      "PV=nRT"
+    ],
+    "domandeVeloci": [
+      "cosa dice la legge di Boyle",
+      "cosa sono le leggi di Gay-Lussac",
+      "cos'è un gas perfetto",
+      "cosa significa PV = nRT"
+    ],
+    "argomenti": [
+      "legge di Boyle (isoterma, T = cost): pV = costante",
+      "prima legge di Gay-Lussac (isocora, V = cost): p/T = costante",
+      "seconda legge di Gay-Lussac (isobara, p = cost): V/T = costante",
+      "equazione di stato del gas perfetto: pV = nRT",
+      "R = 8.314 J/(mol·K), n = numero di moli",
+      "gas perfetto: modello ideale senza forze intermolecolari"
+    ],
+    "collegaA": [
+      "trasformazioni-termodinamiche",
+      "teoria-cinetica-dei-gas",
+      "temperatura"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Dilatazione termica",
+    "slug": "dilatazione-termica",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Termodinamica"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "3º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "3º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "dilatazione termica",
+      "dilatazione lineare e volumetrica",
+      "coefficiente di dilatazione termica"
+    ],
+    "domandeVeloci": [
+      "cos'è la dilatazione termica",
+      "formula della dilatazione lineare",
+      "perché si lasciano giunti di dilatazione nelle rotaie",
+      "differenza tra dilatazione lineare e volumetrica"
+    ],
+    "argomenti": [
+      "cos'è: i corpi si espandono quando si riscaldano",
+      "dilatazione lineare: ΔL = λ·L₀·ΔT",
+      "coefficiente di dilatazione lineare λ (dipende dal materiale)",
+      "dilatazione volumetrica: ΔV = γ·V₀·ΔT con γ ≈ 3λ",
+      "esempi pratici: giunti di dilatazione nelle rotaie, ponti, termometro a mercurio"
+    ],
+    "collegaA": [
+      "temperatura",
+      "calore"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Potenziale elettrico e differenza di potenziale",
+    "slug": "potenziale-elettrico",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "potenziale elettrico",
+      "differenza di potenziale",
+      "tensione",
+      "volt",
+      "superfici equipotenziali"
+    ],
+    "domandeVeloci": [
+      "cos'è il potenziale elettrico",
+      "differenza tra potenziale e campo elettrico",
+      "cos'è la tensione in fisica",
+      "cosa sono le superfici equipotenziali"
+    ],
+    "argomenti": [
+      "potenziale elettrico: V = U/q — energia potenziale per unità di carica",
+      "unità: volt (V) = J/C",
+      "differenza di potenziale (tensione): ΔV = V_A − V_B",
+      "legame con il lavoro: L = q·ΔV",
+      "superfici equipotenziali: perpendicolari alle linee di campo",
+      "potenziale di una carica puntiforme: V = kQ/r"
+    ],
+    "collegaA": [
+      "energia-potenziale-elettrica",
+      "campo-elettrico",
+      "condensatore-e-capacita"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Condensatore e capacità elettrica",
+    "slug": "condensatore-e-capacita",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "condensatore",
+      "capacità elettrica",
+      "condensatore piano",
+      "farad",
+      "capacità formula"
+    ],
+    "domandeVeloci": [
+      "cos'è un condensatore",
+      "come si calcola la capacità di un condensatore",
+      "cos'è il farad",
+      "quanta energia immagazzina un condensatore"
+    ],
+    "argomenti": [
+      "cos'è un condensatore: due armature conduttori separate da un isolante",
+      "capacità: C = Q/V — carica divisa per tensione",
+      "unità: farad (F), in pratica μF e pF",
+      "condensatore piano: C = ε₀·S/d",
+      "energia immagazzinata: U = ½CV²",
+      "condensatori in serie e parallelo (cenni)"
+    ],
+    "collegaA": [
+      "potenziale-elettrico",
+      "campo-elettrico",
+      "circuiti-elettrici"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Resistenze in serie e parallelo",
+    "slug": "resistenze-in-serie-e-parallelo",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Elettromagnetismo",
+      "Elettronica"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "resistenze in serie e parallelo",
+      "resistenza equivalente",
+      "come si sommano le resistenze"
+    ],
+    "domandeVeloci": [
+      "come si calcola la resistenza equivalente in serie",
+      "formula parallelo resistenze",
+      "quando conviene usare il parallelo",
+      "differenza tra serie e parallelo"
+    ],
+    "argomenti": [
+      "resistenze in serie: R_eq = R₁ + R₂ + … (la corrente è la stessa, le tensioni si sommano)",
+      "resistenze in parallelo: 1/R_eq = 1/R₁ + 1/R₂ + … (la tensione è la stessa, le correnti si sommano)",
+      "caso due resistenze in parallelo: R_eq = R₁R₂/(R₁+R₂)",
+      "esempi di circuiti misti (serie + parallelo)",
+      "applicazione pratica: luci di casa in parallelo"
+    ],
+    "collegaA": [
+      "circuiti-elettrici",
+      "leggi-di-ohm",
+      "corrente-elettrica"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Campo magnetico di filo, spira e solenoide",
+    "slug": "campo-magnetico-filo-spira-solenoide",
+    "materia": "fisica",
+    "difficolta": "difficile",
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "legge di Biot-Savart",
+      "campo magnetico di un filo rettilineo",
+      "campo magnetico solenoide",
+      "campo magnetico spira"
+    ],
+    "domandeVeloci": [
+      "come si calcola il campo magnetico di un filo",
+      "formula campo magnetico solenoide",
+      "cosa produce il campo più uniforme",
+      "cos'è la legge di Biot-Savart"
+    ],
+    "argomenti": [
+      "campo di un filo rettilineo infinito: B = μ₀I/(2πr)",
+      "regola della mano destra per la direzione",
+      "campo al centro di una spira circolare: B = μ₀I/(2r)",
+      "campo interno al solenoide: B = μ₀nI (n = spire per unità di lunghezza)",
+      "forza tra due fili paralleli percorsi da corrente",
+      "μ₀ = 4π×10⁻⁷ T·m/A (permeabilità del vuoto)"
+    ],
+    "collegaA": [
+      "campo-magnetico",
+      "forza-di-lorentz",
+      "corrente-elettrica"
+    ]
+  },
+  {
+    "tier": 2,
+    "status": "pending",
+    "title": "Legge di Lenz",
+    "slug": "legge-di-lenz",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "legge di Lenz",
+      "verso della corrente indotta",
+      "legge di Lenz spiegazione"
+    ],
+    "domandeVeloci": [
+      "cosa dice la legge di Lenz",
+      "perché la corrente indotta si oppone alla variazione di flusso",
+      "come si determina il verso della corrente indotta",
+      "legge di Lenz e conservazione dell'energia"
+    ],
+    "argomenti": [
+      "enunciato: la corrente indotta si oppone alla variazione di flusso che la genera",
+      "è il significato fisico del segno meno in Faraday-Neumann",
+      "come trovare il verso: prima trovi come cambia B, poi vedi che campo genera la corrente indotta per opporsi",
+      "legame con la conservazione dell'energia (il sistema non può auto-alimentarsi)",
+      "esempi: magnete che si avvicina a una spira, freno elettromagnetico"
+    ],
+    "collegaA": [
+      "induzione-elettromagnetica",
+      "campo-magnetico"
+    ]
+  },
+  {
+    "tier": 3,
+    "status": "pending",
+    "title": "Numeri relativi",
+    "slug": "numeri-relativi",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Aritmetica"
+    ],
+    "classe": [
+      "1º Media",
+      "2º Media",
+      "3º Media",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico"
+    ],
+    "queryPrincipali": [
+      "numeri relativi",
+      "operazioni con i numeri relativi",
+      "regola dei segni"
+    ],
+    "domandeVeloci": [],
+    "argomenti": [
+      "numeri positivi e negativi",
+      "addizione e sottrazione",
+      "moltiplicazione e divisione: regola dei segni",
+      "valore assoluto",
+      "rappresentazione sulla retta dei numeri"
+    ],
+    "collegaA": [
+      "insiemi-numerici",
+      "espressioni"
+    ]
+  },
+  {
+    "tier": 3,
+    "status": "pending",
+    "title": "Proporzionalità diretta e inversa",
+    "slug": "proporzionalita-diretta-e-inversa",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Algebra"
+    ],
+    "classe": [
+      "1º Media",
+      "2º Media",
+      "3º Media",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico"
+    ],
+    "queryPrincipali": [
+      "proporzionalità diretta e inversa",
+      "grafico proporzionalità"
+    ],
+    "domandeVeloci": [],
+    "argomenti": [
+      "proporzionalità diretta: y = kx",
+      "proporzionalità inversa: y = k/x",
+      "grafici delle due relazioni",
+      "esempi pratici"
+    ],
+    "collegaA": [
+      "proporzioni",
+      "funzioni",
+      "piano-cartesiano"
+    ]
+  },
+  {
+    "tier": 3,
+    "status": "pending",
+    "title": "Distribuzione binomiale",
+    "slug": "distribuzione-binomiale",
+    "materia": "matematica",
+    "difficolta": "difficile",
+    "categoria": [
+      "Probabilità e statistica"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "distribuzione binomiale",
+      "prove di Bernoulli"
+    ],
+    "domandeVeloci": [],
+    "argomenti": [
+      "prove di Bernoulli: successo/insuccesso ripetuto",
+      "formula P(X=k) = C(n,k)·pᵏ·(1-p)^(n-k)",
+      "media e varianza della distribuzione binomiale",
+      "esempi"
+    ],
+    "collegaA": [
+      "probabilit",
+      "calcolo-combinatorio"
+    ]
+  },
+  {
+    "tier": 3,
+    "status": "pending",
+    "title": "Distribuzione normale (gaussiana)",
+    "slug": "distribuzione-normale",
+    "materia": "matematica",
+    "difficolta": "difficile",
+    "categoria": [
+      "Probabilità e statistica"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "distribuzione normale",
+      "curva di Gauss"
+    ],
+    "domandeVeloci": [],
+    "argomenti": [
+      "la curva a campana",
+      "media e deviazione standard che la definiscono",
+      "regola 68-95-99.7",
+      "variabile standardizzata z"
+    ],
+    "collegaA": [
+      "deviazione-standard-e-varianza",
+      "statistica"
+    ]
+  },
+  {
+    "tier": 3,
+    "status": "pending",
+    "title": "Principio di Pascal",
+    "slug": "principio-di-pascal",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Fluidi"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "principio di Pascal",
+      "torchio idraulico"
+    ],
+    "domandeVeloci": [],
+    "argomenti": [
+      "enunciato: la pressione si trasmette uguale in tutte le direzioni",
+      "torchio idraulico: F₁/S₁ = F₂/S₂",
+      "applicazioni: freni, cric"
+    ],
+    "collegaA": [
+      "pressione",
+      "meccanica-dei-fluidi"
+    ]
+  },
+  {
+    "tier": 3,
+    "status": "pending",
+    "title": "Passaggi di stato e calore latente",
+    "slug": "passaggi-di-stato",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Termodinamica"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "passaggi di stato",
+      "calore latente",
+      "fusione evaporazione"
+    ],
+    "domandeVeloci": [],
+    "argomenti": [
+      "i sei passaggi di stato",
+      "calore latente: Q = m·L (la temperatura non cambia)",
+      "calore latente di fusione e di vaporizzazione",
+      "grafico temperatura-tempo con le plateau"
+    ],
+    "collegaA": [
+      "calore",
+      "temperatura"
+    ]
+  },
+  {
+    "tier": 3,
+    "status": "pending",
+    "title": "Lenti",
+    "slug": "lenti",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Onde"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "lenti convergenti e divergenti",
+      "equazione delle lenti"
+    ],
+    "domandeVeloci": [],
+    "argomenti": [
+      "lente convergente vs divergente",
+      "equazione dei costruttori: 1/f = 1/p + 1/q",
+      "ingrandimento lineare",
+      "applicazioni: occhiali, fotocamera"
+    ],
+    "collegaA": [
+      "riflessione-e-rifrazione",
+      "onde"
+    ]
+  },
+  {
+    "tier": 3,
+    "status": "pending",
+    "title": "Relatività ristretta",
+    "slug": "relativita-ristretta",
+    "materia": "fisica",
+    "difficolta": "difficile",
+    "categoria": [
+      "Onde"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "relatività ristretta",
+      "dilatazione dei tempi"
+    ],
+    "domandeVeloci": [],
+    "argomenti": [
+      "i due postulati di Einstein",
+      "dilatazione del tempo: Δt = γΔt₀",
+      "contrazione delle lunghezze",
+      "equivalenza massa-energia: E = mc²"
+    ],
+    "collegaA": [
+      "moto-rettilineo-uniforme",
+      "onde"
+    ]
+  },
+  {
+    "tier": 3,
+    "status": "pending",
+    "title": "Effetto fotoelettrico",
+    "slug": "effetto-fotoelettrico",
+    "materia": "fisica",
+    "difficolta": "difficile",
+    "categoria": [
+      "Onde"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "effetto fotoelettrico",
+      "quanti di luce"
+    ],
+    "domandeVeloci": [],
+    "argomenti": [
+      "cos'è l'effetto fotoelettrico",
+      "modello di Einstein: E = hf",
+      "frequenza di soglia",
+      "perché la fisica classica non lo spiegava"
+    ],
+    "collegaA": [
+      "onde",
+      "cariche-elettriche"
+    ]
+  }
+]

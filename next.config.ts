@@ -63,6 +63,18 @@ const nextConfig: NextConfig = {
         source: "/reset-password/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
+      {
+        source: "/onboarding/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/onboarding",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/studio/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
     ];
   },
   async redirects() {

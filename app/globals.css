@@ -129,8 +129,8 @@ html[data-scroll-behavior="smooth"] {
   position: absolute;
   inset: -8px;
   border-radius: 16px;
-  background: radial-gradient(
-    60% 60% at 50% 50%,
+  background: linear-gradient(
+    135deg,
     rgba(56, 189, 248, 0.35) 0%,
     rgba(37, 99, 235, 0.28) 48%,
     transparent 80%
@@ -157,24 +157,24 @@ html[data-scroll-behavior="smooth"] {
   animation: haloPulse 10s ease-in-out infinite;
 }
 .card-halo-sky::before {
-  background: radial-gradient(
-    60% 60% at 50% 50%,
+  background: linear-gradient(
+    135deg,
     rgba(56, 189, 248, 0.28) 0%,
     rgba(59, 130, 246, 0.22) 50%,
     transparent 85%
   );
 }
 .card-halo-emerald::before {
-  background: radial-gradient(
-    60% 60% at 50% 50%,
+  background: linear-gradient(
+    135deg,
     rgba(16, 185, 129, 0.26) 0%,
     rgba(5, 150, 105, 0.2) 50%,
     transparent 85%
   );
 }
 .card-halo-violet::before {
-  background: radial-gradient(
-    60% 60% at 50% 50%,
+  background: linear-gradient(
+    135deg,
     rgba(244, 114, 182, 0.26) 0%,
     rgba(168, 85, 247, 0.2) 50%,
     transparent 85%

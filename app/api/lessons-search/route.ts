@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { client } from "@/sanity/lib/client";
 
 export const revalidate = 3600; // Cache per 1 ora
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {

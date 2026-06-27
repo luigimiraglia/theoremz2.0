@@ -1,5 +1,6 @@
 // app/(landing)/black/page.tsx
 import type { Metadata } from "next";
+import Image from "next/image";
 import SenjaEmbed from "@/components/SenjaEmbed";
 import BlackPageGuard from "@/components/BlackPageGuard";
 import { ListChecks, CheckCircle2, BookOpen, Star, Users } from "lucide-react";
@@ -438,13 +439,15 @@ export default function BlackPage() {
           {platformFeatures.map((feature) => (
             <div
               key={feature.title}
-              className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-[0_18px_50px_-30px_rgba(56,189,248,0.45)] transition-all duration-300 hover:-translate-y-1 hover:border-white/25 hover:bg-white/10 hover:shadow-[0_22px_60px_-30px_rgba(56,189,248,0.6)]"
-            >
-              <div className="h-56 w-full overflow-hidden bg-gradient-to-br from-white/10 via-white/0 to-sky-500/10 sm:h-64">
-                <img
+            className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-[0_18px_50px_-30px_rgba(56,189,248,0.45)] transition-all duration-300 hover:-translate-y-1 hover:border-white/25 hover:bg-white/10 hover:shadow-[0_22px_60px_-30px_rgba(56,189,248,0.6)]"
+          >
+              <div className="relative h-56 w-full overflow-hidden bg-gradient-to-br from-white/10 via-white/0 to-sky-500/10 sm:h-64">
+                <Image
                   src={feature.image}
                   alt={feature.title}
-                  className="h-full w-full object-contain"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-contain p-6"
                 />
               </div>
               <div className="flex flex-1 flex-col gap-3 p-6 text-center">

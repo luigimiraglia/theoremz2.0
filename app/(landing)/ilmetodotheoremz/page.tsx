@@ -1,10 +1,32 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import CtaModalButton from "./CtaModalButton";
 
 export const metadata: Metadata = {
   title: "Il Metodo Theoremz",
+  description:
+    "Scopri il metodo Theoremz: il percorso strutturato per migliorare davvero in matematica e fisica, senza ripetizioni tradizionali. Risultati concreti, passo dopo passo.",
   alternates: { canonical: "/ilmetodotheoremz" },
+  openGraph: {
+    title: "Il Metodo Theoremz",
+    description:
+      "Scopri il metodo Theoremz: il percorso strutturato per migliorare davvero in matematica e fisica, senza ripetizioni tradizionali. Risultati concreti, passo dopo passo.",
+    url: "https://theoremz.com/ilmetodotheoremz",
+    siteName: "Theoremz",
+    images: [{ url: "/metadata.png" }],
+    type: "website",
+    locale: "it_IT",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Il Metodo Theoremz",
+    description:
+      "Scopri il metodo Theoremz: il percorso strutturato per migliorare davvero in matematica e fisica, senza ripetizioni tradizionali.",
+    site: "@theoremz_",
+    images: ["/metadata.png"],
+  },
+  robots: { index: true, follow: true },
 };
 
 const sections = [
@@ -73,6 +95,20 @@ const testimonianzeImages = [
   "/images/test11.PNG",
 ];
 
+function getTestimonialSize(src: string) {
+  switch (src) {
+    case "/images/test3.PNG":
+      return { width: 739, height: 190 };
+    case "/images/test11.jpeg":
+      return { width: 739, height: 1600 };
+    case "/images/test1.jpeg":
+    case "/images/test2.jpeg":
+      return { width: 946, height: 2048 };
+    default:
+      return { width: 1125, height: 2436 };
+  }
+}
+
 export default function MetodoTheoremzPage() {
   return (
     <main className="bg-white text-[#232323] font-semibold">
@@ -130,23 +166,29 @@ export default function MetodoTheoremzPage() {
                 <div className="flex w-max items-center testimonianze-track">
                   <div className="flex gap-4 pr-4 sm:gap-4 sm:pr-4">
                     {testimonianzeImages.map((src, idx) => (
-                      <img
+                      <Image
                         key={`testimonianza-${idx}`}
                         src={src}
                         alt="Testimonianza"
+                        width={getTestimonialSize(src).width}
+                        height={getTestimonialSize(src).height}
+                        sizes="(max-width: 640px) 280px, (max-width: 1024px) 200px, 240px"
                         className="h-auto w-[calc(100vw-48px)] max-w-[280px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
                       />
                     ))}
                   </div>
                   <div
-                    className="flex gap-4 pr-4 sm:gap-4 sm:pr-4"
-                    aria-hidden="true"
-                  >
+                  className="flex gap-4 pr-4 sm:gap-4 sm:pr-4"
+                  aria-hidden="true"
+                >
                     {testimonianzeImages.map((src, idx) => (
-                      <img
+                      <Image
                         key={`testimonianza-dup-${idx}`}
                         src={src}
                         alt=""
+                        width={getTestimonialSize(src).width}
+                        height={getTestimonialSize(src).height}
+                        sizes="(max-width: 640px) 280px, (max-width: 1024px) 200px, 240px"
                         className="h-auto w-[calc(100vw-48px)] max-w-[280px] shrink-0 rounded-2xl sm:w-[200px] sm:max-w-none lg:w-[240px]"
                       />
                     ))}
@@ -1149,11 +1191,13 @@ export default function MetodoTheoremzPage() {
                     key={`gallery-${src}`}
                     className={`overflow-hidden rounded-2xl border ${panelClass}`}
                   >
-                    <img
+                    <Image
                       src={src}
                       alt={`Testimonianza risultato reale ${idx + 1}`}
+                      width={getTestimonialSize(src).width}
+                      height={getTestimonialSize(src).height}
+                      sizes="(max-width: 768px) 100vw, 33vw"
                       className="h-full w-full object-cover"
-                      loading="lazy"
                     />
                   </figure>
                 ))}

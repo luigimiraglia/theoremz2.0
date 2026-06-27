@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
         funnelSessions.add(event.session_id);
       }
       
-      // Trova sessioni che hanno fatto la segmentazione genitore/studente (FUNNEL 1)
+      // Trova sessioni che hanno attraversato la scelta iniziale del funnel (FUNNEL 1)
       if (event.page_url?.includes('genitore') || 
           event.page_url?.includes('studente') ||
           event.page_url?.includes('parent') ||
@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
       popupClickSessions.add(event.session_id);
     });
     
-    // Traccia Black/Mentor per FUNNEL 1 (dal percorso start/segmentazione)
+    // Traccia Black/Mentor per FUNNEL 1 (dal percorso iniziale)
     const blackPageEvents = events?.filter(e => 
       e.event_type === 'page_view' && 
       e.page_url?.includes('/black') &&

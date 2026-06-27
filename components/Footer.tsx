@@ -40,9 +40,9 @@ export default function Footer() {
                 Termini e Condizioni
               </Link>
               <span>-</span>
-              <a href="/lezioni.html" className="hover:text-blue-400">
+              <Link href="/lezioni" className="hover:text-blue-400">
                 Lista delle lezioni
-              </a>
+              </Link>
               <span>-</span>
               {/* Client link to open cookie preferences */}
               <ConsentManagerLink className="hover:text-blue-400" />

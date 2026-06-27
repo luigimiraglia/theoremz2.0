@@ -87,13 +87,6 @@ export default function LessonExercises({
 
       const currentUser = auth.currentUser;
 
-      console.log("Debug auth:", {
-        currentUser: !!currentUser,
-        isSubscribed,
-        userEmail: currentUser?.email,
-        authReady: true,
-      });
-
       if (!currentUser || !isSubscribed) {
         // Traccia click popup per simula verifica
         trackConversion("popup_click", "simula_verifica", {
@@ -103,12 +96,10 @@ export default function LessonExercises({
         });
         
         // Se non c'è utente o non è abbonato, mostra popup
-        console.log("User not logged or not subscribed, showing popup");
         setState("popup");
         return;
       }
 
-      console.log("All checks passed, redirecting to simula-verifica");
       // Se tutto ok, vai alla simulazione usando Next.js router
       const url = `/simula-verifica?lessonId=${encodeURIComponent(lessonId)}&slug=${encodeURIComponent(lessonSlug)}&title=${encodeURIComponent(lessonTitle)}`;
       router.push(url);
