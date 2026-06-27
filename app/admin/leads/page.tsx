@@ -33,6 +33,12 @@ type Lead = {
   completedAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  firstSeenAt?: string | null;
+  lastSeenAt?: string | null;
+  leadAgeDays?: number | null;
+  heatScore?: number | null;
+  heatLabel?: "cold" | "warm" | "hot" | string | null;
+  funnel?: string | null;
 };
 
 type LeadsResponse = {
@@ -75,6 +81,13 @@ function formatDay(iso?: string | null) {
   return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
 }
 
+function formatLeadAge(days?: number | null) {
+  if (typeof days !== "number") return null;
+  if (days <= 0) return "oggi";
+  if (days === 1) return "1 giorno";
+  return `${days} giorni`;
+}
+
 function buildWhatsAppLink(phone?: string | null, preferWeb?: boolean) {
   if (!phone) return null;
   const digits = phone.replace(/[^\d]/g, "");
@@ -104,6 +117,23 @@ function LeadBadge({ channel }: { channel: Lead["channel"] }) {
     <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
       <AlertTriangle size={14} />
       Contatto
+    </span>
+  );
+}
+
+function HeatBadge({ lead }: { lead: Lead }) {
+  if (typeof lead.heatScore !== "number") return null;
+  const tone =
+    lead.heatLabel === "hot"
+      ? "bg-rose-100 text-rose-700"
+      : lead.heatLabel === "warm"
+        ? "bg-amber-100 text-amber-700"
+        : "bg-slate-100 text-slate-700";
+  const label = lead.heatLabel === "hot" ? "Caldo" : lead.heatLabel === "warm" ? "Tiepido" : "Freddo";
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>
+      {label} {lead.heatScore}
+      {formatLeadAge(lead.leadAgeDays) ? ` · ${formatLeadAge(lead.leadAgeDays)}` : ""}
     </span>
   );
 }
@@ -573,6 +603,13 @@ export default function LeadsAdminPage() {
           </div>
           <div className="flex items-center gap-2">
             <Link
+              href="/admin/leads-os"
+              className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 shadow-sm hover:border-emerald-300"
+            >
+              <ListFilter size={16} />
+              Lead OS
+            </Link>
+            <Link
               href="/admin/whatsapp"
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:border-slate-300"
             >
@@ -681,6 +718,7 @@ export default function LeadsAdminPage() {
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                        <HeatBadge lead={lead} />
                         <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold">
                           {statusLabel}
                         </span>
@@ -980,6 +1018,7 @@ export default function LeadsAdminPage() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <LeadBadge channel={lead.channel} />
+                          <HeatBadge lead={lead} />
                           {lead.isOverdue ? (
                             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
                               In ritardo
@@ -1176,8 +1215,9 @@ export default function LeadsAdminPage() {
                       className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
                     >
                       <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <LeadBadge channel={lead.channel} />
+                          <HeatBadge lead={lead} />
                           <span className="font-semibold text-slate-900">
                             {lead.name || lead.instagramHandle || lead.whatsappPhone || "Lead"}
                           </span>
@@ -1209,8 +1249,9 @@ export default function LeadsAdminPage() {
                 <div className="space-y-2 text-sm">
                   {data.completed.slice(0, 10).map((lead) => (
                     <div key={lead.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <LeadBadge channel={lead.channel} />
+                        <HeatBadge lead={lead} />
                         <span className="font-semibold text-slate-900">
                           {lead.name || lead.instagramHandle || lead.whatsappPhone || "Lead"}
                         </span>
@@ -1286,8 +1327,9 @@ export default function LeadsAdminPage() {
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <LeadBadge channel={lead.channel} />
+                              <HeatBadge lead={lead} />
                               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 {statusLabel}
                               </span>

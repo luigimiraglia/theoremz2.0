@@ -37,6 +37,7 @@ const WHATSAPP_GRAPH_VERSION =
 const WHATSAPP_PHONE_NUMBER_ID =
   process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID?.trim() || "";
 const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN?.trim() || "";
+const BLACK_CHURN_FUNNEL = "black_churn";
 
 type PersonaKind = "start-studente" | "start-genitore";
 
@@ -1651,17 +1652,19 @@ async function ensureBlackLeadFromActivation({
   let existing: any = null;
   if (leadStudentId) {
     const { data } = await db
-      .from("black_followups")
-      .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
+      .from("leads")
+      .select("id, status, next_follow_up_at, full_name, phone, student_id, note")
+      .eq("funnel", BLACK_CHURN_FUNNEL)
       .eq("student_id", leadStudentId)
       .maybeSingle();
     existing = data || null;
   }
   if (!existing) {
     const { data } = await db
-      .from("black_followups")
-      .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
-      .eq("whatsapp_phone", leadPhone)
+      .from("leads")
+      .select("id, status, next_follow_up_at, full_name, phone, student_id, note")
+      .eq("funnel", BLACK_CHURN_FUNNEL)
+      .eq("phone", leadPhone)
       .maybeSingle();
     existing = data || null;
   }
@@ -1676,28 +1679,32 @@ async function ensureBlackLeadFromActivation({
   if (existing?.id) {
     const patch: Record<string, any> = { updated_at: nowIso };
     if (leadName && !existing.full_name) patch.full_name = leadName;
-    if (leadPhone && !existing.whatsapp_phone) patch.whatsapp_phone = leadPhone;
+    if (leadPhone && !existing.phone) patch.phone = leadPhone;
     if (leadStudentId && !existing.student_id) patch.student_id = leadStudentId;
     if (note && !existing.note) patch.note = note;
     if (existing.status !== "active") patch.status = "active";
     if (!existing.next_follow_up_at) patch.next_follow_up_at = nowIso;
     if (Object.keys(patch).length > 1) {
-      await db.from("black_followups").update(patch).eq("id", existing.id);
+      await db.from("leads").update(patch).eq("id", existing.id);
     }
     return;
   }
 
   const insertPayload = {
     full_name: leadName,
-    whatsapp_phone: leadPhone,
+    phone: leadPhone,
     note,
     student_id: leadStudentId,
+    channel: "black",
+    source: "stripe_webhook_activation",
+    funnel: BLACK_CHURN_FUNNEL,
+    response_status: "pending",
     status: "active",
     next_follow_up_at: nowIso,
     created_at: nowIso,
     updated_at: nowIso,
   };
-  await db.from("black_followups").insert(insertPayload);
+  await db.from("leads").insert(insertPayload);
 }
 
 async function ensureBlackLeadFromCancellation({
@@ -1786,24 +1793,27 @@ async function ensureBlackLeadFromCancellation({
   let existing: any = null;
   if (leadStudentId) {
     const { data } = await db
-      .from("black_followups")
-      .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
+      .from("leads")
+      .select("id, status, next_follow_up_at, full_name, phone, student_id, note")
+      .eq("funnel", BLACK_CHURN_FUNNEL)
       .eq("student_id", leadStudentId)
       .maybeSingle();
     existing = data || null;
   }
   if (!existing) {
     const { data } = await db
-      .from("black_followups")
-      .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
-      .eq("whatsapp_phone", leadContact)
+      .from("leads")
+      .select("id, status, next_follow_up_at, full_name, phone, student_id, note")
+      .eq("funnel", BLACK_CHURN_FUNNEL)
+      .eq("phone", leadContact)
       .maybeSingle();
     existing = data || null;
   }
   if (!existing && leadEmail) {
     const { data } = await db
-      .from("black_followups")
-      .select("id, status, next_follow_up_at, full_name, whatsapp_phone, student_id, note")
+      .from("leads")
+      .select("id, status, next_follow_up_at, full_name, phone, student_id, note")
+      .eq("funnel", BLACK_CHURN_FUNNEL)
       .ilike("note", `%${leadEmail}%`)
       .order("updated_at", { ascending: false })
       .limit(1)
@@ -1833,7 +1843,7 @@ async function ensureBlackLeadFromCancellation({
       next_follow_up_at: nowIso,
     };
     if (leadName && !existing.full_name) patch.full_name = leadName;
-    if (leadContact && !existing.whatsapp_phone) patch.whatsapp_phone = leadContact;
+    if (leadContact && !existing.phone) patch.phone = leadContact;
     if (leadStudentId && !existing.student_id) patch.student_id = leadStudentId;
     if (note) {
       if (existing.note) {
@@ -1844,7 +1854,7 @@ async function ensureBlackLeadFromCancellation({
         patch.note = note;
       }
     }
-    await db.from("black_followups").update(patch).eq("id", existing.id);
+    await db.from("leads").update(patch).eq("id", existing.id);
     if (shouldNotify) {
       await sendChurnWhatsappFollowupEmail({
         name: leadName,
@@ -1863,15 +1873,19 @@ async function ensureBlackLeadFromCancellation({
 
   const insertPayload = {
     full_name: leadName,
-    whatsapp_phone: leadContact,
+    phone: leadContact,
     note,
     student_id: leadStudentId,
+    channel: "black",
+    source: "stripe_webhook_cancellation",
+    funnel: BLACK_CHURN_FUNNEL,
+    response_status: "pending",
     status: "active",
     next_follow_up_at: nowIso,
     created_at: nowIso,
     updated_at: nowIso,
   };
-  await db.from("black_followups").insert(insertPayload);
+  await db.from("leads").insert(insertPayload);
   if (shouldNotify) {
     await sendChurnWhatsappFollowupEmail({
       name: leadName,

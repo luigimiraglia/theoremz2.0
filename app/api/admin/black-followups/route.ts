@@ -5,6 +5,7 @@ import { getRomeDayRange } from "@/lib/rome-time";
 const ADMIN_EMAIL = "luigi.miraglia006@gmail.com";
 const DEFAULT_OFFSET_DAYS = 3;
 const LEAD_FOLLOWUP_STEPS = [1, 2, 7, 30];
+const BLACK_CHURN_FUNNEL = "black_churn";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -123,7 +124,7 @@ function mapRow(row: any) {
     id: row.id as string,
     studentId: row.student_id || student?.id || null,
     name: row.full_name || null,
-    whatsappPhone: row.whatsapp_phone || null,
+    whatsappPhone: row.phone || null,
     note: row.note || null,
     status: row.status || "active",
     nextFollowUpAt: row.next_follow_up_at || null,
@@ -246,8 +247,9 @@ export async function GET(request: NextRequest) {
     let activeIds = new Set<string>();
     if (studentIds.length) {
       const { data: activeRows, error: activeErr } = await db
-        .from("black_followups")
+        .from("leads")
         .select("student_id")
+        .eq("funnel", BLACK_CHURN_FUNNEL)
         .eq("status", "active")
         .in("student_id", studentIds);
       if (activeErr) return NextResponse.json({ error: activeErr.message }, { status: 500 });
@@ -266,8 +268,9 @@ export async function GET(request: NextRequest) {
 
   if (fetchAll) {
     const { data, error } = await db
-      .from("black_followups")
+      .from("leads")
       .select("*")
+      .eq("funnel", BLACK_CHURN_FUNNEL)
       .order("status", { ascending: true })
       .order("next_follow_up_at", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: false })
@@ -279,8 +282,9 @@ export async function GET(request: NextRequest) {
 
   if (fetchNext) {
     const { data: activeStudents } = await db
-      .from("black_followups")
+      .from("leads")
       .select("student_id")
+      .eq("funnel", BLACK_CHURN_FUNNEL)
       .eq("status", "active")
         .not("student_id", "is", null);
       const excludeIds = new Set<string>(
@@ -322,14 +326,18 @@ export async function GET(request: NextRequest) {
       const payload = {
         student_id: candidate.id,
         full_name: candidate.preferred_name || candidate.student_name || null,
-        whatsapp_phone: phone,
+        phone,
         note: note || null,
+        channel: "black",
+        source: "admin_black_churn",
+        funnel: BLACK_CHURN_FUNNEL,
+        response_status: "pending",
         status: "active",
         next_follow_up_at: dayStart.toISOString(),
       };
 
       const { data, error } = await db
-        .from("black_followups")
+        .from("leads")
         .insert(payload)
         .select("*")
         .maybeSingle();
@@ -346,22 +354,25 @@ export async function GET(request: NextRequest) {
       completedPromise,
     ] = await Promise.all([
       db
-        .from("black_followups")
+        .from("leads")
         .select("*")
+        .eq("funnel", BLACK_CHURN_FUNNEL)
         .eq("status", "active")
         .lte("next_follow_up_at", dayEnd.toISOString())
         .order("next_follow_up_at", { ascending: true }),
       db
-        .from("black_followups")
+        .from("leads")
         .select("*")
+        .eq("funnel", BLACK_CHURN_FUNNEL)
         .eq("status", "active")
         .gt("next_follow_up_at", dayEnd.toISOString())
         .order("next_follow_up_at", { ascending: true })
         .limit(150),
       includeCompleted
         ? db
-            .from("black_followups")
+            .from("leads")
             .select("*")
+            .eq("funnel", BLACK_CHURN_FUNNEL)
             .eq("status", "completed")
             .order("updated_at", { ascending: false })
             .limit(50)
@@ -398,8 +409,9 @@ export async function GET(request: NextRequest) {
       let activeFollowups = new Set<string>();
       if (churnedIds.length) {
         const { data: activeRows, error: activeErr } = await db
-          .from("black_followups")
+          .from("leads")
           .select("student_id")
+          .eq("funnel", BLACK_CHURN_FUNNEL)
           .eq("status", "active")
           .in("student_id", churnedIds);
         if (activeErr) {
@@ -449,8 +461,9 @@ export async function POST(request: NextRequest) {
   let student: any = null;
   if (studentId) {
     const { data: activeRows, error: activeErr } = await db
-      .from("black_followups")
+      .from("leads")
       .select("id")
+      .eq("funnel", BLACK_CHURN_FUNNEL)
       .eq("student_id", studentId)
       .eq("status", "active")
       .limit(1);
@@ -501,9 +514,10 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: existingByContact } = await db
-    .from("black_followups")
+    .from("leads")
     .select("*")
-    .eq("whatsapp_phone", whatsappPhone)
+    .eq("funnel", BLACK_CHURN_FUNNEL)
+    .eq("phone", whatsappPhone)
     .maybeSingle();
   if (existingByContact?.id) {
     if (studentId && existingByContact.student_id && existingByContact.student_id !== studentId) {
@@ -521,7 +535,7 @@ export async function POST(request: NextRequest) {
     if (studentId && !existingByContact.student_id) patch.student_id = studentId;
     if (note && !existingByContact.note) patch.note = note;
     const { data, error } = await db
-      .from("black_followups")
+      .from("leads")
       .update(patch)
       .eq("id", existingByContact.id)
       .select("*")
@@ -548,15 +562,19 @@ export async function POST(request: NextRequest) {
 
   const payload = {
     full_name: name,
-    whatsapp_phone: whatsappPhone,
+    phone: whatsappPhone,
     note,
     student_id: studentId || null,
+    channel: "black",
+    source: "admin_black_churn",
+    funnel: BLACK_CHURN_FUNNEL,
+    response_status: "pending",
     status: "active",
     next_follow_up_at: nextFollowUpAt.toISOString(),
   };
 
   const { data, error } = await db
-    .from("black_followups")
+    .from("leads")
     .insert(payload)
     .select("*")
     .maybeSingle();
@@ -586,8 +604,9 @@ export async function PATCH(request: NextRequest) {
 
   if (action === "restart_lead_cycle") {
     const { data: existing, error: fetchErr } = await db
-      .from("black_followups")
+      .from("leads")
       .select("*")
+      .eq("funnel", BLACK_CHURN_FUNNEL)
       .eq("id", id)
       .maybeSingle();
     if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
@@ -596,7 +615,7 @@ export async function PATCH(request: NextRequest) {
     const now = new Date();
     const nextRaw = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
     const nextFollowUp = nextRaw && !Number.isNaN(nextRaw.getTime()) ? nextRaw : addDays(now, DEFAULT_OFFSET_DAYS);
-    const phone = normalizePhone(body.whatsapp || body.whatsappPhone || body.phone || existing.whatsapp_phone);
+    const phone = normalizePhone(body.whatsapp || body.whatsappPhone || body.phone || existing.phone);
     if (!phone) return NextResponse.json({ error: "missing_phone" }, { status: 400 });
     const leadName =
       typeof body.name === "string" && body.name.trim()
@@ -608,47 +627,23 @@ export async function PATCH(request: NextRequest) {
       full_name: leadName,
       note: existing.note || null,
       instagram_handle: null,
-      whatsapp_phone: phone,
+      phone,
       channel: "black",
+      source: existing.source || "admin_black_churn",
+      funnel: BLACK_CHURN_FUNNEL,
+      response_status: "pending",
       status: "active",
       current_step: 0,
       last_contacted_at: now.toISOString(),
       next_follow_up_at: nextLeadFollowUp ? nextLeadFollowUp.toISOString() : null,
       completed_at: null,
-      updated_at: now.toISOString(),
     };
 
-    const { data: existingLead } = await db
-      .from("manual_leads")
-      .select("*")
-      .eq("whatsapp_phone", phone)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    let leadRow: any | null = null;
-    if (existingLead?.id) {
-      const { data, error } = await db
-        .from("manual_leads")
-        .update(leadPayload)
-        .eq("id", existingLead.id)
-        .select("*")
-        .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      leadRow = data;
-    } else {
-      leadPayload.created_at = now.toISOString();
-      const { data, error } = await db.from("manual_leads").insert(leadPayload).select("*").maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      leadRow = data;
-    }
-
     const { data: updatedFollowup, error: updateFollowErr } = await db
-      .from("black_followups")
+      .from("leads")
       .update({
-        last_contacted_at: now.toISOString(),
-        next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : null,
-        status: "active",
+        ...leadPayload,
+        next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : leadPayload.next_follow_up_at,
       })
       .eq("id", id)
       .select("*")
@@ -656,13 +651,14 @@ export async function PATCH(request: NextRequest) {
     if (updateFollowErr) return NextResponse.json({ error: updateFollowErr.message }, { status: 500 });
 
     const [withStudent] = await attachStudents(db, updatedFollowup ? [updatedFollowup] : []);
-    return NextResponse.json({ ok: true, leadId: leadRow?.id || null, contact: mapRow(withStudent) });
+    return NextResponse.json({ ok: true, leadId: updatedFollowup?.id || null, contact: mapRow(withStudent) });
   }
 
   if (action === "advance") {
     const { data: existing, error: fetchErr } = await db
-      .from("black_followups")
+      .from("leads")
       .select("*")
+      .eq("funnel", BLACK_CHURN_FUNNEL)
       .eq("id", id)
       .maybeSingle();
     if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
@@ -674,7 +670,7 @@ export async function PATCH(request: NextRequest) {
       nextRaw && !Number.isNaN(nextRaw.getTime()) ? nextRaw : addDays(now, DEFAULT_OFFSET_DAYS);
 
     const { data, error } = await db
-      .from("black_followups")
+      .from("leads")
       .update({
         last_contacted_at: now.toISOString(),
         next_follow_up_at: nextFollowUpAt.toISOString(),
@@ -723,7 +719,7 @@ export async function PATCH(request: NextRequest) {
     if (!normalizedPhone) {
       return NextResponse.json({ error: "missing_whatsapp" }, { status: 400 });
     }
-    patch.whatsapp_phone = normalizedPhone;
+    patch.phone = normalizedPhone;
   }
   if (body.nextFollowUpAt !== undefined) {
     const parsed = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
@@ -742,8 +738,9 @@ export async function PATCH(request: NextRequest) {
 
   if (wantsNameUpdate || wantsPhoneUpdate) {
     const { data: existing, error: fetchErr } = await db
-      .from("black_followups")
+      .from("leads")
       .select("student_id")
+      .eq("funnel", BLACK_CHURN_FUNNEL)
       .eq("id", id)
       .maybeSingle();
     if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
@@ -774,7 +771,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const { data, error } = await db
-    .from("black_followups")
+    .from("leads")
     .update(patch)
     .eq("id", id)
     .select("*")

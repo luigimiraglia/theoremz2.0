@@ -16,6 +16,7 @@ const ACTIVE_SUB_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]
 const CANCEL_SUB_STATUSES = new Set(["canceled", "incomplete_expired", "paused"]);
 const CHURN_NOTE_LABEL = "Disdetta abbonamento";
 const CHURN_NOTE_MATCH = "disdetta abbonamento";
+const BLACK_CHURN_FUNNEL = "black_churn";
 
 const PRODUCT_KIND_MAP: Record<string, string> = {
   prod_PIltnHyTuX5Qig: "black-standard",
@@ -210,11 +211,12 @@ async function findChurnFollowup(
   },
 ) {
   const columns =
-    "id, status, note, student_id, whatsapp_phone, next_follow_up_at, updated_at";
+    "id, status, note, student_id, phone, next_follow_up_at, updated_at";
   if (studentId) {
     const { data, error } = await db
-      .from("black_followups")
+      .from("leads")
       .select(columns)
+      .eq("funnel", BLACK_CHURN_FUNNEL)
       .eq("student_id", studentId)
       .ilike("note", `%${CHURN_NOTE_MATCH}%`)
       .order("updated_at", { ascending: false })
@@ -224,9 +226,10 @@ async function findChurnFollowup(
   }
   if (contact) {
     const { data, error } = await db
-      .from("black_followups")
+      .from("leads")
       .select(columns)
-      .eq("whatsapp_phone", contact)
+      .eq("funnel", BLACK_CHURN_FUNNEL)
+      .eq("phone", contact)
       .ilike("note", `%${CHURN_NOTE_MATCH}%`)
       .order("updated_at", { ascending: false })
       .limit(1);
@@ -236,8 +239,9 @@ async function findChurnFollowup(
   if (email) {
     const pattern = `%${email}%`;
     const { data, error } = await db
-      .from("black_followups")
+      .from("leads")
       .select(columns)
+      .eq("funnel", BLACK_CHURN_FUNNEL)
       .ilike("note", pattern)
       .order("updated_at", { ascending: false })
       .limit(1);
@@ -474,8 +478,8 @@ async function handle(req: Request) {
             patch.student_id = leadStudentId;
             changed = true;
           }
-          if ((!existing.whatsapp_phone || existing.whatsapp_phone === "") && leadContact) {
-            patch.whatsapp_phone = leadContact;
+          if ((!existing.phone || existing.phone === "") && leadContact) {
+            patch.phone = leadContact;
             changed = true;
           }
           if (note) {
@@ -487,7 +491,7 @@ async function handle(req: Request) {
           }
           if (changed) {
             const { error } = await db
-              .from("black_followups")
+              .from("leads")
               .update(patch)
               .eq("id", existing.id);
             if (error) throw error;
@@ -500,15 +504,19 @@ async function handle(req: Request) {
           }
           const payload = {
             full_name: leadName,
-            whatsapp_phone: leadContact,
+            phone: leadContact,
             note,
             student_id: leadStudentId,
+            channel: "black",
+            source: "stripe_sync_black_churn",
+            funnel: BLACK_CHURN_FUNNEL,
+            response_status: "pending",
             status: "active",
             next_follow_up_at: nowIso,
             created_at: nowIso,
             updated_at: nowIso,
           };
-          const { error } = await db.from("black_followups").insert(payload);
+          const { error } = await db.from("leads").insert(payload);
           if (error) throw error;
           stats.created += 1;
         }
@@ -525,7 +533,7 @@ async function handle(req: Request) {
         }
         if (changed) {
           const { error } = await db
-            .from("black_followups")
+            .from("leads")
             .update(patch)
             .eq("id", existing.id);
           if (error) throw error;

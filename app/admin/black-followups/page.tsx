@@ -1582,6 +1582,13 @@ export default function BlackFollowupsPage() {
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <Link
+              href="/admin/leads-os"
+              className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 shadow-sm hover:border-emerald-300"
+            >
+              <ListFilter size={16} />
+              Lead OS
+            </Link>
+            <Link
               href="/admin/whatsapp"
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:border-slate-300"
             >

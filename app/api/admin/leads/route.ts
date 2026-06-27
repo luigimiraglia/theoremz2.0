@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { upsertCanonicalLead } from "@/lib/canonicalLeads";
 import { supabaseServer } from "@/lib/supabase";
 import { getRomeDayRange } from "@/lib/rome-time";
 
@@ -54,7 +55,7 @@ function normalizeHandle(raw?: string | null) {
 
 function normalizePhone(raw?: string | null) {
   if (!raw) return null;
-  const compact = raw.replace(/\s+/g, "").trim(); // tolerate spaces inside
+  const compact = raw.replace(/\s+/g, "").trim();
   const digits = compact.replace(/\D/g, "");
   if (!digits) return null;
   if (compact.startsWith("+")) return `+${digits}`;
@@ -62,54 +63,30 @@ function normalizePhone(raw?: string | null) {
   return `+${digits}`;
 }
 
-function collectPhones(rows: any[]) {
-  const phones: string[] = [];
-  rows.forEach((row) => {
-    const normalized = normalizePhone(row?.whatsapp_phone);
-    if (normalized) phones.push(normalized);
-  });
-  return phones;
+function normalizeLeadChannel(row: any) {
+  if (row?.channel === "black") return "black";
+  if (row?.channel === "instagram" || row?.instagram_handle) return "instagram";
+  if (["whatsapp", "phone", "email"].includes(row?.channel)) return "whatsapp";
+  if (row?.phone) return "whatsapp";
+  return "unknown";
 }
 
-async function getBlackPhoneSet(
-  db: ReturnType<typeof supabaseServer>,
-  phones: string[]
-) {
-  const unique = Array.from(new Set(phones)).filter(Boolean);
-  if (!unique.length) return new Set<string>();
-  const found = new Set<string>();
-  const chunkSize = 100;
-  for (let i = 0; i < unique.length; i += chunkSize) {
-    const chunk = unique.slice(i, i + chunkSize);
-    const { data, error } = await db
-      .from("black_followups")
-      .select("whatsapp_phone")
-      .in("whatsapp_phone", chunk);
-    if (error) {
-      console.error("[admin/leads] black followups lookup error", error);
-      continue;
-    }
-    (data || []).forEach((row: any) => {
-      const normalized = normalizePhone(row?.whatsapp_phone);
-      if (normalized) found.add(normalized);
-    });
-  }
-  return found;
+function diffDaysFromNow(iso?: string | null) {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
 }
 
 function mapLead(row: any) {
   if (!row) return null;
-  const channel =
-    row.channel && ["instagram", "whatsapp", "black", "unknown"].includes(row.channel)
-      ? row.channel
-      : row.instagram_handle
-        ? "instagram"
-        : "whatsapp";
+  const channel = normalizeLeadChannel(row);
+  const firstSeenAt = row.first_seen_at || row.created_at || null;
   return {
     id: row.id as string,
     name: row.full_name || null,
     instagramHandle: row.instagram_handle || null,
-    whatsappPhone: row.whatsapp_phone || null,
+    whatsappPhone: row.phone || null,
     note: row.note || null,
     channel,
     status: row.status || "active",
@@ -119,7 +96,18 @@ function mapLead(row: any) {
     completedAt: row.completed_at || null,
     createdAt: row.created_at || null,
     updatedAt: row.updated_at || null,
+    firstSeenAt,
+    lastSeenAt: row.last_seen_at || row.updated_at || null,
+    leadAgeDays:
+      typeof row.lead_age_days === "number" ? row.lead_age_days : diffDaysFromNow(firstSeenAt),
+    heatScore: row.temperature_score ?? null,
+    heatLabel: row.temperature_label || null,
+    funnel: row.funnel || null,
   };
+}
+
+function baseVisibleQuery(db: ReturnType<typeof supabaseServer>) {
+  return db.from("leads").select("*").neq("funnel", "black_churn");
 }
 
 export async function GET(request: NextRequest) {
@@ -141,23 +129,17 @@ export async function GET(request: NextRequest) {
   const { start: dayStart, end: dayEnd } = getRomeDayRange(dateParam);
 
   if (fetchAll) {
-    const { data, error } = await db
-      .from("manual_leads")
-      .select("*")
+    const { data, error } = await baseVisibleQuery(db)
+      .order("temperature_score", { ascending: false })
+      .order("next_follow_up_at", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(500);
     if (error) {
       console.error("[admin/leads] all fetch error", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    const allRows = Array.isArray(data) ? data : [];
-    const blackPhones = await getBlackPhoneSet(db, collectPhones(allRows));
-    const filtered = allRows.filter((row) => {
-      const normalized = normalizePhone(row?.whatsapp_phone);
-      return !normalized || !blackPhones.has(normalized);
-    });
     return NextResponse.json({
-      all: filtered.map(mapLead).filter((l) => l && l.channel !== "black"),
+      all: (data || []).map(mapLead).filter((lead) => lead && lead.channel !== "black"),
     });
   }
 
@@ -166,23 +148,19 @@ export async function GET(request: NextRequest) {
     { data: upcomingRows, error: upcomingErr },
     completedPromise,
   ] = await Promise.all([
-    db
-      .from("manual_leads")
-      .select("*")
+    baseVisibleQuery(db)
       .eq("status", "active")
       .lte("next_follow_up_at", dayEnd.toISOString())
+      .order("temperature_score", { ascending: false })
       .order("next_follow_up_at", { ascending: true }),
-    db
-      .from("manual_leads")
-      .select("*")
+    baseVisibleQuery(db)
       .eq("status", "active")
       .gt("next_follow_up_at", dayEnd.toISOString())
+      .order("temperature_score", { ascending: false })
       .order("next_follow_up_at", { ascending: true })
       .limit(limit),
     includeCompleted
-      ? db
-          .from("manual_leads")
-          .select("*")
+      ? baseVisibleQuery(db)
           .eq("status", "completed")
           .order("completed_at", { ascending: false })
           .limit(50)
@@ -205,20 +183,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: completedErr.message }, { status: 500 });
   }
 
-  const allRows = [
-    ...(dueRows || []),
-    ...(upcomingRows || []),
-    ...(completedRows || []),
-  ];
-  const blackPhones = await getBlackPhoneSet(db, collectPhones(allRows));
   const filterVisible = (arr: any[] | null | undefined) =>
-    (arr || [])
-      .filter((row) => {
-        const normalized = normalizePhone(row?.whatsapp_phone);
-        return !normalized || !blackPhones.has(normalized);
-      })
-      .map(mapLead)
-      .filter((l) => l && l.channel !== "black");
+    (arr || []).map(mapLead).filter((lead) => lead && lead.channel !== "black");
 
   return NextResponse.json({
     date: dayStart.toISOString(),
@@ -251,20 +217,36 @@ export async function POST(request: NextRequest) {
   const now = new Date();
   const nextFollowUp = computeNextFollowUp(0, now);
 
-  const payload = {
-    full_name: name,
-    note,
-    instagram_handle: instagramHandle,
-    whatsapp_phone: whatsappPhone,
-    channel,
-    status: "active",
-    current_step: 0,
-    next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : null,
-  };
+  let leadId: string | null = null;
+  try {
+    leadId = await upsertCanonicalLead({
+      fullName: name,
+      note,
+      instagramHandle,
+      phone: whatsappPhone,
+      channel,
+      source: "admin_manual",
+      funnel: "manual",
+      status: "active",
+      responseStatus: "pending",
+      currentStep: 0,
+      nextFollowUpAt: nextFollowUp,
+      createdAt: now,
+      updatedAt: now,
+      fallbackKey: `admin_manual:${now.getTime()}`,
+    });
+  } catch (error: any) {
+    console.error("[admin/leads] upsert error", error);
+    return NextResponse.json({ error: error?.message || "insert_failed" }, { status: 500 });
+  }
 
-  const { data, error } = await db.from("manual_leads").insert(payload).select("*").maybeSingle();
+  if (!leadId) {
+    return NextResponse.json({ error: "insert_failed" }, { status: 500 });
+  }
+
+  const { data, error } = await db.from("leads").select("*").eq("id", leadId).maybeSingle();
   if (error) {
-    console.error("[admin/leads] insert error", error);
+    console.error("[admin/leads] fetch after insert error", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -290,7 +272,7 @@ export async function PATCH(request: NextRequest) {
 
   if (action === "advance") {
     const { data: existing, error: fetchErr } = await db
-      .from("manual_leads")
+      .from("leads")
       .select("*")
       .eq("id", id)
       .maybeSingle();
@@ -298,12 +280,11 @@ export async function PATCH(request: NextRequest) {
       console.error("[admin/leads] advance fetch error", fetchErr);
       return NextResponse.json({ error: fetchErr.message }, { status: 500 });
     }
-    if (!existing) {
-      return NextResponse.json({ error: "not_found" }, { status: 404 });
-    }
+    if (!existing) return NextResponse.json({ error: "not_found" }, { status: 404 });
     if (existing.status === "completed") {
       return NextResponse.json({ error: "already_completed" }, { status: 400 });
     }
+
     const now = new Date();
     const currentStep = Number(existing.current_step ?? 0);
     const isMonthly = currentStep >= LAST_STEP_INDEX;
@@ -319,12 +300,10 @@ export async function PATCH(request: NextRequest) {
       next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : null,
       status: nextFollowUp ? "active" : "completed",
     };
-    if (!nextFollowUp) {
-      updatePayload.completed_at = now.toISOString();
-    }
+    if (!nextFollowUp) updatePayload.completed_at = now.toISOString();
 
     const { data, error } = await db
-      .from("manual_leads")
+      .from("leads")
       .update(updatePayload)
       .eq("id", id)
       .select("*")
@@ -337,31 +316,17 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (action === "snooze_monthly") {
-    const { data: existing, error: fetchErr } = await db
-      .from("manual_leads")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
-    if (fetchErr) {
-      console.error("[admin/leads] snooze fetch error", fetchErr);
-      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
-    }
-    if (!existing) {
-      return NextResponse.json({ error: "not_found" }, { status: 404 });
-    }
     const now = new Date();
     const nextFollowUp = addDays(now, FOLLOWUP_STEPS_DAYS[LAST_STEP_INDEX]);
-    const updatePayload: Record<string, any> = {
-      current_step: LAST_STEP_INDEX,
-      status: "active",
-      last_contacted_at: now.toISOString(),
-      next_follow_up_at: nextFollowUp.toISOString(),
-      completed_at: null,
-      updated_at: now.toISOString(),
-    };
     const { data, error } = await db
-      .from("manual_leads")
-      .update(updatePayload)
+      .from("leads")
+      .update({
+        current_step: LAST_STEP_INDEX,
+        status: "active",
+        last_contacted_at: now.toISOString(),
+        next_follow_up_at: nextFollowUp.toISOString(),
+        completed_at: null,
+      })
       .eq("id", id)
       .select("*")
       .maybeSingle();
@@ -369,36 +334,23 @@ export async function PATCH(request: NextRequest) {
       console.error("[admin/leads] snooze update error", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+    if (!data) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.json({ lead: mapLead(data) });
   }
 
   if (action === "restart") {
-    const { data: existing, error: fetchErr } = await db
-      .from("manual_leads")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
-    if (fetchErr) {
-      console.error("[admin/leads] restart fetch error", fetchErr);
-      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
-    }
-    if (!existing) {
-      return NextResponse.json({ error: "not_found" }, { status: 404 });
-    }
     const now = new Date();
     const nextFollowUp = computeNextFollowUp(0, now);
-    const updatePayload: Record<string, any> = {
-      current_step: 0,
-      status: "active",
-      last_contacted_at: now.toISOString(),
-      next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : null,
-      completed_at: null,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
-    };
     const { data, error } = await db
-      .from("manual_leads")
-      .update(updatePayload)
+      .from("leads")
+      .update({
+        current_step: 0,
+        status: "active",
+        last_contacted_at: now.toISOString(),
+        next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : null,
+        completed_at: null,
+        created_at: now.toISOString(),
+      })
       .eq("id", id)
       .select("*")
       .maybeSingle();
@@ -406,6 +358,7 @@ export async function PATCH(request: NextRequest) {
       console.error("[admin/leads] restart update error", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+    if (!data) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.json({ lead: mapLead(data) });
   }
 
@@ -422,7 +375,7 @@ export async function PATCH(request: NextRequest) {
     patch.instagram_handle = normalizeHandle(body.instagram || body.instagramHandle || body.handle);
   }
   if (body.whatsapp !== undefined || body.whatsappPhone !== undefined || body.phone !== undefined) {
-    patch.whatsapp_phone = normalizePhone(body.whatsapp || body.whatsappPhone || body.phone);
+    patch.phone = normalizePhone(body.whatsapp || body.whatsappPhone || body.phone);
   }
   if (body.nextFollowUpAt !== undefined) {
     const parsed = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
@@ -432,9 +385,7 @@ export async function PATCH(request: NextRequest) {
     const status = String(body.status).toLowerCase();
     if (["active", "completed", "dropped"].includes(status)) {
       patch.status = status;
-      if (status === "completed") {
-        patch.completed_at = new Date().toISOString();
-      }
+      if (status === "completed") patch.completed_at = new Date().toISOString();
     }
   }
 
@@ -443,7 +394,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const { data, error } = await db
-    .from("manual_leads")
+    .from("leads")
     .update(patch)
     .eq("id", id)
     .select("*")
@@ -453,6 +404,7 @@ export async function PATCH(request: NextRequest) {
     console.error("[admin/leads] generic update error", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  if (!data) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   return NextResponse.json({ lead: mapLead(data) });
 }

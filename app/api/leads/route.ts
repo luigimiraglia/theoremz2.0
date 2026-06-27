@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
+import { upsertCanonicalLead } from "@/lib/canonicalLeads";
 
 export async function POST(req: Request) {
   try {
@@ -27,7 +28,34 @@ export async function POST(req: Request) {
       ip,
     } as const;
 
-    await adminDb.collection("leads").add(doc);
+    const ref = await adminDb.collection("leads").add(doc);
+    try {
+      await upsertCanonicalLead({
+        fullName: doc.name,
+        email: doc.email,
+        phone: doc.phone,
+        channel: doc.contact === "whatsapp" ? "whatsapp" : "phone",
+        source: doc.source || "quick_contact",
+        funnel: "quick_contact",
+        status: "active",
+        responseStatus: "pending",
+        note: [doc.slot ? `Slot: ${doc.slot}` : null, doc.note].filter(Boolean).join(" | ") || null,
+        pageUrl: referer,
+        createdAt: new Date(doc.ts),
+        updatedAt: new Date(doc.ts),
+        metadata: {
+          contactPreference: doc.contact,
+          userAgent: ua,
+          ip,
+        },
+        legacyRefs: {
+          firestore_leads: ref.id,
+        },
+        fallbackKey: `firestore:leads:${ref.id}`,
+      });
+    } catch (err) {
+      console.error("[api/leads] canonical lead sync error", err);
+    }
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || "server_error" }, { status: 500 });

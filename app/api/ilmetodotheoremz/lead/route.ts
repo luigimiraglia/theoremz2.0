@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { supabaseServer } from "@/lib/supabase";
+import { upsertCanonicalLead } from "@/lib/canonicalLeads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,19 +78,28 @@ export async function POST(req: Request) {
     const fullName = `${firstName} ${lastName}`.trim();
     const referer = req.headers.get("referer");
     const pageUrl = referer ? cleanText(referer, 500) : null;
+    const fullPhone = `${phonePrefix}${phone}`;
 
-    const db = supabaseServer();
-    const { error } = await db.from("ilmetodotheoremz_leads").insert({
-      full_name: fullName,
-      email,
-      phone_prefix: phonePrefix || null,
-      phone,
-      page_url: pageUrl,
-      source: "ilmetodotheoremz",
-    });
-
-    if (error) {
-      console.error("[ilmetodotheoremz lead] insert error", error);
+    try {
+      await upsertCanonicalLead({
+        fullName,
+        email,
+        phone: fullPhone,
+        channel: "whatsapp",
+        source: "ilmetodotheoremz",
+        funnel: "ilmetodo",
+        status: "active",
+        responseStatus: "pending",
+        pageUrl,
+        metadata: {
+          phonePrefix: phonePrefix || null,
+          rawPhone: phone,
+        },
+        legacyRefs: {},
+        fallbackKey: `ilmetodo:${email}`,
+      });
+    } catch (error) {
+      console.error("[ilmetodotheoremz lead] canonical insert error", error);
       return NextResponse.json({ ok: false, error: "insert_failed" }, { status: 500 });
     }
 
@@ -101,7 +110,6 @@ export async function POST(req: Request) {
       auth: { user: fromUser, pass: appPass },
     });
 
-    const fullPhone = `${phonePrefix}${phone}`;
     const whatsappDigits = fullPhone.replace(/\D/g, "");
     const whatsappLink = whatsappDigits
       ? `https://wa.me/${whatsappDigits}`

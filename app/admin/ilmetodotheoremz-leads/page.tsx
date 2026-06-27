@@ -39,6 +39,11 @@ type Lead = {
   pausedAt?: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  firstSeenAt?: string | null;
+  lastSeenAt?: string | null;
+  leadAgeDays?: number | null;
+  heatScore?: number | null;
+  heatLabel?: "cold" | "warm" | "hot" | string | null;
 };
 
 const allowedEmail = "luigi.miraglia006@gmail.com";
@@ -64,6 +69,13 @@ function formatDate(iso?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatLeadAge(days?: number | null) {
+  if (typeof days !== "number") return null;
+  if (days <= 0) return "oggi";
+  if (days === 1) return "1 giorno";
+  return `${days} giorni`;
 }
 
 function buildDefaultMessage(name?: string | null) {
@@ -106,6 +118,18 @@ function statusTone(status: LeadStatus) {
   return "bg-slate-100 text-slate-700";
 }
 
+function heatTone(label?: string | null) {
+  if (label === "hot") return "bg-rose-100 text-rose-700";
+  if (label === "warm") return "bg-amber-100 text-amber-700";
+  return "bg-slate-100 text-slate-700";
+}
+
+function heatLabel(label?: string | null) {
+  if (label === "hot") return "Caldo";
+  if (label === "warm") return "Tiepido";
+  return "Freddo";
+}
+
 function splitLeads(list: Lead[]) {
   return {
     pending: list.filter((lead) => lead.responseStatus === "pending"),
@@ -140,13 +164,25 @@ function LeadCard({ lead, updatingId, preferWebWhatsApp, onStatusChange }: LeadC
             {formatDate(lead.createdAt)}
           </p>
         </div>
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusTone(
-            lead.responseStatus,
-          )}`}
-        >
-          {statusLabel(lead.responseStatus)}
-        </span>
+        <div className="flex flex-wrap justify-end gap-2">
+          {typeof lead.heatScore === "number" ? (
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${heatTone(
+                lead.heatLabel,
+              )}`}
+            >
+              {heatLabel(lead.heatLabel)} {lead.heatScore}
+              {formatLeadAge(lead.leadAgeDays) ? ` · ${formatLeadAge(lead.leadAgeDays)}` : ""}
+            </span>
+          ) : null}
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusTone(
+              lead.responseStatus,
+            )}`}
+          >
+            {statusLabel(lead.responseStatus)}
+          </span>
+        </div>
       </div>
 
       <div className="mt-3 space-y-2 text-sm font-semibold text-slate-700">
@@ -661,11 +697,11 @@ export default function IlMetodoCallLeadsPage() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Lead casuali del giorno
+                Lead caldi del giorno
               </p>
-              <h2 className="text-2xl font-black text-slate-900">Disdette + lead WhatsApp</h2>
+              <h2 className="text-2xl font-black text-slate-900">Priorita ordinate per calore</h2>
               <p className="mt-1 text-sm font-semibold text-slate-600">
-                30 lead casuali da disdette Black e lead WhatsApp.
+                I 30 lead attivi con score piu alto tra landing, quiz, WhatsApp e disdette Black.
               </p>
             </div>
             {dailyDate ? (
@@ -680,7 +716,7 @@ export default function IlMetodoCallLeadsPage() {
               <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">Da contattare</h3>
-                  <p className="text-xs font-semibold text-slate-500">Lead casuali di oggi</p>
+                  <p className="text-xs font-semibold text-slate-500">Ordinati per calore</p>
                 </div>
                 <div className="text-right">
                   <p className="text-[11px] font-semibold uppercase text-slate-400">Rimangono</p>

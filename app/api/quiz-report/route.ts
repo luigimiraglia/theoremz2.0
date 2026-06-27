@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { adminDb } from "@/lib/firebaseAdmin";
-import { supabaseServer } from "@/lib/supabase";
+import { upsertCanonicalLead } from "@/lib/canonicalLeads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -420,14 +420,71 @@ async function logQuizLead({
     });
   }
 
-  // Inserisci/aggiorna anche nella tabella manual_leads (Supabase) per il follow-up automatico
-  if (quiz === "start-studente") {
-    try {
-      await upsertManualLeadFromQuiz({ phone, quizLabel, planName: plan?.name });
-    } catch (err) {
-      console.error("quiz-report manual_leads sync error", err);
-    }
+  try {
+    await upsertCanonicalLeadFromQuiz({
+      quiz,
+      quizLabel,
+      phone,
+      plan,
+      planPitch,
+      responses,
+      submittedAtIso,
+    });
+  } catch (err) {
+    console.error("quiz-report canonical leads sync error", err);
   }
+
+}
+
+async function upsertCanonicalLeadFromQuiz({
+  quiz,
+  quizLabel,
+  phone,
+  plan,
+  planPitch,
+  responses,
+  submittedAtIso,
+}: {
+  quiz: QuizKind;
+  quizLabel: string;
+  phone: string;
+  plan: PlanInfo;
+  planPitch: string;
+  responses: QuizResponse[];
+  submittedAtIso: string;
+}) {
+  const nextFollowUp = computeNextFollowUp(0, new Date(submittedAtIso));
+  const noteParts = [`Quiz: ${quizLabel}`];
+  if (plan.name) noteParts.push(`Piano: ${plan.name}`);
+  if (plan.highlight) noteParts.push(plan.highlight);
+
+  await upsertCanonicalLead({
+    phone,
+    channel: "whatsapp",
+    source: "quiz-report",
+    funnel: "quiz",
+    status: "active",
+    responseStatus: "pending",
+    currentStep: 0,
+    nextFollowUpAt: nextFollowUp,
+    pageUrl: null,
+    note: noteParts.join(" | "),
+    createdAt: submittedAtIso,
+    updatedAt: new Date(),
+    metadata: {
+      quiz,
+      quizLabel,
+      planName: plan.name ?? null,
+      planDescription: plan.description ?? null,
+      planHighlight: plan.highlight ?? null,
+      planPitch,
+      responses,
+    },
+    legacyRefs: {
+      firestore_quiz_leads: `${quiz}:${normalizePhone(phone) || phone}`,
+    },
+    fallbackKey: `quiz:${quiz}:${normalizePhone(phone) || phone}:${submittedAtIso}`,
+  });
 }
 
 const FOLLOWUP_STEPS_DAYS = [1, 2, 7, 30];
@@ -521,70 +578,6 @@ function computeNextFollowUp(stepIndex: number, from: Date) {
   const offset = FOLLOWUP_STEPS_DAYS[stepIndex];
   if (offset === undefined) return null;
   return addDays(from, offset);
-}
-
-async function upsertManualLeadFromQuiz({
-  phone,
-  quizLabel,
-  planName,
-}: {
-  phone: string;
-  quizLabel: string;
-  planName?: string;
-}) {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return;
-  }
-  const normalizedPhone = normalizePhone(phone);
-  if (!normalizedPhone) return;
-  const phoneCandidates = buildPhoneLookupCandidates(phone, normalizedPhone);
-
-  const db = supabaseServer();
-  const now = new Date();
-  const nextFollowUp = computeNextFollowUp(0, now);
-  const noteParts = [`Quiz: ${quizLabel}`];
-  if (planName) noteParts.push(`Piano: ${planName}`);
-  const note = noteParts.join(" • ").slice(0, 220);
-
-  // Se esiste già, riattiva e resetta il follow-up
-  const { data: existing, error: fetchErr } = await db
-    .from("manual_leads")
-    .select("id, status, whatsapp_phone")
-    .in("whatsapp_phone", phoneCandidates.length ? phoneCandidates : [normalizedPhone])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (fetchErr) throw fetchErr;
-
-  if (existing?.id) {
-    const { error: updateErr } = await db
-      .from("manual_leads")
-      .update({
-        whatsapp_phone: normalizedPhone,
-        channel: "whatsapp",
-        status: "active",
-        current_step: 0,
-        next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : null,
-        last_contacted_at: null,
-        completed_at: null,
-        note,
-      })
-      .eq("id", existing.id);
-    if (updateErr) throw updateErr;
-    return;
-  }
-
-  const { error: insertErr } = await db.from("manual_leads").insert({
-    full_name: null,
-    whatsapp_phone: normalizedPhone,
-    instagram_handle: null,
-    channel: "whatsapp",
-    status: "active",
-    current_step: 0,
-    next_follow_up_at: nextFollowUp ? nextFollowUp.toISOString() : null,
-    note,
-  });
-  if (insertErr) throw insertErr;
 }
 
 function buildPlanTemplateMessage({ plan, quiz }: { plan: PlanInfo; quiz: QuizKind }) {

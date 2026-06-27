@@ -1657,6 +1657,13 @@ export default function WhatsAppAdmin() {
               {loadingList ? "Aggiorno..." : "Refresh"}
             </button>
             <Link
+              href="/admin/leads-os"
+              className="px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-sm font-semibold text-emerald-800 shadow-sm hover:border-emerald-300 inline-flex items-center gap-2"
+            >
+              <ListFilter size={16} />
+              Lead OS
+            </Link>
+            <Link
               href="/admin/black-followups"
               className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-900 shadow-sm hover:border-emerald-300 inline-flex items-center gap-2"
             >
