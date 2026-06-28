@@ -112,7 +112,7 @@ type LessonClientProps = {
     lezioniPropedeuticheOpzionali?: LinkedLessonRaw[];
     lezioniFiglie?: LinkedLessonRaw[];
   };
-  sectionItems: { _type: "section"; heading: string; shortTitle: string }[];
+  sectionItems: { heading: string; shortTitle: string }[];
   contentSlot?: ReactNode; // server-rendered content to improve LCP
 };
 

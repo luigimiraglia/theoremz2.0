@@ -1,19 +1,19 @@
-type SectionItem = {
-  _type: "section";
+type IndexItem = {
   heading: string;
   shortTitle: string;
 };
 
-export default function LessonIndex({ sections }: { sections: SectionItem[] }) {
-  if (!sections?.length) return null;
+function toAnchorId(s: string) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/<[^>]+>/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
 
-  const toAnchorId = (s: string) =>
-    String(s || "")
-      .toLowerCase()
-      .replace(/<[^>]+>/g, "")
-      .replace(/[^\p{L}\p{N}]+/gu, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 80);
+export default function LessonIndex({ sections }: { sections: IndexItem[] }) {
+  if (!sections?.length) return null;
 
   return (
     <nav aria-label="Indice della lezione" className="my-1">
@@ -25,7 +25,6 @@ export default function LessonIndex({ sections }: { sections: SectionItem[] }) {
         "
       >
         {sections.map((section) => {
-          // Usa l'H2 completo per l'anchor
           const anchor = toAnchorId(section.heading);
           return (
             <li key={anchor} className="shrink-0">

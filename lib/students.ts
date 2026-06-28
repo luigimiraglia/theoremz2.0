@@ -52,6 +52,52 @@ function shouldPreferIncomingName(current?: string | null, incoming?: string | n
   return normalizedCurrent === "studente" || normalizedCurrent === "student";
 }
 
+async function ensureAuthProfileRow(
+  db: ReturnType<typeof supabaseServer>,
+  input: {
+    authUid: string;
+    fullName?: string | null;
+    email?: string | null;
+  },
+) {
+  const { data: existing, error: readError } = await db
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("id", input.authUid)
+    .maybeSingle();
+  if (readError) throw readError;
+
+  if (existing) {
+    const patch: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (shouldPreferIncomingName(existing.full_name, input.fullName)) {
+      patch.full_name = input.fullName;
+    }
+    if (shouldPreferIncomingEmail(existing.email, input.email)) {
+      patch.email = input.email;
+    }
+    if (Object.keys(patch).length > 1) {
+      const { error } = await db
+        .from("profiles")
+        .update(patch)
+        .eq("id", input.authUid);
+      if (error) throw error;
+    }
+    return;
+  }
+
+  const { error } = await db.from("profiles").insert({
+    id: input.authUid,
+    full_name: input.fullName,
+    email: input.email,
+    role: "student",
+    subscription_tier: "free",
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
 async function findStudentByAuthUid(
   db: ReturnType<typeof supabaseServer>,
   authUid: string,
@@ -76,6 +122,21 @@ async function findStudentByEmail(
     .maybeSingle();
   if (error) throw error;
   return (data as StudentRow | null) || null;
+}
+
+async function isStudentEmailOwnedByAnother(
+  db: ReturnType<typeof supabaseServer>,
+  email: string,
+  studentId: string,
+) {
+  const { data, error } = await db
+    .from("students")
+    .select("id")
+    .eq("email", email)
+    .neq("id", studentId)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data?.id);
 }
 
 async function findStudentByPhone(
@@ -103,6 +164,10 @@ export async function ensureStudentRecord(
   const source = normalizeName(input.source) || "manual";
   const now = new Date().toISOString();
 
+  if (authUid) {
+    await ensureAuthProfileRow(db, { authUid, fullName, email });
+  }
+
   let existing: StudentRow | null = null;
   if (authUid) existing = await findStudentByAuthUid(db, authUid);
   if (!existing && email) existing = await findStudentByEmail(db, email);
@@ -129,7 +194,12 @@ export async function ensureStudentRecord(
   const patch: Partial<StudentRow> & { updated_at: string } = { updated_at: now };
   if (!existing.auth_uid && authUid) patch.auth_uid = authUid;
   if (shouldPreferIncomingName(existing.full_name, fullName)) patch.full_name = fullName;
-  if (shouldPreferIncomingEmail(existing.email, email)) patch.email = email;
+  if (
+    shouldPreferIncomingEmail(existing.email, email) &&
+    !(await isStudentEmailOwnedByAnother(db, email!, existing.id))
+  ) {
+    patch.email = email;
+  }
   if (!existing.phone && phone) patch.phone = phone;
   if (!existing.phone_normalized && phoneNormalized) patch.phone_normalized = phoneNormalized;
   if (!existing.source && source) patch.source = source;

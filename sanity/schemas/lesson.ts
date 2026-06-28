@@ -94,6 +94,220 @@ export const sectionTitle = defineType({
 
 /* ─────────── Documento Lezione ─────────── */
 
+/* ─────────── Riepilogo veloce block ─────────── */
+
+export const riepilogoBlock = defineType({
+  name: "riepilogoBlock",
+  title: "Riepilogo veloce",
+  type: "object",
+  fields: [
+    defineField({ name: "titolo", title: "Titolo", type: "string", validation: (R) => R.required() }),
+    defineField({ name: "definizione", title: "Definizione", type: "text", validation: (R) => R.required() }),
+    defineField({ name: "formulaPrincipale", title: "Formula principale (LaTeX, senza delimitatori)", type: "string" }),
+    defineField({
+      name: "puntiChiave",
+      title: "Punti chiave",
+      type: "array",
+      of: [{ type: "object", name: "punto", fields: [
+        defineField({ name: "testo", title: "Punto", type: "string" }),
+      ]}],
+    }),
+  ],
+  preview: { prepare: () => ({ title: "📋 Riepilogo veloce" }) },
+});
+
+/* ─────────── Schema/Tabella rapida block ─────────── */
+
+export const schemaRapidoBlock = defineType({
+  name: "schemaRapidoBlock",
+  title: "Schema/Tabella rapida",
+  type: "object",
+  fields: [
+    defineField({ name: "caption", title: "Titolo tabella", type: "string" }),
+    defineField({ name: "headers", title: "Intestazioni", type: "array", of: [{ type: "string" }] }),
+    defineField({
+      name: "rows",
+      title: "Righe",
+      type: "array",
+      of: [{
+        type: "object",
+        name: "riga",
+        fields: [
+          defineField({ name: "cells", title: "Celle", type: "array", of: [{ type: "string" }] }),
+        ],
+        preview: {
+          select: { cells: "cells" },
+          prepare: ({ cells }: { cells?: string[] }) => ({ title: (cells ?? []).join(" | ").slice(0, 60) }),
+        },
+      }],
+    }),
+  ],
+  preview: { prepare: () => ({ title: "📊 Schema/Tabella rapida" }) },
+});
+
+/* ─────────── Esempio svolto block ─────────── */
+
+export const esempioBlock = defineType({
+  name: "esempioBlock",
+  title: "Esempio svolto",
+  type: "object",
+  fields: [
+    defineField({ name: "title", title: "Titolo", type: "string", validation: (R) => R.required() }),
+    defineField({
+      name: "content",
+      title: "Soluzione",
+      type: "array",
+      of: [
+        {
+          type: "block",
+          marks: {
+            decorators: [
+              { title: "Grassetto", value: "bold" },
+              { title: "Corsivo", value: "italic" },
+              { title: "Blue Bold", value: "blueBold" },
+              { title: "Red Bold", value: "redBold" },
+              { title: "Evidenziatore", value: "highlightBlue" },
+              { title: "Esempio (barra sx)", value: "exUnderline" },
+              { title: "Box blu (display $$)", value: "mathBlueBox" },
+            ],
+            annotations: [
+              {
+                name: "inlineLatex",
+                type: "object",
+                title: "Formula LaTeX inline",
+                fields: [{ name: "code", type: "string", title: "Codice LaTeX" }],
+              },
+            ],
+          },
+        },
+        { type: "latex" },
+      ],
+    }),
+  ],
+  preview: {
+    select: { title: "title" },
+    prepare: ({ title }: { title?: string }) => ({ title: `📝 ${title || "Esempio"}` }),
+  },
+});
+
+/* ─────────── FAQ block ─────────── */
+
+export const faqBlock = defineType({
+  name: "faqBlock",
+  title: "FAQ — Domande frequenti",
+  type: "object",
+  fields: [
+    defineField({ name: "heading", title: "Titolo sezione", type: "string" }),
+    {
+      name: "items",
+      title: "Domande",
+      type: "array",
+      of: [
+        {
+          type: "object",
+          name: "faqItem",
+          fields: [
+            defineField({
+              name: "question",
+              title: "Domanda",
+              type: "string",
+              validation: (R) => R.required(),
+            }),
+            defineField({
+              name: "answer",
+              title: "Risposta",
+              type: "array",
+              of: [
+                {
+                  type: "block",
+                  marks: {
+                    decorators: [
+                      { title: "Grassetto", value: "bold" },
+                      { title: "Corsivo", value: "italic" },
+                      { title: "Blue Bold", value: "blueBold" },
+                      { title: "Red Bold", value: "redBold" },
+                    ],
+                    annotations: [
+                      {
+                        name: "inlineLatex",
+                        type: "object",
+                        title: "Formula LaTeX inline",
+                        fields: [
+                          { name: "code", type: "string", title: "Codice LaTeX" },
+                        ],
+                      },
+                    ],
+                  },
+                },
+                { type: "latex" },
+              ],
+            }),
+          ],
+          preview: {
+            select: { title: "question" },
+            prepare: ({ title }: { title?: string }) => ({
+              title: `❓ ${title || "Domanda"}`,
+            }),
+          },
+        },
+      ],
+    },
+  ],
+  preview: { prepare: () => ({ title: "❓ FAQ — Domande frequenti" }) },
+});
+
+/* ─────────── Errori comuni block ─────────── */
+
+export const erroriComuniBlock = defineType({
+  name: "erroriComuniBlock",
+  title: "Errori comuni",
+  type: "object",
+  fields: [
+    defineField({ name: "heading", title: "Titolo sezione", type: "string" }),
+    {
+      name: "items",
+      title: "Errori",
+      type: "array",
+      of: [
+        {
+          type: "object",
+          name: "errorItem",
+          fields: [
+            defineField({
+              name: "wrong",
+              title: "❌ Sbagliato",
+              type: "string",
+              validation: (R) => R.required(),
+            }),
+            defineField({
+              name: "correct",
+              title: "✅ Corretto",
+              type: "string",
+              validation: (R) => R.required(),
+            }),
+            defineField({
+              name: "explanation",
+              title: "Spiegazione",
+              type: "text",
+              validation: (R) => R.required(),
+            }),
+          ],
+          preview: {
+            select: { wrong: "wrong", correct: "correct" },
+            prepare: ({ wrong, correct }: { wrong?: string; correct?: string }) => ({
+              title: `❌ ${wrong?.slice(0, 50) || ""}`,
+              subtitle: `✅ ${correct?.slice(0, 50) || ""}`,
+            }),
+          },
+        },
+      ],
+    },
+  ],
+  preview: { prepare: () => ({ title: "⚠️ Errori comuni" }) },
+});
+
+/* ─────────── Documento Lezione ─────────── */
+
 export const formulaFlashcard = defineType({
   name: "formulaFlashcard",
   title: "Formula da memorizzare",
@@ -468,7 +682,12 @@ export default defineType({
         { type: "latex" },
         { type: "imageExternal" },
         { type: "section" },
-        { type: "table" }, // ⬅️ abilitata la tabella (richiede plugin @sanity/table in sanity.config.ts)
+        { type: "table" },
+        { type: "riepilogoBlock" },
+        { type: "schemaRapidoBlock" },
+        { type: "esempioBlock" },
+        { type: "faqBlock" },
+        { type: "erroriComuniBlock" },
       ],
     }),
 

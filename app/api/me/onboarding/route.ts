@@ -107,6 +107,8 @@ export async function POST(req: Request) {
     null;
   const email = cleanText(claims.email, 180)?.toLowerCase() || null;
 
+  let studentId: string | null = null;
+
   try {
     const student = await syncLiteProfilePatch(claims.uid, {
       full_name: fullName,
@@ -145,8 +147,14 @@ export async function POST(req: Request) {
       current_focus_need: needCode,
       help_urgency: urgencyCode,
     });
+    studentId = student?.id || null;
+  } catch (error) {
+    console.error("[me-onboarding] profile save failed", error);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
+  }
 
-    if (wantsTutorHelp && phone) {
+  if (wantsTutorHelp && phone) {
+    try {
       await upsertCanonicalLead({
         fullName,
         email,
@@ -156,7 +164,7 @@ export async function POST(req: Request) {
         funnel: "quick_contact",
         status: "active",
         responseStatus: "pending",
-        studentId: student?.id || null,
+        studentId,
         pageUrl: returnTo,
         note: `Richiesta aiuto gratuito tutor: ${subjectLabel} - ${topic} (${needLabel}, ${urgencyLabel})`,
         metadata: {
@@ -174,11 +182,11 @@ export async function POST(req: Request) {
           urgencyLabel,
           onboardingVersion: "student-segmentation-v2",
         },
+        fallbackKey: `student_onboarding:${claims.uid}`,
       });
+    } catch (error) {
+      console.error("[me-onboarding] lead upsert failed", error);
     }
-  } catch (error) {
-    console.error("[me-onboarding] save failed", error);
-    return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, returnTo });

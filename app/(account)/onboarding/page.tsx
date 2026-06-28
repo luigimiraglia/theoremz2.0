@@ -127,7 +127,10 @@ export default function OnboardingPage() {
         if (typeof draft.trackCode === "string") {
           setTrackCode(draft.trackCode);
         }
-        if (draft.subjectCode === "matematica" || draft.subjectCode === "fisica") {
+        if (
+          draft.subjectCode === "matematica" ||
+          draft.subjectCode === "fisica"
+        ) {
           setSubjectCode(draft.subjectCode);
         }
         if (typeof draft.topicCode === "string") {
@@ -192,7 +195,8 @@ export default function OnboardingPage() {
   const selectedTrackLabel =
     cycle === "medie"
       ? "Medie"
-      : TRACKS.find((track) => track.code === trackCode)?.label || "Scientifico";
+      : TRACKS.find((track) => track.code === trackCode)?.label ||
+        "Scientifico";
   const selectedTopic =
     TOPICS[subjectCode].find((topic) => topic.code === topicCode) ||
     TOPICS[subjectCode][0];
@@ -222,7 +226,9 @@ export default function OnboardingPage() {
     setSaving(true);
     setError(null);
     try {
-      const token = await getAuth().currentUser?.getIdToken();
+      const token =
+        (await user?.getIdToken?.()) ||
+        (await getAuth().currentUser?.getIdToken());
       if (!token) throw new Error("missing_token");
 
       const res = await fetch("/api/me/onboarding", {
@@ -247,7 +253,11 @@ export default function OnboardingPage() {
         }),
       });
 
-      if (!res.ok) throw new Error("save_failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        console.error("[onboarding] save failed", data);
+        throw new Error(data?.error || "save_failed");
+      }
       setSaved(true);
       if (draftKey) {
         try {
@@ -317,7 +327,7 @@ export default function OnboardingPage() {
               <StepTitle
                 icon={<GraduationCap className="h-5 w-5" />}
                 title="Partiamo da te"
-                subtitle="Un percorso su misura."
+                subtitle="Creiamo un percorso su misura."
               />
 
               <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
@@ -429,9 +439,12 @@ export default function OnboardingPage() {
                         TOPICS[subjectCode].filter((topic) =>
                           topic.label.toLowerCase().includes(normalized),
                         )[0] || null;
-                      if (onlyMatch && TOPICS[subjectCode].filter((topic) =>
-                        topic.label.toLowerCase().includes(normalized),
-                      ).length === 1) {
+                      if (
+                        onlyMatch &&
+                        TOPICS[subjectCode].filter((topic) =>
+                          topic.label.toLowerCase().includes(normalized),
+                        ).length === 1
+                      ) {
                         setTopicCode(onlyMatch.code);
                       }
                     }}
@@ -487,9 +500,18 @@ export default function OnboardingPage() {
               </label>
 
               <div className="hidden gap-2 rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-700 sm:grid sm:grid-cols-3 sm:px-4">
-                <MiniSummary icon={<BookOpen className="h-4 w-4" />} label={selectedTopic.label} />
-                <MiniSummary icon={<Target className="h-4 w-4" />} label={selectedNeed.label} />
-                <MiniSummary icon={<Clock3 className="h-4 w-4" />} label={selectedUrgency.label} />
+                <MiniSummary
+                  icon={<BookOpen className="h-4 w-4" />}
+                  label={selectedTopic.label}
+                />
+                <MiniSummary
+                  icon={<Target className="h-4 w-4" />}
+                  label={selectedNeed.label}
+                />
+                <MiniSummary
+                  icon={<Clock3 className="h-4 w-4" />}
+                  label={selectedUrgency.label}
+                />
               </div>
             </div>
           )}
@@ -610,9 +632,7 @@ function ChoiceCard({
       <div className="flex items-center gap-3">
         <div
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl ${
-            active
-              ? "bg-blue-600 text-white"
-              : "bg-slate-100 text-slate-600"
+            active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
           }`}
         >
           {icon}
@@ -672,7 +692,11 @@ function MiniSummary({ icon, label }: { icon: ReactNode; label: string }) {
   );
 }
 
-function sanitizeLocalRedirect(value: string | null | undefined, fallback: string) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return fallback;
+function sanitizeLocalRedirect(
+  value: string | null | undefined,
+  fallback: string,
+) {
+  if (!value || !value.startsWith("/") || value.startsWith("//"))
+    return fallback;
   return value;
 }

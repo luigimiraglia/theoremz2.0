@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { upsertCanonicalLead } from "@/lib/canonicalLeads";
+import { storeLeadAndNotify } from "@/lib/leadIntake";
 
 export async function POST(req: Request) {
   try {
@@ -13,41 +13,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "missing_fields" }, { status: 400 });
     }
 
-    const doc = {
-      name: String(name).slice(0, 120),
+    const result = await storeLeadAndNotify({
+      fullName: String(name).slice(0, 120),
       email: email ? String(email).slice(0, 160) : null,
       phone: String(phone).slice(0, 40),
       slot: slot ? String(slot).slice(0, 40) : "qualsiasi",
       note: note ? String(note).slice(0, 1000) : null,
-      source: source ? String(source).slice(0, 64) : null,
-      contact: contact === 'whatsapp' ? 'whatsapp' : 'call',
-      ts: Date.now(),
-      ua,
-      referer,
-      ip,
-    } as const;
-
-    const leadId = await upsertCanonicalLead({
-      fullName: doc.name,
-      email: doc.email,
-      phone: doc.phone,
-      channel: doc.contact === "whatsapp" ? "whatsapp" : "phone",
-      source: doc.source || "quick_contact",
+      source: source ? String(source).slice(0, 64) : "quick_contact",
       funnel: "quick_contact",
-      status: "active",
-      responseStatus: "pending",
-      note: [doc.slot ? `Slot: ${doc.slot}` : null, doc.note].filter(Boolean).join(" | ") || null,
       pageUrl: referer,
-      createdAt: new Date(doc.ts),
-      updatedAt: new Date(doc.ts),
-      metadata: {
-        contactPreference: doc.contact,
-        userAgent: ua,
-        ip,
-      },
-      fallbackKey: `lead:${doc.phone}:${doc.ts}`,
+      contactPreference: contact === "whatsapp" ? "whatsapp" : "call",
+      subjectLabel: "Lead Theoremz",
+      metadata: { userAgent: ua, ip },
+      fallbackKey: `lead:${String(phone).slice(0, 40)}:${Date.now()}`,
     });
-    return NextResponse.json({ ok: true, leadId });
+
+    if (!result.ok) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, leadId: result.leadId, emailStatus: result.emailStatus });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || "server_error" }, { status: 500 });
   }

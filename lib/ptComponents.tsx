@@ -5,6 +5,11 @@ import { KaInline, KaBlock } from "@/components/KaTeX";
 import "katex/dist/katex.min.css";
 import { LucideQuote as BlockquoteIcon } from "lucide-react";
 import MathText from "@/components/MathText";
+import FaqAccordion from "@/components/FaqAccordion";
+import ErroriComuniCards from "@/components/ErroriComuniCards";
+import EsempioCard from "@/components/EsempioCard";
+import RiepilogoBox from "@/components/RiepilogoBox";
+import SchemaRapido from "@/components/SchemaRapido";
 
 // Genera un anchor id stabile a partire dal testo
 function toAnchorId(s: string | undefined | null): string {
@@ -271,6 +276,35 @@ export const ptComponents: PortableTextComponents = {
       );
     },
 
+    riepilogoBlock: ({ value }) => (
+      <RiepilogoBox
+        titolo={value.titolo ?? ""}
+        definizione={value.definizione ?? ""}
+        formulaPrincipale={value.formulaPrincipale}
+        puntiChiave={value.puntiChiave ?? []}
+      />
+    ),
+
+    schemaRapidoBlock: ({ value }) => (
+      <SchemaRapido
+        caption={value.caption}
+        headers={value.headers ?? []}
+        rows={value.rows ?? []}
+      />
+    ),
+
+    esempioBlock: ({ value }) => (
+      <EsempioCard title={value.title ?? ""} content={value.content ?? []} />
+    ),
+
+    faqBlock: ({ value }) => (
+      <FaqAccordion items={value.items ?? []} heading={value.heading} />
+    ),
+
+    erroriComuniBlock: ({ value }) => (
+      <ErroriComuniCards items={value.items ?? []} heading={value.heading} />
+    ),
+
     section: ({ value }) => {
       const anchor = toAnchorId(value.heading || value.shortTitle);
       return (
@@ -434,10 +468,18 @@ export const ptComponents: PortableTextComponents = {
       <code className="px-1 py-0.5 rounded bg-zinc-100">{children}</code>
     ),
 
-    // retro-compatibilità: mark "inlineLatex"
-    inlineLatex: ({ value }) => (
-      <KaInline>{`\\displaystyle { ${value.code} }`}</KaInline>
-    ),
+    inlineLatex: ({ value }) => {
+      // Strip any delimiters the AI might have included
+      const raw: string = value.code ?? "";
+      const code = raw
+        .replace(/^\\\(|\\\)$/g, "")
+        .replace(/^\\\[|\\\]$/g, "")
+        .replace(/^\$\$|\$\$$/g, "")
+        .replace(/^\$|\$$/g, "")
+        .trim();
+      const needsDisplay = /\\(?:d?frac|cfrac|tfrac)\b/.test(code);
+      return <KaInline>{needsDisplay ? `\\displaystyle { ${code} }` : code}</KaInline>;
+    },
 
     // Decorator custom usato solo come flag per il box blu dei blocchi $$...$$
     // Qui è una no-op per evitare warning di @portabletext/react

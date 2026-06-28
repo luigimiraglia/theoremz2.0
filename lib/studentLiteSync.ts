@@ -44,7 +44,7 @@ async function ensureProfileRow(
 ) {
   const { data: existing, error: readError } = await db
     .from("student_profiles")
-    .select("user_id, student_id")
+    .select("user_id, student_id, email")
     .eq("user_id", userId)
     .maybeSingle();
   if (readError) throw readError;
@@ -60,9 +60,36 @@ async function ensureProfileRow(
     return;
   }
 
+  const email = seed?.email?.trim().toLowerCase() || null;
+  if (email) {
+    const { data: byEmail, error: emailReadError } = await db
+      .from("student_profiles")
+      .select("user_id, student_id, email")
+      .ilike("email", email)
+      .maybeSingle();
+    if (emailReadError) throw emailReadError;
+
+    if (byEmail) {
+      const patch: Record<string, unknown> = {
+        user_id: userId,
+        updated_at: new Date().toISOString(),
+      };
+      if (studentId && !byEmail.student_id) patch.student_id = studentId;
+      if (seed?.full_name) patch.full_name = seed.full_name;
+      if (seed?.phone) patch.phone = seed.phone;
+
+      const { error } = await db
+        .from("student_profiles")
+        .update(patch)
+        .eq("user_id", byEmail.user_id);
+      if (error) throw error;
+      return;
+    }
+  }
+
   const payload: Record<string, unknown> = {
     user_id: userId,
-    email: seed?.email || `${userId}@autogen.theoremz.local`,
+    email: email || `${userId}@autogen.theoremz.local`,
   };
   if (studentId) payload.student_id = studentId;
   if (seed?.full_name) payload.full_name = seed.full_name;
@@ -70,6 +97,21 @@ async function ensureProfileRow(
 
   const { error } = await db.from("student_profiles").insert(payload);
   if (error) throw error;
+}
+
+async function isProfileEmailOwnedByAnother(
+  db: ReturnType<typeof supabaseServer>,
+  email: string,
+  userId: string,
+) {
+  const { data, error } = await db
+    .from("student_profiles")
+    .select("user_id")
+    .ilike("email", email)
+    .neq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data?.user_id);
 }
 
 export async function syncLiteProfilePatch(
@@ -124,10 +166,18 @@ export async function syncLiteProfilePatch(
     student_id: student.id,
     updated_at: new Date().toISOString(),
   };
+  const incomingEmail =
+    typeof patch?.email === "string" ? patch.email.trim().toLowerCase() : null;
+  const emailOwnedByAnother = incomingEmail
+    ? await isProfileEmailOwnedByAnother(db, incomingEmail, userId)
+    : false;
+
   for (const [key, value] of Object.entries(patch || {})) {
     if (value === undefined) continue;
     if (key === "cycle") {
       payload[key] = normalizeCycle(value as string | null);
+    } else if (key === "email") {
+      if (incomingEmail && !emailOwnedByAnother) payload[key] = incomingEmail;
     } else {
       payload[key] = value;
     }

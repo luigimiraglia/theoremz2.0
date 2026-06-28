@@ -47,11 +47,7 @@ type LessonDoc = {
   // reverse lookup: lezioni che referenziano questa (padre/i)
   parents?: LinkedLesson[];
 };
-type SectionBlock = PortableTextBlock & {
-  _type: "section";
-  heading?: string;
-  shortTitle?: string;
-};
+type IndexItem = { heading: string; shortTitle: string };
 
 /* -------------------- Query -------------------- */
 const seoLessonQuery = groq`
@@ -254,23 +250,34 @@ export default async function Page({
   });
   if (!lesson) notFound();
 
-  const sections: SectionBlock[] = (lesson.content ?? []).filter(
-    (b): b is SectionBlock => (b as { _type?: string })._type === "section"
-  );
-  const sectionItems = sections
-    .map((s) => {
-      const heading = s.heading ?? s.shortTitle;
-      if (!heading) return null;
-      return {
-        _type: "section" as const,
-        heading,
-        shortTitle: s.shortTitle ?? heading,
-      };
-    })
-    .filter(
-      (x): x is { _type: "section"; heading: string; shortTitle: string } =>
-        x !== null
-    );
+  const sectionItems: IndexItem[] = [];
+  for (const block of lesson.content ?? []) {
+    const b = block as any;
+    switch (b._type) {
+      case "riepilogoBlock":
+        sectionItems.push({ heading: "concetto-chiave", shortTitle: "Concetto chiave" });
+        break;
+      case "schemaRapidoBlock":
+        if (b.caption) {
+          const id = b.caption.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 80);
+          sectionItems.push({ heading: id, shortTitle: (b.caption as string).slice(0, 35) });
+        } else {
+          sectionItems.push({ heading: "schema-rapido", shortTitle: "Schema rapido" });
+        }
+        break;
+      case "section": {
+        const heading = b.heading ?? b.shortTitle;
+        if (heading) sectionItems.push({ heading, shortTitle: b.shortTitle ?? heading });
+        break;
+      }
+      case "erroriComuniBlock":
+        if (b.heading) sectionItems.push({ heading: b.heading, shortTitle: (b.heading as string).slice(0, 35) });
+        break;
+      case "faqBlock":
+        if (b.heading) sectionItems.push({ heading: b.heading, shortTitle: (b.heading as string).slice(0, 35) });
+        break;
+    }
+  }
 
   // JSON-LD: aggiungi anche le sezioni come hasPart con ancore (#)
   const sectionHasPart = sectionItems.map((s) => ({

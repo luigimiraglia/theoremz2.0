@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Studi ma non rende? — Guida Theoremz</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --bg-2: #0d1b30;
+      --paper: #fbfdff;
+      --paper-soft: #f0f6ff;
+      --ink: #122033;
+      --muted: #63758d;
+      --line: #dbe7f5;
+      --brand: #4f7cff;
+      --brand-dark: #355ee8;
+      --brand-2: #30d5c8;
+      --accent: #ffd166;
+      --rose: #ff7b9c;
+      --green: #2cc36b;
+      --orange: #ff9f43;
+      --shadow: 0 24px 80px rgba(8, 23, 48, 0.18);
+      --shadow-soft: 0 16px 50px rgba(15, 40, 80, 0.10);
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 15px;
+      --radius-sm: 11px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(79,124,255,0.36), transparent 34rem),
+        radial-gradient(circle at 92% 5%, rgba(48,213,200,0.26), transparent 34rem),
+        linear-gradient(180deg, #07111f 0%, #09172a 34%, #edf5ff 34%, #fbfdff 100%);
+      color: var(--ink);
+      line-height: 1.62;
+    }
+
+    .page {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 28px 22px 90px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      color: #fff;
+      margin-bottom: 42px;
+    }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.28rem;
+      font-weight: 950;
+      letter-spacing: -0.045em;
+    }
+
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: white;
+      font-weight: 950;
+      box-shadow: 0 14px 36px rgba(79,124,255,0.36);
+    }
+
+    .top-tag {
+      color: rgba(255,255,255,0.78);
+      font-size: 0.86rem;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(12px);
+      padding: 9px 14px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 30px;
+      color: #fff;
+      align-items: stretch;
+      margin-bottom: 38px;
+    }
+
+    .hero-card,
+    .score-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 40px 100px rgba(0,0,0,0.28);
+    }
+
+    .hero-card {
+      padding: 48px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.035)),
+        linear-gradient(135deg, rgba(79,124,255,0.20), rgba(48,213,200,0.10));
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 310px;
+      height: 310px;
+      right: -105px;
+      bottom: -135px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,209,102,0.34), transparent 68%);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--brand-2);
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-size: clamp(3rem, 8vw, 6.6rem);
+      line-height: 0.88;
+      letter-spacing: -0.085em;
+      margin: 0 0 24px;
+      max-width: 760px;
+    }
+
+    .subtitle {
+      color: rgba(255,255,255,0.84);
+      font-size: clamp(1.08rem, 2.2vw, 1.36rem);
+      max-width: 700px;
+      margin: 0;
+    }
+
+    .hero-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 11px;
+      margin-top: 30px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 13px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.14);
+      color: rgba(255,255,255,0.88);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .score-card {
+      background: #f9fcff;
+      color: var(--ink);
+      padding: 28px;
+    }
+
+    .score-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 9px;
+      background: linear-gradient(90deg, var(--brand), var(--brand-2), var(--accent));
+    }
+
+    .mini-title {
+      margin: 8px 0 7px;
+      font-size: 1.02rem;
+      color: var(--muted);
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .score-card h2 {
+      font-size: 2.15rem;
+      line-height: 1.03;
+      letter-spacing: -0.055em;
+      margin: 0 0 16px;
+    }
+
+    .soft-note {
+      background: linear-gradient(135deg, rgba(79,124,255,0.10), rgba(48,213,200,0.10));
+      border: 1px solid rgba(79,124,255,0.16);
+      border-radius: 20px;
+      padding: 18px;
+      color: #40546e;
+      margin: 18px 0;
+    }
+
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .score-box {
+      padding: 16px;
+      background: var(--paper-soft);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+    }
+
+    .score-box b {
+      display: block;
+      font-size: 1.6rem;
+      letter-spacing: -0.05em;
+      color: var(--brand-dark);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .score-box span {
+      font-size: 0.88rem;
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    .content-shell {
+      display: grid;
+      grid-template-columns: 270px minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .toc {
+      position: sticky;
+      top: 18px;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid rgba(216,228,243,0.9);
+      border-radius: 24px;
+      box-shadow: var(--shadow-soft);
+      padding: 18px;
+      backdrop-filter: blur(16px);
+    }
+
+    .toc h3 {
+      margin: 0 0 12px;
+      font-size: 0.95rem;
+      letter-spacing: -0.02em;
+    }
+
+    .toc a {
+      display: block;
+      color: #52667f;
+      text-decoration: none;
+      padding: 9px 10px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .toc a:hover {
+      background: var(--paper-soft);
+      color: var(--brand-dark);
+    }
+
+    main {
+      min-width: 0;
+    }
+
+    section {
+      background: rgba(255,255,255,0.94);
+      border: 1px solid rgba(216,228,243,0.95);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-soft);
+      padding: 36px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    section.tint {
+      background:
+        linear-gradient(145deg, rgba(79,124,255,0.08), rgba(48,213,200,0.07)),
+        rgba(255,255,255,0.96);
+    }
+
+    section.dark {
+      background:
+        radial-gradient(circle at top right, rgba(48,213,200,0.18), transparent 24rem),
+        linear-gradient(145deg, #0b1830, #07111f);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    h2 {
+      font-size: clamp(2rem, 4vw, 3.3rem);
+      line-height: 0.98;
+      letter-spacing: -0.065em;
+      margin: 0 0 18px;
+    }
+
+    h3 {
+      font-size: 1.45rem;
+      line-height: 1.15;
+      letter-spacing: -0.035em;
+      margin: 30px 0 10px;
+    }
+
+    h4 {
+      font-size: 1.05rem;
+      margin: 20px 0 8px;
+      letter-spacing: -0.02em;
+    }
+
+    p { margin: 0 0 15px; }
+
+    .lead {
+      font-size: 1.16rem;
+      color: #4b5f78;
+      max-width: 820px;
+    }
+
+    .dark .lead,
+    .dark p,
+    .dark li { color: rgba(255,255,255,0.82); }
+    .dark h2, .dark h3, .dark h4 { color: #fff; }
+
+    .dark .card { color: var(--ink); }
+    .dark .card h3,
+    .dark .card h4 { color: var(--ink); }
+    .dark .card p,
+    .dark .card li { color: #455a73; }
+
+    .callout {
+      border-radius: 22px;
+      padding: 22px;
+      border: 1px solid rgba(79,124,255,0.18);
+      background: linear-gradient(135deg, rgba(79,124,255,0.09), rgba(48,213,200,0.08));
+      margin: 22px 0;
+    }
+
+    .callout.yellow {
+      background: linear-gradient(135deg, rgba(255,209,102,0.25), rgba(255,255,255,0.82));
+      border-color: rgba(255,209,102,0.48);
+    }
+
+    .callout.rose {
+      background: linear-gradient(135deg, rgba(255,123,156,0.16), rgba(255,255,255,0.86));
+      border-color: rgba(255,123,156,0.26);
+    }
+
+    .callout.green {
+      background: linear-gradient(135deg, rgba(44,195,107,0.13), rgba(255,255,255,0.86));
+      border-color: rgba(44,195,107,0.24);
+    }
+
+    .label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.78rem;
+      font-weight: 900;
+      color: var(--brand-dark);
+      background: rgba(79,124,255,0.10);
+      border: 1px solid rgba(79,124,255,0.16);
+      border-radius: 999px;
+      padding: 8px 11px;
+      margin-bottom: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .grid-2, .grid-3, .grid-4 {
+      display: grid;
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 12px 32px rgba(15, 40, 80, 0.06);
+    }
+
+    .card h3, .card h4 { margin-top: 0; }
+
+    .num {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: inline-grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: #fff;
+      font-weight: 950;
+      margin-bottom: 12px;
+      box-shadow: 0 10px 25px rgba(79,124,255,0.24);
+    }
+
+    .soft-list {
+      padding-left: 0;
+      list-style: none;
+      margin: 14px 0 0;
+    }
+
+    .soft-list li {
+      position: relative;
+      padding-left: 28px;
+      margin: 10px 0;
+      color: #455a73;
+    }
+
+    .soft-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--green);
+      font-weight: 950;
+    }
+
+    .warning-list li::before { content: "•"; color: var(--orange); font-size: 1.35rem; line-height: 0.85; }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .bad, .good {
+      border-radius: 22px;
+      padding: 20px;
+      border: 1px solid var(--line);
+    }
+
+    .bad {
+      background: linear-gradient(135deg, rgba(255,123,156,0.12), #fff);
+      border-color: rgba(255,123,156,0.28);
+    }
+
+    .good {
+      background: linear-gradient(135deg, rgba(44,195,107,0.12), #fff);
+      border-color: rgba(44,195,107,0.28);
+    }
+
+    .bad h4, .good h4 { margin-top: 0; }
+
+    .worksheet {
+      border: 1px dashed rgba(79,124,255,0.38);
+      background: #fbfdff;
+      border-radius: 24px;
+      padding: 22px;
+      margin: 22px 0;
+    }
+
+    .worksheet-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .worksheet-title h3 { margin: 0; }
+
+    .blank-line {
+      height: 34px;
+      border-bottom: 1.5px solid #cbd9ea;
+      margin: 8px 0;
+    }
+
+    .mini-blank {
+      display: inline-block;
+      min-width: 130px;
+      border-bottom: 1.5px solid #cbd9ea;
+      transform: translateY(-2px);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      margin: 18px 0;
+      background: #fff;
+    }
+
+    th, td {
+      padding: 14px 15px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: var(--paper-soft);
+      color: #31435b;
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .formula {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      background: #f3f7fd;
+      border: 1px solid #d9e5f4;
+      border-radius: 16px;
+      padding: 14px 16px;
+      color: #20324a;
+      margin: 14px 0;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+
+    .exercise {
+      border-left: 5px solid var(--brand);
+      padding: 18px 20px;
+      background: #f7fbff;
+      border-radius: 0 18px 18px 0;
+      margin: 18px 0;
+    }
+
+    .timeline {
+      position: relative;
+      margin: 24px 0 0;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 17px;
+      top: 10px;
+      bottom: 10px;
+      width: 2px;
+      background: linear-gradient(180deg, var(--brand), var(--brand-2));
+    }
+
+    .step {
+      position: relative;
+      padding-left: 55px;
+      margin-bottom: 22px;
+    }
+
+    .dot {
+      position: absolute;
+      left: 0;
+      top: 2px;
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: white;
+      border: 2px solid var(--brand);
+      color: var(--brand-dark);
+      font-weight: 950;
+      box-shadow: 0 10px 30px rgba(79,124,255,0.16);
+    }
+
+    .step h3 { margin: 0 0 5px; }
+
+    .bars {
+      display: grid;
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 60px;
+      align-items: center;
+      gap: 12px;
+      color: #4b5f78;
+      font-weight: 750;
+    }
+
+    .bar-track {
+      height: 14px;
+      background: #e7eef8;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--brand), var(--brand-2));
+    }
+
+    .quote {
+      font-size: 1.5rem;
+      line-height: 1.25;
+      letter-spacing: -0.04em;
+      font-weight: 850;
+      color: #16263a;
+      padding: 24px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(255,209,102,0.25), rgba(79,124,255,0.08));
+      border: 1px solid rgba(255,209,102,0.40);
+      margin: 24px 0;
+    }
+
+    .cta {
+      text-align: center;
+      padding: 50px 36px;
+      border-radius: 30px;
+      color: #fff;
+      background:
+        radial-gradient(circle at top left, rgba(48,213,200,0.25), transparent 28rem),
+        linear-gradient(135deg, #0b1830, #07111f);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 34px 80px rgba(0,0,0,0.22);
+    }
+
+    .cta h2 {
+      margin-bottom: 14px;
+    }
+
+    .cta p {
+      color: rgba(255,255,255,0.78);
+      max-width: 760px;
+      margin: 0 auto 24px;
+      font-size: 1.09rem;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 15px 20px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: white;
+      text-decoration: none;
+      font-weight: 950;
+      box-shadow: 0 18px 42px rgba(79,124,255,0.32);
+    }
+
+    .footer {
+      color: #71839a;
+      text-align: center;
+      margin-top: 32px;
+      font-size: 0.92rem;
+    }
+
+    .small {
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    .page-break {
+      height: 1px;
+      margin: 8px 0;
+    }
+
+    @media (max-width: 940px) {
+      .hero, .content-shell, .grid-2, .grid-3, .grid-4, .comparison {
+        grid-template-columns: 1fr;
+      }
+      .toc { position: static; }
+      .hero-card { padding: 36px; }
+      .bar-row { grid-template-columns: 1fr; gap: 6px; }
+    }
+
+    @media (max-width: 620px) {
+      .page { padding: 20px 14px 64px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .hero-card, .score-card, section { padding: 24px; border-radius: 24px; }
+      h1 { font-size: 3.5rem; }
+      h2 { font-size: 2.25rem; }
+      .score-grid { grid-template-columns: 1fr; }
+      th, td { padding: 12px; }
+    }
+
+
+
+    /* === CONTRAST FIX v2 — più leggibile, meno vetro/trasparenze === */
+    :root {
+      --bg: #07111f;
+      --bg-2: #0d1b30;
+      --paper: #ffffff;
+      --paper-soft: #eef5ff;
+      --ink: #132238;
+      --muted: #435773;
+      --line: #c9d8ec;
+      --brand: #315df5;
+      --brand-dark: #2146c9;
+      --brand-2: #0b8078;
+      --accent: #f2b928;
+      --rose: #d93665;
+      --green: #148a44;
+      --orange: #b85f00;
+      --shadow: 0 22px 70px rgba(8, 23, 48, 0.16);
+      --shadow-soft: 0 12px 34px rgba(15, 40, 80, 0.10);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 8% 0%, rgba(49,93,245,0.28), transparent 32rem),
+        radial-gradient(circle at 92% 6%, rgba(11,128,120,0.20), transparent 32rem),
+        linear-gradient(180deg, #07111f 0%, #0a1830 33%, #f3f7fc 33%, #ffffff 100%);
+      color: var(--ink);
+    }
+
+    .top-tag {
+      color: #f4f8ff;
+      border-color: rgba(255,255,255,0.30);
+      background: rgba(255,255,255,0.12);
+    }
+
+    .hero-card {
+      background:
+        radial-gradient(circle at 88% 80%, rgba(242,185,40,0.18), transparent 20rem),
+        linear-gradient(135deg, #0c1b35 0%, #102b5c 58%, #0b3f49 100%);
+      border-color: rgba(255,255,255,0.28);
+    }
+
+    .hero-card::after {
+      background: radial-gradient(circle, rgba(242,185,40,0.22), transparent 68%);
+    }
+
+    .eyebrow {
+      color: #8df4ec;
+    }
+
+    .subtitle {
+      color: #edf5ff;
+    }
+
+    .pill {
+      background: rgba(255,255,255,0.16);
+      border-color: rgba(255,255,255,0.26);
+      color: #ffffff;
+    }
+
+    .score-card,
+    .toc,
+    section,
+    .card,
+    table {
+      background: #ffffff;
+      border-color: var(--line);
+    }
+
+    .score-card {
+      color: var(--ink);
+    }
+
+    .score-card::before,
+    .button,
+    .num,
+    .bar-fill,
+    .timeline::before {
+      background: linear-gradient(135deg, #315df5, #0b8078);
+    }
+
+    .mini-title,
+    .small,
+    .score-box span,
+    .footer {
+      color: var(--muted);
+    }
+
+    .score-card h2,
+    h2,
+    h3,
+    h4,
+    .quote {
+      color: var(--ink);
+    }
+
+    .soft-note {
+      background: #eef5ff;
+      border-color: #bfd0ea;
+      color: #243a56;
+    }
+
+    .score-box {
+      background: #f4f8fe;
+      border-color: #c9d8ec;
+    }
+
+    .toc {
+      background: #ffffff;
+      backdrop-filter: none;
+    }
+
+    .toc a {
+      color: #263b57;
+    }
+
+    .toc a:hover {
+      color: #173aa9;
+      background: #eaf1ff;
+    }
+
+    section.tint {
+      background: linear-gradient(145deg, #f2f7ff, #ffffff);
+    }
+
+    section.dark,
+    .cta {
+      background:
+        radial-gradient(circle at top right, rgba(36,98,210,0.26), transparent 25rem),
+        linear-gradient(145deg, #10264b, #07111f);
+      border-color: rgba(255,255,255,0.22);
+    }
+
+    .dark h2,
+    .dark h3,
+    .dark h4,
+    .cta h2 {
+      color: #ffffff;
+    }
+
+    .dark .lead,
+    .dark p,
+    .dark li,
+    .cta p {
+      color: #edf5ff;
+    }
+
+    .dark .card,
+    .dark .card h3,
+    .dark .card h4,
+    .dark .card p,
+    .dark .card li {
+      color: var(--ink);
+    }
+
+    .lead,
+    .soft-list li,
+    .bar-row,
+    .dark .card p,
+    .dark .card li {
+      color: #2f435f;
+    }
+
+    .callout {
+      background: #eef5ff;
+      border-color: #bfd0ea;
+      color: #1d314d;
+    }
+
+    .callout.yellow {
+      background: #fff6da;
+      border-color: #e6c45b;
+    }
+
+    .callout.rose {
+      background: #fff0f4;
+      border-color: #e4a4b5;
+    }
+
+    .callout.green {
+      background: #edf9f1;
+      border-color: #9fd7b4;
+    }
+
+    /* Fix contrasto: callout chiari dentro sezioni scure */
+    section.dark .callout {
+      background: #f8fbff;
+      border: 1px solid #c7d9f2;
+      color: #122033;
+      box-shadow: 0 16px 42px rgba(0,0,0,0.18);
+    }
+
+    section.dark .callout h3 {
+      color: #10264b !important;
+    }
+
+    section.dark .callout p,
+    section.dark .callout li {
+      color: #2f435f !important;
+    }
+
+    .label {
+      color: #173aa9;
+      background: #eaf1ff;
+      border-color: #bfd0ea;
+    }
+
+    .bad {
+      background: #fff2f5;
+      border-color: #e4a4b5;
+    }
+
+    .good {
+      background: #effaf3;
+      border-color: #9fd7b4;
+    }
+
+    .worksheet,
+    .exercise {
+      background: #f7fbff;
+      border-color: #bfd0ea;
+    }
+
+    th {
+      background: #eaf1ff;
+      color: #20324a;
+    }
+
+    td {
+      color: #1f314a;
+    }
+
+    .formula {
+      background: #edf3fb;
+      border-color: #bfd0ea;
+      color: #10233d;
+    }
+
+    .quote {
+      background: #fff6da;
+      border-color: #e6c45b;
+    }
+
+    .button {
+      color: #ffffff;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.25);
+    }
+
+    a.button:focus,
+    .toc a:focus {
+      outline: 3px solid #f2b928;
+      outline-offset: 3px;
+    }
+
+    @media print {
+      body { background: white; }
+      .page { max-width: none; padding: 0; }
+      .topbar, .toc, .hero-pills, .button { display: none; }
+      .hero, .content-shell { display: block; }
+      .hero-card, .score-card, section, .cta {
+        box-shadow: none;
+        border: 1px solid #d9e5f4;
+        break-inside: avoid;
+        color: #122033;
+        background: white;
+      }
+      .dark p, .dark li, .cta p { color: #455a73; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand-lockup"><div class="brand-mark">T</div><span>Theoremz</span></div>
+      <div class="top-tag">Guida gratuita · Metodo + matematica + recupero risultati</div>
+    </header>
+
+    <section class="hero" aria-label="Copertina guida">
+      <div class="hero-card">
+        <div class="eyebrow">Guida pratica per studenti</div>
+        <h1>Studi ma non rende?</h1>
+        <p class="subtitle">Una guida gentile ma concreta per capire perché il voto non sale, correggere il metodo e trasformare le ore di studio in risultati visibili.</p>
+        <div class="hero-pills">
+          <span class="pill">Diagnosi in 10 minuti</span>
+          <span class="pill">Metodo passo per passo</span>
+          <span class="pill">Checklist verifica</span>
+          <span class="pill">Template pronti</span>
+        </div>
+      </div>
+      <aside class="score-card">
+        <div class="mini-title">Promessa della guida</div>
+        <h2>Non devi studiare di più. Devi studiare in modo più verificabile.</h2>
+        <p>Se passi tante ore sui libri ma poi in verifica ti blocchi, non significa che tu non sia portato. Spesso significa che stai allenando una cosa diversa da quella che ti viene chiesta a scuola.</p>
+        <div class="soft-note"><strong>Obiettivo:</strong> costruire un metodo semplice per passare da “ho capito mentre leggevo” a “so rifarlo da solo, sotto pressione, con meno errori”.</div>
+        <div class="score-grid">
+          <div class="score-box"><b>4</b><span>aree da controllare</span></div>
+          <div class="score-box"><b>7</b><span>giorni per ripartire</span></div>
+          <div class="score-box"><b>20</b><span>minuti per un ciclo</span></div>
+          <div class="score-box"><b>1</b><span>quaderno errori</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <div class="content-shell">
+      <nav class="toc" aria-label="Indice">
+        <h3>Indice rapido</h3>
+        <a href="#inizio">1. Prima cosa: respira</a>
+        <a href="#perche">2. Perché non rende</a>
+        <a href="#diagnosi">3. Diagnosi personale</a>
+        <a href="#modello">4. Il modello a 4 livelli</a>
+        <a href="#metodo">5. Il metodo Theoremz</a>
+        <a href="#matematica">6. Come studiare matematica</a>
+        <a href="#errori">7. Quaderno errori</a>
+        <a href="#piano">8. Piano 7 giorni</a>
+        <a href="#verifica">9. Strategia verifica</a>
+        <a href="#template">10. Template pronti</a>
+      </nav>
+
+      <main>
+        <section id="inizio" class="tint">
+          <span class="label">Punto di partenza</span>
+          <h2>Prima cosa: non sei “rotto”.</h2>
+          <p class="lead">C’è una frustrazione particolare che molti studenti conoscono bene: fai i compiti, rileggi, guardi video, provi a prepararti… poi arriva la verifica e il voto non rispecchia lo sforzo.</p>
+          <p>Questa situazione fa male perché sembra ingiusta. Non stai ignorando la scuola. Non stai “non facendo niente”. Ci stai provando. E quando il risultato non arriva, è normale pensare: “Allora forse non sono capace”.</p>
+          <div class="quote">Il problema, spesso, non è la quantità di studio. È che lo studio non lascia abbastanza prove concrete di preparazione.</div>
+          <p>Una preparazione vera si riconosce da tre segnali semplici:</p>
+          <div class="grid-3">
+            <div class="card"><div class="num">1</div><h4>Riesci a rifare</h4><p>Non solo “capisci” una soluzione: riesci a ricostruirla senza guardare.</p></div>
+            <div class="card"><div class="num">2</div><h4>Riconosci il tipo</h4><p>Quando vedi un esercizio, capisci quale strumento usare e perché.</p></div>
+            <div class="card"><div class="num">3</div><h4>Riduci gli errori</h4><p>Hai un sistema per non ripetere sempre gli stessi segni, passaggi o distrazioni.</p></div>
+          </div>
+          <p>Questa guida ti accompagna proprio lì: da uno studio “di sensazione” a uno studio che puoi controllare.</p>
+        </section>
+
+        <section id="perche">
+          <span class="label">Il vero problema</span>
+          <h2>Perché studi, ma il voto non sale?</h2>
+          <p class="lead">Quando uno studente dice “ho studiato tanto”, bisogna chiedersi una cosa: che tipo di studio ha fatto?</p>
+          <p>Il punto delicato è questo: alcune attività danno la sensazione di migliorare, ma non allenano abbastanza ciò che serve in verifica. Sono utili fino a un certo punto, poi diventano una coperta calda: ti fanno sentire più tranquillo, ma non ti preparano davvero alla pressione dell’esercizio nuovo.</p>
+
+          <div class="comparison">
+            <div class="bad">
+              <h4>Studio che sembra utile</h4>
+              <ul class="soft-list warning-list">
+                <li>Rileggere molte volte la teoria.</li>
+                <li>Guardare esercizi svolti e pensare “sì, ho capito”.</li>
+                <li>Fare solo esercizi simili a quelli già visti.</li>
+                <li>Correggere guardando subito la soluzione.</li>
+                <li>Saltare gli errori perché “era solo distrazione”.</li>
+              </ul>
+            </div>
+            <div class="good">
+              <h4>Studio che produce risultati</h4>
+              <ul class="soft-list">
+                <li>Provare a spiegare senza libro davanti.</li>
+                <li>Rifare gli esercizi da zero, anche lentamente.</li>
+                <li>Allenare esercizi di difficoltà crescente.</li>
+                <li>Scrivere perché hai sbagliato.</li>
+                <li>Riprovare gli errori dopo 24-48 ore.</li>
+              </ul>
+            </div>
+          </div>
+
+          <h3>Le 4 perdite invisibili</h3>
+          <p>Immagina il tuo studio come un tubo: tu versi tempo ed energia da una parte, ma il voto esce dall’altra. Se ci sono buchi nel tubo, puoi versare anche più acqua, ma ne arriverà comunque poca. Le perdite più comuni sono quattro.</p>
+
+          <div class="grid-2">
+            <div class="card">
+              <div class="num">1</div>
+              <h3>Capisci solo quando qualcuno guida</h3>
+              <p>Durante la spiegazione sembra tutto chiaro. Il problema arriva quando devi scegliere tu il primo passaggio. Questo non è un fallimento: è il segnale che devi allenare l’autonomia.</p>
+            </div>
+            <div class="card">
+              <div class="num">2</div>
+              <h3>Confondi capire con ricordare</h3>
+              <p>Capire oggi non significa ricordare venerdì. Per ricordare serve richiamare attivamente, non solo rileggere.</p>
+            </div>
+            <div class="card">
+              <div class="num">3</div>
+              <h3>Alleni esercizi troppo comodi</h3>
+              <p>Se fai solo quelli che sai già fare, studi ma non cresci. Il miglioramento nasce nella zona in cui sbagli un po’, correggi e riprovi.</p>
+            </div>
+            <div class="card">
+              <div class="num">4</div>
+              <h3>Non trasformi gli errori in dati</h3>
+              <p>Ogni errore contiene un’informazione. Se lo chiudi con “vabbè, distrazione”, lo perdi. Se lo classifichi, ti protegge nella verifica successiva.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="diagnosi" class="tint">
+          <span class="label">Esercizio guidato</span>
+          <h2>Diagnosi in 10 minuti</h2>
+          <p class="lead">Prima di cambiare metodo, devi capire dove si rompe il tuo. Non serve giudicarti: serve osservare.</p>
+          <p>Prendi un foglio e rispondi sinceramente. Non devi farlo “bene”. Devi farlo vero.</p>
+
+          <div class="worksheet">
+            <div class="worksheet-title"><h3>Mini-test: dove perdi punti?</h3><span class="small">Segna 0, 1 o 2</span></div>
+            <table>
+              <thead>
+                <tr><th>Domanda</th><th>0 punti</th><th>1 punto</th><th>2 punti</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Quando studi, riesci a rifare un esercizio senza guardare?</td><td>Quasi mai</td><td>A volte</td><td>Spesso</td></tr>
+                <tr><td>Sai spiegare a parole perché usi una formula?</td><td>No</td><td>Solo con alcuni argomenti</td><td>Sì, abbastanza</td></tr>
+                <tr><td>Quando sbagli, scrivi il motivo preciso?</td><td>No</td><td>Qualche volta</td><td>Sì</td></tr>
+                <tr><td>Ripassi gli errori dopo 1-2 giorni?</td><td>No</td><td>Solo prima della verifica</td><td>Sì</td></tr>
+                <tr><td>Fai simulazioni senza aiuti e con tempo limitato?</td><td>No</td><td>Raramente</td><td>Sì</td></tr>
+                <tr><td>In verifica riconosci subito il tipo di esercizio?</td><td>No</td><td>A volte</td><td>Spesso</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Risultato:</strong> se sei sotto 6 punti, non hai bisogno di “più motivazione”: hai bisogno di una struttura. Se sei tra 6 e 9, hai già qualcosa che funziona ma devi renderlo più costante. Se sei sopra 9, il margine principale è ridurre errori e pressione.</p>
+          </div>
+
+          <h3>Diagnosi per tipo di difficoltà</h3>
+          <table>
+            <thead><tr><th>Segnale</th><th>Probabile causa</th><th>Cosa fare</th></tr></thead>
+            <tbody>
+              <tr><td>Capisci in classe, ma a casa non parti</td><td>Dipendenza dalla guida del prof o del video</td><td>Allenare il primo passaggio: “che tipo di esercizio è?”</td></tr>
+              <tr><td>Gli esercizi a casa vanno, in verifica no</td><td>Manca simulazione con tempo e senza aiuti</td><td>Fare mini-verifiche da 25-35 minuti</td></tr>
+              <tr><td>Sbagli segni, calcoli, passaggi</td><td>Errore procedurale ricorrente</td><td>Creare checklist personale anti-errore</td></tr>
+              <tr><td>Studi tanto la teoria ma gli esercizi non vengono</td><td>Troppo input, poco output</td><td>Passare a cicli brevi: teoria minima + esercizio subito</td></tr>
+              <tr><td>Ti blocchi davanti a esercizi leggermente diversi</td><td>Riconoscimento debole</td><td>Confrontare esercizi simili e chiedersi cosa cambia</td></tr>
+            </tbody>
+          </table>
+
+          <div class="callout green">
+            <h3>Una frase utile da ricordare</h3>
+            <p>Non chiederti solo: “ho studiato?”. Chiediti: “quale prova ho che saprei farlo anche senza aiuto?”.</p>
+          </div>
+        </section>
+
+        <section id="modello">
+          <span class="label">Metodo</span>
+          <h2>Il modello a 4 livelli</h2>
+          <p class="lead">Per prendere un voto migliore in matematica non basta “capire”. Capire è il primo gradino. La verifica misura anche gli altri tre.</p>
+
+          <div class="timeline">
+            <div class="step">
+              <div class="dot">1</div>
+              <h3>Capire</h3>
+              <p>So cosa significa l’argomento. Riesco a seguire una spiegazione. Le parole non mi sembrano più completamente nuove.</p>
+            </div>
+            <div class="step">
+              <div class="dot">2</div>
+              <h3>Ricordare</h3>
+              <p>Riesco a richiamare definizioni, passaggi e formule senza avere il libro aperto. Non dipendo solo dalla pagina davanti.</p>
+            </div>
+            <div class="step">
+              <div class="dot">3</div>
+              <h3>Riconoscere</h3>
+              <p>Guardo un esercizio e capisco a quale famiglia appartiene: equazione, funzione, limite, studio del segno, probabilità, geometria, ecc.</p>
+            </div>
+            <div class="step">
+              <div class="dot">4</div>
+              <h3>Eseguire sotto pressione</h3>
+              <p>Riesco a svolgere con tempo limitato, con passaggi ordinati e controllando gli errori più probabili.</p>
+            </div>
+          </div>
+
+          <div class="callout yellow">
+            <h3>Dove si blocca la maggior parte degli studenti?</h3>
+            <p>Spesso tra il livello 1 e il livello 3. Hanno capito la spiegazione, ma non hanno allenato abbastanza il riconoscimento autonomo degli esercizi. In verifica non basta dire “questa cosa l’ho vista”: devi capire cosa fare nei primi 30 secondi.</p>
+          </div>
+
+          <div class="bars" aria-label="Impatto degli elementi del metodo">
+            <div class="bar-row"><span>Rilettura</span><div class="bar-track"><div class="bar-fill" style="width: 30%"></div></div><span>30%</span></div>
+            <div class="bar-row"><span>Esercizi guidati</span><div class="bar-track"><div class="bar-fill" style="width: 55%"></div></div><span>55%</span></div>
+            <div class="bar-row"><span>Esercizi da solo</span><div class="bar-track"><div class="bar-fill" style="width: 78%"></div></div><span>78%</span></div>
+            <div class="bar-row"><span>Errori riprovati</span><div class="bar-track"><div class="bar-fill" style="width: 92%"></div></div><span>92%</span></div>
+          </div>
+          <p class="small">I valori sono indicativi: servono a visualizzare una cosa semplice. Più lo studio produce output autonomo, più diventa vicino alla verifica.</p>
+        </section>
+
+        <section id="metodo" class="dark">
+          <span class="label">Sistema Theoremz</span>
+          <h2>Il ciclo 20-20-20</h2>
+          <p class="lead">Un metodo semplice per smettere di studiare “a nebbia” e iniziare a produrre prove concrete di preparazione.</p>
+          <p>Ogni sessione dura circa un’ora. Non è obbligatorio farla perfetta. L’importante è rispettare l’ordine: prima orientamento, poi pratica, poi correzione.</p>
+
+          <div class="grid-3">
+            <div class="card">
+              <div class="num">20</div>
+              <h3>Minuti di orientamento</h3>
+              <p>Ripassi solo ciò che serve per partire: definizioni, formule, esempio base. Niente maratona di teoria.</p>
+              <ul class="soft-list">
+                <li>Scrivi l’obiettivo della sessione.</li>
+                <li>Rivedi un esempio svolto.</li>
+                <li>Chiudi libro/video e ricostruisci i passaggi.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="num">20</div>
+              <h3>Minuti di esercizi veri</h3>
+              <p>Fai esercizi senza guardare subito la soluzione. Devono essere abbastanza difficili da farti pensare.</p>
+              <ul class="soft-list">
+                <li>Parti da 2 esercizi base.</li>
+                <li>Passa a 2 intermedi.</li>
+                <li>Segna dove ti blocchi.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="num">20</div>
+              <h3>Minuti di correzione</h3>
+              <p>Qui avviene il miglioramento. Non correggere solo il risultato: correggi il processo.</p>
+              <ul class="soft-list">
+                <li>Classifica ogni errore.</li>
+                <li>Scrivi la regola da ricordare.</li>
+                <li>Rifai almeno un esercizio sbagliato.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="callout">
+            <h3>La regola più importante</h3>
+            <p>Una sessione senza correzione è incompleta. È come fare palestra senza sapere se stai eseguendo il movimento giusto: ti stanchi, ma non sempre migliori.</p>
+          </div>
+        </section>
+
+        <section id="matematica">
+          <span class="label">Valore pratico</span>
+          <h2>Come studiare matematica senza perderti</h2>
+          <p class="lead">La matematica va studiata in modo diverso da storia o biologia. Non basta leggere: devi imparare a riconoscere strutture e prendere decisioni.</p>
+
+          <h3>La sequenza corretta</h3>
+          <table>
+            <thead><tr><th>Fase</th><th>Domanda da farti</th><th>Output da produrre</th></tr></thead>
+            <tbody>
+              <tr><td>1. Capire il concetto</td><td>Che cosa rappresenta questa cosa?</td><td>Una spiegazione in 3 righe con parole tue</td></tr>
+              <tr><td>2. Vedere un esempio</td><td>Qual è il primo passaggio?</td><td>Lista dei passaggi, non solo risultato</td></tr>
+              <tr><td>3. Rifare da solo</td><td>Dove mi blocco senza guardare?</td><td>Esercizio completo o punto preciso di blocco</td></tr>
+              <tr><td>4. Variare</td><td>Cosa cambia se l’esercizio è leggermente diverso?</td><td>Confronto tra due esercizi</td></tr>
+              <tr><td>5. Simulare</td><td>Lo so fare con tempo limitato?</td><td>Mini-verifica corretta</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Esempio: studiare una disequazione</h3>
+          <p>Supponiamo che tu debba studiare le disequazioni di secondo grado. Il modo debole è guardare 5 esercizi svolti e pensare “ok, si fa la parabola”. Il modo forte è costruire una mappa decisionale.</p>
+          <div class="exercise">
+            <h4>Esercizio esempio</h4>
+            <div class="formula">x² - 5x + 6 &gt; 0</div>
+            <p><strong>Domanda 1:</strong> è una disequazione di secondo grado? Sì.</p>
+            <p><strong>Domanda 2:</strong> trovo gli zeri dell’equazione associata: x² - 5x + 6 = 0.</p>
+            <p><strong>Domanda 3:</strong> fattorizzo: (x - 2)(x - 3) = 0, quindi x = 2 e x = 3.</p>
+            <p><strong>Domanda 4:</strong> il coefficiente di x² è positivo, quindi la parabola è rivolta verso l’alto.</p>
+            <p><strong>Domanda 5:</strong> mi chiedono &gt; 0, quindi prendo gli intervalli esterni.</p>
+            <div class="formula">Soluzione: x &lt; 2 oppure x &gt; 3</div>
+          </div>
+
+          <div class="comparison">
+            <div class="bad">
+              <h4>Come la studi male</h4>
+              <p>“Guardo come si fa, copio i passaggi, capisco l’esempio.”</p>
+              <p>Il rischio: appena cambia un dettaglio, non sai più se prendere interno o esterno.</p>
+            </div>
+            <div class="good">
+              <h4>Come la studi bene</h4>
+              <p>“Creo una sequenza di decisioni: grado, zeri, verso, segno richiesto, intervallo.”</p>
+              <p>Il vantaggio: anche se cambia l’esercizio, hai una strada.</p>
+            </div>
+          </div>
+
+          <h3>La scheda “riconoscimento”</h3>
+          <p>Per ogni argomento, crea una mini-scheda così:</p>
+          <div class="worksheet">
+            <h3>Argomento: <span class="mini-blank"></span></h3>
+            <p><strong>Come lo riconosco?</strong></p><div class="blank-line"></div><div class="blank-line"></div>
+            <p><strong>Qual è il primo passaggio?</strong></p><div class="blank-line"></div>
+            <p><strong>Quali sono i 3 errori tipici?</strong></p><div class="blank-line"></div><div class="blank-line"></div><div class="blank-line"></div>
+            <p><strong>Quale esercizio devo saper fare senza aiuti?</strong></p><div class="blank-line"></div>
+          </div>
+
+          <h3>Il metodo “3 colori” per le verifiche</h3>
+          <p>Quando fai esercizi a casa, non limitarti a mettere giusto o sbagliato. Usa tre categorie:</p>
+          <div class="grid-3">
+            <div class="card"><h4>Verde</h4><p>Lo so fare da solo, senza aiuti, in tempo ragionevole. Questo è pronto.</p></div>
+            <div class="card"><h4>Giallo</h4><p>Lo capisco, ma mi serve ancora una spinta o faccio errori. Questo è da consolidare.</p></div>
+            <div class="card"><h4>Rosso</h4><p>Non so partire o sbaglio il metodo. Questo va spiegato e ricostruito.</p></div>
+          </div>
+          <p>Il tuo obiettivo prima della verifica non è avere tutto verde. È avere pochissimi rossi e sapere esattamente cosa fare con i gialli.</p>
+        </section>
+
+        <section id="errori" class="tint">
+          <span class="label">Lo strumento chiave</span>
+          <h2>Il quaderno degli errori</h2>
+          <p class="lead">Il quaderno degli errori è il modo più semplice per smettere di ripetere sempre gli stessi sbagli.</p>
+          <p>Non deve essere bello. Non deve sembrare un quaderno da Pinterest. Deve essere utile. Ogni errore va trasformato in una frase chiara: “la prossima volta, quando vedo questa situazione, farò così”.</p>
+
+          <table>
+            <thead><tr><th>Tipo di errore</th><th>Esempio</th><th>Come correggerlo</th></tr></thead>
+            <tbody>
+              <tr><td>Concetto</td><td>Non so cosa rappresenta il dominio</td><td>Rivedere definizione + 3 esempi diversi</td></tr>
+              <tr><td>Procedura</td><td>Salto un passaggio nella disequazione</td><td>Scrivere checklist dei passaggi</td></tr>
+              <tr><td>Calcolo</td><td>Errore di segno o frazione</td><td>Controllo finale obbligatorio</td></tr>
+              <tr><td>Riconoscimento</td><td>Non capisco che metodo usare</td><td>Confrontare esercizi simili e diversi</td></tr>
+              <tr><td>Tempo</td><td>Mi perdo nei primi esercizi</td><td>Allenare mini-simulazioni cronometrate</td></tr>
+              <tr><td>Ansia</td><td>So farlo a casa, ma mi blocco</td><td>Simulare la verifica con tempo e senza aiuti</td></tr>
+            </tbody>
+          </table>
+
+          <div class="worksheet">
+            <div class="worksheet-title"><h3>Pagina tipo del quaderno errori</h3><span class="small">Da copiare</span></div>
+            <p><strong>Data:</strong> <span class="mini-blank"></span> <strong>Argomento:</strong> <span class="mini-blank"></span></p>
+            <p><strong>Esercizio in cui ho sbagliato:</strong></p><div class="blank-line"></div>
+            <p><strong>Che errore ho fatto?</strong></p><div class="blank-line"></div><div class="blank-line"></div>
+            <p><strong>Perché l’ho fatto?</strong></p><div class="blank-line"></div><div class="blank-line"></div>
+            <p><strong>Regola personale per la prossima volta:</strong></p><div class="blank-line"></div><div class="blank-line"></div>
+            <p><strong>Esercizio simile rifatto correttamente?</strong> Sì / No</p>
+          </div>
+
+          <div class="callout rose">
+            <h3>Nota gentile ma importante</h3>
+            <p>Dire “era solo distrazione” a volte è vero. Però, se la stessa distrazione torna spesso, non è più solo distrazione: è un punto del metodo che va protetto con una checklist.</p>
+          </div>
+        </section>
+
+        <section id="piano">
+          <span class="label">Piano operativo</span>
+          <h2>Piano 7 giorni per ripartire</h2>
+          <p class="lead">Questo piano non promette miracoli. Promette una cosa più utile: in una settimana puoi smettere di studiare a caso e costruire una base più stabile.</p>
+
+          <table>
+            <thead><tr><th>Giorno</th><th>Obiettivo</th><th>Cosa fare</th><th>Output</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Capire dove sei</td><td>Fai la diagnosi e raccogli gli ultimi errori/verifiche</td><td>Lista dei 3 problemi principali</td></tr>
+              <tr><td>2</td><td>Riprendere un argomento base</td><td>20 minuti teoria + 20 esercizi base + 20 correzione</td><td>1 scheda riconoscimento</td></tr>
+              <tr><td>3</td><td>Allenare autonomia</td><td>Rifai esercizi senza guardare soluzioni</td><td>Almeno 4 esercizi completati</td></tr>
+              <tr><td>4</td><td>Correggere errori</td><td>Costruisci il quaderno errori</td><td>5 errori classificati</td></tr>
+              <tr><td>5</td><td>Variare difficoltà</td><td>Fai esercizi simili ma non identici</td><td>Lista “cosa cambia?”</td></tr>
+              <tr><td>6</td><td>Simulare</td><td>Mini-verifica da 30 minuti senza aiuti</td><td>Punteggio realistico + correzione</td></tr>
+              <tr><td>7</td><td>Consolidare</td><td>Rifai solo errori e gialli</td><td>Checklist personale</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Come scegliere gli esercizi</h3>
+          <p>Un errore frequente è scegliere esercizi a caso. Invece usa una scala:</p>
+          <div class="grid-4">
+            <div class="card"><h4>Livello 1</h4><p>Esercizio identico all’esempio. Serve per partire.</p></div>
+            <div class="card"><h4>Livello 2</h4><p>Stessa struttura, numeri diversi. Serve per automatizzare.</p></div>
+            <div class="card"><h4>Livello 3</h4><p>Stesso argomento, richiesta diversa. Serve per riconoscere.</p></div>
+            <div class="card"><h4>Livello 4</h4><p>Esercizio misto o da verifica. Serve per prepararti davvero.</p></div>
+          </div>
+          <p>Se salti direttamente al livello 4 e va male, ti scoraggi. Se resti solo al livello 1, ti illudi. La crescita sta nel salire un gradino alla volta.</p>
+        </section>
+
+        <section id="verifica" class="dark">
+          <span class="label">Prima, durante, dopo</span>
+          <h2>Strategia verifica</h2>
+          <p class="lead">La verifica non si prepara solo studiando gli argomenti. Si prepara anche allenando il comportamento durante il compito.</p>
+
+          <div class="grid-3">
+            <div class="card">
+              <h3>48 ore prima</h3>
+              <ul class="soft-list">
+                <li>Fai una lista degli argomenti.</li>
+                <li>Segna verdi, gialli e rossi.</li>
+                <li>Rifai gli esercizi rossi con aiuto.</li>
+                <li>Prepara una mini-simulazione.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>24 ore prima</h3>
+              <ul class="soft-list">
+                <li>Niente maratona infinita.</li>
+                <li>Rifai gli errori più importanti.</li>
+                <li>Ripassa formule con esempi.</li>
+                <li>Dormi abbastanza per ragionare.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Durante</h3>
+              <ul class="soft-list">
+                <li>Leggi tutto il compito.</li>
+                <li>Parti dagli esercizi più accessibili.</li>
+                <li>Scrivi passaggi chiari.</li>
+                <li>Lascia 5 minuti per controllare.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="callout">
+            <h3>Se ti blocchi</h3>
+            <p>Non restare fermo 10 minuti sullo stesso punto. Scrivi quello che sai: dati, formula possibile, disegno, primo passaggio, caso simile. Anche un inizio ordinato può recuperare punti e soprattutto sbloccare il ragionamento.</p>
+          </div>
+
+          <h3>Checklist anti-panico</h3>
+          <table>
+            <thead><tr><th>Momento</th><th>Azione</th><th>Perché serve</th></tr></thead>
+            <tbody>
+              <tr><td>Primi 2 minuti</td><td>Guardo tutti gli esercizi e scelgo l’ordine</td><td>Evito di perdere tempo sul più difficile</td></tr>
+              <tr><td>Prima di iniziare un esercizio</td><td>Scrivo che tipo di esercizio è</td><td>Attivo il metodo giusto</td></tr>
+              <tr><td>Durante i calcoli</td><td>Non salto passaggi nei punti delicati</td><td>Riduco errori invisibili</td></tr>
+              <tr><td>Quando ottengo un risultato</td><td>Controllo se ha senso</td><td>Trovo errori grossolani</td></tr>
+              <tr><td>Ultimi 5 minuti</td><td>Controllo segni, condizioni, unità, dominio</td><td>Recupero punti facili</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="template" class="tint">
+          <span class="label">Pronti da usare</span>
+          <h2>Template da copiare</h2>
+          <p class="lead">Qui trovi tre strumenti semplici da usare già oggi. Stampali, copiali su un quaderno o trasformali in una nota sul telefono.</p>
+
+          <div class="worksheet">
+            <h3>Template 1 — Piano studio di una sessione</h3>
+            <p><strong>Argomento:</strong> <span class="mini-blank"></span></p>
+            <p><strong>Obiettivo concreto:</strong> oggi devo saper fare <span class="mini-blank"></span></p>
+            <p><strong>20 minuti orientamento:</strong></p><div class="blank-line"></div>
+            <p><strong>20 minuti esercizi:</strong></p><div class="blank-line"></div>
+            <p><strong>20 minuti correzione:</strong></p><div class="blank-line"></div>
+            <p><strong>Errore più importante da ricordare:</strong></p><div class="blank-line"></div>
+          </div>
+
+          <div class="worksheet">
+            <h3>Template 2 — Scheda argomento</h3>
+            <p><strong>Nome argomento:</strong> <span class="mini-blank"></span></p>
+            <p><strong>Lo riconosco quando vedo:</strong></p><div class="blank-line"></div><div class="blank-line"></div>
+            <p><strong>Il primo passaggio è:</strong></p><div class="blank-line"></div>
+            <p><strong>Formula/regola chiave:</strong></p><div class="blank-line"></div>
+            <p><strong>Errore da evitare:</strong></p><div class="blank-line"></div>
+            <p><strong>Esercizio test:</strong></p><div class="blank-line"></div>
+          </div>
+
+          <div class="worksheet">
+            <h3>Template 3 — Dopo la verifica</h3>
+            <p><strong>Voto:</strong> <span class="mini-blank"></span> <strong>Obiettivo prossimo:</strong> <span class="mini-blank"></span></p>
+            <p><strong>Dove ho perso più punti?</strong></p><div class="blank-line"></div>
+            <p><strong>Quale errore è stato evitabile?</strong></p><div class="blank-line"></div>
+            <p><strong>Quale argomento devo riprendere?</strong></p><div class="blank-line"></div>
+            <p><strong>Cosa farò diversamente nei prossimi 7 giorni?</strong></p><div class="blank-line"></div><div class="blank-line"></div>
+          </div>
+        </section>
+
+        <section>
+          <span class="label">Per genitori e studenti</span>
+          <h2>Come chiedere aiuto senza sentirsi in colpa</h2>
+          <p class="lead">Chiedere aiuto non significa essere incapaci. Significa smettere di perdere settimane nello stesso punto.</p>
+          <p>Un buon aiuto non deve semplicemente “fare i compiti al posto tuo”. Deve farti vedere dove si rompe il ragionamento, darti esercizi calibrati e aiutarti a costruire autonomia.</p>
+
+          <div class="grid-2">
+            <div class="card">
+              <h3>Frase per lo studente</h3>
+              <p>“Mi sto impegnando, ma non riesco a capire dove sbaglio. Ho bisogno di qualcuno che mi aiuti a trovare il punto preciso, non solo a fare più esercizi.”</p>
+            </div>
+            <div class="card">
+              <h3>Frase per il genitore</h3>
+              <p>“Prima di aumentare ore e pressione, proviamo a capire se il problema è metodo, basi, errori ricorrenti o ansia da verifica.”</p>
+            </div>
+          </div>
+
+          <div class="callout green">
+            <h3>Domanda finale</h3>
+            <p>Se tra 7 giorni studiassi esattamente come hai studiato negli ultimi 7, cosa cambierebbe davvero? Se la risposta è “probabilmente poco”, questa guida ti ha già dato il punto di partenza: cambiare il sistema, non solo aumentare lo sforzo.</p>
+          </div>
+        </section>
+
+        <div class="cta">
+          <h2>Vuoi capire dove si blocca davvero il tuo studio?</h2>
+          <p>Con Theoremz puoi fare una diagnosi del tuo metodo, capire quali argomenti ti stanno rallentando e ricevere un piano più chiaro per recuperare senza sentirti perso.</p>
+          <a class="button" href="#">Richiedi una diagnosi Theoremz</a>
+        </div>
+
+        <p class="footer">Theoremz · Guida gratuita per studenti · Studiare meglio, con più calma e più risultati.</p>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
