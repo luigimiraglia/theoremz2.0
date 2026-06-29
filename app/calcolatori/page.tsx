@@ -3,6 +3,7 @@ import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   FaCalculator,
+  FaChartLine,
   FaCheckCircle,
   FaDivide,
   FaEquals,
@@ -11,6 +12,7 @@ import {
   FaProjectDiagram,
   FaRulerCombined,
   FaSquareRootAlt,
+  FaSuperscript,
   FaTable,
 } from "react-icons/fa";
 import type { IconType } from "react-icons";
@@ -28,7 +30,7 @@ type Calculator = {
 export const metadata: Metadata = {
   title: "Calcolatori online di matematica e fisica",
   description:
-    "Elenco dei calcolatori online Theoremz per matematica e fisica: percentuali, MCD, mcm, fattori primi, equivalenze, espressioni ed equazioni.",
+    "Elenco dei calcolatori online Theoremz per matematica e fisica: percentuali, MCD, mcm, equivalenze, espressioni, equazioni, derivate e integrali.",
   alternates: { canonical: "/calcolatori" },
   robots: {
     index: true,
@@ -112,6 +114,27 @@ const calculators: Calculator[] = [
     status: "Disponibile",
     icon: FaProjectDiagram,
     href: "/calcolatori/proporzioni-online",
+  },
+  {
+    title: "Potenze online",
+    description: "Base, esponente, frazioni e potenze negative.",
+    status: "Disponibile",
+    icon: FaSuperscript,
+    href: "/calcolatori/potenze-online",
+  },
+  {
+    title: "Derivate online",
+    description: "Derivata prima con regole e passaggi.",
+    status: "Disponibile",
+    icon: FaChartLine,
+    href: "/calcolatori/derivate-online",
+  },
+  {
+    title: "Integrali online",
+    description: "Primitive scolastiche con regole e passaggi.",
+    status: "Disponibile",
+    icon: FaSquareRootAlt,
+    href: "/calcolatori/integrali-online",
   },
   {
     title: "Espressioni online",

@@ -4409,5 +4409,658 @@
       "dualismo-onda-particella",
       "lenti"
     ]
+  },
+  {
+    "tier": 1,
+    "status": "done",
+    "title": "Progressioni aritmetiche",
+    "slug": "progressioni-aritmetiche",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Algebra"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "progressione aritmetica",
+      "formula somma progressione aritmetica",
+      "ragione progressione aritmetica",
+      "termine n-esimo progressione"
+    ],
+    "domandeVeloci": [
+      "cos'è una progressione aritmetica",
+      "come si trova il termine n-esimo",
+      "formula per la somma dei primi n termini",
+      "cosa significa ragione"
+    ],
+    "argomenti": [
+      "definizione: successione in cui ogni termine differisce dal precedente di una costante (ragione d)",
+      "termine n-esimo: aₙ = a₁ + (n−1)d",
+      "somma dei primi n termini: Sₙ = n(a₁+aₙ)/2",
+      "proprietà: il termine centrale è la media aritmetica degli estremi",
+      "esempi numerici e applicazioni"
+    ],
+    "collegaA": [
+      "progressioni-geometriche",
+      "successioni",
+      "serie"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "done",
+    "title": "Progressioni geometriche",
+    "slug": "progressioni-geometriche",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Algebra"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "progressione geometrica",
+      "somma progressione geometrica",
+      "ragione q",
+      "formula progressione geometrica"
+    ],
+    "domandeVeloci": [
+      "cos'è una progressione geometrica",
+      "come si trova il termine n-esimo di una progressione geometrica",
+      "formula somma finita progressione geometrica",
+      "differenza tra progressione aritmetica e geometrica"
+    ],
+    "argomenti": [
+      "definizione: ogni termine si ottiene moltiplicando il precedente per la ragione q",
+      "termine n-esimo: aₙ = a₁·qⁿ⁻¹",
+      "somma dei primi n termini: Sₙ = a₁·(qⁿ−1)/(q−1) per q ≠ 1",
+      "serie geometrica convergente (|q|<1): S = a₁/(1−q)",
+      "esempi: interessi composti, suddivisione frattale"
+    ],
+    "collegaA": [
+      "progressioni-aritmetiche",
+      "successioni",
+      "serie",
+      "esponenziali"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "done",
+    "title": "Calcolo letterale",
+    "slug": "calcolo-letterale",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Algebra"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "calcolo letterale",
+      "espressioni letterali",
+      "esercizi calcolo letterale",
+      "monomi e polinomi"
+    ],
+    "domandeVeloci": [
+      "cos'è il calcolo letterale",
+      "come si sommano i monomi simili",
+      "come si moltiplica un monomio per un polinomio",
+      "cos'è il grado di un polinomio"
+    ],
+    "argomenti": [
+      "monomi: coefficiente e parte letterale; monomi simili",
+      "operazioni tra monomi: addizione (solo simili), moltiplicazione, divisione, potenza",
+      "polinomi: somma di monomi; grado e termine di grado massimo",
+      "addizione e sottrazione di polinomi",
+      "prodotto monomio × polinomio e polinomio × polinomio",
+      "raccoglimento a fattor comune (introduzione)"
+    ],
+    "collegaA": [
+      "numeri-relativi",
+      "prodotti-notevoli",
+      "equazioni-di-primo-grado"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "done",
+    "title": "Numeri razionali ed espressioni con frazioni",
+    "slug": "numeri-razionali",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Aritmetica"
+    ],
+    "classe": [
+      "1º Media",
+      "2º Media",
+      "3º Media",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico"
+    ],
+    "queryPrincipali": [
+      "numeri razionali",
+      "espressioni con frazioni",
+      "insieme Q",
+      "frazioni equivalenti"
+    ],
+    "domandeVeloci": [
+      "cos'è un numero razionale",
+      "differenza tra numero razionale e irrazionale",
+      "come si semplifica una frazione",
+      "come si sommano le frazioni con denominatori diversi"
+    ],
+    "argomenti": [
+      "numeri razionali: tutti i numeri esprimibili come p/q con q≠0",
+      "frazioni equivalenti e riduzione ai minimi termini (MCD)",
+      "operazioni: addizione con mcm, moltiplicazione, divisione (moltiplicazione per il reciproco)",
+      "confronto tra frazioni",
+      "numeri irrazionali: breve confronto (√2, π)",
+      "rappresentazione sulla retta numerica"
+    ],
+    "collegaA": [
+      "numeri-relativi",
+      "calcolo-letterale",
+      "frazioni-algebriche"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "done",
+    "title": "Formule di duplicazione",
+    "slug": "formule-di-duplicazione",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Trigonometria"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "formule di duplicazione",
+      "duplicazione seno coseno tangente",
+      "sin 2α formula",
+      "cos 2α formula"
+    ],
+    "domandeVeloci": [
+      "cosa sono le formule di duplicazione",
+      "come si ricava sin(2α)",
+      "quante forme ha cos(2α)",
+      "quando si usano le formule di duplicazione"
+    ],
+    "argomenti": [
+      "sin(2α) = 2·sin α·cos α",
+      "cos(2α): tre forme equivalenti — cos²α−sin²α, 2cos²α−1, 1−2sin²α",
+      "tan(2α) = 2tanα/(1−tan²α)",
+      "derivazione dalle formule di addizione",
+      "applicazioni: semplificare espressioni, risolvere equazioni trigonometriche"
+    ],
+    "collegaA": [
+      "formule-di-addizione-e-sottrazione",
+      "formule-di-bisezione",
+      "funzioni-goniometriche",
+      "equazioni-goniometriche"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Formule di bisezione",
+    "slug": "formule-di-bisezione",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Trigonometria"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "formule di bisezione",
+      "bisezione seno coseno",
+      "formula metà angolo",
+      "sin(α/2) formula"
+    ],
+    "domandeVeloci": [
+      "cosa sono le formule di bisezione",
+      "come si ricava sin(α/2)",
+      "come si ricava cos(α/2)",
+      "quando si usano le formule di bisezione"
+    ],
+    "argomenti": [
+      "sin(α/2) = ±√((1−cosα)/2)",
+      "cos(α/2) = ±√((1+cosα)/2)",
+      "tan(α/2) = sinα/(1+cosα) = (1−cosα)/sinα",
+      "scelta del segno in base al quadrante di α/2",
+      "derivazione invertendo le formule di duplicazione",
+      "esempi: calcolo di sin(15°) a partire da cos(30°)"
+    ],
+    "collegaA": [
+      "formule-di-duplicazione",
+      "formule-parametriche",
+      "funzioni-goniometriche",
+      "equazioni-goniometriche"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Formule parametriche",
+    "slug": "formule-parametriche",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Trigonometria"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "formule parametriche",
+      "parametriche tangente t=tan(x/2)",
+      "sostituzione parametrica trigonometria"
+    ],
+    "domandeVeloci": [
+      "cosa sono le formule parametriche in trigonometria",
+      "cos'è la sostituzione t=tan(x/2)",
+      "quando si usano le formule parametriche",
+      "come si ricava sin x con le parametriche"
+    ],
+    "argomenti": [
+      "sostituzione t = tan(x/2)",
+      "sinx = 2t/(1+t²), cosx = (1−t²)/(1+t²), tanx = 2t/(1−t²)",
+      "utilizzo principale: risolvere equazioni di tipo a·sinx + b·cosx = c",
+      "caso degenere x = π (t non definito)",
+      "esempi di sostituzione in equazioni trigonometriche"
+    ],
+    "collegaA": [
+      "formule-di-bisezione",
+      "formule-di-duplicazione",
+      "equazioni-goniometriche"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Formule di Werner e prostaferesi",
+    "slug": "formule-werner-prostaferesi",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Trigonometria"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "formule di prostaferesi",
+      "formule di Werner",
+      "somma in prodotto trigonometria",
+      "prodotto in somma"
+    ],
+    "domandeVeloci": [
+      "cosa sono le formule di Werner",
+      "cosa sono le formule di prostaferesi",
+      "differenza tra formule di Werner e prostaferesi",
+      "quando si usano"
+    ],
+    "argomenti": [
+      "formule di Werner (prodotto → somma): es. sin α·cos β = ½[sin(α+β)+sin(α−β)]",
+      "formule di prostaferesi (somma → prodotto): es. sinα+sinβ = 2·sin((α+β)/2)·cos((α−β)/2)",
+      "tabella completa: tutte le combinazioni sin/cos",
+      "derivazione dalle formule di addizione",
+      "applicazioni: semplificazione di espressioni, acustica (battimenti)"
+    ],
+    "collegaA": [
+      "formule-di-duplicazione",
+      "formule-di-bisezione",
+      "equazioni-goniometriche"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Pentagono regolare",
+    "slug": "pentagono-regolare",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "classe": [
+      "2º Media",
+      "3º Media",
+      "1º Scientifico",
+      "2º Scientifico",
+      "1º Classico",
+      "2º Classico"
+    ],
+    "queryPrincipali": [
+      "pentagono",
+      "area pentagono regolare",
+      "formule pentagono regolare",
+      "apotema pentagono"
+    ],
+    "domandeVeloci": [
+      "come si calcola l'area di un pentagono regolare",
+      "cos'è l'apotema del pentagono",
+      "angolo interno del pentagono regolare",
+      "quanti gradi ha ogni angolo di un pentagono"
+    ],
+    "argomenti": [
+      "pentagono regolare: 5 lati e 5 angoli uguali",
+      "somma degli angoli interni: (5−2)·180° = 540°; angolo interno = 108°",
+      "apotema: a = l/(2·tan(36°))",
+      "area: A = (perimetro·apotema)/2 = (5/2)·l·a",
+      "diagonali: d = l·φ con φ = (1+√5)/2 (numero aureo)",
+      "costruzione geometrica col compasso (cenni)"
+    ],
+    "collegaA": [
+      "poligoni-regolari",
+      "sezione-aurea",
+      "criteri-di-congruenza-dei-triangoli"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "La sezione aurea",
+    "slug": "sezione-aurea",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea",
+      "Algebra"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "sezione aurea",
+      "rapporto aureo",
+      "numero aureo phi",
+      "numero d'oro"
+    ],
+    "domandeVeloci": [
+      "cos'è la sezione aurea",
+      "quanto vale φ (phi)",
+      "dove si trova la sezione aurea in natura",
+      "cos'è la spirale aurea"
+    ],
+    "argomenti": [
+      "definizione: divisione di un segmento tale che il tutto sta alla parte maggiore come la parte maggiore sta alla minore",
+      "valore di φ = (1+√5)/2 ≈ 1.618",
+      "equazione caratteristica: φ² = φ + 1",
+      "rapporto con la successione di Fibonacci: Fₙ₊₁/Fₙ → φ",
+      "rettangolo aureo e spirale logaritmica",
+      "esempi in natura e arte: conchiglie, piante, architettura"
+    ],
+    "collegaA": [
+      "pentagono-regolare",
+      "successioni",
+      "numeri-irrazionali"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Coordinate polari",
+    "slug": "coordinate-polari",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "coordinate polari",
+      "da cartesiane a polari",
+      "conversione coordinate polari cartesiane",
+      "equazione in coordinate polari"
+    ],
+    "domandeVeloci": [
+      "cos'è un sistema di coordinate polari",
+      "come si converte da cartesiane a polari",
+      "come si converte da polari a cartesiane",
+      "quando si usano le coordinate polari"
+    ],
+    "argomenti": [
+      "sistema di riferimento polare: polo O e asse polare; coppia (r, θ)",
+      "da polari a cartesiane: x = r·cosθ, y = r·sinθ",
+      "da cartesiane a polari: r = √(x²+y²), θ = arctan(y/x)",
+      "curve notevoli in polari: cerchio (r = costante), retta, spirale di Archimede, cardioide",
+      "esempi di conversione e tracciamento"
+    ],
+    "collegaA": [
+      "piano-cartesiano",
+      "funzioni-goniometriche",
+      "trasformazioni-geometriche"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Funzioni iperboliche",
+    "slug": "funzioni-iperboliche",
+    "materia": "matematica",
+    "difficolta": "difficile",
+    "categoria": [
+      "Analisi"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "funzioni iperboliche",
+      "seno e coseno iperbolico",
+      "sinh cosh tanh",
+      "derivata sinh cosh"
+    ],
+    "domandeVeloci": [
+      "cos'è il seno iperbolico",
+      "formula di sinh e cosh",
+      "differenza tra funzioni trigonometriche e iperboliche",
+      "come si derivano sinh e cosh"
+    ],
+    "argomenti": [
+      "definizioni: sinh x = (eˣ−e⁻ˣ)/2, cosh x = (eˣ+e⁻ˣ)/2",
+      "tanh x = sinh x / cosh x",
+      "identità fondamentale: cosh²x − sinh²x = 1",
+      "grafici e proprietà (parità/disparità, asintoti)",
+      "derivate: d/dx sinh = cosh, d/dx cosh = sinh",
+      "funzioni inverse: arcsinh, arccosh, arctanh (cenni)",
+      "analogia con le funzioni trigonometriche (identità vs iperboliche)"
+    ],
+    "collegaA": [
+      "funzioni-esponenziali",
+      "derivate",
+      "funzioni-goniometriche-inverse"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Le unità di misura e il Sistema Internazionale",
+    "slug": "unita-di-misura",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Metrologia"
+    ],
+    "classe": [
+      "1º Media",
+      "2º Media",
+      "3º Media",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico"
+    ],
+    "queryPrincipali": [
+      "unità di misura",
+      "sistema internazionale",
+      "grandezze fisiche e unità di misura",
+      "SI unità base"
+    ],
+    "domandeVeloci": [
+      "cos'è il Sistema Internazionale",
+      "quali sono le grandezze base del SI",
+      "cos'è una grandezza derivata",
+      "cos'è la notazione scientifica"
+    ],
+    "argomenti": [
+      "grandezza fisica: tutto ciò che si può misurare; unità di misura come riferimento convenzionale",
+      "le 7 unità base del SI: metro, kilogrammo, secondo, ampere, kelvin, mole, candela",
+      "grandezze derivate: velocità (m/s), forza (N = kg·m/s²), energia (J), pressione (Pa)",
+      "multipli e sottomultipli: prefissi kilo, mega, giga, milli, micro, nano",
+      "notazione scientifica e ordine di grandezza",
+      "errori di misura: misura diretta vs indiretta (cenni)"
+    ],
+    "collegaA": [
+      "equivalenze",
+      "densita",
+      "pressione",
+      "velocita-e-accelerazione"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Le equivalenze",
+    "slug": "equivalenze",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Aritmetica"
+    ],
+    "classe": [
+      "1º Media",
+      "2º Media",
+      "3º Media",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico"
+    ],
+    "queryPrincipali": [
+      "equivalenze",
+      "come si fanno le equivalenze",
+      "tabella equivalenze",
+      "conversione unità di misura"
+    ],
+    "domandeVeloci": [
+      "come si fanno le equivalenze",
+      "come si convertono i km in m",
+      "come si convertono i cm in mm",
+      "tabella equivalenze lunghezze"
+    ],
+    "argomenti": [
+      "cos'è un'equivalenza: due misure che esprimono la stessa quantità",
+      "metodo: moltiplicare o dividere per la potenza di 10 corretta",
+      "equivalenze di lunghezza: km, hm, dam, m, dm, cm, mm",
+      "equivalenze di massa: kg, hg, dag, g, dg, cg, mg",
+      "equivalenze di superficie e volume (cenni)",
+      "equivalenze di tempo: ore, minuti, secondi",
+      "tabella riassuntiva con esempi pratici passo-passo"
+    ],
+    "collegaA": [
+      "unita-di-misura",
+      "potenze",
+      "frazioni"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Relatività galileiana e sistemi di riferimento",
+    "slug": "relativita-galileiana",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Cinematica"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "3º Linguistico",
+      "4º Linguistico"
+    ],
+    "queryPrincipali": [
+      "relatività galileiana",
+      "sistemi di riferimento inerziali",
+      "trasformazioni di Galileo",
+      "moto relativo"
+    ],
+    "domandeVeloci": [
+      "cos'è la relatività galileiana",
+      "cosa sono i sistemi di riferimento inerziali",
+      "come si sommano le velocità in fisica classica",
+      "cos'è il principio di relatività di Galileo"
+    ],
+    "argomenti": [
+      "sistema di riferimento inerziale: in moto rettilineo uniforme",
+      "principio di relatività galileiana: le leggi della meccanica sono le stesse in tutti i sistemi inerziali",
+      "trasformazioni di Galileo: x' = x−vt, t' = t (tempo assoluto)",
+      "composizione delle velocità: v_rel = v₁ − v₂",
+      "esempi: uomo su treno, due auto in moto",
+      "limite: non vale per la luce → porta alla relatività di Einstein"
+    ],
+    "collegaA": [
+      "moto-rettilineo-uniforme",
+      "i-tre-principi-della-dinamica",
+      "relativita-ristretta",
+      "velocita-e-accelerazione"
+    ]
   }
 ]
