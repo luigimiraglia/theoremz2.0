@@ -4106,7 +4106,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Dilatazione dei tempi e contrazione delle lunghezze",
     "slug": "dilatazione-dei-tempi",
     "materia": "fisica",
@@ -4150,7 +4150,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Equivalenza massa-energia",
     "slug": "equivalenza-massa-energia",
     "materia": "fisica",

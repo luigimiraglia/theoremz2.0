@@ -98,6 +98,13 @@ const calculators: Calculator[] = [
     href: "/calcolatori/equivalenze",
   },
   {
+    title: "Calcolatrice frazioni",
+    description: "Somma, sottrazione, prodotto e divisione tra frazioni.",
+    status: "Disponibile",
+    icon: FaDivide,
+    href: "/calcolatori/calcolatrice-frazioni",
+  },
+  {
     title: "Espressioni online",
     description: "Espressioni con numeri, frazioni, potenze e parentesi.",
     status: "Disponibile",

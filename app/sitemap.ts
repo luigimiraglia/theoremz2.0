@@ -20,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/calcolatori/scomposizione-fattori-primi`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/calcolatori/numero-primo`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/calcolatori/equivalenze`, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${baseUrl}/calcolatori/calcolatrice-frazioni`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/calcolatori/espressioni-online`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/calcolatori/equazioni`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/black`, changeFrequency: "monthly", priority: 0.7 },
