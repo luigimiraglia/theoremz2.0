@@ -44,6 +44,10 @@ export default function Footer() {
                 Lista delle lezioni
               </Link>
               <span>-</span>
+              <Link href="/calcolatori" className="hover:text-blue-400">
+                Calcolatori
+              </Link>
+              <span>-</span>
               {/* Client link to open cookie preferences */}
               <ConsentManagerLink className="hover:text-blue-400" />
             </div>

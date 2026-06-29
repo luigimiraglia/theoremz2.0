@@ -591,7 +591,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Potenza",
     "slug": "potenza",
     "materia": "fisica",
@@ -634,7 +634,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Forza di attrito",
     "slug": "forza-di-attrito",
     "materia": "fisica",
@@ -683,7 +683,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Campo magnetico",
     "slug": "campo-magnetico",
     "materia": "fisica",
@@ -728,7 +728,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Forza di Lorentz",
     "slug": "forza-di-lorentz",
     "materia": "fisica",
@@ -773,7 +773,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Induzione elettromagnetica",
     "slug": "induzione-elettromagnetica",
     "materia": "fisica",
@@ -1899,7 +1899,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Legge di Coulomb",
     "slug": "legge-di-coulomb",
     "materia": "fisica",
@@ -1945,7 +1945,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Probabilità condizionata e teorema di Bayes",
     "slug": "probabilita-condizionata",
     "materia": "matematica",
@@ -1991,7 +1991,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Distanza tra due punti e punto medio",
     "slug": "distanza-tra-due-punti",
     "materia": "matematica",
@@ -2037,7 +2037,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Angoli",
     "slug": "angoli",
     "materia": "matematica",
@@ -2084,7 +2084,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Forza centripeta",
     "slug": "forza-centripeta",
     "materia": "fisica",
@@ -2131,7 +2131,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Fasci di rette",
     "slug": "fasci-di-rette",
     "materia": "matematica",
@@ -2173,7 +2173,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Specchi",
     "slug": "specchi",
     "materia": "fisica",
@@ -2217,7 +2217,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Onde elettromagnetiche e spettro",
     "slug": "onde-elettromagnetiche",
     "materia": "fisica",
@@ -2261,7 +2261,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Frazioni algebriche",
     "slug": "frazioni-algebriche",
     "materia": "matematica",
@@ -2309,7 +2309,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Retta tangente a una curva",
     "slug": "retta-tangente-a-una-curva",
     "materia": "matematica",
@@ -2353,7 +2353,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Studio del segno di una funzione",
     "slug": "studio-del-segno-di-una-funzione",
     "materia": "matematica",
@@ -2402,7 +2402,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Esagono regolare",
     "slug": "esagono",
     "materia": "matematica",
@@ -2452,7 +2452,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Settore circolare e arco di circonferenza",
     "slug": "settore-circolare",
     "materia": "matematica",
@@ -2501,7 +2501,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Criteri di congruenza dei triangoli",
     "slug": "criteri-di-congruenza-dei-triangoli",
     "materia": "matematica",
@@ -2551,7 +2551,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Densità",
     "slug": "densita",
     "materia": "fisica",
@@ -2601,7 +2601,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Potenza elettrica",
     "slug": "potenza-elettrica",
     "materia": "fisica",
@@ -2646,7 +2646,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Effetto Doppler",
     "slug": "effetto-doppler",
     "materia": "fisica",
@@ -2691,7 +2691,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Trasmissione del calore",
     "slug": "trasmissione-del-calore",
     "materia": "fisica",
@@ -2736,7 +2736,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Leggi di Kirchhoff",
     "slug": "leggi-di-kirchhoff",
     "materia": "fisica",
@@ -2779,7 +2779,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Quadrato",
     "slug": "quadrato",
     "materia": "matematica",
@@ -2826,7 +2826,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Rettangolo",
     "slug": "rettangolo",
     "materia": "matematica",
@@ -2873,7 +2873,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Distanza punto-retta",
     "slug": "distanza-punto-retta",
     "materia": "matematica",
@@ -2917,7 +2917,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Trasformazioni geometriche",
     "slug": "trasformazioni-geometriche",
     "materia": "matematica",
@@ -2964,7 +2964,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Calcolo di aree con gli integrali",
     "slug": "area-sottesa-integrali",
     "materia": "matematica",
@@ -3008,7 +3008,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Pendolo semplice",
     "slug": "pendolo",
     "materia": "fisica",
@@ -3054,7 +3054,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Radioattività e decadimento",
     "slug": "radioattivita",
     "materia": "fisica",
@@ -3098,7 +3098,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Onde sonore",
     "slug": "onde-sonore",
     "materia": "fisica",
@@ -3143,7 +3143,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Funzioni goniometriche inverse",
     "slug": "funzioni-goniometriche-inverse",
     "materia": "matematica",
@@ -3189,7 +3189,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Funzione composta e funzione inversa",
     "slug": "funzione-composta-e-inversa",
     "materia": "matematica",
@@ -3240,7 +3240,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Sistemi di secondo grado",
     "slug": "sistemi-di-secondo-grado",
     "materia": "matematica",
@@ -3287,7 +3287,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Disequazioni con valore assoluto",
     "slug": "disequazioni-con-valore-assoluto",
     "materia": "matematica",
@@ -3337,7 +3337,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Metodi di integrazione",
     "slug": "metodi-di-integrazione",
     "materia": "matematica",
@@ -3382,7 +3382,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Equazioni differenziali",
     "slug": "equazioni-differenziali",
     "materia": "matematica",
@@ -3425,7 +3425,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Variabili aleatorie",
     "slug": "variabili-aleatorie",
     "materia": "matematica",
@@ -3470,7 +3470,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Logica e connettivi logici",
     "slug": "logica",
     "materia": "matematica",
@@ -3519,7 +3519,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Principio di induzione",
     "slug": "principio-di-induzione",
     "materia": "matematica",
@@ -3564,7 +3564,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Numeri primi",
     "slug": "numeri-primi",
     "materia": "matematica",
@@ -3615,7 +3615,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Poligoni regolari",
     "slug": "poligoni-regolari",
     "materia": "matematica",
@@ -3665,7 +3665,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Teorema della corda (seno)",
     "slug": "teorema-della-corda",
     "materia": "matematica",
@@ -3714,7 +3714,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Impulso e quantità di moto",
     "slug": "impulso",
     "materia": "fisica",
@@ -3762,7 +3762,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Entropia",
     "slug": "entropia",
     "materia": "fisica",
@@ -3805,7 +3805,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Macchine termiche e rendimento",
     "slug": "macchine-termiche",
     "materia": "fisica",
@@ -3847,7 +3847,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Autoinduzione e induttanza",
     "slug": "autoinduzione",
     "materia": "fisica",

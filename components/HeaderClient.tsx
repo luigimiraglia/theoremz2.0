@@ -45,7 +45,7 @@ export default function HeaderClient() {
         aria-label="Header Navigation"
         className="hidden peer-checked:block pl-2 py-6 md:block md:py-0 font-semibold font-stretch-100%"
       >
-        <ul className="flex flex-col items-center gap-y-4 md:flex-row md:gap-x-8">
+        <ul className="flex flex-col items-center gap-y-4 md:flex-row md:gap-x-6">
           <li>
             <Link
               href="/"
@@ -75,11 +75,11 @@ export default function HeaderClient() {
           </li>
           <li>
             <Link
-              href="/esercizi"
+              href="/calcolatori"
               onClick={handleLinkClick}
               className="text-gray-800 [.dark_&]:text-white hover:text-blue-500 transition-colors duration-250 ease-in-out delay-50"
             >
-              Esercizi
+              Calcolatori
             </Link>
           </li>
           <li className="mt-2 sm:mt-0">
