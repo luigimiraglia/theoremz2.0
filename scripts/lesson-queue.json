@@ -138,7 +138,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Cilindro",
     "slug": "cilindro",
     "materia": "matematica",
@@ -184,7 +184,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Cono",
     "slug": "cono",
     "materia": "matematica",
@@ -230,7 +230,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Sfera",
     "slug": "sfera",
     "materia": "matematica",
@@ -273,7 +273,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Statistica descrittiva",
     "slug": "statistica",
     "materia": "matematica",
@@ -324,7 +324,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Deviazione standard e varianza",
     "slug": "deviazione-standard-e-varianza",
     "materia": "matematica",
@@ -367,7 +367,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Calcolo combinatorio",
     "slug": "calcolo-combinatorio",
     "materia": "matematica",
@@ -414,7 +414,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Lavoro di una forza",
     "slug": "lavoro",
     "materia": "fisica",
@@ -460,7 +460,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Energia cinetica",
     "slug": "energia-cinetica",
     "materia": "fisica",
@@ -504,7 +504,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Energia potenziale",
     "slug": "energia-potenziale",
     "materia": "fisica",
@@ -548,7 +548,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Energia meccanica e conservazione dell'energia",
     "slug": "energia-meccanica",
     "materia": "fisica",
@@ -2257,6 +2257,2157 @@
       "induzione-elettromagnetica",
       "ottica-geometrica",
       "effetto-fotoelettrico"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Frazioni algebriche",
+    "slug": "frazioni-algebriche",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Algebra"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico"
+    ],
+    "queryPrincipali": [
+      "frazioni algebriche",
+      "semplificare frazioni algebriche",
+      "operazioni con frazioni algebriche",
+      "MCD tra polinomi"
+    ],
+    "domandeVeloci": [
+      "cos'è una frazione algebrica",
+      "come si semplifica una frazione algebrica",
+      "come si sommano le frazioni algebriche",
+      "quando una frazione algebrica non è definita",
+      "come si trovano le condizioni di esistenza"
+    ],
+    "argomenti": [
+      "definizione: rapporto di due polinomi A(x)/B(x)",
+      "condizioni di esistenza: B(x)≠0",
+      "semplificazione tramite scomposizione e cancellazione di fattori comuni",
+      "operazioni: somma (MCD dei denominatori), prodotto, quoziente",
+      "equazioni fratte: moltiplicare per il MCD e verificare le soluzioni"
+    ],
+    "collegaA": [
+      "polinomi",
+      "scomposizione-di-polinomi",
+      "mcd-e-mcm",
+      "equazioni-di-secondo-grado"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Retta tangente a una curva",
+    "slug": "retta-tangente-a-una-curva",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Analisi matematica",
+      "Derivate"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "equazione della retta tangente",
+      "retta tangente a una curva nel punto",
+      "retta tangente derivata"
+    ],
+    "domandeVeloci": [
+      "come si trova la retta tangente a una curva",
+      "qual è il legame tra derivata e retta tangente",
+      "cos'è il coefficiente angolare di una curva",
+      "retta tangente orizzontale quando",
+      "come si calcola la retta normale"
+    ],
+    "argomenti": [
+      "coefficiente angolare della tangente: m = f'(x₀)",
+      "equazione: y - f(x₀) = f'(x₀)(x - x₀)",
+      "tangente orizzontale: f'(x₀) = 0 (punto stazionario)",
+      "tangente verticale: f'(x₀) non esiste o è ±∞",
+      "retta normale: perpendicolare alla tangente, m_n = -1/f'(x₀)",
+      "applicazioni: linearizzazione, approssimazioni locali"
+    ],
+    "collegaA": [
+      "derivate",
+      "derivata-di-una-funzione",
+      "retta-nel-piano-cartesiano",
+      "massimi-e-minimi"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Studio del segno di una funzione",
+    "slug": "studio-del-segno-di-una-funzione",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Studio di funzione",
+      "Disequazioni"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "5º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "5º Classico",
+      "3º Linguistico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "studio del segno di una funzione",
+      "quando una funzione è positiva",
+      "studio del segno esercizi svolti"
+    ],
+    "domandeVeloci": [
+      "cos'è lo studio del segno",
+      "come si studia il segno di una funzione",
+      "studio del segno di una funzione fratta",
+      "come si usa il tableau",
+      "quando f(x) > 0"
+    ],
+    "argomenti": [
+      "obiettivo: trovare dove f(x) > 0, f(x) < 0, f(x) = 0",
+      "studio del segno di polinomi: zeri e molteplicità",
+      "studio del segno di frazioni: segno numeratore/denominatore con tableau",
+      "funzioni con radicali e logaritmi: condizioni di esistenza + segno",
+      "tabella dei segni (tableau): metodo sistematico",
+      "collegamento con lo studio di funzione completo"
+    ],
+    "collegaA": [
+      "disequazioni-di-secondo-grado",
+      "frazioni-algebriche",
+      "studio-di-funzione",
+      "dominio-di-una-funzione"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Esagono regolare",
+    "slug": "esagono",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea",
+      "Poligoni regolari"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Media",
+      "2º Media",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "area dell'esagono",
+      "area esagono regolare formula",
+      "perimetro esagono",
+      "esagono regolare lato e apotema"
+    ],
+    "domandeVeloci": [
+      "come si calcola l'area di un esagono regolare",
+      "qual è la formula dell'area dell'esagono",
+      "cos'è l'apotema di un esagono",
+      "quanti gradi ha ogni angolo interno dell'esagono",
+      "qual è il perimetro dell'esagono"
+    ],
+    "argomenti": [
+      "definizione: poligono regolare con 6 lati uguali e 6 angoli uguali di 120°",
+      "area: A = (3√3/2)·l² oppure A = (perimetro·apotema)/2",
+      "apotema: a = (l√3)/2",
+      "perimetro: P = 6l",
+      "relazione con il cerchio inscritto e circoscritto",
+      "scomposizione in 6 triangoli equilateri"
+    ],
+    "collegaA": [
+      "triangoli-equilateri",
+      "poligoni-regolari",
+      "apotema",
+      "cerchio-e-circonferenza"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Settore circolare e arco di circonferenza",
+    "slug": "settore-circolare",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea",
+      "Circonferenza"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Media",
+      "2º Media",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "area del settore circolare",
+      "arco di circonferenza formula",
+      "lunghezza arco",
+      "settore circolare angolo al centro"
+    ],
+    "domandeVeloci": [
+      "come si calcola l'area di un settore circolare",
+      "come si trova la lunghezza di un arco",
+      "cos'è un settore circolare",
+      "formula arco di circonferenza",
+      "differenza tra arco e corda"
+    ],
+    "argomenti": [
+      "arco di circonferenza: l = (α/360°)·2πr oppure l = αr con α in radianti",
+      "area del settore circolare: A = (α/360°)·πr² oppure A = (l·r)/2",
+      "angolo al centro e angolo inscritto",
+      "segmento circolare: differenza con il settore",
+      "conversione gradi ↔ radianti: α[rad] = α[°]·π/180"
+    ],
+    "collegaA": [
+      "cerchio-e-circonferenza",
+      "circonferenza-goniometrica",
+      "angoli",
+      "pigreco"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Criteri di congruenza dei triangoli",
+    "slug": "criteri-di-congruenza-dei-triangoli",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea",
+      "Triangoli"
+    ],
+    "classe": [
+      "1º Media",
+      "2º Media",
+      "3º Media",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico"
+    ],
+    "queryPrincipali": [
+      "criteri di congruenza dei triangoli",
+      "1° 2° 3° criterio di congruenza",
+      "triangoli congruenti",
+      "come dimostrare che due triangoli sono congruenti"
+    ],
+    "domandeVeloci": [
+      "cosa significa che due triangoli sono congruenti",
+      "quanti criteri di congruenza esistono",
+      "qual è il primo criterio di congruenza",
+      "come si usa il terzo criterio",
+      "criterio LAL LLA LLL"
+    ],
+    "argomenti": [
+      "congruenza: stessa forma e stesse dimensioni (≅)",
+      "1° criterio (LAL): un lato e i due angoli adiacenti",
+      "2° criterio (LLL): i tre lati",
+      "3° criterio (ALA): due lati e l'angolo compreso",
+      "caso speciale: triangoli rettangoli (ipotenusa + cateto)",
+      "applicazioni nelle dimostrazioni e nei problemi di geometria"
+    ],
+    "collegaA": [
+      "triangoli",
+      "teorema-di-pitagora",
+      "criteri-di-similitudine",
+      "geometria-euclidea"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Densità",
+    "slug": "densita",
+    "materia": "fisica",
+    "difficolta": "facile",
+    "categoria": [
+      "Meccanica dei fluidi",
+      "Grandezze fisiche"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Media",
+      "2º Media",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "densità formula",
+      "densità di un corpo",
+      "come si calcola la densità",
+      "densità fisica formula"
+    ],
+    "domandeVeloci": [
+      "cos'è la densità",
+      "qual è la formula della densità",
+      "qual è la densità dell'acqua",
+      "differenza tra densità e peso specifico",
+      "come si misura la densità"
+    ],
+    "argomenti": [
+      "definizione: ρ = m/V (massa per unità di volume)",
+      "unità di misura: kg/m³ e g/cm³",
+      "densità dell'acqua: 1000 kg/m³ = 1 g/cm³",
+      "densità relativa (peso specifico): ρ_rel = ρ/ρ_acqua",
+      "densità di miscele e leghe",
+      "collegamento con il principio di Archimede: galleggiamento se ρ < ρ_fluido"
+    ],
+    "collegaA": [
+      "grandezze-fisiche",
+      "principio-di-archimede",
+      "pressione",
+      "meccanica-fluidi"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Potenza elettrica",
+    "slug": "potenza-elettrica",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Elettrostatica",
+      "Circuiti elettrici"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "potenza elettrica formula",
+      "P=VI",
+      "effetto Joule",
+      "potenza dissipata da una resistenza"
+    ],
+    "domandeVeloci": [
+      "cos'è la potenza elettrica",
+      "qual è la formula della potenza elettrica",
+      "cos'è l'effetto Joule",
+      "come si calcola l'energia elettrica consumata",
+      "differenza tra watt e kilowattora"
+    ],
+    "argomenti": [
+      "potenza elettrica: P = V·I = I²R = V²/R (in W)",
+      "effetto Joule: calore dissipato Q = P·t = I²Rt",
+      "energia elettrica: E = P·t (in J; in pratica kWh)",
+      "1 kWh = 3.6·10⁶ J",
+      "potenza in corrente alternata: potenza attiva, reattiva, apparente (cenni)",
+      "applicazioni: lampadine, resistenze, fusibili"
+    ],
+    "collegaA": [
+      "legge-di-ohm",
+      "resistenze-in-serie-e-parallelo",
+      "condensatore-e-capacita",
+      "potenza"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Effetto Doppler",
+    "slug": "effetto-doppler",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Onde",
+      "Acustica"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "effetto Doppler",
+      "formula effetto Doppler",
+      "effetto Doppler suono",
+      "frequenza percepita effetto Doppler"
+    ],
+    "domandeVeloci": [
+      "cos'è l'effetto Doppler",
+      "quando si verifica l'effetto Doppler",
+      "qual è la formula dell'effetto Doppler",
+      "perché l'ambulanza cambia suono",
+      "effetto Doppler con la luce"
+    ],
+    "argomenti": [
+      "definizione: variazione della frequenza percepita per moto relativo sorgente-osservatore",
+      "formula: f' = f·(v ± v_o)/(v ∓ v_s)",
+      "segni: + se sorgente/osservatore si avvicinano, - se si allontanano",
+      "avvicinamento → frequenza percepita maggiore; allontanamento → minore",
+      "effetto Doppler con la luce: red-shift e blue-shift; applicazioni in astronomia",
+      "applicazioni: radar, ecografia, astronomia, autovelox"
+    ],
+    "collegaA": [
+      "onde-meccaniche",
+      "onde-sonore",
+      "onde-elettromagnetiche",
+      "moto-rettilineo-uniforme"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Trasmissione del calore",
+    "slug": "trasmissione-del-calore",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Termodinamica",
+      "Termologia"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "propagazione del calore",
+      "conduzione convezione irraggiamento",
+      "trasmissione del calore formula",
+      "conduzione termica"
+    ],
+    "domandeVeloci": [
+      "quali sono i tre modi di trasmissione del calore",
+      "cos'è la conduzione termica",
+      "cos'è la convezione",
+      "cos'è l'irraggiamento",
+      "qual è la legge di Fourier"
+    ],
+    "argomenti": [
+      "conduzione: trasferimento per contatto, legge di Fourier Q/t = λ·A·ΔT/d",
+      "convezione: trasporto di materia (naturale e forzata)",
+      "irraggiamento: emissione di onde EM, legge di Stefan-Boltzmann P = εσT⁴",
+      "corpo nero: emissione e assorbimento ideali",
+      "resistenza termica: analogia con la resistenza elettrica",
+      "applicazioni: isolamento, riscaldamento, dissipatori di calore"
+    ],
+    "collegaA": [
+      "calore-e-temperatura",
+      "passaggi-di-stato",
+      "termodinamica",
+      "dilatazione-termica"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Leggi di Kirchhoff",
+    "slug": "leggi-di-kirchhoff",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Circuiti elettrici"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "leggi di Kirchhoff",
+      "prima e seconda legge di Kirchhoff",
+      "legge dei nodi",
+      "legge delle maglie"
+    ],
+    "domandeVeloci": [
+      "cosa dicono le leggi di Kirchhoff",
+      "cos'è la legge dei nodi",
+      "cos'è la legge delle maglie",
+      "come si applica Kirchhoff a un circuito",
+      "differenza tra legge dei nodi e legge delle maglie"
+    ],
+    "argomenti": [
+      "prima legge (nodi): somma correnti entranti = somma correnti uscenti (conservazione della carica)",
+      "seconda legge (maglie): somma delle f.e.m. = somma delle cadute di tensione lungo una maglia chiusa",
+      "metodo sistematico: orientare le correnti, scrivere i sistemi di equazioni",
+      "applicazioni a circuiti con più generatori e resistenze",
+      "confronto con resistenze in serie/parallelo: casi particolari di Kirchhoff"
+    ],
+    "collegaA": [
+      "legge-di-ohm",
+      "resistenze-in-serie-e-parallelo",
+      "circuito-rc",
+      "potenza-elettrica"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Quadrato",
+    "slug": "quadrato",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea",
+      "Quadrilateri"
+    ],
+    "classe": [
+      "1º Media",
+      "2º Media",
+      "3º Media",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico"
+    ],
+    "queryPrincipali": [
+      "area del quadrato",
+      "perimetro del quadrato",
+      "diagonale del quadrato",
+      "quadrato formula"
+    ],
+    "domandeVeloci": [
+      "come si calcola l'area del quadrato",
+      "qual è la formula del perimetro del quadrato",
+      "come si calcola la diagonale del quadrato",
+      "differenza tra quadrato e rombo",
+      "il quadrato è un rettangolo"
+    ],
+    "argomenti": [
+      "definizione: quadrilatero con 4 lati uguali e 4 angoli retti (90°)",
+      "area: A = l²",
+      "perimetro: P = 4l",
+      "diagonale: d = l√2 (dal teorema di Pitagora)",
+      "proprietà: le diagonali sono uguali, perpendicolari e si bisecano",
+      "il quadrato è sia un rettangolo, sia un rombo"
+    ],
+    "collegaA": [
+      "rettangolo",
+      "rombo",
+      "parallelogramma",
+      "teorema-di-pitagora"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Rettangolo",
+    "slug": "rettangolo",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea",
+      "Quadrilateri"
+    ],
+    "classe": [
+      "1º Media",
+      "2º Media",
+      "3º Media",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico"
+    ],
+    "queryPrincipali": [
+      "area del rettangolo",
+      "perimetro del rettangolo",
+      "diagonale del rettangolo",
+      "rettangolo formula"
+    ],
+    "domandeVeloci": [
+      "come si calcola l'area del rettangolo",
+      "qual è la formula del perimetro del rettangolo",
+      "come si trova la diagonale del rettangolo",
+      "differenza tra rettangolo e quadrato",
+      "cos'è il rettangolo"
+    ],
+    "argomenti": [
+      "definizione: parallelogramma con 4 angoli retti",
+      "area: A = base × altezza",
+      "perimetro: P = 2(b + h)",
+      "diagonale: d = √(b² + h²) (teorema di Pitagora)",
+      "proprietà: le diagonali sono uguali e si bisecano",
+      "il quadrato è un caso particolare di rettangolo"
+    ],
+    "collegaA": [
+      "quadrato",
+      "parallelogramma",
+      "teorema-di-pitagora",
+      "triangoli"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Distanza punto-retta",
+    "slug": "distanza-punto-retta",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "distanza punto retta formula",
+      "distanza di un punto da una retta",
+      "formula distanza punto retta"
+    ],
+    "domandeVeloci": [
+      "qual è la formula della distanza punto-retta",
+      "come si calcola la distanza di un punto da una retta",
+      "come si usa la formula d = |ax+by+c|/√(a²+b²)",
+      "cos'è la distanza di un punto dall'origine",
+      "distanza tra due rette parallele"
+    ],
+    "argomenti": [
+      "formula: d(P, r) = |ax₀ + by₀ + c| / √(a² + b²) dove r: ax+by+c=0",
+      "dimostrazione geometrica tramite proiezione perpendicolare",
+      "distanza dall'origine: d = |c| / √(a² + b²)",
+      "distanza tra due rette parallele: stessa formula con un punto su una delle due",
+      "applicazioni: trovare rette equidistanti, cerchi tangenti a una retta"
+    ],
+    "collegaA": [
+      "retta-nel-piano-cartesiano",
+      "distanza-tra-due-punti",
+      "cerchio-nel-piano-cartesiano",
+      "fasci-di-rette"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Trasformazioni geometriche",
+    "slug": "trasformazioni-geometriche",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Geometria euclidea",
+      "Geometria analitica"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "traslazione rotazione simmetria",
+      "isometrie geometria",
+      "trasformazioni geometriche",
+      "omotetia geometria"
+    ],
+    "domandeVeloci": [
+      "cosa sono le isometrie",
+      "come si esegue una traslazione",
+      "cos'è la simmetria assiale",
+      "cos'è la rotazione",
+      "differenza tra isometria e omotetia"
+    ],
+    "argomenti": [
+      "isometrie: trasformazioni che conservano distanze e angoli",
+      "traslazione: P'=(x+a, y+b)",
+      "simmetria assiale: rispetto a una retta (asse x, asse y, y=x, retta generica)",
+      "simmetria centrale: rispetto a un punto (origine o generico)",
+      "rotazione: di angolo α attorno all'origine",
+      "omotetia: trasformazione che conserva la forma ma non le dimensioni"
+    ],
+    "collegaA": [
+      "geometria-analitica",
+      "vettori",
+      "funzioni-pari-e-dispari",
+      "criteri-di-similitudine"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Calcolo di aree con gli integrali",
+    "slug": "area-sottesa-integrali",
+    "materia": "matematica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Analisi matematica",
+      "Integrali"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "area sottesa da una curva",
+      "calcolo area con integrali",
+      "area tra due curve",
+      "integrale definito area"
+    ],
+    "domandeVeloci": [
+      "come si calcola l'area con gli integrali",
+      "area tra due curve formula",
+      "area con funzione negativa",
+      "quando l'area è uguale all'integrale",
+      "area di una figura delimitata da due funzioni"
+    ],
+    "argomenti": [
+      "area sotto una curva: A = ∫ₐᵇ f(x) dx se f(x) ≥ 0",
+      "area con funzione negativa: A = ∫ₐᵇ |f(x)| dx",
+      "area tra due curve: A = ∫ₐᵇ [f(x) - g(x)] dx con f(x) ≥ g(x)",
+      "trovare gli estremi di integrazione dagli zeri delle funzioni",
+      "area di figure composte: somma/differenza di integrali"
+    ],
+    "collegaA": [
+      "integrali",
+      "teorema-fondamentale-del-calcolo",
+      "primitiva",
+      "massimi-e-minimi"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Pendolo semplice",
+    "slug": "pendolo",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Meccanica",
+      "Moto armonico"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "periodo del pendolo semplice",
+      "formula pendolo",
+      "pendolo semplice periodo",
+      "oscillazioni del pendolo"
+    ],
+    "domandeVeloci": [
+      "qual è la formula del periodo del pendolo",
+      "da cosa dipende il periodo del pendolo",
+      "il periodo dipende dalla massa",
+      "cos'è un pendolo semplice",
+      "piccole oscillazioni pendolo"
+    ],
+    "argomenti": [
+      "definizione: massa puntiforme appesa a un filo inestensibile",
+      "approssimazione delle piccole oscillazioni (θ < 15°): moto armonico",
+      "periodo: T = 2π√(l/g) — indipendente dalla massa e dall'ampiezza",
+      "frequenza: f = 1/T = (1/2π)√(g/l)",
+      "equazione del moto: d²θ/dt² = -(g/l)θ",
+      "isocronia di Galileo: T dipende solo da l e g",
+      "applicazioni: orologio a pendolo, misura di g"
+    ],
+    "collegaA": [
+      "moto-armonico",
+      "forza-peso",
+      "gravitazione-universale",
+      "oscillazioni"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Radioattività e decadimento",
+    "slug": "radioattivita",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Fisica nucleare",
+      "Fisica moderna"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "decadimento radioattivo",
+      "radioattività formula",
+      "legge del decadimento radioattivo",
+      "tempo di dimezzamento"
+    ],
+    "domandeVeloci": [
+      "cos'è la radioattività",
+      "quali sono i tipi di decadimento radioattivo",
+      "cos'è il tempo di dimezzamento",
+      "qual è la legge del decadimento radioattivo",
+      "differenza tra alfa beta e gamma"
+    ],
+    "argomenti": [
+      "radioattività: emissione spontanea di radiazioni da nuclei instabili",
+      "tipi di decadimento: α (nucleo He-4), β⁻ (elettrone), β⁺ (positrone), γ (fotone)",
+      "legge del decadimento: N(t) = N₀·e^(-λt)",
+      "costante di decadimento λ e attività A = λN",
+      "tempo di dimezzamento: T₁/₂ = ln2/λ = 0.693/λ",
+      "unità di misura: Becquerel (Bq) e Curie (Ci)",
+      "applicazioni: datazione con C-14, medicina nucleare, centrali nucleari"
+    ],
+    "collegaA": [
+      "fissione-e-fusione-nucleare",
+      "equivalenza-massa-energia",
+      "modello-atomico-di-bohr",
+      "effetto-fotoelettrico"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Onde sonore",
+    "slug": "onde-sonore",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Onde",
+      "Acustica"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "onde sonore",
+      "velocità del suono",
+      "frequenza del suono",
+      "intensità sonora decibel"
+    ],
+    "domandeVeloci": [
+      "cosa sono le onde sonore",
+      "qual è la velocità del suono in aria",
+      "cos'è la frequenza di un suono",
+      "cos'è il decibel",
+      "differenza tra timbro altezza e intensità"
+    ],
+    "argomenti": [
+      "onde sonore: onde meccaniche longitudinali che si propagano in un mezzo",
+      "velocità del suono in aria: v ≈ 343 m/s a 20°C; dipende da temperatura e mezzo",
+      "caratteristiche del suono: altezza (frequenza), timbro (forma dell'onda), intensità (ampiezza)",
+      "udibile: 20 Hz – 20 kHz; infrasuoni < 20 Hz; ultrasuoni > 20 kHz",
+      "intensità sonora: I = P/A (W/m²); livello sonoro in dB: L = 10·log(I/I₀)",
+      "fenomeni: risonanza, battimenti, eco, effetto Doppler"
+    ],
+    "collegaA": [
+      "onde-meccaniche",
+      "effetto-doppler",
+      "moto-armonico",
+      "onde-elettromagnetiche"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Funzioni goniometriche inverse",
+    "slug": "funzioni-goniometriche-inverse",
+    "materia": "matematica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Trigonometria",
+      "Analisi matematica"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "arcoseno arcocoseno arcotangente",
+      "funzioni goniometriche inverse",
+      "arcsin arccos arctan",
+      "equazioni goniometriche con arcoseno"
+    ],
+    "domandeVeloci": [
+      "cos'è l'arcoseno",
+      "qual è il dominio di arcsin",
+      "come si risolve arcsin(x) = a",
+      "differenza tra sin⁻¹ e 1/sin",
+      "arctan di infinito"
+    ],
+    "argomenti": [
+      "necessità della restrizione del dominio per invertire seno/coseno/tangente",
+      "arcsin: dominio [-1,1], immagine [-π/2, π/2]",
+      "arccos: dominio [-1,1], immagine [0, π]",
+      "arctan: dominio ℝ, immagine (-π/2, π/2)",
+      "proprietà: arcsin(-x) = -arcsin(x), arccos(-x) = π - arccos(x)",
+      "equazioni: sin(x) = a ↔ x = arcsin(a) + 2kπ o x = π - arcsin(a) + 2kπ",
+      "derivate: (arcsin x)' = 1/√(1-x²), (arctan x)' = 1/(1+x²)"
+    ],
+    "collegaA": [
+      "funzioni-goniometriche",
+      "equazioni-goniometriche",
+      "derivate",
+      "funzione-composta-e-inversa"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Funzione composta e funzione inversa",
+    "slug": "funzione-composta-e-inversa",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Analisi matematica",
+      "Funzioni"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "5º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "5º Classico",
+      "3º Linguistico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "funzione composta",
+      "funzione inversa",
+      "composizione di funzioni",
+      "come si trova la funzione inversa"
+    ],
+    "domandeVeloci": [
+      "cos'è la funzione composta",
+      "come si calcola f∘g",
+      "cos'è la funzione inversa",
+      "quando una funzione è invertibile",
+      "come si trova la funzione inversa"
+    ],
+    "argomenti": [
+      "funzione composta: (f∘g)(x) = f(g(x)) — prima si applica g poi f",
+      "dominio della funzione composta: x nel dominio di g tale che g(x) nel dominio di f",
+      "f∘g ≠ g∘f (non commutativa in generale)",
+      "funzione inversa: f⁻¹ tale che f⁻¹(f(x)) = x",
+      "condizione di invertibilità: f iniettiva (strettamente monotona)",
+      "grafico di f⁻¹: simmetrico a f rispetto alla retta y = x",
+      "derivata della funzione inversa: (f⁻¹)'(y) = 1/f'(x)"
+    ],
+    "collegaA": [
+      "funzioni",
+      "derivate",
+      "funzioni-goniometriche-inverse",
+      "logaritmi-e-le-loro-propriet"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Sistemi di secondo grado",
+    "slug": "sistemi-di-secondo-grado",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Algebra",
+      "Equazioni"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "sistemi di secondo grado",
+      "sistema con equazione di secondo grado",
+      "intersezione retta e parabola",
+      "sistema non lineare"
+    ],
+    "domandeVeloci": [
+      "come si risolvono i sistemi di secondo grado",
+      "sistema retta-parabola",
+      "sistema parabola-parabola",
+      "quante soluzioni ha un sistema di secondo grado",
+      "metodo di sostituzione nei sistemi"
+    ],
+    "argomenti": [
+      "metodo di sostituzione: sostituire un'incognita nell'altra equazione",
+      "sistema retta-parabola: y = mx+q sostituita in y = ax²+bx+c → equazione di 2° grado in x",
+      "interpretazione geometrica: intersezione delle curve nel piano",
+      "discriminante: 0 soluzioni (non si intersecano), 1 (tangenti), 2 (si intersecano)",
+      "sistema parabola-parabola e casi simmetrici",
+      "verifica delle soluzioni trovate"
+    ],
+    "collegaA": [
+      "equazioni-di-secondo-grado",
+      "sistemi-lineari",
+      "parabola",
+      "retta-nel-piano-cartesiano"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Disequazioni con valore assoluto",
+    "slug": "disequazioni-con-valore-assoluto",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Algebra",
+      "Disequazioni"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "5º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "5º Classico",
+      "3º Linguistico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "disequazioni con valore assoluto",
+      "disequazioni con modulo",
+      "|f(x)| < a",
+      "disequazioni con valore assoluto esercizi"
+    ],
+    "domandeVeloci": [
+      "come si risolvono le disequazioni con il valore assoluto",
+      "quando |f(x)| < a",
+      "come si tratta |f(x)| > a",
+      "disequazione con modulo al denominatore",
+      "|x-a| < b cosa significa geometricamente"
+    ],
+    "argomenti": [
+      "ripasso: |x| = x se x≥0, |x| = -x se x<0",
+      "caso |f(x)| < a (con a>0): -a < f(x) < a (intersezione)",
+      "caso |f(x)| > a (con a>0): f(x) < -a oppure f(x) > a (unione)",
+      "caso |f(x)| ≤ a e |f(x)| ≥ a: analoghi con estremi inclusi",
+      "interpretazione geometrica: distanza sulla retta numerica",
+      "disequazioni del tipo |f(x)| < |g(x)|: elevazione al quadrato"
+    ],
+    "collegaA": [
+      "valore-assoluto",
+      "disequazioni-di-secondo-grado",
+      "equazioni-con-valore-assoluto",
+      "disequazioni-con-frazioni"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Metodi di integrazione",
+    "slug": "metodi-di-integrazione",
+    "materia": "matematica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Analisi matematica",
+      "Integrali"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "integrazione per parti",
+      "integrazione per sostituzione",
+      "metodi di integrazione",
+      "come si integra per parti"
+    ],
+    "domandeVeloci": [
+      "come si integra per parti",
+      "qual è la formula dell'integrazione per parti",
+      "come funziona l'integrazione per sostituzione",
+      "quando si usa la sostituzione negli integrali",
+      "formula LIATE per la scelta delle funzioni"
+    ],
+    "argomenti": [
+      "integrazione per parti: ∫u dv = uv - ∫v du; regola LIATE per scegliere u",
+      "esempi: ∫x·eˣ dx, ∫x·sin(x) dx, ∫ln(x) dx",
+      "integrazione per sostituzione: t = g(x), dx = dt/g'(x)",
+      "esempi: ∫sin(2x) dx, ∫x·√(x²+1) dx",
+      "sostituzione trigonometrica: per √(a²-x²), √(a²+x²)",
+      "scomposizione in fratti semplici (cenni) per funzioni razionali"
+    ],
+    "collegaA": [
+      "integrali",
+      "area-sottesa-integrali",
+      "primitiva",
+      "funzione-composta-e-inversa"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Equazioni differenziali",
+    "slug": "equazioni-differenziali",
+    "materia": "matematica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Analisi matematica"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "equazioni differenziali",
+      "equazione differenziale del primo ordine",
+      "equazioni differenziali a variabili separabili",
+      "soluzione generale equazione differenziale"
+    ],
+    "domandeVeloci": [
+      "cos'è un'equazione differenziale",
+      "come si risolve un'equazione differenziale a variabili separabili",
+      "cos'è la soluzione generale",
+      "cos'è il problema di Cauchy",
+      "equazione differenziale lineare del primo ordine"
+    ],
+    "argomenti": [
+      "definizione: equazione in cui l'incognita è una funzione e compaiono le sue derivate",
+      "ordine e grado di un'equazione differenziale",
+      "equazioni a variabili separabili: dy/dx = f(x)g(y) → ∫dy/g(y) = ∫f(x)dx",
+      "equazioni lineari del 1° ordine: y' + P(x)y = Q(x)",
+      "problema di Cauchy: soluzione particolare con condizione iniziale",
+      "equazione y'' + ω²y = 0: moto armonico",
+      "modelli applicativi: crescita esponenziale, raffreddamento, circuiti RC"
+    ],
+    "collegaA": [
+      "integrali",
+      "metodi-di-integrazione",
+      "moto-armonico",
+      "circuito-rc"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Variabili aleatorie",
+    "slug": "variabili-aleatorie",
+    "materia": "matematica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Probabilità",
+      "Statistica"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "variabile aleatoria",
+      "valore atteso",
+      "varianza variabile aleatoria",
+      "distribuzione di probabilità"
+    ],
+    "domandeVeloci": [
+      "cos'è una variabile aleatoria",
+      "cos'è il valore atteso",
+      "come si calcola la varianza di una variabile aleatoria",
+      "differenza tra variabile discreta e continua",
+      "cos'è la funzione di ripartizione"
+    ],
+    "argomenti": [
+      "variabile aleatoria discreta: valori finiti o numerabili, funzione di massa P(X=xᵢ)",
+      "variabile aleatoria continua: funzione di densità f(x) con ∫f(x)dx = 1",
+      "valore atteso (media): E[X] = Σxᵢ·P(xᵢ) oppure ∫x·f(x)dx",
+      "varianza: Var(X) = E[X²] - (E[X])²; deviazione standard σ = √Var",
+      "funzione di ripartizione F(x) = P(X ≤ x)",
+      "proprietà lineari: E[aX+b] = aE[X]+b, Var(aX+b) = a²Var(X)"
+    ],
+    "collegaA": [
+      "probabilita",
+      "distribuzione-binomiale",
+      "distribuzione-normale",
+      "deviazione-standard-e-varianza"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Logica e connettivi logici",
+    "slug": "logica",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Logica matematica"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "connettivi logici e proposizioni",
+      "logica matematica",
+      "tavole di verità",
+      "proposizioni e connettivi logici"
+    ],
+    "domandeVeloci": [
+      "cosa sono i connettivi logici",
+      "cos'è la negazione",
+      "differenza tra AND e OR",
+      "cos'è la tavola di verità",
+      "cos'è l'implicazione logica"
+    ],
+    "argomenti": [
+      "proposizione: enunciato vero o falso (non entrambi)",
+      "negazione ¬p: vero se p è falso",
+      "congiunzione p∧q (AND): vera solo se entrambe vere",
+      "disgiunzione p∨q (OR): falsa solo se entrambe false",
+      "implicazione p→q: falsa solo se p vera e q falsa (equivale a ¬p∨q)",
+      "doppia implicazione p↔q: vera se p e q hanno lo stesso valore",
+      "tavole di verità e leggi di De Morgan: ¬(p∧q) = ¬p∨¬q",
+      "quantificatori ∀ e ∃"
+    ],
+    "collegaA": [
+      "insiemi",
+      "principio-di-induzione",
+      "geometria-euclidea",
+      "teoremi-e-dimostrazioni"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Principio di induzione",
+    "slug": "principio-di-induzione",
+    "materia": "matematica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Logica matematica",
+      "Algebra"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "principio di induzione",
+      "dimostrazione per induzione",
+      "principio di induzione matematica",
+      "induzione matematica esempi"
+    ],
+    "domandeVeloci": [
+      "cos'è il principio di induzione",
+      "come funziona la dimostrazione per induzione",
+      "passo base e passo induttivo",
+      "principio di induzione per le somme",
+      "perché funziona l'induzione"
+    ],
+    "argomenti": [
+      "enunciato: se P(1) è vera e P(k)→P(k+1) per ogni k≥1, allora P(n) è vera per ogni n≥1",
+      "passo base: verificare P(1) (o P(0))",
+      "ipotesi induttiva: assumere P(k) vera",
+      "passo induttivo: dimostrare P(k+1) usando P(k)",
+      "esempi: somma dei primi n numeri naturali, formula per nᵃ, disuguaglianza di Bernoulli",
+      "principio di induzione forte (variante)"
+    ],
+    "collegaA": [
+      "logica",
+      "successioni",
+      "combinatoria",
+      "insiemi-numerici"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Numeri primi",
+    "slug": "numeri-primi",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Aritmetica",
+      "Algebra"
+    ],
+    "classe": [
+      "1º Media",
+      "2º Media",
+      "3º Media",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico"
+    ],
+    "queryPrincipali": [
+      "numeri primi",
+      "lista numeri primi",
+      "come si riconosce un numero primo",
+      "crivello di Eratostene"
+    ],
+    "domandeVeloci": [
+      "cos'è un numero primo",
+      "come si capisce se un numero è primo",
+      "1 è un numero primo",
+      "qual è il teorema fondamentale dell'aritmetica",
+      "come si scompone in fattori primi"
+    ],
+    "argomenti": [
+      "definizione: numero naturale > 1 divisibile solo per 1 e se stesso",
+      "1 NON è primo per definizione; 2 è l'unico primo pari",
+      "crivello di Eratostene: metodo sistematico per trovare i primi",
+      "teorema fondamentale dell'aritmetica: ogni n > 1 si scompone in fattori primi in modo unico",
+      "scomposizione in fattori primi: albero di fattorizzazione",
+      "applicazioni: MCD e mcm tramite scomposizione in fattori",
+      "infinità dei numeri primi (dimostrazione di Euclide, cenni)"
+    ],
+    "collegaA": [
+      "mcd-e-mcm",
+      "divisibilita",
+      "scomposizione-di-polinomi",
+      "insiemi-numerici"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Poligoni regolari",
+    "slug": "poligoni-regolari",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "classe": [
+      "1º Scientifico",
+      "2º Scientifico",
+      "1º Classico",
+      "2º Classico",
+      "1º Linguistico",
+      "2º Linguistico",
+      "3º Media",
+      "2º Media",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "poligoni regolari",
+      "area poligono regolare",
+      "apotema poligono regolare",
+      "angolo interno poligono regolare"
+    ],
+    "domandeVeloci": [
+      "cos'è un poligono regolare",
+      "qual è la formula dell'angolo interno di un poligono regolare",
+      "come si calcola l'area di un poligono regolare",
+      "cos'è l'apotema",
+      "somma degli angoli interni di un poligono"
+    ],
+    "argomenti": [
+      "definizione: poligono con tutti i lati uguali e tutti gli angoli uguali",
+      "angolo interno: α = (n-2)·180°/n",
+      "somma angoli interni: (n-2)·180°",
+      "area: A = (perimetro · apotema)/2 = (n·l·a)/2",
+      "apotema: a = l/(2·tan(π/n))",
+      "raggio del cerchio circoscritto: R = l/(2·sin(π/n))",
+      "casi notevoli: triangolo equilatero (n=3), quadrato (n=4), esagono (n=6)"
+    ],
+    "collegaA": [
+      "esagono",
+      "triangoli",
+      "apotema",
+      "cerchio-e-circonferenza"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Teorema della corda (seno)",
+    "slug": "teorema-della-corda",
+    "materia": "matematica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Trigonometria"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "5º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "5º Classico",
+      "3º Linguistico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "teorema della corda",
+      "teorema dei seni",
+      "legge dei seni",
+      "a/sinA = b/sinB = c/sinC"
+    ],
+    "domandeVeloci": [
+      "cos'è il teorema della corda",
+      "come si usa il teorema dei seni",
+      "differenza tra teorema dei seni e teorema di Carnot",
+      "quando si usa il teorema dei seni",
+      "teorema della corda e cerchio circoscritto"
+    ],
+    "argomenti": [
+      "enunciato: a/sin A = b/sin B = c/sin C = 2R (R = raggio del cerchio circoscritto)",
+      "dimostrazione tramite angolo al centro e angolo inscritto",
+      "casi di applicazione: noti due angoli e un lato (AAS) o due lati e un angolo opposto (SSA)",
+      "caso ambiguo nell'SSA: uno, due o nessun triangolo",
+      "confronto con il teorema di Carnot: quando usare l'uno o l'altro",
+      "applicazioni: triangolazione, navigazione, astronomia"
+    ],
+    "collegaA": [
+      "funzioni-goniometriche",
+      "teorema-di-carnot",
+      "teorema-di-pitagora",
+      "angoli"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Impulso e quantità di moto",
+    "slug": "impulso",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Dinamica",
+      "Meccanica"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "impulso e quantità di moto",
+      "quantità di moto formula",
+      "conservazione della quantità di moto",
+      "impulso fisica"
+    ],
+    "domandeVeloci": [
+      "cos'è la quantità di moto",
+      "cos'è l'impulso",
+      "quando si conserva la quantità di moto",
+      "come si calcola l'impulso",
+      "differenza tra impulso e quantità di moto"
+    ],
+    "argomenti": [
+      "quantità di moto: p = mv (vettore, unità kg·m/s)",
+      "teorema dell'impulso: J = F·Δt = Δp",
+      "impulso: J = F·Δt (vettore, unità N·s = kg·m/s)",
+      "conservazione della quantità di moto: Σp = costante se F_esterna = 0",
+      "urti: elastici (si conserva anche l'energia cinetica), anelastici",
+      "urti centrali 1D: formule per v₁' e v₂' dopo l'urto",
+      "centro di massa: R_cm = Σmᵢrᵢ/Σmᵢ"
+    ],
+    "collegaA": [
+      "i-tre-principi-della-dinamica",
+      "energia-cinetica",
+      "forza-di-attrito",
+      "moto-rettilineo-uniforme"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Entropia",
+    "slug": "entropia",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Termodinamica"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "entropia termodinamica",
+      "secondo principio della termodinamica entropia",
+      "variazione di entropia",
+      "entropia disordine"
+    ],
+    "domandeVeloci": [
+      "cos'è l'entropia",
+      "perché l'entropia aumenta sempre",
+      "come si calcola la variazione di entropia",
+      "entropia di un processo reversibile e irreversibile",
+      "entropia e disordine"
+    ],
+    "argomenti": [
+      "entropia come funzione di stato: dS = dQ_rev/T",
+      "variazione di entropia: ΔS = ∫dQ_rev/T",
+      "trasformazioni reversibili: ΔS_universo = 0; irreversibili: ΔS_universo > 0",
+      "secondo principio: l'entropia dell'universo non può diminuire",
+      "interpretazione statistica: S = k_B·ln(W) (Boltzmann)",
+      "entropia e direzione spontanea dei processi",
+      "applicazioni: macchine termiche, frigoriferi, ciclo di Carnot"
+    ],
+    "collegaA": [
+      "macchine-termiche",
+      "termodinamica",
+      "calore-e-temperatura",
+      "leggi-dei-gas"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Macchine termiche e rendimento",
+    "slug": "macchine-termiche",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Termodinamica"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "rendimento macchina termica",
+      "ciclo di Carnot",
+      "macchina termica rendimento formula",
+      "secondo principio termodinamica"
+    ],
+    "domandeVeloci": [
+      "cos'è il rendimento di una macchina termica",
+      "qual è il rendimento massimo di Carnot",
+      "cosa dice il secondo principio della termodinamica",
+      "differenza tra ciclo di Carnot e ciclo reale",
+      "come funziona un frigorifero"
+    ],
+    "argomenti": [
+      "macchina termica: assorbe Q₁ da sorgente calda, compie lavoro L, cede Q₂ a sorgente fredda",
+      "rendimento: η = L/Q₁ = 1 - Q₂/Q₁ < 1",
+      "ciclo di Carnot: ciclo reversibile con rendimento massimo η_Carnot = 1 - T₂/T₁",
+      "secondo principio (Kelvin-Planck): impossibile convertire tutto il calore in lavoro",
+      "frigorifero: lavoro → trasferimento di calore da freddo a caldo; COP = Q₂/L",
+      "macchine reali: rendimento sempre < Carnot per irreversibilità"
+    ],
+    "collegaA": [
+      "entropia",
+      "termodinamica",
+      "leggi-dei-gas",
+      "calore-e-temperatura"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Autoinduzione e induttanza",
+    "slug": "autoinduzione",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Elettromagnetismo",
+      "Induzione"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "autoinduzione e induttanza",
+      "induttanza formula",
+      "coefficiente di autoinduzione",
+      "induttore circuito"
+    ],
+    "domandeVeloci": [
+      "cos'è l'autoinduzione",
+      "cos'è il coefficiente di autoinduzione",
+      "qual è la formula dell'induttanza di un solenoide",
+      "come si calcola la forza elettromotrice autoindotta",
+      "energia immagazzinata in un induttore"
+    ],
+    "argomenti": [
+      "autoinduzione: un circuito percorso da corrente variabile induce una f.e.m. su se stesso",
+      "coefficiente di autoinduzione (induttanza): L = NΦ/i, unità Henry (H)",
+      "f.e.m. autoindotta: ε = -L·di/dt (legge di Lenz applicata)",
+      "induttanza del solenoide: L = μ₀n²Vₛ (n = spire per unità di lunghezza)",
+      "energia immagazzinata: E = ½Li²",
+      "transitori in RL: crescita e decrescita esponenziale della corrente"
+    ],
+    "collegaA": [
+      "induzione-elettromagnetica",
+      "legge-di-lenz",
+      "circuito-rc",
+      "corrente-alternata"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Corrente alternata e alternatore",
+    "slug": "corrente-alternata",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "corrente alternata",
+      "tensione alternata formula",
+      "valore efficace corrente alternata",
+      "alternatore fisica"
+    ],
+    "domandeVeloci": [
+      "cos'è la corrente alternata",
+      "qual è la differenza tra corrente alternata e continua",
+      "cos'è il valore efficace",
+      "come funziona un alternatore",
+      "perché la rete elettrica è a 50 Hz"
+    ],
+    "argomenti": [
+      "corrente alternata: i(t) = I₀·sin(ωt + φ); tensione v(t) = V₀·sin(ωt)",
+      "frequenza in Italia: f = 50 Hz, ω = 2πf = 314 rad/s",
+      "valore di picco I₀ e valore efficace (RMS): I_eff = I₀/√2",
+      "potenza in AC: P = V_eff·I_eff·cosφ (fattore di potenza cosφ)",
+      "alternatore: f.e.m. indotta per rotazione di una spira in campo magnetico uniforme",
+      "cenni su circuiti RLC: impedenza, risonanza"
+    ],
+    "collegaA": [
+      "induzione-elettromagnetica",
+      "trasformatore",
+      "autoinduzione",
+      "potenza-elettrica"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Trasformatore",
+    "slug": "trasformatore",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "trasformatore fisica",
+      "rapporto di trasformazione",
+      "trasformatore elevatore e riduttore",
+      "come funziona un trasformatore"
+    ],
+    "domandeVeloci": [
+      "come funziona un trasformatore",
+      "cos'è il rapporto di trasformazione",
+      "differenza tra trasformatore elevatore e riduttore",
+      "perché si usano i trasformatori nel trasporto dell'energia",
+      "il trasformatore funziona in corrente continua"
+    ],
+    "argomenti": [
+      "principio: mutua induzione tra due solenoidi sullo stesso nucleo ferromagnetico",
+      "rapporto di trasformazione: V₂/V₁ = N₂/N₁",
+      "conservazione della potenza (ideale): V₁I₁ = V₂I₂",
+      "trasformatore elevatore: N₂ > N₁, aumenta V, riduce I",
+      "trasformatore riduttore: N₂ < N₁, riduce V, aumenta I",
+      "applicazioni: distribuzione dell'energia elettrica (alta tensione = perdite minori)"
+    ],
+    "collegaA": [
+      "corrente-alternata",
+      "autoinduzione",
+      "induzione-elettromagnetica",
+      "potenza-elettrica"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Circuito RC",
+    "slug": "circuito-rc",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Elettrostatica",
+      "Circuiti elettrici"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "circuito RC carica e scarica",
+      "costante di tempo RC",
+      "carica condensatore formula",
+      "circuito RC transitorio"
+    ],
+    "domandeVeloci": [
+      "cos'è la costante di tempo di un circuito RC",
+      "come si carica un condensatore",
+      "come si scarica un condensatore",
+      "cosa succede a t=τ in un circuito RC",
+      "come si calcola la tensione sul condensatore"
+    ],
+    "argomenti": [
+      "circuito RC: generatore + resistenza + condensatore in serie",
+      "equazione differenziale: R·dq/dt + q/C = ε",
+      "carica: q(t) = Cε(1 - e^(-t/RC)); V_C(t) = ε(1 - e^(-t/τ))",
+      "scarica: q(t) = q₀·e^(-t/RC); V_C(t) = V₀·e^(-t/τ)",
+      "costante di tempo: τ = RC (in secondi); a t=τ il condensatore è carico al 63%",
+      "energia immagazzinata: E = ½CV²",
+      "applicazioni: temporizzatori, filtri elettronici, flash fotografici"
+    ],
+    "collegaA": [
+      "condensatore-e-capacita",
+      "legge-di-ohm",
+      "equazioni-differenziali",
+      "autoinduzione"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Condensatori in serie e parallelo",
+    "slug": "condensatori-serie-parallelo",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Elettrostatica",
+      "Circuiti elettrici"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "condensatori in serie e parallelo",
+      "capacità equivalente",
+      "condensatori in serie formula",
+      "condensatori in parallelo formula"
+    ],
+    "domandeVeloci": [
+      "come si calcolano condensatori in serie",
+      "come si calcolano condensatori in parallelo",
+      "differenza tra serie e parallelo per condensatori e resistenze",
+      "capacità equivalente formula",
+      "energia di un sistema di condensatori"
+    ],
+    "argomenti": [
+      "condensatori in serie: 1/C_eq = 1/C₁ + 1/C₂ + … (stessa carica, tensioni si sommano)",
+      "condensatori in parallelo: C_eq = C₁ + C₂ + … (stessa tensione, cariche si sommano)",
+      "confronto con resistenze: le formule sono invertite",
+      "energia totale: E = ½C_eq·V²",
+      "applicazioni: regolazione della capacità nei circuiti",
+      "circuiti misti: calcolo passo-passo riducendo serie e parallelo"
+    ],
+    "collegaA": [
+      "condensatore-e-capacita",
+      "resistenze-in-serie-e-parallelo",
+      "circuito-rc",
+      "potenziale-elettrico"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Equazioni di Maxwell",
+    "slug": "equazioni-di-maxwell",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "equazioni di Maxwell",
+      "legge di Gauss elettrica",
+      "legge di Ampere-Maxwell",
+      "campo elettromagnetico"
+    ],
+    "domandeVeloci": [
+      "cosa sono le equazioni di Maxwell",
+      "quante sono le equazioni di Maxwell",
+      "cosa dice la legge di Gauss",
+      "cos'è la corrente di spostamento",
+      "come le equazioni di Maxwell descrivono le onde EM"
+    ],
+    "argomenti": [
+      "4 equazioni che descrivono completamente il campo EM",
+      "1ª: Legge di Gauss E: flusso di E ∝ carica interna (∇·E = ρ/ε₀)",
+      "2ª: Legge di Gauss B: monopoli magnetici non esistono (∇·B = 0)",
+      "3ª: Legge di Faraday: variazione di B induce E (∇×E = -∂B/∂t)",
+      "4ª: Legge di Ampere-Maxwell: corrente + corrente di spostamento genera B (∇×B = μ₀J + μ₀ε₀∂E/∂t)",
+      "corrente di spostamento: intuizione di Maxwell per la simmetria",
+      "conseguenza: onde EM; velocità c = 1/√(μ₀ε₀)"
+    ],
+    "collegaA": [
+      "onde-elettromagnetiche",
+      "campo-elettrico",
+      "campo-magnetico",
+      "induzione-elettromagnetica"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Dilatazione dei tempi e contrazione delle lunghezze",
+    "slug": "dilatazione-dei-tempi",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Relatività",
+      "Fisica moderna"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "dilatazione dei tempi",
+      "contrazione delle lunghezze",
+      "relatività ristretta dilatazione",
+      "tempo proprio e tempo dilatato"
+    ],
+    "domandeVeloci": [
+      "cos'è la dilatazione dei tempi",
+      "cos'è la contrazione delle lunghezze",
+      "cosa significa tempo proprio",
+      "cos'è il fattore di Lorentz",
+      "quando gli effetti relativistici sono significativi"
+    ],
+    "argomenti": [
+      "postulati della relatività ristretta: stessa velocità della luce c in tutti i SdR inerziali",
+      "fattore di Lorentz: γ = 1/√(1 - v²/c²) ≥ 1",
+      "dilatazione dei tempi: Δt = γ·Δt₀ (l'orologio in moto va più lento)",
+      "contrazione delle lunghezze: L = L₀/γ (i corpi in moto si accorciano nella direzione del moto)",
+      "simultaneità relativa: eventi simultanei in un SdR non lo sono in un altro",
+      "paradosso dei gemelli (cenni)",
+      "limite non-relativistico: v << c → γ ≈ 1"
+    ],
+    "collegaA": [
+      "relativita-ristretta",
+      "equivalenza-massa-energia",
+      "onde-elettromagnetiche",
+      "moto-rettilineo-uniforme"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Equivalenza massa-energia",
+    "slug": "equivalenza-massa-energia",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Relatività",
+      "Fisica moderna"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "E=mc2 significato",
+      "equivalenza massa energia",
+      "energia a riposo",
+      "formula di Einstein E=mc²"
+    ],
+    "domandeVeloci": [
+      "cosa significa E=mc²",
+      "cos'è la massa a riposo",
+      "come si calcola l'energia di una particella",
+      "perché la fissione libera energia",
+      "differenza tra energia totale ed energia cinetica relativistica"
+    ],
+    "argomenti": [
+      "energia a riposo: E₀ = mc²",
+      "energia totale relativistica: E = γmc²",
+      "energia cinetica relativistica: K = (γ-1)mc²",
+      "quantità di moto relativistica: p = γmv",
+      "relazione E-p: E² = (pc)² + (mc²)²",
+      "difetto di massa nelle reazioni nucleari: ΔE = Δm·c²",
+      "applicazioni: fissione e fusione nucleare, acceleratori di particelle"
+    ],
+    "collegaA": [
+      "dilatazione-dei-tempi",
+      "relativita-ristretta",
+      "fissione-e-fusione-nucleare",
+      "energia-cinetica"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Modello atomico di Bohr",
+    "slug": "modello-atomico-di-bohr",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Fisica moderna",
+      "Fisica atomica"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "modello atomico di Bohr",
+      "livelli energetici dell'atomo di idrogeno",
+      "spettro dell'idrogeno Bohr",
+      "orbite di Bohr"
+    ],
+    "domandeVeloci": [
+      "cosa dice il modello di Bohr",
+      "come si calcolano i livelli energetici dell'idrogeno",
+      "perché gli atomi emettono luce a frequenze discrete",
+      "cos'è la costante di Rydberg",
+      "limiti del modello di Bohr"
+    ],
+    "argomenti": [
+      "postulati: orbite stazionarie, condizione di quantizzazione L = nℏ, emissione/assorbimento per salti di livello",
+      "energia dei livelli: Eₙ = -13.6 eV/n²",
+      "raggio delle orbite: rₙ = n²·a₀ (a₀ = 0.053 nm, raggio di Bohr)",
+      "frequenza emessa: hf = Eₙ - Eₘ (formula di Rydberg)",
+      "spettro dell'idrogeno: serie di Lyman (UV), Balmer (visibile), Paschen (IR)",
+      "limiti: non spiega atomi multi-elettronici, non spiega lo spin",
+      "superato dalla meccanica quantistica"
+    ],
+    "collegaA": [
+      "effetto-fotoelettrico",
+      "dualismo-onda-particella",
+      "radioattivita",
+      "principio-di-indeterminazione"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Dualismo onda-particella e de Broglie",
+    "slug": "dualismo-onda-particella",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Fisica moderna",
+      "Meccanica quantistica"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "dualismo onda particella",
+      "lunghezza d'onda di de Broglie",
+      "dualismo della luce",
+      "materia e onde"
+    ],
+    "domandeVeloci": [
+      "cos'è il dualismo onda-particella",
+      "qual è la formula di de Broglie",
+      "come si calcola la lunghezza d'onda di un elettrone",
+      "la luce è un'onda o una particella",
+      "cosa dimostra la diffrazione degli elettroni"
+    ],
+    "argomenti": [
+      "dualismo della luce: onda (interferenza, diffrazione) e particella (fotone, effetto fotoelettrico)",
+      "ipotesi di de Broglie: anche la materia ha natura ondulatoria, λ = h/p = h/(mv)",
+      "verifica sperimentale: diffrazione degli elettroni (Davisson-Germer)",
+      "lunghezza d'onda di de Broglie per elettroni, protoni e oggetti macroscopici",
+      "interpretazione probabilistica: |ψ|² = densità di probabilità",
+      "principio di complementarità di Bohr"
+    ],
+    "collegaA": [
+      "effetto-fotoelettrico",
+      "principio-di-indeterminazione",
+      "modello-atomico-di-bohr",
+      "onde-elettromagnetiche"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Principio di indeterminazione di Heisenberg",
+    "slug": "principio-di-indeterminazione",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Fisica moderna",
+      "Meccanica quantistica"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "principio di indeterminazione di Heisenberg",
+      "Δx·Δp ≥ ℏ/2",
+      "principio di indeterminazione energia-tempo",
+      "incertezza quantistica"
+    ],
+    "domandeVeloci": [
+      "cosa dice il principio di indeterminazione",
+      "come si scrive il principio di indeterminazione",
+      "perché non possiamo conoscere posizione e velocità insieme",
+      "principio di indeterminazione ed energia",
+      "è un limite strumentale o fondamentale"
+    ],
+    "argomenti": [
+      "enunciato: Δx·Δpₓ ≥ ℏ/2 (posizione e quantità di moto)",
+      "enunciato: ΔE·Δt ≥ ℏ/2 (energia e tempo)",
+      "ℏ = h/2π (costante di Planck ridotta)",
+      "non è un limite tecnologico ma fondamentale: misurare disturba il sistema",
+      "conseguenze: l'elettrone non ha traiettoria, energy-time uncertainty e vite medie",
+      "applicazioni: larghezza delle righe spettrali, energia a riposo del vuoto quantistico",
+      "confronto con la meccanica classica"
+    ],
+    "collegaA": [
+      "dualismo-onda-particella",
+      "modello-atomico-di-bohr",
+      "effetto-fotoelettrico",
+      "radioattivita"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Fissione e fusione nucleare",
+    "slug": "fissione-e-fusione-nucleare",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Fisica nucleare",
+      "Fisica moderna"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "fissione e fusione nucleare",
+      "reazione nucleare energia",
+      "fissione dell'uranio",
+      "fusione nucleare sole"
+    ],
+    "domandeVeloci": [
+      "differenza tra fissione e fusione",
+      "perché la fissione libera energia",
+      "cos'è il difetto di massa",
+      "come funziona una centrale nucleare",
+      "perché è difficile realizzare la fusione controllata"
+    ],
+    "argomenti": [
+      "difetto di massa: Δm = Z·mₚ + N·mₙ - M_nucleo; energia di legame = Δm·c²",
+      "curva di legame: ferro (Fe-56) ha legame massimo; fissione conviene per nuclei pesanti, fusione per nuclei leggeri",
+      "fissione: nucleo pesante (U-235) + neutrone → 2 frammenti + 2-3 neutroni + energia",
+      "reazione a catena: critica, sottocritica, supercritica",
+      "fusione: H-2 + H-3 → He-4 + n + 17.6 MeV; condizioni estreme (plasma, T ~ 10⁸ K)",
+      "applicazioni: bombe atomiche/H, centrali nucleari (fissione), ITER (fusione controllata)"
+    ],
+    "collegaA": [
+      "radioattivita",
+      "equivalenza-massa-energia",
+      "modello-atomico-di-bohr",
+      "effetto-fotoelettrico"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Interferenza e diffrazione della luce",
+    "slug": "interferenza-e-diffrazione",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Ottica fisica",
+      "Onde"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "interferenza e diffrazione della luce",
+      "esperimento di Young",
+      "reticolo di diffrazione",
+      "figure di interferenza"
+    ],
+    "domandeVeloci": [
+      "cos'è l'interferenza della luce",
+      "cos'è la diffrazione",
+      "come funziona l'esperimento di Young",
+      "cos'è un reticolo di diffrazione",
+      "differenza tra interferenza costruttiva e distruttiva"
+    ],
+    "argomenti": [
+      "interferenza: sovrapposizione di onde; costruttiva (Δφ = 2nπ) e distruttiva (Δφ = (2n+1)π)",
+      "esperimento di Young (doppia fenditura): frange luminose e scure, distanza Δy = λL/d",
+      "diffrazione: deviazione di un'onda intorno a un ostacolo; significativa se λ ≈ dimensione ostacolo",
+      "singola fenditura: minimo di diffrazione per a·sin θ = nλ",
+      "reticolo di diffrazione: d·sin θ = nλ (massimi principali)",
+      "applicazioni: spettroscopia, olografia, antiriflesso",
+      "dualismo: anche gli elettroni mostrano diffrazione (Davisson-Germer)"
+    ],
+    "collegaA": [
+      "onde-elettromagnetiche",
+      "onde-sonore",
+      "dualismo-onda-particella",
+      "lenti"
     ]
   }
 ]

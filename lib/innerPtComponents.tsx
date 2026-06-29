@@ -82,23 +82,6 @@ export const innerPtComponents: PortableTextComponents = {
       return <KaInline>{needsDisplay ? `\\displaystyle { ${code} }` : code}</KaInline>;
     },
     mathBlueBox: ({ children }) => <>{children}</>,
-    exUnderline: ({ children }) => (
-      <span className="relative inline-block align-baseline" style={{ paddingLeft: 10 }}>
-        <span
-          aria-hidden
-          className="pointer-events-none"
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 6,
-            backgroundImage: "linear-gradient(180deg, #0ea5e9, #6366f1)",
-            borderRadius: 9999,
-          }}
-        />
-        {withInlineMath(children)}
-      </span>
-    ),
+    exUnderline: ({ children }) => <>{withInlineMath(children)}</>,
   },
 };

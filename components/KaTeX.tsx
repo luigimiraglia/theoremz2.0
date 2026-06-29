@@ -15,7 +15,7 @@ export function KaInline({ children }: Props) {
       }),
     [children]
   );
-  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+  return <span className="mx-[0.15em]" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 export function KaBlock({ children }: Props) {

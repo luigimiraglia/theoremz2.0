@@ -30,6 +30,8 @@ export default function MathText({
     const expr = dd ?? d ?? p ?? b ?? "";
     const isBlock = !!dd || !!b; // $$...$$ or \[...\]
 
+    last = i + full.length;
+
     if (isBlock && allowBlock) {
       parts.push(
         <div key={parts.length} className="my-3 overflow-x-auto">
@@ -40,12 +42,21 @@ export default function MathText({
       // Inline: ingrandisci frazioni con \displaystyle senza spezzare il flusso
       const needsDisplayInline = /\\(?:d?frac|cfrac|tfrac)\b/.test(expr);
       const toRender = needsDisplayInline ? `\\displaystyle { ${expr} }` : expr;
-      parts.push(
-        <KaInline key={parts.length}>{toRender}</KaInline>
-      );
+      // Se il testo seguente inizia con punteggiatura, avvolgi insieme per evitare
+      // che la punteggiatura vada a capo da sola su mobile
+      const punctMatch = s.slice(last).match(/^[.,;:!?)\]]+/);
+      if (punctMatch) {
+        const punct = punctMatch[0];
+        parts.push(
+          <span key={parts.length} className="whitespace-nowrap">
+            <KaInline>{toRender}</KaInline>{punct}
+          </span>
+        );
+        last += punct.length;
+      } else {
+        parts.push(<KaInline key={parts.length}>{toRender}</KaInline>);
+      }
     }
-
-    last = i + full.length;
   }
 
   if (last < s.length) parts.push(s.slice(last));

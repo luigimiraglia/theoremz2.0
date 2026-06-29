@@ -424,28 +424,7 @@ export const ptComponents: PortableTextComponents = {
       </span>
     ),
 
-    // Barra verticale a sinistra (gradient) che sposta l'indentazione, con bordi arrotondati e singola barra per tutte le righe
-    exUnderline: ({ children }) => (
-      <span
-        className="relative inline-block align-baseline"
-        style={{ paddingLeft: 10 }}
-      >
-        <span
-          aria-hidden
-          className="pointer-events-none"
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 6,
-            backgroundImage: "linear-gradient(180deg, #0ea5e9, #6366f1)",
-            borderRadius: 9999,
-          }}
-        />
-        {withInlineMath(children)}
-      </span>
-    ),
+    exUnderline: ({ children }) => <>{withInlineMath(children)}</>,
 
     // link: niente MathText dentro
     link: ({ children, value }) => (
