@@ -22,7 +22,6 @@ export async function POST(req: Request) {
       note: "Richiesta diagnosi gratuita",
       pageUrl: referer,
       subjectLabel: "Diagnosi gratuita",
-      mailLabel: "diagnosi-gratuita",
       contactPreference: "call",
       replyToEmail: String(email).trim().slice(0, 160),
       metadata: {

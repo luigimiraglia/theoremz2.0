@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import MobileGuideDownloadGate from "./MobileGuideDownloadGate";
 import PrintButton from "./PrintButton";
 
@@ -460,9 +461,9 @@ export default function GuidaDa4A6() {
             <h2>Vuoi un piano preciso sui tuoi argomenti?</h2>
             <p>Ogni studente ha un problema diverso: basi, metodo, ansia da verifica, esercizi troppo difficili, mancanza di costanza. Il modo più veloce per recuperare è smettere di studiare a caso e costruire un piano sui tuoi errori reali.</p>
             <p>In una chiamata gratuita di 15 minuti capiamo insieme il tuo punto di partenza, gli argomenti prioritari e come strutturare le prossime settimane.</p>
-            <a className="cta-button" href="/diagnosi-gratuita">
+            <Link className="cta-button" href="/diagnosi-gratuita">
               Prenota la diagnosi gratuita →
-            </a>
+            </Link>
           </div>
         </div>
       </main>

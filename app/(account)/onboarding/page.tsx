@@ -226,9 +226,7 @@ export default function OnboardingPage() {
     setSaving(true);
     setError(null);
     try {
-      const token =
-        (await user?.getIdToken?.()) ||
-        (await getAuth().currentUser?.getIdToken());
+      const token = await getAuth().currentUser?.getIdToken();
       if (!token) throw new Error("missing_token");
 
       const res = await fetch("/api/me/onboarding", {
