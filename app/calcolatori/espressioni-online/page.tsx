@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
-import McdOnlineClient from "./McdOnlineClient";
+import EspressioniOnlineClient from "./EspressioniOnlineClient";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
-const CANONICAL = `${SITE}/calcolatori/mcd-online`;
+const CANONICAL = `${SITE}/calcolatori/espressioni-online`;
 
 export const metadata: Metadata = {
-  title: "MCD online con passaggi",
+  title: "Espressioni online con passaggi",
   description:
-    "Calcola il MCD online di due o più numeri con algoritmo di Euclide, scomposizione in fattori primi e passaggi spiegati.",
-  alternates: { canonical: "/calcolatori/mcd-online" },
+    "Risolvi espressioni online con parentesi, frazioni, potenze e operazioni. Calcolo numerico con risultato esatto e passaggi spiegati.",
+  alternates: { canonical: "/calcolatori/espressioni-online" },
   robots: {
     index: true,
     follow: true,
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
       "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
   },
   openGraph: {
-    title: "MCD online con passaggi",
+    title: "Espressioni online con passaggi",
     description:
-      "Calcolatore del massimo comune divisore con passaggi, fattori primi e algoritmo di Euclide.",
+      "Calcolatore di espressioni numeriche con parentesi, frazioni, potenze e passaggi.",
     url: CANONICAL,
     siteName: "Theoremz",
     type: "website",
@@ -29,43 +29,43 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "MCD online con passaggi",
+    title: "Espressioni online con passaggi",
     description:
-      "Calcola il massimo comune divisore online con procedimento spiegato.",
+      "Risolvi espressioni numeriche online con procedimento spiegato.",
     images: ["/metadata.png"],
     site: "@theoremz_",
   },
   keywords: [
-    "mcd online",
-    "calcolo mcd online",
-    "massimo comune divisore",
-    "calcolatore mcd",
-    "mcd con passaggi",
-    "algoritmo di Euclide",
-    "scomposizione in fattori primi",
+    "espressioni online",
+    "risolvi espressioni online",
+    "calcolatore espressioni",
+    "espressioni con frazioni",
+    "espressioni con potenze",
+    "espressioni con parentesi",
+    "espressioni con passaggi",
   ],
 };
 
 const faq = [
   {
-    question: "Che cos'è il MCD?",
+    question: "Che tipo di espressioni posso risolvere?",
     answer:
-      "Il MCD, massimo comune divisore, è il più grande numero intero che divide esattamente tutti i numeri considerati.",
+      "Puoi risolvere espressioni numeriche con addizioni, sottrazioni, moltiplicazioni, divisioni, parentesi, frazioni e potenze con esponente intero.",
   },
   {
-    question: "Come si calcola il MCD con i fattori primi?",
+    question: "Come si scrivono le frazioni?",
     answer:
-      "Si scompongono i numeri in fattori primi e si moltiplicano solo i fattori comuni presi con l'esponente più piccolo.",
+      "Le frazioni si scrivono con la barra. Per esempio un mezzo si scrive 1/2 e tre quarti si scrive 3/4.",
   },
   {
-    question: "Come funziona l'algoritmo di Euclide?",
+    question: "Qual è l'ordine delle operazioni?",
     answer:
-      "Si divide il numero più grande per il più piccolo e si continua dividendo il divisore per il resto, finché il resto diventa zero.",
+      "Prima si risolvono parentesi e potenze, poi moltiplicazioni e divisioni, infine addizioni e sottrazioni.",
   },
   {
-    question: "Si può calcolare il MCD di più di due numeri?",
+    question: "Il risultato è approssimato?",
     answer:
-      "Sì. Si calcola prima il MCD dei primi due numeri, poi il MCD tra quel risultato e il numero successivo, fino alla fine.",
+      "Quando il risultato è frazionario, il calcolatore mostra la frazione esatta e anche il valore decimale.",
   },
 ];
 
@@ -78,7 +78,7 @@ function JsonLd({ data }: { data: unknown }) {
   );
 }
 
-export default function McdOnlinePage() {
+export default function EspressioniOnlinePage() {
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -93,7 +93,7 @@ export default function McdOnlinePage() {
       {
         "@type": "ListItem",
         position: 3,
-        name: "MCD online",
+        name: "Espressioni online",
         item: CANONICAL,
       },
     ],
@@ -102,7 +102,7 @@ export default function McdOnlinePage() {
   const softwareJsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "MCD online",
+    name: "Espressioni online",
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
     url: CANONICAL,
@@ -112,11 +112,12 @@ export default function McdOnlinePage() {
       priceCurrency: "EUR",
     },
     featureList: [
-      "Calcolo del massimo comune divisore",
-      "Supporto per due o più numeri",
-      "Algoritmo di Euclide con passaggi",
-      "Scomposizione in fattori primi",
-      "Fattori comuni con esponente minore",
+      "Espressioni numeriche",
+      "Parentesi",
+      "Frazioni",
+      "Potenze intere",
+      "Risultato esatto",
+      "Passaggi spiegati",
     ],
   };
 
@@ -158,40 +159,38 @@ export default function McdOnlinePage() {
           </div>
 
           <h1 className="text-3xl font-bold leading-tight tracking-tight opacity-90 sm:text-4xl">
-            MCD online
+            Espressioni online
           </h1>
           <p className="mt-4 hidden max-w-2xl text-[15.5px] font-medium leading-relaxed sm:block">
-            Calcola il massimo comune divisore di due o più numeri. Il risultato
-            viene mostrato con algoritmo di Euclide, scomposizione in fattori
-            primi e passaggi essenziali.
+            Risolvi espressioni numeriche con parentesi, frazioni, potenze e
+            operazioni base. Il risultato viene mostrato in forma esatta e con i
+            passaggi essenziali.
           </p>
         </div>
 
         <div className="mt-8">
-          <McdOnlineClient />
+          <EspressioniOnlineClient />
         </div>
       </section>
 
       <section className="mx-6 mt-6 grid max-w-screen-xl gap-4 pb-12 lg:grid-cols-[1.05fr_0.95fr] xl:mx-auto">
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Cos&apos;è il MCD</h2>
+          <h2 className="text-2xl font-bold">Come scrivere l&apos;espressione</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Il MCD, massimo comune divisore, è il più grande numero che divide
-            esattamente tutti i numeri dati. Serve per semplificare frazioni,
-            risolvere problemi con divisori comuni e confrontare quantità
-            divisibili nello stesso modo.
+            Scrivi i numeri e gli operatori nell&apos;ordine dell&apos;esercizio. Puoi
+            usare sia × sia *, sia : sia /. Le frazioni si scrivono con la barra,
+            per esempio 1/2 + 3/4.
           </p>
         </article>
 
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Formula con fattori primi</h2>
+          <h2 className="text-2xl font-bold">Ordine delle operazioni</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Dopo aver scomposto i numeri in fattori primi, il MCD si ottiene
-            moltiplicando soltanto i fattori comuni, ciascuno con l&apos;esponente
-            minore.
+            Il calcolatore rispetta l&apos;ordine standard: prima parentesi e potenze,
+            poi moltiplicazioni e divisioni, infine addizioni e sottrazioni.
           </p>
           <div className="mt-4 rounded-[18px] border-2 border-slate-900/70 bg-white px-4 py-3 font-bold shadow-[0_3px_0_#0f172a] [.dark_&]:bg-slate-900">
-            MCD = prodotto dei fattori comuni con esponente minore
+            parentesi → potenze → × e : → + e -
           </div>
         </article>
       </section>

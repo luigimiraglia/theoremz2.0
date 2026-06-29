@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
-import McdOnlineClient from "./McdOnlineClient";
+import EquivalenzeClient from "./EquivalenzeClient";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
-const CANONICAL = `${SITE}/calcolatori/mcd-online`;
+const CANONICAL = `${SITE}/calcolatori/equivalenze`;
 
 export const metadata: Metadata = {
-  title: "MCD online con passaggi",
+  title: "Equivalenze online con passaggi",
   description:
-    "Calcola il MCD online di due o più numeri con algoritmo di Euclide, scomposizione in fattori primi e passaggi spiegati.",
-  alternates: { canonical: "/calcolatori/mcd-online" },
+    "Calcola equivalenze online tra unità di misura: lunghezza, massa, capacità, area, volume e tempo, con risultato e passaggi spiegati.",
+  alternates: { canonical: "/calcolatori/equivalenze" },
   robots: {
     index: true,
     follow: true,
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
       "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
   },
   openGraph: {
-    title: "MCD online con passaggi",
+    title: "Equivalenze online con passaggi",
     description:
-      "Calcolatore del massimo comune divisore con passaggi, fattori primi e algoritmo di Euclide.",
+      "Convertitore di unità di misura per equivalenze scolastiche con procedimento spiegato.",
     url: CANONICAL,
     siteName: "Theoremz",
     type: "website",
@@ -29,43 +29,44 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "MCD online con passaggi",
+    title: "Equivalenze online con passaggi",
     description:
-      "Calcola il massimo comune divisore online con procedimento spiegato.",
+      "Calcola equivalenze tra unità di misura con risultato e passaggi.",
     images: ["/metadata.png"],
     site: "@theoremz_",
   },
   keywords: [
-    "mcd online",
-    "calcolo mcd online",
-    "massimo comune divisore",
-    "calcolatore mcd",
-    "mcd con passaggi",
-    "algoritmo di Euclide",
-    "scomposizione in fattori primi",
+    "equivalenze",
+    "equivalenze online",
+    "calcolo equivalenze",
+    "convertitore unità di misura",
+    "equivalenze con passaggi",
+    "equivalenze metri",
+    "equivalenze grammi",
+    "equivalenze litri",
   ],
 };
 
 const faq = [
   {
-    question: "Che cos'è il MCD?",
+    question: "Come si fanno le equivalenze?",
     answer:
-      "Il MCD, massimo comune divisore, è il più grande numero intero che divide esattamente tutti i numeri considerati.",
+      "Per fare un'equivalenza si trasforma il valore dalla sua unità di partenza all'unità di arrivo, moltiplicando o dividendo per il fattore di conversione corretto.",
   },
   {
-    question: "Come si calcola il MCD con i fattori primi?",
+    question: "Quando si moltiplica e quando si divide?",
     answer:
-      "Si scompongono i numeri in fattori primi e si moltiplicano solo i fattori comuni presi con l'esponente più piccolo.",
+      "Se passi a un'unità più piccola il numero aumenta, quindi di solito moltiplichi. Se passi a un'unità più grande il numero diminuisce, quindi dividi.",
   },
   {
-    question: "Come funziona l'algoritmo di Euclide?",
+    question: "Le equivalenze con aree e volumi funzionano allo stesso modo?",
     answer:
-      "Si divide il numero più grande per il più piccolo e si continua dividendo il divisore per il resto, finché il resto diventa zero.",
+      "No. Nelle aree ogni salto vale 100, mentre nei volumi ogni salto vale 1000. Per lunghezze, masse e capacità ogni salto metrico vale 10.",
   },
   {
-    question: "Si può calcolare il MCD di più di due numeri?",
+    question: "Quali unità posso convertire?",
     answer:
-      "Sì. Si calcola prima il MCD dei primi due numeri, poi il MCD tra quel risultato e il numero successivo, fino alla fine.",
+      "Il calcolatore gestisce lunghezza, massa, capacità, area, volume e tempo, cioè le equivalenze più comuni a scuola.",
   },
 ];
 
@@ -78,7 +79,7 @@ function JsonLd({ data }: { data: unknown }) {
   );
 }
 
-export default function McdOnlinePage() {
+export default function EquivalenzePage() {
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -93,7 +94,7 @@ export default function McdOnlinePage() {
       {
         "@type": "ListItem",
         position: 3,
-        name: "MCD online",
+        name: "Equivalenze",
         item: CANONICAL,
       },
     ],
@@ -102,7 +103,7 @@ export default function McdOnlinePage() {
   const softwareJsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "MCD online",
+    name: "Equivalenze online",
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
     url: CANONICAL,
@@ -112,11 +113,13 @@ export default function McdOnlinePage() {
       priceCurrency: "EUR",
     },
     featureList: [
-      "Calcolo del massimo comune divisore",
-      "Supporto per due o più numeri",
-      "Algoritmo di Euclide con passaggi",
-      "Scomposizione in fattori primi",
-      "Fattori comuni con esponente minore",
+      "Equivalenze di lunghezza",
+      "Equivalenze di massa",
+      "Equivalenze di capacità",
+      "Equivalenze di area",
+      "Equivalenze di volume",
+      "Equivalenze di tempo",
+      "Passaggi spiegati",
     ],
   };
 
@@ -158,40 +161,39 @@ export default function McdOnlinePage() {
           </div>
 
           <h1 className="text-3xl font-bold leading-tight tracking-tight opacity-90 sm:text-4xl">
-            MCD online
+            Equivalenze online
           </h1>
           <p className="mt-4 hidden max-w-2xl text-[15.5px] font-medium leading-relaxed sm:block">
-            Calcola il massimo comune divisore di due o più numeri. Il risultato
-            viene mostrato con algoritmo di Euclide, scomposizione in fattori
-            primi e passaggi essenziali.
+            Converti unità di misura per lunghezza, massa, capacità, area,
+            volume e tempo. Il risultato mostra il fattore di conversione e i
+            passaggi essenziali.
           </p>
         </div>
 
         <div className="mt-8">
-          <McdOnlineClient />
+          <EquivalenzeClient />
         </div>
       </section>
 
       <section className="mx-6 mt-6 grid max-w-screen-xl gap-4 pb-12 lg:grid-cols-[1.05fr_0.95fr] xl:mx-auto">
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Cos&apos;è il MCD</h2>
+          <h2 className="text-2xl font-bold">Come funzionano le equivalenze</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Il MCD, massimo comune divisore, è il più grande numero che divide
-            esattamente tutti i numeri dati. Serve per semplificare frazioni,
-            risolvere problemi con divisori comuni e confrontare quantità
-            divisibili nello stesso modo.
+            Un&apos;equivalenza cambia l&apos;unità di misura senza cambiare la grandezza
+            reale. Per esempio 1 metro e 100 centimetri indicano la stessa
+            lunghezza, scritta con unità diverse.
           </p>
         </article>
 
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Formula con fattori primi</h2>
+          <h2 className="text-2xl font-bold">Attenzione ad aree e volumi</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Dopo aver scomposto i numeri in fattori primi, il MCD si ottiene
-            moltiplicando soltanto i fattori comuni, ciascuno con l&apos;esponente
-            minore.
+            Nelle lunghezze ogni salto metrico vale 10. Nelle aree ogni salto
+            vale 100, perché le unità sono al quadrato. Nei volumi ogni salto
+            vale 1000, perché le unità sono al cubo.
           </p>
           <div className="mt-4 rounded-[18px] border-2 border-slate-900/70 bg-white px-4 py-3 font-bold shadow-[0_3px_0_#0f172a] [.dark_&]:bg-slate-900">
-            MCD = prodotto dei fattori comuni con esponente minore
+            lunghezze: ×10 · aree: ×100 · volumi: ×1000
           </div>
         </article>
       </section>

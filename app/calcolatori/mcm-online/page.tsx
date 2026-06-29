@@ -174,7 +174,7 @@ export default function McmOnlinePage() {
 
       <section className="mx-6 mt-6 grid max-w-screen-xl gap-4 pb-12 lg:grid-cols-[1.05fr_0.95fr] xl:mx-auto">
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Cos'è il mcm</h2>
+          <h2 className="text-2xl font-bold">Cos&apos;è il mcm</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
             Il mcm, minimo comune multiplo, è il più piccolo numero positivo che
             è multiplo di tutti i numeri dati. Serve quando bisogna trovare un
@@ -187,7 +187,7 @@ export default function McmOnlinePage() {
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
             Dopo aver scomposto i numeri in fattori primi, il mcm si ottiene
             moltiplicando tutti i fattori comuni e non comuni, ciascuno con
-            l'esponente maggiore.
+            l&apos;esponente maggiore.
           </p>
           <div className="mt-4 rounded-[18px] border-2 border-slate-900/70 bg-white px-4 py-3 font-bold shadow-[0_3px_0_#0f172a] [.dark_&]:bg-slate-900">
             mcm = prodotto dei fattori comuni e non comuni con esponente maggiore

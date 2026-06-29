@@ -3890,7 +3890,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Corrente alternata e alternatore",
     "slug": "corrente-alternata",
     "materia": "fisica",
@@ -3932,7 +3932,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Trasformatore",
     "slug": "trasformatore",
     "materia": "fisica",
@@ -3974,7 +3974,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Circuito RC",
     "slug": "circuito-rc",
     "materia": "fisica",
@@ -4018,7 +4018,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Condensatori in serie e parallelo",
     "slug": "condensatori-serie-parallelo",
     "materia": "fisica",
@@ -4063,7 +4063,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Equazioni di Maxwell",
     "slug": "equazioni-di-maxwell",
     "materia": "fisica",

@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
-import McdOnlineClient from "./McdOnlineClient";
+import EquazioniClient from "./EquazioniClient";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
-const CANONICAL = `${SITE}/calcolatori/mcd-online`;
+const CANONICAL = `${SITE}/calcolatori/equazioni`;
 
 export const metadata: Metadata = {
-  title: "MCD online con passaggi",
+  title: "Equazioni online con passaggi",
   description:
-    "Calcola il MCD online di due o più numeri con algoritmo di Euclide, scomposizione in fattori primi e passaggi spiegati.",
-  alternates: { canonical: "/calcolatori/mcd-online" },
+    "Risolvi equazioni online di primo e secondo grado con x, parentesi, frazioni numeriche, discriminante e passaggi spiegati.",
+  alternates: { canonical: "/calcolatori/equazioni" },
   robots: {
     index: true,
     follow: true,
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
       "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
   },
   openGraph: {
-    title: "MCD online con passaggi",
+    title: "Equazioni online con passaggi",
     description:
-      "Calcolatore del massimo comune divisore con passaggi, fattori primi e algoritmo di Euclide.",
+      "Calcolatore di equazioni di primo e secondo grado con procedimento spiegato.",
     url: CANONICAL,
     siteName: "Theoremz",
     type: "website",
@@ -29,43 +29,43 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "MCD online con passaggi",
+    title: "Equazioni online con passaggi",
     description:
-      "Calcola il massimo comune divisore online con procedimento spiegato.",
+      "Risolvi equazioni di primo e secondo grado online con passaggi.",
     images: ["/metadata.png"],
     site: "@theoremz_",
   },
   keywords: [
-    "mcd online",
-    "calcolo mcd online",
-    "massimo comune divisore",
-    "calcolatore mcd",
-    "mcd con passaggi",
-    "algoritmo di Euclide",
-    "scomposizione in fattori primi",
+    "equazioni online",
+    "risolutore equazioni",
+    "calcolatore equazioni",
+    "equazioni primo grado online",
+    "equazioni secondo grado online",
+    "equazioni con passaggi",
+    "formula discriminante",
   ],
 };
 
 const faq = [
   {
-    question: "Che cos'è il MCD?",
+    question: "Che equazioni posso risolvere?",
     answer:
-      "Il MCD, massimo comune divisore, è il più grande numero intero che divide esattamente tutti i numeri considerati.",
+      "Puoi risolvere equazioni numeriche di primo e secondo grado nella variabile x, anche con parentesi, frazioni numeriche e potenze x^2.",
   },
   {
-    question: "Come si calcola il MCD con i fattori primi?",
+    question: "Come si scrive x al quadrato?",
     answer:
-      "Si scompongono i numeri in fattori primi e si moltiplicano solo i fattori comuni presi con l'esponente più piccolo.",
+      "Puoi scrivere x^2. Per esempio x^2 - 5x + 6 = 0.",
   },
   {
-    question: "Come funziona l'algoritmo di Euclide?",
+    question: "Il calcolatore mostra i passaggi?",
     answer:
-      "Si divide il numero più grande per il più piccolo e si continua dividendo il divisore per il resto, finché il resto diventa zero.",
+      "Sì. Mostra la forma normale dell'equazione, il procedimento e, per le equazioni di secondo grado, il discriminante.",
   },
   {
-    question: "Si può calcolare il MCD di più di due numeri?",
+    question: "Risolve equazioni di grado superiore?",
     answer:
-      "Sì. Si calcola prima il MCD dei primi due numeri, poi il MCD tra quel risultato e il numero successivo, fino alla fine.",
+      "No. Questo strumento è pensato per equazioni scolastiche di primo e secondo grado.",
   },
 ];
 
@@ -78,7 +78,7 @@ function JsonLd({ data }: { data: unknown }) {
   );
 }
 
-export default function McdOnlinePage() {
+export default function EquazioniPage() {
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -93,7 +93,7 @@ export default function McdOnlinePage() {
       {
         "@type": "ListItem",
         position: 3,
-        name: "MCD online",
+        name: "Equazioni",
         item: CANONICAL,
       },
     ],
@@ -102,7 +102,7 @@ export default function McdOnlinePage() {
   const softwareJsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "MCD online",
+    name: "Equazioni online",
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
     url: CANONICAL,
@@ -112,11 +112,12 @@ export default function McdOnlinePage() {
       priceCurrency: "EUR",
     },
     featureList: [
-      "Calcolo del massimo comune divisore",
-      "Supporto per due o più numeri",
-      "Algoritmo di Euclide con passaggi",
-      "Scomposizione in fattori primi",
-      "Fattori comuni con esponente minore",
+      "Equazioni di primo grado",
+      "Equazioni di secondo grado",
+      "Parentesi",
+      "Frazioni numeriche",
+      "Discriminante",
+      "Passaggi spiegati",
     ],
   };
 
@@ -158,40 +159,37 @@ export default function McdOnlinePage() {
           </div>
 
           <h1 className="text-3xl font-bold leading-tight tracking-tight opacity-90 sm:text-4xl">
-            MCD online
+            Equazioni online
           </h1>
           <p className="mt-4 hidden max-w-2xl text-[15.5px] font-medium leading-relaxed sm:block">
-            Calcola il massimo comune divisore di due o più numeri. Il risultato
-            viene mostrato con algoritmo di Euclide, scomposizione in fattori
-            primi e passaggi essenziali.
+            Risolvi equazioni di primo e secondo grado. Scrivi l&apos;equazione con
+            la lettera x e guarda forma normale, soluzioni e passaggi.
           </p>
         </div>
 
         <div className="mt-8">
-          <McdOnlineClient />
+          <EquazioniClient />
         </div>
       </section>
 
       <section className="mx-6 mt-6 grid max-w-screen-xl gap-4 pb-12 lg:grid-cols-[1.05fr_0.95fr] xl:mx-auto">
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Cos&apos;è il MCD</h2>
+          <h2 className="text-2xl font-bold">Come scrivere l&apos;equazione</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Il MCD, massimo comune divisore, è il più grande numero che divide
-            esattamente tutti i numeri dati. Serve per semplificare frazioni,
-            risolvere problemi con divisori comuni e confrontare quantità
-            divisibili nello stesso modo.
+            Usa la lettera x e un solo segno uguale. Puoi scrivere prodotti
+            impliciti come 2x o 3(x + 1), frazioni numeriche come 1/2 e potenze
+            come x^2.
           </p>
         </article>
 
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Formula con fattori primi</h2>
+          <h2 className="text-2xl font-bold">Secondo grado</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Dopo aver scomposto i numeri in fattori primi, il MCD si ottiene
-            moltiplicando soltanto i fattori comuni, ciascuno con l&apos;esponente
-            minore.
+            Per le equazioni di secondo grado il calcolatore porta tutto nella
+            forma ax² + bx + c = 0 e usa il discriminante.
           </p>
           <div className="mt-4 rounded-[18px] border-2 border-slate-900/70 bg-white px-4 py-3 font-bold shadow-[0_3px_0_#0f172a] [.dark_&]:bg-slate-900">
-            MCD = prodotto dei fattori comuni con esponente minore
+            Δ = b² - 4ac
           </div>
         </article>
       </section>

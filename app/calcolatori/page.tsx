@@ -93,20 +93,23 @@ const calculators: Calculator[] = [
   {
     title: "Equivalenze",
     description: "Conversioni tra unità di misura.",
-    status: "In preparazione",
+    status: "Disponibile",
     icon: FaRulerCombined,
+    href: "/calcolatori/equivalenze",
   },
   {
     title: "Espressioni online",
     description: "Espressioni con numeri, frazioni, potenze e parentesi.",
-    status: "Prossimamente",
+    status: "Disponibile",
     icon: FaSquareRootAlt,
+    href: "/calcolatori/espressioni-online",
   },
   {
     title: "Equazioni",
     description: "Equazioni di primo e secondo grado.",
-    status: "Prossimamente",
+    status: "Disponibile",
     icon: FaCalculator,
+    href: "/calcolatori/equazioni",
   },
 ];
 
