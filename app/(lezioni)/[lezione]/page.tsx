@@ -35,7 +35,11 @@ type LessonDoc = {
   _createdAt?: string;
   _updatedAt?: string;
   tags?: string[];
+  seoDefinizione?: string | null;
+  categoria?: string[];
+  classe?: string[];
   formule?: {
+    title?: string;
     formula: string;
     explanation: string;
     difficulty: number;
@@ -52,8 +56,10 @@ type IndexItem = { heading: string; shortTitle: string };
 /* -------------------- Query -------------------- */
 const seoLessonQuery = groq`
   *[_type=="lesson" && slug.current==$slug][0]{
-    _id, title, subtitle, slug, thumbnailUrl,
+    _id, title, subtitle, materia, slug, thumbnailUrl,
     content[0..2], _createdAt, _updatedAt, tags,
+    categoria, classe,
+    "seoDefinizione": content[_type=="riepilogoBlock"][0].definizione,
     formule[]{
       formula,
       explanation,
@@ -66,6 +72,7 @@ const fullLessonQuery = groq`
     _id, title, subtitle, materia, slug, thumbnailUrl, resources, content,
     _createdAt, _updatedAt, tags,
     categoria, classe,
+    formule[]{ title, formula, explanation, difficulty },
     lezioniPropedeuticheObbligatorie[]->{ title, "slug": slug },
     lezioniPropedeuticheOpzionali[]->{ title, "slug": slug },
     lezioniFiglie[]->{ title, "slug": slug, thumbnailUrl },
@@ -126,6 +133,26 @@ function buildSeoTitle(raw: string): string {
   // Non aggiungere il brand qui: il layout ha già title.template "%s | Theoremz"
   return limitForSerp(base);
 }
+function extractFaqForJsonLd(content: PortableTextBlock[]): { question: string; answer: string }[] {
+  const result: { question: string; answer: string }[] = [];
+  for (const block of content ?? []) {
+    const b = block as any;
+    if (b._type !== "faqBlock") continue;
+    for (const item of b.items ?? []) {
+      const q = String(item.question ?? "").trim();
+      if (!q) continue;
+      const a = (item.answer ?? [])
+        .filter((ab: any) => ab._type === "block")
+        .map((ab: any) => (ab.children ?? []).map((c: any) => String(c.text ?? "")).join(""))
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (a) result.push({ question: q, answer: a.slice(0, 500) });
+    }
+  }
+  return result;
+}
+
 function toAnchorId(s: string): string {
   const t = String(s || "").toLowerCase();
   return t
@@ -168,7 +195,12 @@ export async function generateMetadata({
   }
 
   const title = buildSeoTitle(lesson.title);
-  const plain = trimDesc(ptToPlain(lesson.content) || lesson.subtitle || "");
+  const plain = trimDesc(
+    lesson.seoDefinizione ||
+    ptToPlain(lesson.content) ||
+    lesson.subtitle ||
+    ""
+  );
   const description =
     plain || "Lezione completa con spiegazione, formule ed esempi su Theoremz.";
 
@@ -215,15 +247,15 @@ export async function generateMetadata({
     keywords: [
       lesson.title,
       ...(lesson.tags ?? []),
+      ...(lesson.categoria ?? []),
       "formule",
-      "esempi", 
-      "esercizi",
-      "appunti",
+      "esempi",
+      "esercizi svolti",
+      "spiegazione",
       "theoremz",
-      "lezione",
-      "matematica",
-      "fisica",
-      "studio"
+      lesson.materia ?? "matematica",
+      "studio",
+      "scuola superiore",
     ],
     other: {
       // SEO avanzato per ranking
@@ -282,9 +314,15 @@ export default async function Page({
   // JSON-LD: aggiungi anche le sezioni come hasPart con ancore (#)
   const sectionHasPart = sectionItems.map((s) => ({
     name: s.shortTitle,
-    // Usa l'H2 completo per l'anchor, il mini-index resta solo come label
     slug: `${lesson.slug.current}#${toAnchorId(s.heading)}`,
   }));
+
+  // Estrai domande FAQ per FAQPage schema (rich results)
+  const faqItems = extractFaqForJsonLd(lesson.content);
+
+  // Estrai definizione dal riepilogoBlock per abstract JSON-LD
+  const seoAbstract = (lesson.content ?? []).find((b: any) => b._type === "riepilogoBlock") as any;
+  const abstract = seoAbstract?.definizione as string | undefined;
 
   return (
     <>
@@ -297,6 +335,11 @@ export default async function Page({
         videoUrl={lesson.resources?.videolezione ?? undefined}
         createdAt={lesson._createdAt}
         updatedAt={lesson._updatedAt}
+        abstract={abstract}
+        faqItems={faqItems.length ? faqItems : undefined}
+        formule={(lesson.formule ?? []).filter((f) => f.title && f.explanation) as { title: string; explanation: string }[]}
+        categoria={(lesson as any).categoria ?? []}
+        classe={(lesson as any).classe ?? []}
         breadcrumbs={(function () {
           const SITE = "https://theoremz.com";
           const materia = (lesson as any).materia as string | null | undefined;

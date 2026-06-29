@@ -115,6 +115,27 @@ Max 2 per section. Describe exactly what to draw, including labels.
 
 ---
 
+### `bulletList` block — unordered list
+
+Use **sparingly** (max 2 per section) only for **genuinely parallel, non-narrative items**: mathematical conditions, properties of an object, algorithm steps. Do **not** use for explanations, motivations, or any prose that flows sequentially — those belong in `text` blocks.
+
+```json
+{
+  "type": "bulletList",
+  "items": [
+    [{ "text": "La funzione deve essere definita in ", "marks": [] }, { "text": "x_0", "marks": ["inlineLatex"] }],
+    [{ "text": "Il limite deve esistere finito.", "marks": [] }],
+    [{ "text": "Il limite deve coincidere con il valore ", "marks": [] }, { "text": "f(x_0)", "marks": ["inlineLatex"] }]
+  ]
+}
+```
+
+Each element of `items` is an array of spans — identical structure to a `text` block's `spans`. Supports all marks including `inlineLatex`.
+
+Constraints: minimum 2 items, maximum 8 items.
+
+---
+
 ### `esempioBlock` — a styled worked-example card (optional, inline)
 
 Use when an example requires 3 or more steps. It renders as a distinct visual card.
@@ -321,7 +342,7 @@ This shows the correct structure and length for a content section. Study the mar
       { "type": "text", "spans": [{ "text": "Verificare che f(x) = x² è continua in x₀ = 3.", "marks": ["exUnderline"] }] },
       { "type": "text", "spans": [{ "text": "La funzione è definita in ", "marks": [] }, { "text": "x_0 = 3", "marks": ["inlineLatex"] }, { "text": " e si ottiene ", "marks": [] }, { "text": "f(3) = 9", "marks": ["inlineLatex"] }, { "text": ".", "marks": [] }] },
       { "type": "displayFormula", "latex": "\\lim_{x \\to 3} x^2 = 9" },
-      { "type": "text", "spans": [{ "text": "Il limite coincide con il valore della funzione: la continuità è verificata.", "marks": ["blueBold"] }] }
+      { "type": "text", "spans": [{ "text": "Il limite coincide con il valore della funzione: la funzione è ", "marks": [] }, { "text": "continua", "marks": ["blueBold"] }, { "text": " in x₀ = 3.", "marks": [] }] }
     ]
   }
 ]

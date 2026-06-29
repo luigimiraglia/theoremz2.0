@@ -68,6 +68,12 @@ const HorizontalRuleBlock = z.object({
   type: z.literal("horizontalRule"),
 });
 
+// Bullet list: each item is an array of spans (same structure as text spans)
+const BulletListBlock = z.object({
+  type: z.literal("bulletList"),
+  items: z.array(z.array(Span).min(1)).min(2).max(8),
+});
+
 // EsempioBlock can appear inline inside content sections too
 const EsempioContentBlock = z.discriminatedUnion("type", [
   TextBlock,
@@ -77,6 +83,7 @@ const EsempioContentBlock = z.discriminatedUnion("type", [
 
 const ContentBlock = z.discriminatedUnion("type", [
   TextBlock,
+  BulletListBlock,
   SectionBlock,
   DisplayFormulaBlock,
   ImagePlaceholderBlock,
@@ -93,6 +100,29 @@ const FormulaFlashcard = z.object({
   formula: z.string(),
   explanation: z.string().max(150),
   difficulty: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+});
+
+// ─── Exercise schemas ────────────────────────────────────────────────────────
+
+const ExerciseBlock = z.discriminatedUnion("type", [
+  TextBlock,
+  DisplayFormulaBlock,
+]);
+
+const ExerciseItem = z.object({
+  titolo: z.string().max(120),
+  testo: z.array(ExerciseBlock).min(1).max(6),
+  soluzione: z.array(ExerciseBlock).min(1).max(4),
+  passaggi: z.array(ExerciseBlock).min(2).max(10),
+});
+
+const ExercisesResponse = z.object({
+  needed: z.boolean(),
+  items: z.array(ExerciseItem).min(0).max(5),
+});
+
+const ExercisesBatchResponse = z.object({
+  items: z.array(ExerciseItem).min(0).max(5),
 });
 
 // ─── Per-section response schemas ───────────────────────────────────────────
@@ -302,6 +332,13 @@ Struttura dei contenuti:
 4. Casi particolari, eccezioni, condizioni di validità
 5. Almeno 1 \`imagePlaceholder\` con descrizione dettagliata (grafico, schema, diagramma con etichette)
 
+MARKS VIETATI IN QUESTA SEZIONE:
+- NON usare \`redBold\` in text block autonomi ("Errore tipico: ...", "Attenzione: ..."). Gli errori vanno nella Sezione 6 (erroriComuniBlock), non qui. L'unico uso lecito di \`redBold\` è all'interno di un \`esempioBlock\` per evidenziare il risultato sbagliato in un esempio svolto.
+
+QUANDO USARE \`bulletList\` (usalo con parsimonia — massimo 2 per sezione):
+SOLO quando si elencano 3–6 elementi genuinamente paralleli e non narrativi: condizioni necessarie/sufficienti, proprietà di un oggetto matematico, passi di un algoritmo. NON usarlo per spiegazioni, motivazioni o paragrafi che si leggono in sequenza — quelli vanno come \`text\`.
+Ogni elemento di \`items\` è un array di span non vuoti (stessa struttura di \`text\`).
+
 NON ripetere la definizione sintetica già nel "Concetto chiave" in cima. Parti da lì e approfondisci.`;
 
     case 3:
@@ -321,6 +358,8 @@ Struttura richiesta:
      { "type": "esempioBlock", "title": "Esempio — [descrizione]", "blocks": [...min 3 blocchi...] }
 3. Per la fisica: unità di misura con inlineLatex per ogni grandezza
 4. Varianti utili, forme inverse, casi speciali
+
+Usa \`bulletList\` solo per elencare simboli/grandezze o condizioni di validità — massimo 1 volta per sezione, solo se ci sono almeno 3 voci parallele.
 
 Restituisci anche i flashcard nel campo \`formule\` (3–6 card):
 - formula: LaTeX senza delimitatori (niente $$, \\[, \\()
@@ -342,8 +381,8 @@ Restituisci:
     - ${lesson.materia === "fisica" ? '{ "type": "imagePlaceholder", "description": "..." } — diagramma obbligatorio' : '{ "type": "imagePlaceholder", "description": "..." } — se geometricamente utile'}
     - 2 text blocks: analisi (dati, incognita, metodo)
     - 3–5 text blocks + displayFormula: soluzione passo-passo con calcoli in inlineLatex
-    - 1 text block: risultato finale in blueBold
-    - 1 text block: errore tipico con redBold
+    - 1 text block: risultato finale — applica blueBold SOLO alla parola o al valore chiave, NON all'intera frase. Es. { "type": "text", "spans": [{ "text": "La funzione è ", "marks": [] }, { "text": "continua", "marks": ["blueBold"] }, { "text": " in x₀ = 2.", "marks": [] }] }
+    - 1 text block: errore tipico con mark redBold, es. { "type": "text", "spans": [{ "text": "Errore comune: ", "marks": [] }, { "text": "confondere il limite con il valore della funzione.", "marks": ["redBold"] }] } — NON scrivere "redBold" come testo visibile, è il nome del mark nell'array marks
 
 Gli esempi devono testare aspetti diversi dell'argomento (difficoltà crescente).`;
 
@@ -416,6 +455,98 @@ function key() {
   return Math.random().toString(36).slice(2, 11);
 }
 
+/** Converte un array di ExerciseBlock nel formato Sanity PortableText */
+function convertExerciseBlocks(blocks) {
+  return (blocks ?? []).map((block) => {
+    if (block.type === "text") return convertTextBlock(block);
+    if (block.type === "displayFormula") {
+      return { _type: "latex", _key: key(), code: sanitizeLatex(block.latex), display: true };
+    }
+    return null;
+  }).filter(Boolean);
+}
+
+const EXERCISE_BATCHES = [
+  { label: "base",       isFirst: true,  focus: "Difficoltà: base (livello 1) — applicazione diretta delle definizioni e formule fondamentali" },
+  { label: "intermedio", isFirst: false, focus: "Difficoltà: intermedia (livello 2) — combinazione di più concetti, calcoli in più passaggi" },
+  { label: "avanzato",   isFirst: false, focus: "Difficoltà: avanzata (livello 3) — casi limite, dimostrazioni parziali, applicazioni non immediate" },
+  { label: "riepilogo",  isFirst: false, focus: "Difficoltà: mista — esercizi di riepilogo che coprono tutti gli aspetti dell'argomento in modo sintetico" },
+];
+
+function buildExercisesBatchPrompt(lesson, intermediate, batch, previousTitles) {
+  const header = `Materia: ${lesson.materia} | Difficoltà lezione: ${lesson.difficolta}
+Classi: ${(intermediate.classe ?? lesson.classe).join(", ")}
+Lezione: "${lesson.title}" — ${intermediate.subtitle ?? ""}`;
+
+  const alreadyGenerated = previousTitles.length > 0
+    ? `\nEsercizi già generati — NON duplicare per titolo o contenuto:\n${previousTitles.map(t => `- ${t}`).join("\n")}\n`
+    : "";
+
+  const decision = batch.isFirst
+    ? `Decidi se questa lezione necessita di esercizi pratici:
+- needed: false se l'argomento è puramente definitorio/storico senza calcoli applicabili
+- needed: true e genera 5 esercizi altrimenti`
+    : `Genera sempre 5 esercizi (needed: true).`;
+
+  return `${header}
+
+${decision}
+${batch.focus}${alreadyGenerated}
+
+Ogni esercizio:
+- titolo: nome breve (es. "Verifica della continuità in un punto")
+- testo: consegna (blocks text/displayFormula)
+- soluzione: risposta sintetica col risultato finale
+- passaggi: risoluzione dettagliata passo-passo
+
+FORMATO:
+- Tipo "text" con spans; simboli matematici inline → span con marks: ["inlineLatex"], testo: LaTeX SENZA delimitatori
+- Tipo "displayFormula" per formule su riga propria, latex SENZA delimitatori
+- Tono impersonale ("si calcola", "si ottiene") — mai "tu"
+- Lingua: italiano`;
+}
+
+/**
+ * Rimuove caratteri Unicode non validi (null byte, surrogati non accoppiati, ecc.)
+ * da tutte le stringhe di un documento prima del push su Sanity.
+ */
+function sanitizeDoc(val) {
+  if (typeof val === "string") {
+    // Rimuove null byte e altri caratteri di controllo che Sanity rifiuta
+    return val.replace(/ /g, "").replace(/[\uD800-\uDFFF]/g, "");
+  }
+  if (Array.isArray(val)) return val.map(sanitizeDoc);
+  if (val && typeof val === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(val)) out[k] = sanitizeDoc(v);
+    return out;
+  }
+  return val;
+}
+
+/**
+ * Deduplica e seleziona le flashcard più essenziali.
+ * - Rimuove duplicati per titolo normalizzato
+ * - Ordina per difficoltà crescente (base → avanzato)
+ * - Mantiene massimo 8 card (quelle davvero necessarie da memorizzare)
+ */
+function curateFlashcards(cards) {
+  if (!cards?.length) return [];
+  const seen = new Set();
+  const deduped = [];
+  for (const card of cards) {
+    // Normalizza: lowercase, solo lettere/numeri, primi 40 caratteri
+    const key = card.title.toLowerCase().replace(/[^a-zàáèéìíòóùú0-9\s]/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(card);
+    }
+  }
+  // Priorità ai concetti base, poi intermedio, poi avanzato
+  deduped.sort((a, b) => a.difficulty - b.difficulty);
+  return deduped.slice(0, 8);
+}
+
 /** Strip LaTeX delimiters that the AI might incorrectly include */
 function sanitizeLatex(s) {
   return (s ?? "")
@@ -436,23 +567,24 @@ function spacer() {
   };
 }
 
-function convertTextBlock(block) {
+function convertSpans(spans) {
   const markDefs = [];
   const children = [];
-
-  for (const span of block.spans) {
+  for (const span of spans) {
     const spanKey = key();
     const marks = [...span.marks];
-
     if (marks.includes("inlineLatex")) {
       const defKey = key();
       markDefs.push({ _key: defKey, _type: "inlineLatex", code: sanitizeLatex(span.text) });
       marks[marks.indexOf("inlineLatex")] = defKey;
     }
-
     children.push({ _type: "span", _key: spanKey, text: span.text, marks });
   }
+  return { markDefs, children };
+}
 
+function convertTextBlock(block) {
+  const { markDefs, children } = convertSpans(block.spans);
   return { _type: "block", _key: key(), style: "normal", markDefs, children };
 }
 
@@ -484,7 +616,7 @@ function toSanityBlocks(content) {
     // HR before section dividers and special terminal blocks (errori/faq)
     // riepilogoBlock and schemaRapidoBlock sit at the top — no HR before them
     if (block.type === "section" || block.type === "erroriComuniBlock" || block.type === "faqBlock") {
-      if (out.length > 0) {
+      if (out.length > 0 && out[out.length - 1]._type !== "horizontalRule") {
         out.push({ _type: "horizontalRule", _key: key() });
       }
     } else if (out.length > 0) {
@@ -494,6 +626,22 @@ function toSanityBlocks(content) {
     switch (block.type) {
       case "text":
         out.push(convertTextBlock(block));
+        break;
+
+      case "bulletList":
+        for (const itemSpans of block.items) {
+          if (!itemSpans.some((s) => s.text.trim() !== "")) continue;
+          const { markDefs, children } = convertSpans(itemSpans);
+          out.push({
+            _type: "block",
+            _key: key(),
+            style: "normal",
+            listItem: "bullet",
+            level: 1,
+            markDefs,
+            children,
+          });
+        }
         break;
 
       case "section":
@@ -532,7 +680,9 @@ function toSanityBlocks(content) {
         break;
 
       case "horizontalRule":
-        out.push({ _type: "horizontalRule", _key: key() });
+        if (out.length === 0 || out[out.length - 1]._type !== "horizontalRule") {
+          out.push({ _type: "horizontalRule", _key: key() });
+        }
         break;
 
       case "riepilogoBlock":
@@ -642,6 +792,8 @@ function validate(lesson) {
   const total = allBlocks.length;
   const nonEmpty = allBlocks.filter(
     (b) => b.type === "text" && b.spans.some((s) => s.text.trim() !== ""),
+  ).length + allBlocks.filter(
+    (b) => b.type === "bulletList" && b.items.length > 0,
   ).length;
   // Sections 3-5 each produce one section block; others embed heading in special block
   const sections = content.filter((b) => b.type === "section").length;
@@ -818,7 +970,7 @@ async function main() {
     categoria: lesson.categoria,
     classe: classeGenerata ?? lesson.classe,
     content: allContent,
-    formule: formule ?? [],
+    formule: curateFlashcards(formule ?? []),
   };
 
   // ─── Validate full lesson ──────────────────────────────────────────────────
@@ -841,13 +993,40 @@ async function main() {
   const total = allBlocksFlat.length;
   const sections = intermediate.content.filter((b) => b.type === "section").length;
   const esempi = intermediate.content.filter((b) => b.type === "esempioBlock").length;
-  const images = allBlocksFlat.filter((b) => b.type === "imagePlaceholder").length;
   const formulas = allBlocksFlat.filter((b) => b.type === "displayFormula").length;
   const erroriCount = intermediate.content.find((b) => b.type === "erroriComuniBlock")?.items?.length ?? 0;
   const faqCount = intermediate.content.find((b) => b.type === "faqBlock")?.items?.length ?? 0;
   console.log(
     `\n✅ Validazione OK: ${total} blocchi | ${sections} sezioni | ${esempi} esempi | ${formulas} formule | ${erroriCount} errori | ${faqCount} FAQ | ${intermediate.formule.length} flashcard`,
   );
+
+  // ─── Generate exercises — 4 batches × 5 = 20 (non-blocking) ─────────────
+
+  let generatedExercises = [];
+  console.log("\n⏳ Esercizi — 4 batch da 5 (target 20)...");
+  for (const batch of EXERCISE_BATCHES) {
+    try {
+      const previousTitles = generatedExercises.map((e) => e.titolo);
+      const schema = batch.isFirst ? ExercisesResponse : ExercisesBatchResponse;
+      const exResponse = await openai.chat.completions.create({
+        model: "gpt-5.4-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: buildExercisesBatchPrompt(lesson, intermediate, batch, previousTitles) },
+        ],
+        response_format: zodResponseFormat(schema, "exercises"),
+      });
+      const exParsed = schema.parse(JSON.parse(exResponse.choices[0].message.content));
+      if (batch.isFirst && !exParsed.needed) {
+        console.log("   ℹ️  Esercizi non necessari per questa lezione — saltati.");
+        break;
+      }
+      generatedExercises.push(...exParsed.items);
+      console.log(`   ✅ Batch "${batch.label}": ${exParsed.items.length} esercizi (totale: ${generatedExercises.length})`);
+    } catch (exErr) {
+      console.warn(`   ⚠️  Batch "${batch.label}" fallito (non bloccante): ${exErr.message}`);
+    }
+  }
 
   // ─── Convert to Sanity ─────────────────────────────────────────────────────
 
@@ -868,8 +1047,9 @@ async function main() {
   };
 
   if (!shouldPush) {
+    const preview = { lesson: doc, exercises: generatedExercises };
     const outPath = path.join(__dirname, `lesson-preview-${lesson.slug}.json`);
-    writeFileSync(outPath, JSON.stringify(doc, null, 2));
+    writeFileSync(outPath, JSON.stringify(preview, null, 2));
     console.log(
       `\n📄 Preview salvata in: scripts/lesson-preview-${lesson.slug}.json`,
     );
@@ -881,11 +1061,41 @@ async function main() {
   doc._id = intermediate.slug;
 
   console.log("\n🚀 Push su Sanity...");
-  const result = await sanity.createOrReplace(doc);
+  const result = await sanity.createOrReplace(sanitizeDoc(doc));
   console.log(`✅ Lezione salvata: ${result._id}`);
   console.log(
     `   https://www.sanity.io/manage/personal/project/0nqn5jl0/content;${result._id}`,
   );
+
+  // ─── Push exercises ────────────────────────────────────────────────────────
+
+  if (generatedExercises.length > 0) {
+    console.log(`\n🚀 Push esercizi (${generatedExercises.length})...`);
+    const exerciseRefs = [];
+    for (let i = 0; i < generatedExercises.length; i++) {
+      const ex = generatedExercises[i];
+      const exId = `${intermediate.slug}-ex-${i + 1}`;
+      try {
+        await sanity.createOrReplace(sanitizeDoc({
+          _id: exId,
+          _type: "exercise",
+          titolo: ex.titolo,
+          testo: convertExerciseBlocks(ex.testo),
+          soluzione: convertExerciseBlocks(ex.soluzione),
+          passaggi: convertExerciseBlocks(ex.passaggi),
+          lezioniCollegate: [{ _type: "reference", _ref: intermediate.slug }],
+        }));
+        exerciseRefs.push({ _type: "reference", _key: key(), _ref: exId });
+        console.log(`   ✅ ${ex.titolo}`);
+      } catch (exPushErr) {
+        console.warn(`   ⚠️  Esercizio "${ex.titolo}" non pushato: ${exPushErr.message}`);
+      }
+    }
+    if (exerciseRefs.length > 0) {
+      await sanity.patch(intermediate.slug).set({ esercizi: exerciseRefs }).commit();
+      console.log(`   Lezione aggiornata con ${exerciseRefs.length} esercizi collegati.`);
+    }
+  }
 
   if (lesson.status === "pending") {
     lesson.status = "done";

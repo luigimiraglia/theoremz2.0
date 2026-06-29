@@ -1896,5 +1896,367 @@
       "onde",
       "cariche-elettriche"
     ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Legge di Coulomb",
+    "slug": "legge-di-coulomb",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Elettrostatica"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "5º Scientifico",
+      "3º Classico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "legge di Coulomb",
+      "forza tra cariche elettriche",
+      "forza elettrostatica formula",
+      "costante di Coulomb"
+    ],
+    "domandeVeloci": [
+      "cosa dice la legge di Coulomb",
+      "qual è la formula della forza elettrostatica",
+      "cos'è la costante di Coulomb",
+      "la forza di Coulomb è attrattiva o repulsiva",
+      "differenza tra forza di Coulomb e forza gravitazionale"
+    ],
+    "argomenti": [
+      "forza tra due cariche puntiformi: F = k·q₁q₂/r²",
+      "costante di Coulomb k ≈ 9×10⁹ N·m²/C² e permittività del vuoto ε₀",
+      "forza attrattiva (cariche opposte) e repulsiva (cariche uguali): direzione e verso",
+      "principio di sovrapposizione: forza totale come somma vettoriale",
+      "confronto con la legge di gravitazione universale: stessa forma, diverse costanti",
+      "unità di misura: Coulomb (C) per la carica"
+    ],
+    "collegaA": [
+      "campo-elettrico",
+      "cariche-elettriche",
+      "energia-potenziale-elettrica",
+      "potenziale-elettrico"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Probabilità condizionata e teorema di Bayes",
+    "slug": "probabilita-condizionata",
+    "materia": "matematica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Probabilità",
+      "Statistica"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico",
+      "4º Linguistico",
+      "5º Linguistico"
+    ],
+    "queryPrincipali": [
+      "probabilità condizionata",
+      "teorema di Bayes",
+      "probabilità condizionata formula",
+      "eventi indipendenti"
+    ],
+    "domandeVeloci": [
+      "cos'è la probabilità condizionata",
+      "come si calcola P(A|B)",
+      "cosa dice il teorema di Bayes",
+      "quando due eventi sono indipendenti",
+      "come si usa il teorema di Bayes negli esercizi"
+    ],
+    "argomenti": [
+      "definizione di probabilità condizionata: P(A|B) = P(A∩B) / P(B)",
+      "formula della probabilità composta: P(A∩B) = P(A|B) · P(B)",
+      "eventi indipendenti: P(A|B) = P(A), ovvero P(A∩B) = P(A)·P(B)",
+      "teorema della probabilità totale: partizione dello spazio campionario",
+      "teorema di Bayes: inversione della probabilità condizionata",
+      "applicazioni: test diagnostici (falsi positivi/negativi), problemi con estrazioni senza reimmissione"
+    ],
+    "collegaA": [
+      "probabilita",
+      "calcolo-combinatorio",
+      "distribuzioni-di-probabilita"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Distanza tra due punti e punto medio",
+    "slug": "distanza-tra-due-punti",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico",
+      "3º Media"
+    ],
+    "queryPrincipali": [
+      "distanza tra due punti",
+      "formula distanza tra due punti",
+      "punto medio segmento",
+      "coordinate punto medio"
+    ],
+    "domandeVeloci": [
+      "come si calcola la distanza tra due punti",
+      "qual è la formula del punto medio",
+      "come si trova la lunghezza di un segmento nel piano",
+      "cos'è il punto medio",
+      "distanza tra due punti in 3D"
+    ],
+    "argomenti": [
+      "formula distanza: d = √[(x₂-x₁)² + (y₂-y₁)²] — derivazione dal teorema di Pitagora",
+      "punto medio: M = ((x₁+x₂)/2, (y₁+y₂)/2)",
+      "applicazioni: perimetro di un poligono nel piano, verifica se tre punti sono allineati",
+      "distanza di un punto dall'origine: caso particolare d = √(x²+y²)",
+      "estensione a 3 dimensioni: d = √[(x₂-x₁)² + (y₂-y₁)² + (z₂-z₁)²]"
+    ],
+    "collegaA": [
+      "piano-cartesiano",
+      "retta-nel-piano-cartesiano",
+      "triangoli",
+      "pitagora"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Angoli",
+    "slug": "angoli",
+    "materia": "matematica",
+    "difficolta": "facile",
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "classe": [
+      "1º Media",
+      "2º Media",
+      "3º Media",
+      "1º Scientifico",
+      "1º Classico",
+      "1º Linguistico"
+    ],
+    "queryPrincipali": [
+      "angoli geometria",
+      "tipi di angoli",
+      "angoli supplementari e complementari",
+      "somma angoli di un triangolo"
+    ],
+    "domandeVeloci": [
+      "cos'è un angolo",
+      "quali sono i tipi di angoli",
+      "cosa sono gli angoli supplementari",
+      "cosa sono gli angoli complementari",
+      "quanti gradi ha un angolo piatto"
+    ],
+    "argomenti": [
+      "definizione di angolo: ampiezza in gradi e radianti",
+      "classificazione: nullo (0°), acuto (0°–90°), retto (90°), ottuso (90°–180°), piatto (180°), esplente (360°)",
+      "angoli complementari (somma 90°), supplementari (somma 180°), esplementari (somma 360°)",
+      "angoli opposti al vertice: uguali tra loro",
+      "angoli formati da due rette parallele tagliate da una trasversale: alterni, corrispondenti, coniugati",
+      "somma degli angoli interni di un triangolo: 180°; poligono con n lati: (n-2)·180°",
+      "bisettrice di un angolo: definizione e proprietà"
+    ],
+    "collegaA": [
+      "triangoli",
+      "poligoni",
+      "teorema-di-pitagora",
+      "funzioni-goniometriche"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Forza centripeta",
+    "slug": "forza-centripeta",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Dinamica",
+      "Moto circolare"
+    ],
+    "classe": [
+      "2º Scientifico",
+      "3º Scientifico",
+      "2º Classico",
+      "3º Classico",
+      "2º Linguistico",
+      "3º Linguistico"
+    ],
+    "queryPrincipali": [
+      "forza centripeta",
+      "accelerazione centripeta formula",
+      "forza centripeta formula",
+      "moto circolare uniforme forza"
+    ],
+    "domandeVeloci": [
+      "cos'è la forza centripeta",
+      "qual è la formula della forza centripeta",
+      "la forza centripeta è una vera forza",
+      "come si calcola l'accelerazione centripeta",
+      "differenza tra forza centripeta e centrifuga"
+    ],
+    "argomenti": [
+      "accelerazione centripeta: a_c = v²/r = ω²r, sempre diretta verso il centro",
+      "forza centripeta: F_c = mv²/r = mω²r — non è una nuova forza ma la risultante diretta al centro",
+      "la forza centripeta può essere fornita da: tensione (pendolo), attrito (curva), gravità (orbita), normale (giostra)",
+      "forza centrifuga: forza fittizia nel sistema non inerziale, stessa intensità ma verso opposto",
+      "periodo e frequenza del moto circolare uniforme: T = 2πr/v",
+      "applicazioni: satelliti in orbita, curve stradali, centrifughe"
+    ],
+    "collegaA": [
+      "moto-circolare-uniforme",
+      "i-tre-principi-della-dinamica",
+      "gravitazione-universale",
+      "forza-di-attrito"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Fasci di rette",
+    "slug": "fasci-di-rette",
+    "materia": "matematica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "classe": [
+      "3º Scientifico",
+      "4º Scientifico",
+      "3º Classico",
+      "4º Classico"
+    ],
+    "queryPrincipali": [
+      "fascio di rette",
+      "retta passante per intersezione di due rette",
+      "fascio proprio fascio improprio"
+    ],
+    "domandeVeloci": [
+      "cos'è un fascio di rette",
+      "come si scrive l'equazione di un fascio di rette",
+      "cos'è il fascio improprio",
+      "come si trova una retta di un fascio con una condizione",
+      "differenza tra fascio proprio e improprio"
+    ],
+    "argomenti": [
+      "fascio proprio di rette: famiglia di rette passanti per un punto fisso (centro)",
+      "equazione del fascio: r₁ + k·r₂ = 0, dove r₁ e r₂ sono due rette del fascio",
+      "determinare il centro del fascio risolvendo il sistema r₁=0, r₂=0",
+      "fascio improprio: rette parallele tra loro (centro all'infinito)",
+      "trovare la retta di un fascio che soddisfa una condizione aggiuntiva (passare per un punto, perpendicolarità, ecc.)",
+      "retta esclusa: r₂ non appartiene al fascio (corrisponde a k→∞)"
+    ],
+    "collegaA": [
+      "retta-nel-piano-cartesiano",
+      "sistemi-lineari",
+      "geometria-analitica"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Specchi",
+    "slug": "specchi",
+    "materia": "fisica",
+    "difficolta": "intermedia",
+    "categoria": [
+      "Ottica"
+    ],
+    "classe": [
+      "4º Scientifico",
+      "5º Scientifico",
+      "4º Classico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "specchi concavi e convessi",
+      "formula degli specchi",
+      "specchio piano immagine",
+      "ingrandimento specchio"
+    ],
+    "domandeVeloci": [
+      "qual è la differenza tra specchio concavo e convesso",
+      "come si trova l'immagine in uno specchio",
+      "qual è la formula degli specchi",
+      "cos'è il fuoco di uno specchio concavo",
+      "quando l'immagine è reale o virtuale"
+    ],
+    "argomenti": [
+      "legge della riflessione: angolo incidente = angolo riflesso (rispetto alla normale)",
+      "specchio piano: immagine virtuale, dritta, stessa dimensione, distanza uguale",
+      "specchio sferico: centro di curvatura C, raggio R, fuoco F = R/2",
+      "specchio concavo: converge i raggi, immagine reale o virtuale a seconda della posizione dell'oggetto",
+      "specchio convesso: diverge i raggi, immagine sempre virtuale, dritta e rimpicciolita",
+      "equazione dei punti coniugati: 1/f = 1/dₒ + 1/dᵢ",
+      "ingrandimento laterale: M = -dᵢ/dₒ (segno indica orientamento)"
+    ],
+    "collegaA": [
+      "ottica-geometrica",
+      "rifrazione-e-legge-di-snell",
+      "lenti"
+    ]
+  },
+  {
+    "tier": 1,
+    "status": "pending",
+    "title": "Onde elettromagnetiche e spettro",
+    "slug": "onde-elettromagnetiche",
+    "materia": "fisica",
+    "difficolta": "avanzata",
+    "categoria": [
+      "Elettromagnetismo",
+      "Onde"
+    ],
+    "classe": [
+      "5º Scientifico",
+      "5º Classico"
+    ],
+    "queryPrincipali": [
+      "onde elettromagnetiche",
+      "spettro elettromagnetico",
+      "onde elettromagnetiche frequenza e lunghezza d'onda",
+      "velocità della luce"
+    ],
+    "domandeVeloci": [
+      "cosa sono le onde elettromagnetiche",
+      "qual è la velocità delle onde elettromagnetiche",
+      "quali sono i tipi di onde elettromagnetiche",
+      "come si calcola la frequenza di un'onda elettromagnetica",
+      "differenza tra onde elettromagnetiche e meccaniche"
+    ],
+    "argomenti": [
+      "natura delle onde EM: oscillazione di campo elettrico e magnetico perpendicolari tra loro e alla direzione di propagazione",
+      "velocità nel vuoto: c = 3×10⁸ m/s, relazione c = λ·f",
+      "spettro elettromagnetico: onde radio, microonde, infrarosso, luce visibile, UV, raggi X, raggi γ (frequenza crescente, λ decrescente)",
+      "energia fotone: E = hf (Planck), prima introduzione alla fisica quantistica",
+      "produzione e ricezione: antenne, atomi eccitati, nuclei",
+      "applicazioni: comunicazioni radio, radar, microonde, diagnostica medica (RX), terapia oncologica"
+    ],
+    "collegaA": [
+      "campo-elettrico",
+      "campo-magnetico",
+      "induzione-elettromagnetica",
+      "ottica-geometrica",
+      "effetto-fotoelettrico"
+    ]
   }
 ]

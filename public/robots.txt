@@ -5,5 +5,33 @@ Disallow: /_next/
 Disallow: /notes/
 Disallow: /studio/
 
+# AI crawlers — allowed to index educational content
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
 Sitemap: https://theoremz.com/sitemap.xml
 Sitemap: https://theoremz.com/video-sitemap.xml

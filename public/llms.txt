@@ -1,0 +1,34 @@
+# Theoremz
+
+> Piattaforma italiana di lezioni di matematica e fisica per studenti delle scuole superiori e medie. Ogni lezione include spiegazione completa, schema riassuntivo, formule, esempi svolti, errori comuni, domande frequenti e flashcard.
+
+## Lezioni
+
+Le lezioni su Theoremz seguono una struttura in 8 sezioni:
+1. **Concetto chiave** — definizione sintetica del concetto e punti fondamentali
+2. **Schema rapido** — tabella di riferimento con proprietà o casi principali
+3. **Spiegazione completa** — trattazione dettagliata con sottosezioni per ogni caso/variante
+4. **Formule e proprietà** — raccolta di formule con esempi numerici
+5. **Esempi svolti** — esercizi risolti passo per passo
+6. **Errori comuni** — confronto sbagliato/corretto con spiegazione
+7. **Domande frequenti** — FAQ su dubbi tipici degli studenti
+8. **Flashcard** — carte concettuali per la memorizzazione
+
+## Materie
+
+- Matematica: algebra, geometria analitica, analisi, trigonometria, probabilità e statistica, studio di funzione
+- Fisica: meccanica, termodinamica, elettromagnetismo, ottica, onde
+
+## Pubblico target
+
+Studenti italiani di scuola secondaria (medie e liceo), 11–19 anni. Linguaggio rigoroso ma accessibile, con impersonale scientifico ("si calcola", "si dimostra"). Nessun uso di "tu" o tono colloquiale.
+
+## Licenza e accesso
+
+Tutte le lezioni sono accessibili gratuitamente. Theoremz è un sito educativo senza scopo di lucro per la diffusione della cultura scientifica.
+
+## Link utili
+
+- Lezioni di matematica: https://theoremz.com/matematica
+- Lezioni di fisica: https://theoremz.com/fisica
+- Sitemap: https://theoremz.com/sitemap.xml

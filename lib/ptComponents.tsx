@@ -117,7 +117,7 @@ export const ptComponents: PortableTextComponents = {
         <h2
           id={id}
           tabIndex={-1}
-          className="mt-8 mb-4 text-2xl text-blue-500 font-extrabold scroll-mt-24"
+          className="mt-8 mb-4 text-2xl text-blue-700 [.dark_&]:text-blue-500 font-extrabold scroll-mt-24"
         >
           <MathInChildren>{children}</MathInChildren>
         </h2>
@@ -139,10 +139,10 @@ export const ptComponents: PortableTextComponents = {
           <div className="my-3 flex justify-center">
             <div
               className="w-full max-w-[680px] rounded-lg border-4 px-1 py-0.5 
-                         border-blue-600 dark:border-blue-400 
+                         border-blue-500 bg-blue-50/70 text-slate-950 [.dark_&]:border-blue-400 [.dark_&]:bg-transparent [.dark_&]:text-inherit
                          [&_.katex-display]:m-0"
             >
-              <div className="prose prose-slate dark:prose-invert max-w-none text-[0.96rem]">
+              <div className="prose prose-slate [.dark_&]:prose-invert max-w-none text-[0.96rem]">
                 {math}
               </div>
             </div>
@@ -311,7 +311,7 @@ export const ptComponents: PortableTextComponents = {
         <h2
           id={anchor}
           tabIndex={-1}
-          className="mt-4 text-2xl font-bold text-blue-500 scroll-mt-24"
+          className="mt-4 text-2xl font-bold text-blue-700 [.dark_&]:text-blue-500 scroll-mt-24"
         >
           <MathText text={value.heading} />
         </h2>
@@ -338,15 +338,15 @@ export const ptComponents: PortableTextComponents = {
 
       return (
         <div className="my-8 flex justify-center">
-          <div className="w-full max-w-[860px] overflow-x-auto rounded-2xl shadow-sm ring-2 ring-blue-700 bg-blue-600">
+          <div className="w-full max-w-[860px] overflow-x-auto rounded-2xl border border-blue-100 bg-white shadow-sm ring-1 ring-blue-100 [.dark_&]:border-0 [.dark_&]:bg-blue-600 [.dark_&]:ring-2 [.dark_&]:ring-blue-700">
             <table className="w-full border-collapse text-sm md:text-base">
               {headerLikely && (
                 <thead>
-                  <tr className="bg-blue-900/60">
+                  <tr className="bg-blue-50 [.dark_&]:bg-blue-900/60">
                     {normalize(headerCells, colCount).map((c, i) => (
                       <th
                         key={i}
-                        className="px-4 py-3 text-left font-semibold text-blue-100 border-b border-blue-700"
+                        className="px-4 py-3 text-left font-semibold text-blue-950 border-b border-blue-100 [.dark_&]:text-blue-100 [.dark_&]:border-blue-700"
                       >
                         {renderCell(c)}
                       </th>
@@ -356,11 +356,11 @@ export const ptComponents: PortableTextComponents = {
               )}
               <tbody>
                 {bodyRows.map((r: any, ri: number) => (
-                  <tr key={ri} className={ri % 2 ? "bg-blue-900/30" : ""}>
+                  <tr key={ri} className={ri % 2 ? "bg-blue-50/60 [.dark_&]:bg-blue-900/30" : "bg-white [.dark_&]:bg-transparent"}>
                     {normalize(r?.cells, colCount).map((c, ci) => (
                       <td
                         key={ci}
-                        className="px-4 py-3 text-white/90 font-semibold border-b-2 border-l-2 border-blue-900/50 align-top"
+                        className="px-4 py-3 text-slate-700 font-semibold border-b border-l border-blue-100 align-top [.dark_&]:text-white/90 [.dark_&]:border-b-2 [.dark_&]:border-l-2 [.dark_&]:border-blue-900/50"
                       >
                         {renderCell(c)}
                       </td>
@@ -402,7 +402,7 @@ export const ptComponents: PortableTextComponents = {
       </strong>
     ),
     redBold: ({ children }) => (
-      <strong className="font-bold text-[#dc143c]">
+      <strong className="font-semibold text-red-500 [.dark_&]:text-red-400">
         {withInlineMath(children)}
       </strong>
     ),
@@ -415,7 +415,7 @@ export const ptComponents: PortableTextComponents = {
           // Light mode: giallo deciso
           "bg-yellow-300/90 text-slate-900",
           // Dark mode: tono leggero + anello per contrasto, mantiene il colore del testo
-          "dark:bg-yellow-300/25 dark:ring-1 dark:ring-yellow-300/30 dark:text-inherit",
+          "[.dark_&]:bg-yellow-300/25 [.dark_&]:ring-1 [.dark_&]:ring-yellow-300/30 [.dark_&]:text-inherit",
           // Copre parole spezzate su più righe
           "[box-decoration-break:clone] [WebkitBoxDecorationBreak:clone]",
         ].join(" ")}

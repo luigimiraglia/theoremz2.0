@@ -61,12 +61,12 @@ export const innerPtComponents: PortableTextComponents = {
       </strong>
     ),
     redBold: ({ children }) => (
-      <strong className="font-bold text-[#dc143c]">
+      <strong className="font-semibold text-red-500 [.dark_&]:text-red-400">
         {withInlineMath(children)}
       </strong>
     ),
     highlightBlue: ({ children }) => (
-      <span className="relative inline rounded-[4px] px-[0.26em] py-[0.04em] bg-yellow-300/90 text-slate-900 dark:bg-yellow-300/25 dark:text-inherit [box-decoration-break:clone]">
+      <span className="relative inline rounded-[4px] px-[0.26em] py-[0.04em] bg-yellow-300/90 text-slate-900 [.dark_&]:bg-yellow-300/25 [.dark_&]:text-inherit [box-decoration-break:clone]">
         {withInlineMath(children)}
       </span>
     ),
