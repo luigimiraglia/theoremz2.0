@@ -4632,7 +4632,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Formule di bisezione",
     "slug": "formule-di-bisezione",
     "materia": "matematica",
@@ -4677,7 +4677,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Formule parametriche",
     "slug": "formule-parametriche",
     "materia": "matematica",
@@ -4719,7 +4719,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Formule di Werner e prostaferesi",
     "slug": "formule-werner-prostaferesi",
     "materia": "matematica",
@@ -4760,7 +4760,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Pentagono regolare",
     "slug": "pentagono-regolare",
     "materia": "matematica",
@@ -4804,7 +4804,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "La sezione aurea",
     "slug": "sezione-aurea",
     "materia": "matematica",
@@ -4848,7 +4848,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Coordinate polari",
     "slug": "coordinate-polari",
     "materia": "matematica",
@@ -4889,7 +4889,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Funzioni iperboliche",
     "slug": "funzioni-iperboliche",
     "materia": "matematica",
@@ -4930,7 +4930,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Le unità di misura e il Sistema Internazionale",
     "slug": "unita-di-misura",
     "materia": "fisica",
@@ -4975,7 +4975,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Le equivalenze",
     "slug": "equivalenze",
     "materia": "matematica",
@@ -5020,7 +5020,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Relatività galileiana e sistemi di riferimento",
     "slug": "relativita-galileiana",
     "materia": "fisica",

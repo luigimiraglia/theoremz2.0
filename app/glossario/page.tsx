@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import ThemeToggle from "@/components/ThemeToggle";
 import { glossario, CATEGORIE, type GlossaryTerm } from "@/data/glossario";
 
 export const metadata: Metadata = {
@@ -15,29 +15,27 @@ export const metadata: Metadata = {
   },
 };
 
-const CATEGORIA_EMOJI: Record<string, string> = {
-  Algebra: "🔢",
-  Analisi: "📈",
-  Trigonometria: "📐",
-  Geometria: "📏",
-  "Probabilità e statistica": "🎲",
-  Fisica: "⚛️",
-};
-
 const CATEGORIA_COLOR: Record<string, string> = {
   Algebra:
-    "bg-violet-100 text-violet-700 [.dark_&]:bg-violet-900/40 [.dark_&]:text-violet-300",
+    "bg-blue-100 text-blue-700 [.dark_&]:bg-blue-950 [.dark_&]:text-blue-200",
   Analisi:
-    "bg-sky-100 text-sky-700 [.dark_&]:bg-sky-900/40 [.dark_&]:text-sky-300",
+    "bg-cyan-100 text-cyan-700 [.dark_&]:bg-cyan-950 [.dark_&]:text-cyan-200",
   Trigonometria:
-    "bg-emerald-100 text-emerald-700 [.dark_&]:bg-emerald-900/40 [.dark_&]:text-emerald-300",
+    "bg-emerald-100 text-emerald-700 [.dark_&]:bg-emerald-950 [.dark_&]:text-emerald-200",
   Geometria:
-    "bg-orange-100 text-orange-700 [.dark_&]:bg-orange-900/40 [.dark_&]:text-orange-300",
+    "bg-amber-100 text-amber-700 [.dark_&]:bg-amber-950 [.dark_&]:text-amber-200",
   "Probabilità e statistica":
-    "bg-pink-100 text-pink-700 [.dark_&]:bg-pink-900/40 [.dark_&]:text-pink-300",
+    "bg-rose-100 text-rose-700 [.dark_&]:bg-rose-950 [.dark_&]:text-rose-200",
   Fisica:
-    "bg-cyan-100 text-cyan-700 [.dark_&]:bg-cyan-900/40 [.dark_&]:text-cyan-300",
+    "bg-indigo-100 text-indigo-700 [.dark_&]:bg-indigo-950 [.dark_&]:text-indigo-200",
 };
+
+function categoryAnchor(cat: string) {
+  return cat
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[àèìòù]/g, (c) => ({ à: "a", è: "e", ì: "i", ò: "o", ù: "u" }[c] ?? c));
+}
 
 function buildJsonLd(terms: GlossaryTerm[]) {
   return {
@@ -75,114 +73,88 @@ export default function GlossarioPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <main className="min-h-screen bg-white [.dark_&]:bg-slate-950">
-        <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+      <main className="min-h-screen text-[var(--fg)]">
+        <section className="relative mx-6 mt-24 max-w-screen-xl rounded-[24px] bg-gray-100/60 px-4 py-6 shadow-[inset_0_1px_0_rgba(0,0,0,0.04)] [.dark_&]:bg-slate-800 sm:mt-20 sm:px-6 sm:py-8 xl:mx-auto">
+          <div className="absolute right-6 top-6 hidden sm:block">
+            <ThemeToggle position="relative" />
+          </div>
 
-          {/* Header */}
-          <div className="mb-10">
-            <p className="text-sm font-medium text-sky-600 [.dark_&]:text-sky-400 mb-2 uppercase tracking-wide">
-              Riferimento rapido
-            </p>
-            <h1 className="text-4xl font-black text-slate-900 [.dark_&]:text-white mb-3">
+          <div className="max-w-3xl">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div className="inline-flex rounded-full bg-blue-100 px-4 py-2 text-sm font-bold text-blue-700 [.dark_&]:bg-blue-950 [.dark_&]:text-blue-200">
+                Riferimento rapido
+              </div>
+              <div className="sm:hidden">
+                <ThemeToggle position="relative" />
+              </div>
+            </div>
+
+            <h1 className="text-3xl font-bold leading-tight tracking-tight opacity-90 sm:text-4xl">
               Glossario
             </h1>
-            <p className="text-lg text-slate-600 [.dark_&]:text-slate-300 max-w-2xl">
+            <p className="mt-4 hidden max-w-2xl text-[15.5px] font-medium leading-relaxed sm:block">
               {glossario.length} termini chiave di matematica e fisica spiegati
-              in modo chiaro. Ogni definizione è pensata per essere estraibile e
-              utile prima di una verifica.
+              in modo chiaro, con definizioni rapide pensate per ripassare
+              prima di una verifica.
             </p>
           </div>
 
-          {/* Quick-nav categorie */}
           <nav
             aria-label="Categorie del glossario"
-            className="flex flex-wrap gap-2 mb-12"
+            className="mt-8 flex flex-wrap gap-2"
           >
             {CATEGORIE.map((cat) => (
               <a
                 key={cat}
-                href={`#${cat.toLowerCase().replace(/\s+/g, "-").replace(/[àèìòù]/g, (c) => ({ à: "a", è: "e", ì: "i", ò: "o", ù: "u" }[c] ?? c))}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border border-slate-200 [.dark_&]:border-slate-700 bg-slate-50 [.dark_&]:bg-slate-900 text-slate-700 [.dark_&]:text-slate-300 hover:bg-slate-100 [.dark_&]:hover:bg-slate-800 transition-colors"
+                href={`#${categoryAnchor(cat)}`}
+                className="inline-flex items-center gap-2 rounded-full border-2 border-slate-900/20 bg-white px-3 py-2 text-sm font-bold transition hover:border-slate-900/50 [.dark_&]:border-slate-500 [.dark_&]:bg-slate-900 [.dark_&]:hover:border-slate-300"
               >
-                <span>{CATEGORIA_EMOJI[cat]}</span>
                 {cat}
-                <span className="text-xs text-slate-400 [.dark_&]:text-slate-500">
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 [.dark_&]:bg-slate-800 [.dark_&]:text-slate-300">
                   {byCategoria[cat].length}
                 </span>
               </a>
             ))}
           </nav>
+        </section>
 
-          {/* Sezioni per categoria */}
-          <div className="space-y-16">
+        <section className="mx-6 mt-6 max-w-screen-xl pb-12 xl:mx-auto">
+          <div className="space-y-6">
             {CATEGORIE.map((cat) => {
               const terms = byCategoria[cat];
               if (!terms.length) return null;
-              const anchorId = cat
-                .toLowerCase()
-                .replace(/\s+/g, "-")
-                .replace(/[àèìòù]/g, (c) =>
-                  ({ à: "a", è: "e", ì: "i", ò: "o", ù: "u" }[c] ?? c)
-                );
 
               return (
-                <section key={cat} id={anchorId} className="scroll-mt-20">
-                  <div className="flex items-center gap-3 mb-6 pb-3 border-b border-slate-200 [.dark_&]:border-slate-800">
-                    <span className="text-2xl" aria-hidden>
-                      {CATEGORIA_EMOJI[cat]}
-                    </span>
-                    <h2 className="text-2xl font-bold text-slate-900 [.dark_&]:text-white">
-                      {cat}
-                    </h2>
-                    <span className="text-sm text-slate-400 [.dark_&]:text-slate-500 ml-auto">
+                <section
+                  key={cat}
+                  id={categoryAnchor(cat)}
+                  className="scroll-mt-24 rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6"
+                >
+                  <div className="mb-4 flex flex-wrap items-center gap-3">
+                    <h2 className="text-2xl font-bold">{cat}</h2>
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${CATEGORIA_COLOR[cat]}`}>
                       {terms.length} termini
                     </span>
                   </div>
 
-                  <dl className="space-y-6">
+                  <dl className="grid gap-3 md:grid-cols-2">
                     {terms.map((term) => (
                       <div
                         key={term.slug}
                         id={term.slug}
-                        className="scroll-mt-20 group rounded-xl border border-slate-200 [.dark_&]:border-slate-800 bg-slate-50/50 [.dark_&]:bg-slate-900/30 p-5 hover:border-slate-300 [.dark_&]:hover:border-slate-700 transition-colors"
+                        className="scroll-mt-24 rounded-[18px] border-2 border-slate-900/70 bg-white px-4 py-4 shadow-[0_3px_0_#0f172a] [.dark_&]:bg-slate-900"
                       >
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <dt className="font-semibold text-slate-900 [.dark_&]:text-white text-[1.05rem]">
+                        <div className="flex items-start justify-between gap-3">
+                          <dt className="text-lg font-bold leading-snug">
                             {term.termine}
                           </dt>
-                          <span
-                            className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${CATEGORIA_COLOR[cat]}`}
-                          >
+                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${CATEGORIA_COLOR[cat]}`}>
                             {cat}
                           </span>
                         </div>
-                        <dd className="text-slate-600 [.dark_&]:text-slate-400 text-[0.93rem] leading-7">
+                        <dd className="mt-3 text-sm font-medium leading-7 opacity-85">
                           {term.definizione}
                         </dd>
-                        {term.lezione && (
-                          <div className="mt-3">
-                            <Link
-                              href={`/${term.lezione}`}
-                              className="inline-flex items-center gap-1 text-xs font-medium text-sky-600 [.dark_&]:text-sky-400 hover:underline"
-                            >
-                              Lezione completa
-                              <svg
-                                className="w-3 h-3"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                                aria-hidden
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
-                                />
-                              </svg>
-                            </Link>
-                          </div>
-                        )}
                       </div>
                     ))}
                   </dl>
@@ -190,35 +162,16 @@ export default function GlossarioPage() {
               );
             })}
           </div>
+        </section>
 
-          {/* Footer CTA */}
-          <div className="mt-16 pt-8 border-t border-slate-200 [.dark_&]:border-slate-800 text-center">
-            <p className="text-slate-600 [.dark_&]:text-slate-400 mb-4">
-              Vuoi approfondire? Consulta le lezioni complete di matematica e
-              fisica.
+        <section className="mx-6 max-w-screen-xl pb-16 xl:mx-auto">
+          <div className="rounded-[24px] bg-gray-100/60 px-4 py-5 text-center [.dark_&]:bg-slate-800 sm:px-6">
+            <p className="text-sm font-medium leading-7 opacity-85">
+              Le definizioni sono sintetiche: usale come riferimento rapido
+              mentre studi matematica e fisica.
             </p>
-            <Link
-              href="/lezioni"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold transition-colors"
-            >
-              Tutte le lezioni
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-                aria-hidden
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
-                />
-              </svg>
-            </Link>
           </div>
-        </div>
+        </section>
       </main>
     </>
   );
