@@ -8,8 +8,10 @@ import {
   FaEquals,
   FaListOl,
   FaPercent,
+  FaProjectDiagram,
   FaRulerCombined,
   FaSquareRootAlt,
+  FaTable,
 } from "react-icons/fa";
 import type { IconType } from "react-icons";
 
@@ -26,7 +28,7 @@ type Calculator = {
 export const metadata: Metadata = {
   title: "Calcolatori online di matematica e fisica",
   description:
-    "Elenco dei calcolatori online Theoremz per matematica e fisica: percentuali, MCD, mcm, fattori primi, equivalenze ed espressioni.",
+    "Elenco dei calcolatori online Theoremz per matematica e fisica: percentuali, MCD, mcm, fattori primi, equivalenze, espressioni ed equazioni.",
   alternates: { canonical: "/calcolatori" },
   robots: {
     index: true,
@@ -105,6 +107,13 @@ const calculators: Calculator[] = [
     href: "/calcolatori/calcolatrice-frazioni",
   },
   {
+    title: "Proporzioni online",
+    description: "Termine incognito, medi, estremi e verifica.",
+    status: "Disponibile",
+    icon: FaProjectDiagram,
+    href: "/calcolatori/proporzioni-online",
+  },
+  {
     title: "Espressioni online",
     description: "Espressioni con numeri, frazioni, potenze e parentesi.",
     status: "Disponibile",
@@ -117,6 +126,20 @@ const calculators: Calculator[] = [
     status: "Disponibile",
     icon: FaCalculator,
     href: "/calcolatori/equazioni",
+  },
+  {
+    title: "Equazioni secondo grado",
+    description: "Formula risolutiva, delta e soluzioni reali.",
+    status: "Disponibile",
+    icon: FaSquareRootAlt,
+    href: "/calcolatori/equazioni-secondo-grado",
+  },
+  {
+    title: "Sistemi di equazioni",
+    description: "Sistemi lineari 2x2 con metodo di Cramer.",
+    status: "Disponibile",
+    icon: FaTable,
+    href: "/calcolatori/sistemi-equazioni",
   },
 ];
 

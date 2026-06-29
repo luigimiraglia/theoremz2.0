@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
-import EquazioniClient from "./EquazioniClient";
+import EquazioniSecondoGradoClient from "./EquazioniSecondoGradoClient";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
-const CANONICAL = `${SITE}/calcolatori/equazioni`;
+const CANONICAL = `${SITE}/calcolatori/equazioni-secondo-grado`;
 
 export const metadata: Metadata = {
-  title: "Equazioni online con passaggi",
+  title: "Equazioni di secondo grado online con passaggi",
   description:
-    "Risolvi equazioni online di primo e secondo grado con x, parentesi, frazioni numeriche, discriminante e passaggi spiegati.",
-  alternates: { canonical: "/calcolatori/equazioni" },
+    "Risolvi equazioni di secondo grado online con formula risolutiva, delta, soluzioni reali e passaggi spiegati.",
+  alternates: { canonical: "/calcolatori/equazioni-secondo-grado" },
   robots: {
     index: true,
     follow: true,
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
       "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
   },
   openGraph: {
-    title: "Equazioni online con passaggi",
+    title: "Equazioni di secondo grado online con passaggi",
     description:
-      "Calcolatore di equazioni di primo e secondo grado con procedimento spiegato.",
+      "Calcolatore per equazioni di secondo grado con discriminante, formula risolutiva e passaggi.",
     url: CANONICAL,
     siteName: "Theoremz",
     type: "website",
@@ -29,43 +29,44 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Equazioni online con passaggi",
+    title: "Equazioni di secondo grado online con passaggi",
     description:
-      "Risolvi equazioni di primo e secondo grado online con passaggi.",
+      "Trova delta e soluzioni di una equazione di secondo grado online.",
     images: ["/metadata.png"],
     site: "@theoremz_",
   },
   keywords: [
-    "equazioni online",
-    "risolutore equazioni",
-    "calcolatore equazioni",
-    "equazioni primo grado online",
     "equazioni secondo grado online",
-    "equazioni con passaggi",
-    "formula discriminante",
+    "equazioni di secondo grado",
+    "formula risolutiva online",
+    "calcolatore delta",
+    "discriminante online",
+    "equazioni complete secondo grado",
+    "equazioni incomplete secondo grado",
+    "soluzioni equazione secondo grado",
   ],
 };
 
 const faq = [
   {
-    question: "Che equazioni posso risolvere?",
+    question: "Come si usa il calcolatore di equazioni di secondo grado?",
     answer:
-      "Puoi risolvere equazioni numeriche di primo e secondo grado nella variabile x, anche con parentesi, frazioni numeriche e potenze x^2.",
+      "Inserisci i coefficienti a, b e c della forma ax² + bx + c = 0. Il calcolatore trova il discriminante e le soluzioni reali.",
   },
   {
-    question: "Come si scrive x al quadrato?",
+    question: "Che cosa succede se il delta è negativo?",
     answer:
-      "Puoi scrivere x^2. Per esempio x^2 - 5x + 6 = 0.",
+      "Se il discriminante è negativo, l'equazione non ha soluzioni reali. In questo calcolatore vengono mostrate solo le soluzioni reali.",
   },
   {
-    question: "Il calcolatore mostra i passaggi?",
+    question: "Il calcolatore gestisce anche le equazioni incomplete?",
     answer:
-      "Sì. Mostra la forma normale dell'equazione, il procedimento e, per le equazioni di secondo grado, il discriminante.",
+      "Sì. Puoi mettere b = 0 oppure c = 0 per risolvere anche equazioni di secondo grado incomplete.",
   },
   {
-    question: "Risolve equazioni di grado superiore?",
+    question: "Posso usare numeri decimali?",
     answer:
-      "No. Questo strumento è pensato per equazioni scolastiche di primo e secondo grado.",
+      "Sì. Puoi scrivere numeri interi o decimali, usando sia il punto sia la virgola.",
   },
 ];
 
@@ -78,7 +79,7 @@ function JsonLd({ data }: { data: unknown }) {
   );
 }
 
-export default function EquazioniPage() {
+export default function EquazioniSecondoGradoPage() {
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -93,7 +94,7 @@ export default function EquazioniPage() {
       {
         "@type": "ListItem",
         position: 3,
-        name: "Equazioni",
+        name: "Equazioni di secondo grado",
         item: CANONICAL,
       },
     ],
@@ -102,7 +103,7 @@ export default function EquazioniPage() {
   const softwareJsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "Equazioni online",
+    name: "Equazioni di secondo grado online",
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
     url: CANONICAL,
@@ -112,12 +113,12 @@ export default function EquazioniPage() {
       priceCurrency: "EUR",
     },
     featureList: [
-      "Equazioni di primo grado",
-      "Equazioni di secondo grado",
-      "Parentesi",
-      "Frazioni numeriche",
-      "Discriminante",
+      "Calcolo del delta",
+      "Formula risolutiva",
+      "Soluzioni reali",
+      "Equazioni incomplete",
       "Passaggi spiegati",
+      "Coefficienti decimali",
     ],
   };
 
@@ -159,44 +160,44 @@ export default function EquazioniPage() {
           </div>
 
           <h1 className="text-3xl font-bold leading-tight tracking-tight opacity-90 sm:text-4xl">
-            Equazioni online
+            Equazioni di secondo grado online
           </h1>
           <p className="mt-4 hidden max-w-2xl text-[15.5px] font-medium leading-relaxed sm:block">
-            Risolvi equazioni di primo e secondo grado. Scrivi l&apos;equazione con
-            la lettera x e guarda forma normale, soluzioni e passaggi.
+            Inserisci i coefficienti della forma ax² + bx + c = 0. Il
+            calcolatore mostra delta, formula risolutiva, soluzioni e passaggi
+            del procedimento.
           </p>
         </div>
 
         <div className="mt-8">
-          <EquazioniClient />
+          <EquazioniSecondoGradoClient />
         </div>
       </section>
 
-      <section className="mx-6 mt-6 grid max-w-screen-xl gap-4 pb-12 lg:grid-cols-[1.05fr_0.95fr] xl:mx-auto">
+      <section className="mx-6 mt-6 grid max-w-screen-xl gap-4 pb-12 lg:grid-cols-[1fr_1fr] xl:mx-auto">
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Come scrivere l&apos;equazione</h2>
+          <h2 className="text-2xl font-bold">Formula risolutiva</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Usa la lettera x e un solo segno uguale. Puoi scrivere prodotti
-            impliciti come 2x o 3(x + 1), frazioni numeriche come 1/2 e potenze
-            come x^2.
+            Una equazione di secondo grado completa si scrive nella forma ax² +
+            bx + c = 0, con a diverso da zero. Dopo aver calcolato il
+            discriminante, le soluzioni reali si trovano con la formula
+            risolutiva.
           </p>
+          <div className="mt-4 overflow-x-auto rounded-[18px] border-2 border-slate-900/70 bg-white px-4 py-3 text-center font-bold shadow-[0_3px_0_#0f172a] [.dark_&]:bg-slate-900">
+            x = (-b ± √Δ) / 2a
+          </div>
         </article>
 
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Secondo grado</h2>
+          <h2 className="text-2xl font-bold">Delta e soluzioni</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Per le equazioni di secondo grado il calcolatore porta tutto nella
-            forma ax² + bx + c = 0 e usa il discriminante.
+            Il discriminante indica quante soluzioni reali ha l&apos;equazione:
+            due se Δ è positivo, una doppia se Δ è zero, nessuna soluzione reale
+            se Δ è negativo.
           </p>
           <div className="mt-4 rounded-[18px] border-2 border-slate-900/70 bg-white px-4 py-3 font-bold shadow-[0_3px_0_#0f172a] [.dark_&]:bg-slate-900">
             Δ = b² - 4ac
           </div>
-          <Link
-            href="/calcolatori/equazioni-secondo-grado"
-            className="mt-4 inline-flex rounded-[14px] bg-blue-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-600"
-          >
-            Apri il calcolatore dedicato
-          </Link>
         </article>
       </section>
 

@@ -4194,7 +4194,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Modello atomico di Bohr",
     "slug": "modello-atomico-di-bohr",
     "materia": "fisica",
@@ -4238,7 +4238,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Dualismo onda-particella e de Broglie",
     "slug": "dualismo-onda-particella",
     "materia": "fisica",
@@ -4281,7 +4281,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Principio di indeterminazione di Heisenberg",
     "slug": "principio-di-indeterminazione",
     "materia": "fisica",
@@ -4325,7 +4325,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Fissione e fusione nucleare",
     "slug": "fissione-e-fusione-nucleare",
     "materia": "fisica",
@@ -4368,7 +4368,7 @@
   },
   {
     "tier": 1,
-    "status": "pending",
+    "status": "done",
     "title": "Interferenza e diffrazione della luce",
     "slug": "interferenza-e-diffrazione",
     "materia": "fisica",

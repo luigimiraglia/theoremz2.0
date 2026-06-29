@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
-import EquazioniClient from "./EquazioniClient";
+import ProporzioniOnlineClient from "./ProporzioniOnlineClient";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
-const CANONICAL = `${SITE}/calcolatori/equazioni`;
+const CANONICAL = `${SITE}/calcolatori/proporzioni-online`;
 
 export const metadata: Metadata = {
-  title: "Equazioni online con passaggi",
+  title: "Proporzioni online con x e passaggi",
   description:
-    "Risolvi equazioni online di primo e secondo grado con x, parentesi, frazioni numeriche, discriminante e passaggi spiegati.",
-  alternates: { canonical: "/calcolatori/equazioni" },
+    "Risolvi proporzioni online con termine incognito x, prodotto dei medi e degli estremi, verifica e passaggi spiegati.",
+  alternates: { canonical: "/calcolatori/proporzioni-online" },
   robots: {
     index: true,
     follow: true,
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
       "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
   },
   openGraph: {
-    title: "Equazioni online con passaggi",
+    title: "Proporzioni online con x e passaggi",
     description:
-      "Calcolatore di equazioni di primo e secondo grado con procedimento spiegato.",
+      "Calcolatore di proporzioni con termine incognito, verifica e procedimento.",
     url: CANONICAL,
     siteName: "Theoremz",
     type: "website",
@@ -29,43 +29,43 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Equazioni online con passaggi",
+    title: "Proporzioni online con x e passaggi",
     description:
-      "Risolvi equazioni di primo e secondo grado online con passaggi.",
+      "Trova il termine incognito di una proporzione con passaggi spiegati.",
     images: ["/metadata.png"],
     site: "@theoremz_",
   },
   keywords: [
-    "equazioni online",
-    "risolutore equazioni",
-    "calcolatore equazioni",
-    "equazioni primo grado online",
-    "equazioni secondo grado online",
-    "equazioni con passaggi",
-    "formula discriminante",
+    "proporzioni online",
+    "calcolatore proporzioni",
+    "risolvi proporzioni",
+    "proporzioni con x",
+    "termine incognito proporzioni",
+    "prodotto medi estremi",
+    "proporzioni con passaggi",
   ],
 };
 
 const faq = [
   {
-    question: "Che equazioni posso risolvere?",
+    question: "Come si risolve una proporzione con x?",
     answer:
-      "Puoi risolvere equazioni numeriche di primo e secondo grado nella variabile x, anche con parentesi, frazioni numeriche e potenze x^2.",
+      "Si usa la proprietà fondamentale delle proporzioni: il prodotto degli estremi è uguale al prodotto dei medi. Poi si divide per isolare x.",
   },
   {
-    question: "Come si scrive x al quadrato?",
+    question: "Dove posso mettere la x?",
     answer:
-      "Puoi scrivere x^2. Per esempio x^2 - 5x + 6 = 0.",
+      "Puoi scrivere x in uno qualsiasi dei quattro termini della proporzione. Il calcolatore riconosce automaticamente il termine incognito.",
   },
   {
-    question: "Il calcolatore mostra i passaggi?",
+    question: "Il calcolatore verifica anche proporzioni senza x?",
     answer:
-      "Sì. Mostra la forma normale dell'equazione, il procedimento e, per le equazioni di secondo grado, il discriminante.",
+      "Sì. Se non inserisci x, lo strumento confronta il prodotto degli estremi con il prodotto dei medi e dice se la proporzione è corretta.",
   },
   {
-    question: "Risolve equazioni di grado superiore?",
+    question: "Posso usare numeri decimali?",
     answer:
-      "No. Questo strumento è pensato per equazioni scolastiche di primo e secondo grado.",
+      "Sì. Puoi usare numeri interi o decimali, sia con la virgola sia con il punto.",
   },
 ];
 
@@ -78,7 +78,7 @@ function JsonLd({ data }: { data: unknown }) {
   );
 }
 
-export default function EquazioniPage() {
+export default function ProporzioniOnlinePage() {
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -93,7 +93,7 @@ export default function EquazioniPage() {
       {
         "@type": "ListItem",
         position: 3,
-        name: "Equazioni",
+        name: "Proporzioni online",
         item: CANONICAL,
       },
     ],
@@ -102,7 +102,7 @@ export default function EquazioniPage() {
   const softwareJsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "Equazioni online",
+    name: "Proporzioni online",
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
     url: CANONICAL,
@@ -112,11 +112,10 @@ export default function EquazioniPage() {
       priceCurrency: "EUR",
     },
     featureList: [
-      "Equazioni di primo grado",
-      "Equazioni di secondo grado",
-      "Parentesi",
-      "Frazioni numeriche",
-      "Discriminante",
+      "Termine incognito in qualsiasi posizione",
+      "Prodotto dei medi e degli estremi",
+      "Verifica delle proporzioni",
+      "Numeri decimali",
       "Passaggi spiegati",
     ],
   };
@@ -159,44 +158,39 @@ export default function EquazioniPage() {
           </div>
 
           <h1 className="text-3xl font-bold leading-tight tracking-tight opacity-90 sm:text-4xl">
-            Equazioni online
+            Proporzioni online
           </h1>
           <p className="mt-4 hidden max-w-2xl text-[15.5px] font-medium leading-relaxed sm:block">
-            Risolvi equazioni di primo e secondo grado. Scrivi l&apos;equazione con
-            la lettera x e guarda forma normale, soluzioni e passaggi.
+            Scrivi una proporzione nella forma a : b = c : d e inserisci x nel
+            termine da trovare. Il calcolatore mostra risultato, verifica e
+            passaggi.
           </p>
         </div>
 
         <div className="mt-8">
-          <EquazioniClient />
+          <ProporzioniOnlineClient />
         </div>
       </section>
 
       <section className="mx-6 mt-6 grid max-w-screen-xl gap-4 pb-12 lg:grid-cols-[1.05fr_0.95fr] xl:mx-auto">
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Come scrivere l&apos;equazione</h2>
+          <h2 className="text-2xl font-bold">Proprietà fondamentale</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Usa la lettera x e un solo segno uguale. Puoi scrivere prodotti
-            impliciti come 2x o 3(x + 1), frazioni numeriche come 1/2 e potenze
-            come x^2.
+            In una proporzione il prodotto degli estremi è uguale al prodotto
+            dei medi. Per questo, in a : b = c : d vale sempre a · d = b · c.
           </p>
+          <div className="mt-4 rounded-[18px] border-2 border-slate-900/70 bg-white px-4 py-3 font-bold shadow-[0_3px_0_#0f172a] [.dark_&]:bg-slate-900">
+            a : b = c : d → a · d = b · c
+          </div>
         </article>
 
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Secondo grado</h2>
+          <h2 className="text-2xl font-bold">Termine incognito</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Per le equazioni di secondo grado il calcolatore porta tutto nella
-            forma ax² + bx + c = 0 e usa il discriminante.
+            Se manca un termine, si moltiplicano i due termini collegati dalla
+            proprietà fondamentale e si divide per il termine rimanente. Lo
+            strumento mostra anche la verifica finale.
           </p>
-          <div className="mt-4 rounded-[18px] border-2 border-slate-900/70 bg-white px-4 py-3 font-bold shadow-[0_3px_0_#0f172a] [.dark_&]:bg-slate-900">
-            Δ = b² - 4ac
-          </div>
-          <Link
-            href="/calcolatori/equazioni-secondo-grado"
-            className="mt-4 inline-flex rounded-[14px] bg-blue-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-600"
-          >
-            Apri il calcolatore dedicato
-          </Link>
         </article>
       </section>
 

@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
-import EquazioniClient from "./EquazioniClient";
+import SistemiEquazioniClient from "./SistemiEquazioniClient";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://theoremz.com";
-const CANONICAL = `${SITE}/calcolatori/equazioni`;
+const CANONICAL = `${SITE}/calcolatori/sistemi-equazioni`;
 
 export const metadata: Metadata = {
-  title: "Equazioni online con passaggi",
+  title: "Sistemi di equazioni online con passaggi",
   description:
-    "Risolvi equazioni online di primo e secondo grado con x, parentesi, frazioni numeriche, discriminante e passaggi spiegati.",
-  alternates: { canonical: "/calcolatori/equazioni" },
+    "Risolvi sistemi di equazioni 2x2 online con il metodo di Cramer, determinanti, soluzioni e passaggi spiegati.",
+  alternates: { canonical: "/calcolatori/sistemi-equazioni" },
   robots: {
     index: true,
     follow: true,
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
       "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
   },
   openGraph: {
-    title: "Equazioni online con passaggi",
+    title: "Sistemi di equazioni online con passaggi",
     description:
-      "Calcolatore di equazioni di primo e secondo grado con procedimento spiegato.",
+      "Calcolatore per sistemi lineari 2x2 con metodo di Cramer e passaggi.",
     url: CANONICAL,
     siteName: "Theoremz",
     type: "website",
@@ -29,43 +29,42 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Equazioni online con passaggi",
+    title: "Sistemi di equazioni online con passaggi",
     description:
-      "Risolvi equazioni di primo e secondo grado online con passaggi.",
+      "Risolvi sistemi lineari 2x2 online con procedimento spiegato.",
     images: ["/metadata.png"],
     site: "@theoremz_",
   },
   keywords: [
-    "equazioni online",
-    "risolutore equazioni",
-    "calcolatore equazioni",
-    "equazioni primo grado online",
-    "equazioni secondo grado online",
-    "equazioni con passaggi",
-    "formula discriminante",
+    "sistemi di equazioni online",
+    "risolutore sistemi",
+    "sistemi lineari 2x2",
+    "metodo di Cramer",
+    "sistemi con passaggi",
+    "calcolatore sistemi equazioni",
   ],
 };
 
 const faq = [
   {
-    question: "Che equazioni posso risolvere?",
+    question: "Che sistemi posso risolvere?",
     answer:
-      "Puoi risolvere equazioni numeriche di primo e secondo grado nella variabile x, anche con parentesi, frazioni numeriche e potenze x^2.",
+      "Puoi risolvere sistemi lineari 2x2 nella forma ax + by = c e dx + ey = f.",
   },
   {
-    question: "Come si scrive x al quadrato?",
+    question: "Che metodo usa il calcolatore?",
     answer:
-      "Puoi scrivere x^2. Per esempio x^2 - 5x + 6 = 0.",
+      "Il calcolatore usa il metodo di Cramer, calcolando il determinante D e i determinanti Dx e Dy.",
   },
   {
-    question: "Il calcolatore mostra i passaggi?",
+    question: "Cosa succede se il determinante è zero?",
     answer:
-      "Sì. Mostra la forma normale dell'equazione, il procedimento e, per le equazioni di secondo grado, il discriminante.",
+      "Se D è zero il sistema può avere infinite soluzioni oppure nessuna soluzione, a seconda dei valori di Dx e Dy.",
   },
   {
-    question: "Risolve equazioni di grado superiore?",
+    question: "Il risultato viene dato come frazione?",
     answer:
-      "No. Questo strumento è pensato per equazioni scolastiche di primo e secondo grado.",
+      "Sì. Quando serve, le soluzioni vengono mostrate come frazioni semplificate e anche come valori decimali.",
   },
 ];
 
@@ -78,7 +77,7 @@ function JsonLd({ data }: { data: unknown }) {
   );
 }
 
-export default function EquazioniPage() {
+export default function SistemiEquazioniPage() {
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -93,7 +92,7 @@ export default function EquazioniPage() {
       {
         "@type": "ListItem",
         position: 3,
-        name: "Equazioni",
+        name: "Sistemi di equazioni",
         item: CANONICAL,
       },
     ],
@@ -102,7 +101,7 @@ export default function EquazioniPage() {
   const softwareJsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "Equazioni online",
+    name: "Sistemi di equazioni online",
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
     url: CANONICAL,
@@ -112,11 +111,11 @@ export default function EquazioniPage() {
       priceCurrency: "EUR",
     },
     featureList: [
-      "Equazioni di primo grado",
-      "Equazioni di secondo grado",
-      "Parentesi",
-      "Frazioni numeriche",
-      "Discriminante",
+      "Sistemi lineari 2x2",
+      "Metodo di Cramer",
+      "Determinante D",
+      "Determinanti Dx e Dy",
+      "Soluzioni frazionarie",
       "Passaggi spiegati",
     ],
   };
@@ -159,44 +158,37 @@ export default function EquazioniPage() {
           </div>
 
           <h1 className="text-3xl font-bold leading-tight tracking-tight opacity-90 sm:text-4xl">
-            Equazioni online
+            Sistemi di equazioni online
           </h1>
           <p className="mt-4 hidden max-w-2xl text-[15.5px] font-medium leading-relaxed sm:block">
-            Risolvi equazioni di primo e secondo grado. Scrivi l&apos;equazione con
-            la lettera x e guarda forma normale, soluzioni e passaggi.
+            Risolvi sistemi lineari 2x2 con il metodo di Cramer. Inserisci i
+            coefficienti e guarda determinanti, soluzioni e passaggi.
           </p>
         </div>
 
         <div className="mt-8">
-          <EquazioniClient />
+          <SistemiEquazioniClient />
         </div>
       </section>
 
       <section className="mx-6 mt-6 grid max-w-screen-xl gap-4 pb-12 lg:grid-cols-[1.05fr_0.95fr] xl:mx-auto">
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Come scrivere l&apos;equazione</h2>
+          <h2 className="text-2xl font-bold">Forma del sistema</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Usa la lettera x e un solo segno uguale. Puoi scrivere prodotti
-            impliciti come 2x o 3(x + 1), frazioni numeriche come 1/2 e potenze
-            come x^2.
+            Il calcolatore usa sistemi nella forma ax + by = c e dx + ey = f.
+            Devi inserire solo i sei coefficienti numerici.
           </p>
         </article>
 
         <article className="rounded-[24px] bg-gray-100/60 px-4 py-5 [.dark_&]:bg-slate-800 sm:px-6">
-          <h2 className="text-2xl font-bold">Secondo grado</h2>
+          <h2 className="text-2xl font-bold">Metodo di Cramer</h2>
           <p className="mt-3 text-sm font-medium leading-7 opacity-85">
-            Per le equazioni di secondo grado il calcolatore porta tutto nella
-            forma ax² + bx + c = 0 e usa il discriminante.
+            Se il determinante D è diverso da zero, il sistema ha una sola
+            soluzione e si calcola con x = Dx / D e y = Dy / D.
           </p>
           <div className="mt-4 rounded-[18px] border-2 border-slate-900/70 bg-white px-4 py-3 font-bold shadow-[0_3px_0_#0f172a] [.dark_&]:bg-slate-900">
-            Δ = b² - 4ac
+            x = Dx / D, y = Dy / D
           </div>
-          <Link
-            href="/calcolatori/equazioni-secondo-grado"
-            className="mt-4 inline-flex rounded-[14px] bg-blue-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-600"
-          >
-            Apri il calcolatore dedicato
-          </Link>
         </article>
       </section>
 
