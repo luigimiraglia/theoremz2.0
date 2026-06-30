@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     url: CANONICAL,
     siteName: "Theoremz",
     type: "website",
-    images: [{ url: "/metadata.png" }],
+    images: [{ url: "/metadata.png", width: 1200, height: 630, alt: "Proporzioni online con x e passaggi — Theoremz" }],
     locale: "it_IT",
   },
   twitter: {

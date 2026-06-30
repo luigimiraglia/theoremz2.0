@@ -7,10 +7,13 @@ import OptimizedImage from "@/components/OptimizedImage";
 // It also marks the first image as eager/high to improve LCP.
 export default function LessonContentServer({
   value,
+  lessonTitle,
 }: {
   value: PortableTextBlock[];
+  lessonTitle?: string;
 }) {
   let firstImageUsed = false;
+  let imageIndex = 0;
 
 
 
@@ -20,7 +23,11 @@ export default function LessonContentServer({
       ...ptComponents.types,
       imageExternal: ({ value }: any) => {
         const url: string = value?.url || "";
-        const alt: string = value?.alt || "Immagine";
+        imageIndex++;
+        const fallbackAlt = lessonTitle
+          ? `Illustrazione ${imageIndex > 1 ? imageIndex + " " : ""}— ${lessonTitle}`
+          : "Illustrazione";
+        const alt: string = value?.alt || fallbackAlt;
         const eager = !firstImageUsed;
         firstImageUsed = true;
 

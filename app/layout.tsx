@@ -30,7 +30,7 @@ export const metadata: Metadata = {
       "Studia gratuitamente le materie scientifiche su Theoremz! Qui troverai anche esercizi per allenarti.",
     url: "https://theoremz.com",
     siteName: "Theoremz",
-    images: [{ url: "/metadata.png" }],
+    images: [{ url: "/metadata.png", width: 1200, height: 630, alt: "Theoremz — Matematica e Fisica" }],
     type: "website",
   },
   twitter: {

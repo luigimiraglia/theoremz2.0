@@ -37,7 +37,22 @@ export async function generateMetadata({ params }: { params: Promise<{ categoria
     title,
     description,
     alternates: { canonical: `/matematica/${categoria}` },
-    robots: { index: true, follow: true },
+    robots: { index: true, follow: true, googleBot: "index, follow, max-snippet:-1, max-image-preview:large" },
+    openGraph: {
+      title,
+      description,
+      url: `https://theoremz.com/matematica/${categoria}`,
+      siteName: "Theoremz",
+      type: "website",
+      images: [{ url: "/metadata.png", width: 1200, height: 630, alt: `${name} — Matematica Theoremz` }],
+    },
+    twitter: {
+      card: "summary_large_image" as const,
+      title,
+      description,
+      images: ["/metadata.png"],
+      site: "@theoremz_",
+    },
   };
 }
 

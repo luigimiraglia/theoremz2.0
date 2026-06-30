@@ -52,7 +52,7 @@ export async function generateMetadata() {
       url: CANONICAL,
       siteName: "Theoremz",
       type: "website",
-      images: [{ url: "/metadata.png" }],
+      images: [{ url: "/metadata.png", width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card: "summary_large_image",

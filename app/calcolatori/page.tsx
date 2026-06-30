@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     url: `${SITE}/calcolatori`,
     siteName: "Theoremz",
     type: "website",
-    images: [{ url: "/metadata.png" }],
+    images: [{ url: "/metadata.png", width: 1200, height: 630, alt: "Calcolatori online di matematica e fisica — Theoremz" }],
     locale: "it_IT",
   },
   twitter: {
@@ -194,13 +194,23 @@ export default function CalcolatoriPage() {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "Calcolatori online Theoremz",
-    itemListElement: calculators.map((calculator, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      name: calculator.title,
-      description: calculator.description,
-      ...(calculator.href ? { url: `${SITE}${calculator.href}` } : {}),
-    })),
+    itemListElement: calculators
+      .filter((c) => c.href)
+      .map((calculator, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        item: {
+          "@type": "SoftwareApplication",
+          name: calculator.title,
+          description: calculator.description,
+          url: `${SITE}${calculator.href}`,
+          applicationCategory: "EducationalApplication",
+          operatingSystem: "Web",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+          inLanguage: "it-IT",
+          provider: { "@type": "Organization", name: "Theoremz", url: SITE },
+        },
+      })),
   };
 
   return (

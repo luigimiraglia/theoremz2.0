@@ -8,6 +8,22 @@ export const metadata: Metadata = {
   description:
     "Consulta l'indice completo di tutte le lezioni di matematica e fisica disponibili su Theoremz.",
   alternates: { canonical: "https://theoremz.com/lezioni" },
+  robots: { index: true, follow: true },
+  openGraph: {
+    title: "Tutte le lezioni di matematica e fisica — Theoremz",
+    description: "Indice completo di lezioni di matematica e fisica: algebra, analisi, trigonometria, geometria, fisica e molto altro.",
+    url: "https://theoremz.com/lezioni",
+    siteName: "Theoremz",
+    type: "website",
+    images: [{ url: "/metadata.png", width: 1200, height: 630, alt: "Lezioni di matematica e fisica — Theoremz" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tutte le lezioni di matematica e fisica — Theoremz",
+    description: "Indice completo di lezioni di matematica e fisica per le scuole superiori.",
+    images: ["/metadata.png"],
+    site: "@theoremz_",
+  },
 };
 
 const LESSONS_QUERY = groq`

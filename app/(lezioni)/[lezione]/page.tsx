@@ -380,6 +380,9 @@ export default async function Page({
         }))}
       />
 
+      {/* H1 server-rendered per garantire che i bot vedano il titolo nell'HTML iniziale */}
+      <h1 className="sr-only">{lesson.title}</h1>
+
       {/* UI: render content server-side and pass it into client wrapper to reduce hydration cost */}
       <LessonClient
         lezione={lezione}
@@ -403,7 +406,7 @@ export default async function Page({
           lezioniFiglie: lesson.lezioniFiglie ?? [],
         }}
         sectionItems={sectionItems}
-        contentSlot={<LessonContentServer value={lesson.content} />}
+        contentSlot={<LessonContentServer value={lesson.content} lessonTitle={lesson.title} />}
       />
       
       {/* Prefetch intelligente per risorse correlate */}

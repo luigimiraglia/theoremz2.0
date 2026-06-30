@@ -12,6 +12,16 @@ export const metadata: Metadata = {
     description:
       "Tutti i termini chiave spiegati in modo semplice. Algebra, analisi, trigonometria, geometria, probabilità e fisica.",
     url: "https://theoremz.com/glossario",
+    siteName: "Theoremz",
+    type: "website",
+    images: [{ url: "/metadata.png", width: 1200, height: 630, alt: "Glossario di matematica e fisica — Theoremz" }],
+  },
+  twitter: {
+    card: "summary_large_image" as const,
+    title: "Glossario di matematica e fisica — Theoremz",
+    description: "Definizioni chiare dei termini principali di matematica e fisica per le scuole superiori.",
+    images: ["/metadata.png"],
+    site: "@theoremz_",
   },
 };
 
