@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
+import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { track, trackConversion } from "@/lib/analytics";
 import Icon from "./Icon";
@@ -20,7 +21,7 @@ export default function FreeExercisesPdfBanner({
   lessonId,
   lessonTitle,
   lessonSlug,
-  exerciseCount: _exerciseCount,
+  exerciseCount,
 }: Props) {
   const { user } = useAuth();
   const [authReady, setAuthReady] = useState(false);
@@ -305,11 +306,11 @@ export default function FreeExercisesPdfBanner({
                       PDF esercizi della lezione
                     </p>
                     <p className="m-0 mt-0.5 text-xs font-semibold text-slate-600 [.dark_&]:text-slate-300">
-                      Download immediato
+                      Download immediato - {exerciseCount} esercizi
                     </p>
                   </div>
                   <div className="rounded-lg bg-white px-3 py-1.5 text-sm font-black text-[#2b7fff] shadow-sm [.dark_&]:bg-slate-900">
-                    0 euro
+                    0€
                   </div>
                 </div>
               </div>
@@ -362,9 +363,9 @@ export default function FreeExercisesPdfBanner({
 
               <p className="m-0 mt-3 text-center text-[11px] font-medium leading-snug text-slate-500 [.dark_&]:text-slate-400">
                 Accetti la{" "}
-                <a href="/privacy-policy" className="font-bold text-[#2b7fff] underline-offset-2 hover:underline">
+                <Link href="/privacy-policy" className="font-bold text-[#2b7fff] underline-offset-2 hover:underline">
                   Privacy Policy
-                </a>
+                </Link>
                 .
               </p>
             </div>

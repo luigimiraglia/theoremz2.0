@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { groq } from "next-sanity";
 import katex from "katex";
 import puppeteer from "puppeteer";
+import { Resend } from "resend";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -142,7 +143,7 @@ export async function POST(req: Request) {
     );
   }
 
-  return generatePdfResponse(validLesson);
+  return generatePdfResponse(validLesson, email);
 }
 
 async function fetchLesson(lessonId: string) {
@@ -168,11 +169,22 @@ function validateLessonForPdf(lesson: LessonPayload | null) {
   return null;
 }
 
-async function generatePdfResponse(lesson: LessonPayload) {
+async function generatePdfResponse(lesson: LessonPayload, recipientEmail?: string) {
   const generatedAt = new Date();
   const html = await buildHtml(lesson);
   const pdf = await renderPdf(html);
   const filename = `${safeFilename(lesson.title || "esercizi")}-esercizi-theoremz-${generatedAt.getTime()}.pdf`;
+
+  if (recipientEmail) {
+    await sendPdfCopyEmail({
+      to: recipientEmail,
+      lesson,
+      filename,
+      pdf,
+    }).catch((error) => {
+      console.error("[exercises-pdf] resend email failed", error);
+    });
+  }
 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
@@ -183,6 +195,101 @@ async function generatePdfResponse(lesson: LessonPayload) {
       Expires: "0",
     },
   });
+}
+
+async function sendPdfCopyEmail({
+  to,
+  lesson,
+  filename,
+  pdf,
+}: {
+  to: string;
+  lesson: LessonPayload;
+  filename: string;
+  pdf: Uint8Array | Buffer;
+}) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("[exercises-pdf] RESEND_API_KEY missing, email copy skipped");
+    return;
+  }
+
+  const from =
+    process.env.RESEND_FROM ||
+    process.env.RESEND_FROM_EMAIL ||
+    "Theoremz <noreply@theoremz.com>";
+
+  const resend = new Resend(apiKey);
+  const subject = `Il tuo PDF di esercizi - ${lesson.title}`;
+
+  const result = await resend.emails.send({
+    from,
+    to,
+    subject,
+    html: buildPdfCopyEmailHtml(lesson),
+    text: `Ciao, trovi in allegato il PDF gratuito con gli esercizi della lezione "${lesson.title}".\n\nTheoremz`,
+    attachments: [
+      {
+        filename,
+        content: Buffer.from(pdf),
+        contentType: "application/pdf",
+      },
+    ],
+    tags: [
+      { name: "source", value: "free_exercises_pdf" },
+      { name: "lesson", value: safeFilename(lesson.slug || lesson.title).slice(0, 50) },
+    ],
+  });
+
+  if (result.error) {
+    throw result.error;
+  }
+}
+
+function buildPdfCopyEmailHtml(lesson: LessonPayload) {
+  const title = escapeHtml(lesson.title);
+  const count = lesson.exercises.length;
+
+  return `<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>PDF esercizi Theoremz</title>
+  </head>
+  <body style="margin:0;background:#f4f7fb;font-family:Montserrat,Arial,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;overflow:hidden;border-radius:22px;background:#ffffff;border:1px solid #dbeafe;box-shadow:0 18px 50px rgba(15,23,42,0.12);">
+            <tr>
+              <td style="padding:24px;background:linear-gradient(90deg,#2563eb,#2b7fff,#55d4ff);color:#ffffff;">
+                <div style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;opacity:0.86;">Theoremz</div>
+                <h1 style="margin:8px 0 0;font-size:26px;line-height:1.15;font-weight:900;">PDF esercizi gratuito</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;">
+                <p style="margin:0 0 16px;font-size:16px;line-height:1.6;font-weight:700;color:#334155;">In allegato trovi una copia del PDF che hai scaricato.</p>
+                <div style="border:1px solid #dbeafe;border-left:5px solid #2b7fff;border-radius:14px;background:#f8fbff;padding:16px;margin:0 0 18px;">
+                  <div style="font-size:13px;font-weight:800;color:#2b7fff;text-transform:uppercase;letter-spacing:0.08em;">Lezione</div>
+                  <div style="margin-top:6px;font-size:18px;line-height:1.35;font-weight:900;color:#0f172a;">${title}</div>
+                  <div style="margin-top:8px;font-size:13px;font-weight:700;color:#64748b;">${count} esercizi con soluzioni e passaggi nelle pagine finali.</div>
+                </div>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#64748b;">Puoi conservarlo nella tua email e ristamparlo quando vuoi.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 24px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px;font-weight:700;">
+                theoremz.com
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 }
 
 function compact(value?: string | null, max = 180) {
