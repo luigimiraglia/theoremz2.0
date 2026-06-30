@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     db
       .from("tutor_assignments")
       .select(
-        "tutor_id, student:student:students!inner(id, preferred_name, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, status)",
+        "tutor_id, student:students!inner(id, preferred_name, student_email, parent_email, student_phone, parent_phone, hours_paid, hours_consumed, status)",
       ),
     db.from("tutor_assignments").select("tutor_id, student_id, hourly_rate, consumed_baseline"),
   ]);
@@ -77,7 +77,7 @@ export async function GET(request: Request) {
     const hoursPaid = Number(raw.hours_paid ?? 0);
     const hoursConsumed = Number(raw.hours_consumed ?? 0);
     const baseline = baselineMap.get(`${tutorId}__${raw.id}`) ?? 0;
-    const remainingPaid = Math.max(0, hoursPaid, hoursPaid - hoursConsumed);
+    const remainingPaid = Math.max(0, hoursPaid);
     const name =
       raw.preferred_name ||
       raw.student_email ||

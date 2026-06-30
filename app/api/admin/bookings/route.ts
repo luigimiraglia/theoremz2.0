@@ -349,8 +349,7 @@ async function ensureBookableSlot(
       .maybeSingle();
     if (remainingErr) throw new Error(remainingErr.message);
     const hoursPaid = Number(remainingRow?.hours_paid ?? 0);
-    const hoursConsumed = Number(remainingRow?.hours_consumed ?? 0);
-    const remaining = Math.max(0, hoursPaid - hoursConsumed);
+    const remaining = Math.max(0, hoursPaid);
     if (remaining <= 0) {
       throw new Error("Ore insufficienti");
     }
@@ -472,6 +471,9 @@ async function applyBookingCompletion(opts: {
   if (!booking) throw new Error("Booking non trovato");
   if (!viewer?.isAdmin && viewer?.tutorId && booking.tutor_id !== viewer.tutorId) {
     throw new Error("forbidden");
+  }
+  if ((booking.status || "").toLowerCase() === "completed") {
+    throw new Error("Booking già segnato come effettuato");
   }
 
   const slot = Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
@@ -598,17 +600,10 @@ async function applyBookingCompletion(opts: {
     .eq("id", bookingId);
   if (statusUpdateErr) throw new Error(statusUpdateErr.message);
 
-  const { data: tutorRow, error: tutorErr } = await db
-    .from("tutors")
-    .select("hours_due")
-    .eq("id", booking.tutor_id)
-    .maybeSingle();
-  if (tutorErr) throw new Error(tutorErr.message);
-  const currentDue = Number(tutorRow?.hours_due ?? 0);
-  const { error: tutorUpdateErr } = await db
-    .from("tutors")
-    .update({ hours_due: currentDue + hoursToDeduct })
-    .eq("id", booking.tutor_id);
+  const { error: tutorUpdateErr } = await db.rpc("increment_tutor_hours_due", {
+    p_tutor_id: booking.tutor_id,
+    p_delta: hoursToDeduct,
+  });
   if (tutorUpdateErr) throw new Error(tutorUpdateErr.message);
 
   const { error: studentUpdateErr } = await db

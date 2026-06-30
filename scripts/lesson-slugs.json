@@ -1,0 +1,2092 @@
+[
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "autoinduzione",
+    "title": "Autoinduzione e induttanza"
+  },
+  {
+    "categoria": [
+      "Termodinamica"
+    ],
+    "materia": "fisica",
+    "slug": "calore",
+    "title": "Calore"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "campo-elettrico",
+    "title": "Campo elettrico"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "campo-magnetico",
+    "title": "Campo magnetico"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "cariche-elettriche",
+    "title": "Cariche elettriche"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "centro-di-massa",
+    "title": "Centro di massa"
+  },
+  {
+    "categoria": [
+      "Termodinamica"
+    ],
+    "materia": "fisica",
+    "slug": "ciclo-di-carnot",
+    "title": "Ciclo di Carnot"
+  },
+  {
+    "categoria": [
+      "Circuiti elettrici"
+    ],
+    "materia": "fisica",
+    "slug": "circuiti-elettrici",
+    "title": "Circuiti elettrici"
+  },
+  {
+    "categoria": [
+      "Elettrostatica",
+      "Circuiti elettrici"
+    ],
+    "materia": "fisica",
+    "slug": "circuito-rc",
+    "title": "Circuito RC"
+  },
+  {
+    "categoria": [
+      "Elettrostatica",
+      "Circuiti elettrici"
+    ],
+    "materia": "fisica",
+    "slug": "condensatori-serie-parallelo",
+    "title": "Condensatori in serie e parallelo"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "corrente-alternata",
+    "title": "Corrente alternata e alternatore"
+  },
+  {
+    "categoria": [
+      "Circuiti elettrici"
+    ],
+    "materia": "fisica",
+    "slug": "corrente-elettrica",
+    "title": "Corrente elettrica"
+  },
+  {
+    "categoria": [
+      "Meccanica dei fluidi",
+      "Grandezze e misure"
+    ],
+    "materia": "fisica",
+    "slug": "densita",
+    "title": "Densità"
+  },
+  {
+    "categoria": [
+      "Relatività",
+      "Fisica moderna"
+    ],
+    "materia": "fisica",
+    "slug": "dilatazione-dei-tempi",
+    "title": "Dilatazione dei tempi e contrazione delle lunghezze"
+  },
+  {
+    "categoria": [
+      "Fisica moderna",
+      "Meccanica quantistica"
+    ],
+    "materia": "fisica",
+    "slug": "dualismo-onda-particella",
+    "title": "Dualismo onda-particella e de Broglie"
+  },
+  {
+    "categoria": [
+      "Onde"
+    ],
+    "materia": "fisica",
+    "slug": "effetto-doppler",
+    "title": "Effetto Doppler"
+  },
+  {
+    "categoria": [
+      "Circuiti elettrici"
+    ],
+    "materia": "fisica",
+    "slug": "effetto-joule",
+    "title": "Effetto Joule"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "energia-cinetica",
+    "title": "Energia cinetica"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "energia-meccanica",
+    "title": "Energia meccanica e conservazione dell'energia"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "energia-potenziale",
+    "title": "Energia potenziale"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "energia-potenziale-elettrica",
+    "title": "Energia potenziale elettrica"
+  },
+  {
+    "categoria": [
+      "Termodinamica"
+    ],
+    "materia": "fisica",
+    "slug": "entropia",
+    "title": "Entropia"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "equazioni-di-maxwell",
+    "title": "Equazioni di Maxwell"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "equilibrio",
+    "title": "Equilibrio"
+  },
+  {
+    "categoria": [
+      "Relatività",
+      "Fisica moderna"
+    ],
+    "materia": "fisica",
+    "slug": "equivalenza-massa-energia",
+    "title": "Equivalenza massa-energia"
+  },
+  {
+    "categoria": [
+      "Fisica nucleare",
+      "Fisica moderna"
+    ],
+    "materia": "fisica",
+    "slug": "fissione-e-fusione-nucleare",
+    "title": "Fissione e fusione nucleare"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "flusso-del-campo-elettrico",
+    "title": "Flusso del campo elettrico"
+  },
+  {
+    "categoria": [
+      "Dinamica",
+      "Cinematica"
+    ],
+    "materia": "fisica",
+    "slug": "forza-centripeta",
+    "title": "Forza centripeta"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "forza-di-lorentz",
+    "title": "Forza di Lorentz"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "forza-di-attrito",
+    "title": "Forza di attrito"
+  },
+  {
+    "categoria": [
+      "Dinamica rotazionale"
+    ],
+    "materia": "fisica",
+    "slug": "giroscopio",
+    "title": "Giroscopio"
+  },
+  {
+    "categoria": [
+      "Grandezze e misure"
+    ],
+    "materia": "fisica",
+    "slug": "grandezze-fisiche",
+    "title": "Grandezze fisiche"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "i-tre-principi-della-dinamica",
+    "title": "I tre principi della dinamica"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "impulso",
+    "title": "Impulso e quantità di moto"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "induzione-elettromagnetica",
+    "title": "Induzione elettromagnetica"
+  },
+  {
+    "categoria": [
+      "Onde"
+    ],
+    "materia": "fisica",
+    "slug": "intensita-di-un-onda",
+    "title": "Intensità di un'onda"
+  },
+  {
+    "categoria": [
+      "Ottica",
+      "Onde"
+    ],
+    "materia": "fisica",
+    "slug": "interferenza-e-diffrazione",
+    "title": "Interferenza e diffrazione della luce"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "lavoro",
+    "title": "Lavoro di una forza"
+  },
+  {
+    "categoria": [
+      "Grandezze e misure"
+    ],
+    "materia": "fisica",
+    "slug": "unita-di-misura",
+    "title": "Le unità di misura e il Sistema Internazionale"
+  },
+  {
+    "categoria": [
+      "Elettrostatica"
+    ],
+    "materia": "fisica",
+    "slug": "legge-di-coulomb",
+    "title": "Legge di Coulomb"
+  },
+  {
+    "categoria": [
+      "Gravitazione"
+    ],
+    "materia": "fisica",
+    "slug": "leggi-di-keplero",
+    "title": "Leggi di Keplero"
+  },
+  {
+    "categoria": [
+      "Circuiti elettrici"
+    ],
+    "materia": "fisica",
+    "slug": "leggi-di-kirchhoff",
+    "title": "Leggi di Kirchhoff"
+  },
+  {
+    "categoria": [
+      "Meccanica dei fluidi"
+    ],
+    "materia": "fisica",
+    "slug": "leggi-di-mendel",
+    "title": "Leggi di Mendel"
+  },
+  {
+    "categoria": [
+      "Circuiti elettrici"
+    ],
+    "materia": "fisica",
+    "slug": "leggi-di-ohm",
+    "title": "Leggi di Ohm"
+  },
+  {
+    "categoria": [
+      "Termodinamica"
+    ],
+    "materia": "fisica",
+    "slug": "macchine-termiche",
+    "title": "Macchine termiche e rendimento"
+  },
+  {
+    "categoria": [
+      "Meccanica dei fluidi"
+    ],
+    "materia": "fisica",
+    "slug": "meccanica-dei-fluidi",
+    "title": "Meccanica dei fluidi"
+  },
+  {
+    "categoria": [
+      "Fisica moderna"
+    ],
+    "materia": "fisica",
+    "slug": "modello-atomico-di-bohr",
+    "title": "Modello atomico di Bohr"
+  },
+  {
+    "categoria": [
+      "Dinamica rotazionale"
+    ],
+    "materia": "fisica",
+    "slug": "momento-angolare",
+    "title": "Momento angolare"
+  },
+  {
+    "categoria": [
+      "Dinamica rotazionale"
+    ],
+    "materia": "fisica",
+    "slug": "momento-delle-forze",
+    "title": "Momento delle forze"
+  },
+  {
+    "categoria": [
+      "Dinamica rotazionale"
+    ],
+    "materia": "fisica",
+    "slug": "momento-di-inerzia-e-accelerazione-angolare",
+    "title": "Momento di inerzia e accelerazione angolare"
+  },
+  {
+    "categoria": [
+      "Cinematica"
+    ],
+    "materia": "fisica",
+    "slug": "moto-armonico",
+    "title": "Moto armonico"
+  },
+  {
+    "categoria": [
+      "Cinematica"
+    ],
+    "materia": "fisica",
+    "slug": "moto-circolare",
+    "title": "Moto circolare"
+  },
+  {
+    "categoria": [
+      "Cinematica"
+    ],
+    "materia": "fisica",
+    "slug": "moto-di-caduta-libera",
+    "title": "Moto di caduta libera"
+  },
+  {
+    "categoria": [
+      "Cinematica"
+    ],
+    "materia": "fisica",
+    "slug": "moto-parabolico",
+    "title": "Moto parabolico"
+  },
+  {
+    "categoria": [
+      "Cinematica"
+    ],
+    "materia": "fisica",
+    "slug": "moto-rettilineo-uniforme",
+    "title": "Moto rettilineo uniforme"
+  },
+  {
+    "categoria": [
+      "Cinematica"
+    ],
+    "materia": "fisica",
+    "slug": "moto-rettilineo-uniformemente-accelerato",
+    "title": "Moto rettilineo uniformemente accelerato"
+  },
+  {
+    "categoria": [
+      "Cinematica"
+    ],
+    "materia": "fisica",
+    "slug": "moto-su-piano-inclinato",
+    "title": "Moto su piano inclinato"
+  },
+  {
+    "categoria": [
+      "Grandezze e misure"
+    ],
+    "materia": "fisica",
+    "slug": "notazione-scientifica",
+    "title": "Notazione scientifica"
+  },
+  {
+    "categoria": [
+      "Onde"
+    ],
+    "materia": "fisica",
+    "slug": "onde",
+    "title": "Onde"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo",
+      "Onde"
+    ],
+    "materia": "fisica",
+    "slug": "onde-elettromagnetiche",
+    "title": "Onde elettromagnetiche e spettro"
+  },
+  {
+    "categoria": [
+      "Onde"
+    ],
+    "materia": "fisica",
+    "slug": "onde-sonore",
+    "title": "Onde sonore"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "pendolo",
+    "title": "Pendolo semplice"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "potenza",
+    "title": "Potenza"
+  },
+  {
+    "categoria": [
+      "Elettrostatica",
+      "Circuiti elettrici"
+    ],
+    "materia": "fisica",
+    "slug": "potenza-elettrica",
+    "title": "Potenza elettrica"
+  },
+  {
+    "categoria": [
+      "Termodinamica"
+    ],
+    "materia": "fisica",
+    "slug": "principi-della-termodinamica",
+    "title": "Principi della termodinamica"
+  },
+  {
+    "categoria": [
+      "Fisica moderna",
+      "Meccanica quantistica"
+    ],
+    "materia": "fisica",
+    "slug": "principio-di-indeterminazione",
+    "title": "Principio di indeterminazione di Heisenberg"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "quanita-di-moto",
+    "title": "Quantità di moto"
+  },
+  {
+    "categoria": [
+      "Fisica nucleare",
+      "Fisica moderna"
+    ],
+    "materia": "fisica",
+    "slug": "radioattivita",
+    "title": "Radioattività e decadimento"
+  },
+  {
+    "categoria": [
+      "Cinematica"
+    ],
+    "materia": "fisica",
+    "slug": "relativita-galileiana",
+    "title": "Relatività galileiana e sistemi di riferimento"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "retta-e-piano-uniformemente-carichi",
+    "title": "Retta e piano uniformemente carichi"
+  },
+  {
+    "categoria": [
+      "Onde"
+    ],
+    "materia": "fisica",
+    "slug": "riflessione-e-rifrazione",
+    "title": "Riflessione e rifrazione"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "sfere-uniformemente-cariche",
+    "title": "Sfere uniformemente cariche"
+  },
+  {
+    "categoria": [
+      "Onde"
+    ],
+    "materia": "fisica",
+    "slug": "sovrapposizione-delle-onde",
+    "title": "Sovrapposizione delle onde"
+  },
+  {
+    "categoria": [
+      "Ottica"
+    ],
+    "materia": "fisica",
+    "slug": "specchi",
+    "title": "Specchi"
+  },
+  {
+    "categoria": [
+      "Meccanica dei fluidi"
+    ],
+    "materia": "fisica",
+    "slug": "tavola-periodica",
+    "title": "Tavola periodica"
+  },
+  {
+    "categoria": [
+      "Termodinamica"
+    ],
+    "materia": "fisica",
+    "slug": "temperatura",
+    "title": "Temperatura"
+  },
+  {
+    "categoria": [
+      "Termodinamica"
+    ],
+    "materia": "fisica",
+    "slug": "teoria-cinetica-dei-gas",
+    "title": "Teoria cinetica dei gas"
+  },
+  {
+    "categoria": [
+      "Grandezze e misure"
+    ],
+    "materia": "fisica",
+    "slug": "teoria-della-misura",
+    "title": "Teoria della misura"
+  },
+  {
+    "categoria": [
+      "Elettromagnetismo"
+    ],
+    "materia": "fisica",
+    "slug": "trasformatore",
+    "title": "Trasformatore"
+  },
+  {
+    "categoria": [
+      "Termodinamica"
+    ],
+    "materia": "fisica",
+    "slug": "trasformazioni-termodinamiche",
+    "title": "Trasformazioni termodinamiche"
+  },
+  {
+    "categoria": [
+      "Termodinamica"
+    ],
+    "materia": "fisica",
+    "slug": "trasmissione-del-calore",
+    "title": "Trasmissione del calore"
+  },
+  {
+    "categoria": [
+      "Dinamica"
+    ],
+    "materia": "fisica",
+    "slug": "urti",
+    "title": "Urti"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "angoli",
+    "title": "Angoli"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "apotema-e-numero-fisso",
+    "title": "Apotema e numero fisso"
+  },
+  {
+    "categoria": [
+      "Trigonometria"
+    ],
+    "materia": "matematica",
+    "slug": "archi-associati",
+    "title": "Archi associati"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "asintoti",
+    "title": "Asintoti di una funzione"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "baricentro-di-un-triangolo",
+    "title": "Baricentro di un triangolo"
+  },
+  {
+    "categoria": [
+      "Probabilità e statistica",
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "calcolo-combinatorio",
+    "title": "Calcolo combinatorio"
+  },
+  {
+    "categoria": [
+      "Analisi matematica"
+    ],
+    "materia": "matematica",
+    "slug": "area-sottesa-integrali",
+    "title": "Calcolo di aree con gli integrali"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "calcolo-letterale",
+    "title": "Calcolo letterale"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "cerchio",
+    "title": "Cerchio"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "cilindro",
+    "title": "Cilindro"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "circocentro-di-un-triangolo",
+    "title": "Circocentro di un triangolo"
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "circonferenza",
+    "title": "Circonferenza"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "cono",
+    "title": "Cono"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "continuita-e-discontinuita",
+    "title": "Continuità e punti di discontinuità"
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "coordinate-polari",
+    "title": "Coordinate polari"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "criteri-di-congruenza-dei-triangoli",
+    "title": "Criteri di congruenza dei triangoli"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "criteri-di-divisibilita",
+    "title": "Criteri di divisibilità"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "cubo",
+    "title": "Cubo"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "cubo-di-binomio",
+    "title": "Cubo di binomio"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "derivate",
+    "title": "Derivate"
+  },
+  {
+    "categoria": [
+      "Probabilità e statistica"
+    ],
+    "materia": "matematica",
+    "slug": "deviazione-standard-e-varianza",
+    "title": "Deviazione standard e varianza"
+  },
+  {
+    "categoria": [
+      "Algebra",
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "disequazioni-con-valore-assoluto",
+    "title": "Disequazioni con valore assoluto"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "disequazioni-di-secondo-grado",
+    "title": "Disequazioni di 2°grado"
+  },
+  {
+    "categoria": [
+      "Esponenziali e logaritmi",
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "disequazioni-esponenziali",
+    "title": "Disequazioni esponenziali"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "disequazioni-fratte",
+    "title": "Disequazioni fratte"
+  },
+  {
+    "categoria": [
+      "Trigonometria",
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "disequazioni-goniometriche",
+    "title": "Disequazioni goniometriche"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "disequazioni-irrazionali",
+    "title": "Disequazioni irrazionali"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "disequazioni-lineari",
+    "title": "Disequazioni lineari"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "disequazioni-lineari-a-due-incognite",
+    "title": "Disequazioni lineari a due incognite"
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "distanza-punto-retta",
+    "title": "Distanza punto-retta"
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "distanza-tra-due-punti",
+    "title": "Distanza tra due punti e punto medio"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "divisione-tra-polinomi",
+    "title": "Divisione tra polinomi"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "divisori-e-multipli-di-un-numero",
+    "title": "Divisori e multipli di un numero"
+  },
+  {
+    "categoria": [
+      "Studio di funzione",
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "dominio-di-una-funzione",
+    "title": "Dominio di una funzione"
+  },
+  {
+    "categoria": [
+      "Studio di funzione",
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "dominio-di-una-funzione",
+    "title": "Dominio di una funzione"
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "ellisse",
+    "title": "Ellisse"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "enti-geometrici-fondamentali",
+    "title": "Enti geometrici fondamentali"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni-biquadratiche",
+    "title": "Equazioni biquadratiche e trinomie"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "moduli",
+    "title": "Equazioni con valore assoluto"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni",
+    "title": "Equazioni di 1°grado"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni-di-secondo-grado",
+    "title": "Equazioni di 2°grado"
+  },
+  {
+    "categoria": [
+      "Analisi matematica"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni-differenziali",
+    "title": "Equazioni differenziali"
+  },
+  {
+    "categoria": [
+      "Esponenziali e logaritmi",
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni-e-disequazioni-logaritmiche",
+    "title": "Equazioni e disequazioni logaritmiche"
+  },
+  {
+    "categoria": [
+      "Esponenziali e logaritmi",
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni-esponenziali",
+    "title": "Equazioni esponenziali"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni-fratte",
+    "title": "Equazioni fratte"
+  },
+  {
+    "categoria": [
+      "Trigonometria",
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni-goniometriche",
+    "title": "Equazioni goniometriche"
+  },
+  {
+    "categoria": [
+      "Numeri complessi"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni-in-c",
+    "title": "Equazioni in C"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni-irrazionali",
+    "title": "Equazioni irrazionali"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni-irrazionali",
+    "title": "Equazioni irrazionali"
+  },
+  {
+    "categoria": [
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "equazioni-parametriche",
+    "title": "Equazioni parametriche"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "equivalenze-asintotiche",
+    "title": "Equivalenze asintotiche"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "esagono",
+    "title": "Esagono regolare"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "espressioni",
+    "title": "Espressioni"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "excentro-di-un-triangolo",
+    "title": "Excentro di un triangolo"
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "fasci-di-rette",
+    "title": "Fasci di rette"
+  },
+  {
+    "categoria": [
+      "Numeri complessi"
+    ],
+    "materia": "matematica",
+    "slug": "forma-esponenziale-dei-numeri-complessi",
+    "title": "Forma esponenziale dei numeri complessi"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "forme-bilineari",
+    "title": "Forme bilineari"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "forme-hermitiane",
+    "title": "Forme hermitiane"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "formula-di-erone",
+    "title": "Formula di Erone"
+  },
+  {
+    "categoria": [
+      "Trigonometria"
+    ],
+    "materia": "matematica",
+    "slug": "formule-werner-prostaferesi",
+    "title": "Formule di Werner e prostaferesi"
+  },
+  {
+    "categoria": [
+      "Trigonometria"
+    ],
+    "materia": "matematica",
+    "slug": "formule-di-bisezione",
+    "title": "Formule di bisezione"
+  },
+  {
+    "categoria": [
+      "Trigonometria"
+    ],
+    "materia": "matematica",
+    "slug": "formule-di-duplicazione",
+    "title": "Formule di duplicazione"
+  },
+  {
+    "categoria": [
+      "Trigonometria"
+    ],
+    "materia": "matematica",
+    "slug": "formule-parametriche",
+    "title": "Formule parametriche"
+  },
+  {
+    "categoria": [
+      "Trigonometria",
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "formule-trigonometriche",
+    "title": "Formule trigonometriche"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "frazioni",
+    "title": "Frazioni"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "frazioni-algebriche",
+    "title": "Frazioni algebriche"
+  },
+  {
+    "categoria": [
+      "Analisi matematica"
+    ],
+    "materia": "matematica",
+    "slug": "funzione-composta-e-inversa",
+    "title": "Funzione composta e funzione inversa"
+  },
+  {
+    "categoria": [
+      "Esponenziali e logaritmi"
+    ],
+    "materia": "matematica",
+    "slug": "funzione-logaritmica",
+    "title": "Funzione logaritmica"
+  },
+  {
+    "categoria": [
+      "Esponenziali e logaritmi"
+    ],
+    "materia": "matematica",
+    "slug": "funzione-logaritmica",
+    "title": "Funzione logaritmica"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "funzioni",
+    "title": "Funzioni"
+  },
+  {
+    "categoria": [
+      "Esponenziali e logaritmi"
+    ],
+    "materia": "matematica",
+    "slug": "funzioni-esponenziali",
+    "title": "Funzioni esponenziali"
+  },
+  {
+    "categoria": [
+      "Trigonometria"
+    ],
+    "materia": "matematica",
+    "slug": "funzioni-goniometriche",
+    "title": "Funzioni goniometriche"
+  },
+  {
+    "categoria": [
+      "Trigonometria",
+      "Analisi matematica"
+    ],
+    "materia": "matematica",
+    "slug": "funzioni-goniometriche-inverse",
+    "title": "Funzioni goniometriche inverse"
+  },
+  {
+    "categoria": [
+      "Analisi matematica"
+    ],
+    "materia": "matematica",
+    "slug": "funzioni-iperboliche",
+    "title": "Funzioni iperboliche"
+  },
+  {
+    "categoria": [
+      "Trigonometria"
+    ],
+    "materia": "matematica",
+    "slug": "funzioni-trigonometriche",
+    "title": "Funzioni trigonometriche"
+  },
+  {
+    "categoria": [
+      "Trigonometria"
+    ],
+    "materia": "matematica",
+    "slug": "grafico-delle-funzioni-goniometriche",
+    "title": "Grafico delle funzioni goniometriche"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "incentro-di-un-triangolo",
+    "title": "Incentro di un triangolo"
+  },
+  {
+    "categoria": [
+      "Algebra",
+      "Probabilità e statistica"
+    ],
+    "materia": "matematica",
+    "slug": "insiemi",
+    "title": "Insiemi"
+  },
+  {
+    "categoria": [
+      "Aritmetica",
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "insiemi-numerici",
+    "title": "Insiemi numerici"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "integrali",
+    "title": "Integrali"
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "iperbole",
+    "title": "Iperbole"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea",
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "sezione-aurea",
+    "title": "La sezione aurea"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "equivalenze",
+    "title": "Le equivalenze"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "limiti",
+    "title": "Limite di una funzione"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "limiti-notevoli",
+    "title": "Limiti notevoli"
+  },
+  {
+    "categoria": [
+      "Esponenziali e logaritmi"
+    ],
+    "materia": "matematica",
+    "slug": "logaritmi",
+    "title": "Logaritmi e le loro proprietà"
+  },
+  {
+    "categoria": [
+      "Logica matematica"
+    ],
+    "materia": "matematica",
+    "slug": "logica",
+    "title": "Logica e connettivi logici"
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "luogo-geometrico",
+    "title": "Luogo geometrico"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "medie",
+    "title": "Medie"
+  },
+  {
+    "categoria": [
+      "Analisi matematica"
+    ],
+    "materia": "matematica",
+    "slug": "metodi-di-integrazione",
+    "title": "Metodi di integrazione"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "minimo-comune-multiplo-e-massimo-comune-divisore",
+    "title": "Minimo comune multiplo e massimo comune divisore"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "monomi-e-polinomi",
+    "title": "Monomi e polinomi"
+  },
+  {
+    "categoria": [
+      "Numeri complessi"
+    ],
+    "materia": "matematica",
+    "slug": "numeri-complessi",
+    "title": "Numeri complessi in forma algebrica"
+  },
+  {
+    "categoria": [
+      "Numeri complessi"
+    ],
+    "materia": "matematica",
+    "slug": "forma-trigonometrica-dei-numeri-complessi",
+    "title": "Numeri complessi in forma trigonometrica"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "numeri-decimali",
+    "title": "Numeri decimali"
+  },
+  {
+    "categoria": [
+      "Numeri complessi"
+    ],
+    "materia": "matematica",
+    "slug": "numeri-immaginari",
+    "title": "Numeri immaginari"
+  },
+  {
+    "categoria": [
+      "Aritmetica",
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "numeri-primi",
+    "title": "Numeri primi"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "numeri-razionali",
+    "title": "Numeri razionali ed espressioni con frazioni"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "numeri-romani",
+    "title": "Numeri romani"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "ortocentro-di-un-triangolo",
+    "title": "Ortocentro di un triangolo "
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "parabola",
+    "title": "Parabola"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "parallelepipedo",
+    "title": "Parallelepipedo"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "parallelogramma",
+    "title": "Parallelogramma"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "pentagono-regolare",
+    "title": "Pentagono regolare"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "percentuali",
+    "title": "Percentuali"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "peso-lordo-netto-e-tara",
+    "title": "Peso lordo, peso netto e tara"
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "piani-nello-spazio",
+    "title": "Piani nello spazio"
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "piano-cartesiano",
+    "title": "Piano cartesiano"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "piramide-retta",
+    "title": "Piramide retta"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "poliedri",
+    "title": "Poliedri"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "poligoni-regolari",
+    "title": "Poligoni regolari"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "potenze",
+    "title": "Potenze"
+  },
+  {
+    "categoria": [
+      "Logica matematica",
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "principio-di-induzione",
+    "title": "Principio di induzione"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "prisma-retto",
+    "title": "Prisma retto"
+  },
+  {
+    "categoria": [
+      "Probabilità e statistica"
+    ],
+    "materia": "matematica",
+    "slug": "probabilita",
+    "title": "Probabilità"
+  },
+  {
+    "categoria": [
+      "Probabilità e statistica"
+    ],
+    "materia": "matematica",
+    "slug": "probabilita-condizionata",
+    "title": "Probabilità condizionata e teorema di Bayes"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "prodotti-notevoli",
+    "title": "Prodotti notevoli"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "somma-per-differenza",
+    "title": "Prodotto di una somma per una differenza"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "progressioni-aritmetiche",
+    "title": "Progressioni aritmetiche"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "progressioni-geometriche",
+    "title": "Progressioni geometriche"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "proporzioni",
+    "title": "Proporzioni"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "proprieta-delle-operazioni",
+    "title": "Proprietà delle operazioni"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "proprieta-delle-potenze",
+    "title": "Proprietà delle potenze"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "punti-notevoli-dei-triangoli",
+    "title": "Punti notevoli dei triangoli"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "punti-notevoli-dei-triangoli",
+    "title": "Punti notevoli dei triangoli"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "quadrato",
+    "title": "Quadrato"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "quadrato-di-binomio",
+    "title": "Quadrato di binomio"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "quadrato-di-trinomio",
+    "title": "Quadrato di trinomio"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "raccoglimento-parziale",
+    "title": "Raccoglimento parziale"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "raccoglimento-totale",
+    "title": "Raccoglimento totale"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "radicali",
+    "title": "Radicali"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "radice-quadrata",
+    "title": "Radice quadrata"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "razionalizzazione",
+    "title": "Razionalizzazione"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "regola-di-ruffini",
+    "title": "Regola di Ruffini"
+  },
+  {
+    "categoria": [
+      "Analisi matematica",
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "retta-tangente-a-una-curva",
+    "title": "Retta tangente a una curva"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "rettangolo",
+    "title": "Rettangolo"
+  },
+  {
+    "categoria": [
+      "Geometria analitica",
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "rette",
+    "title": "Rette"
+  },
+  {
+    "categoria": [
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "rette-nello-spazio",
+    "title": "Rette nello spazio"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "rette-tagliate-da-una-trasversale",
+    "title": "Rette tagliate da una trasversale"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "rombo",
+    "title": "Rombo"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "scomposizione-con-i-prodotti-notevoli",
+    "title": "Scomposizione con i prodotti notevoli"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "scomposizione-dei-polinomi",
+    "title": "Scomposizione dei polinomi"
+  },
+  {
+    "categoria": [
+      "Aritmetica"
+    ],
+    "materia": "matematica",
+    "slug": "scomposizione-in-fattori-primi",
+    "title": "Scomposizione in fattori primi"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "serie",
+    "title": "Serie"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "settore-circolare",
+    "title": "Settore circolare e arco di circonferenza"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "sfera",
+    "title": "Sfera"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "sistemi",
+    "title": "Sistemi"
+  },
+  {
+    "categoria": [
+      "Algebra",
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "sistemi-di-secondo-grado",
+    "title": "Sistemi di secondo grado"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "somma-e-differenza",
+    "title": "Somma e differenza"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "somma-e-differenza-di-due-cubi",
+    "title": "Somma e differenza di due cubi"
+  },
+  {
+    "categoria": [
+      "Probabilità e statistica"
+    ],
+    "materia": "matematica",
+    "slug": "statistica",
+    "title": "Statistica descrittiva"
+  },
+  {
+    "categoria": [
+      "Studio di funzione",
+      "Equazioni e disequazioni"
+    ],
+    "materia": "matematica",
+    "slug": "studio-del-segno-di-una-funzione",
+    "title": "Studio del segno di una funzione"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "studio-di-funzione",
+    "title": "Studio di funzione"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "successioni",
+    "title": "Successioni"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "superfici-e-volume-dei-solidi",
+    "title": "Superficie e volume dei solidi"
+  },
+  {
+    "categoria": [
+      "Trigonometria"
+    ],
+    "materia": "matematica",
+    "slug": "teorema-del-seno-e-teorema-del-coseno",
+    "title": "Teorema del seno e Teorema del coseno"
+  },
+  {
+    "categoria": [
+      "Trigonometria"
+    ],
+    "materia": "matematica",
+    "slug": "teorema-della-corda",
+    "title": "Teorema della corda (seno)"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "teorema-di-de-l-hopital",
+    "title": "Teorema di De l'Hopital"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "teorema-di-lagrange",
+    "title": "Teorema di Lagrange"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "teorema-di-pitagora-e-di-euclide",
+    "title": "Teorema di Pitagora e i due Teoremi di Euclide"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "teorema-di-rolle",
+    "title": "Teorema di Rolle"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "teorema-di-talete",
+    "title": "Teorema di Talete"
+  },
+  {
+    "categoria": [
+      "Studio di funzione"
+    ],
+    "materia": "matematica",
+    "slug": "teoremi-di-analisi",
+    "title": "Teoremi di analisi matematica"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "teoremi-e-assiomi",
+    "title": "Teoremi e assiomi"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "trapezio",
+    "title": "Trapezio"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea",
+      "Geometria analitica"
+    ],
+    "materia": "matematica",
+    "slug": "trasformazioni-geometriche",
+    "title": "Trasformazioni geometriche"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "triangoli-particolari",
+    "title": "Triangoli particolari"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "triangoli-simili",
+    "title": "Triangoli simili"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "triangoli-simili",
+    "title": "Triangoli simili"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "triangolo-equilatero",
+    "title": "Triangolo equilatero"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "triangolo-isoscele",
+    "title": "Triangolo isoscele"
+  },
+  {
+    "categoria": [
+      "Geometria euclidea"
+    ],
+    "materia": "matematica",
+    "slug": "triangolo-rettangolo",
+    "title": "Triangolo rettangolo"
+  },
+  {
+    "categoria": [
+      "Algebra"
+    ],
+    "materia": "matematica",
+    "slug": "trinomio-notevole",
+    "title": "Trinomio notevole"
+  },
+  {
+    "categoria": [
+      "Probabilità e statistica"
+    ],
+    "materia": "matematica",
+    "slug": "variabili-aleatorie",
+    "title": "Variabili aleatorie"
+  },
+  {
+    "categoria": [
+      "Grandezze e misure"
+    ],
+    "materia": "matematica",
+    "slug": "vettori",
+    "title": "Vettori"
+  }
+]

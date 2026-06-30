@@ -33,6 +33,24 @@ function compactString(value?: string | null, max = 500) {
   return trimmed ? trimmed.slice(0, max) : null;
 }
 
+const ALLOWED_CHANNELS = new Set(["instagram", "whatsapp", "phone", "email", "black", "unknown"]);
+const ALLOWED_FUNNELS = new Set([
+  "manual",
+  "ilmetodo",
+  "quiz",
+  "quick_contact",
+  "whatsapp_prospect",
+  "black_churn",
+  "black_onboarding",
+  "other",
+]);
+const ALLOWED_STATUSES = new Set(["active", "completed", "dropped"]);
+const ALLOWED_RESPONSE_STATUSES = new Set(["pending", "responded", "no_response", "paused"]);
+
+function allowedValue(value: string | null, allowed: Set<string>, fallback: string) {
+  return value && allowed.has(value) ? value : fallback;
+}
+
 function normalizePhoneDigits(raw?: string | null) {
   if (!raw || raw.includes("@")) return null;
   let digits = raw.replace(/\D+/g, "");
@@ -86,6 +104,15 @@ export async function upsertCanonicalLead(input: CanonicalLeadInput) {
   const contactKey = buildContactKey(input, phone, instagram);
   if (!contactKey) return null;
 
+  const channel = allowedValue(compactString(input.channel, 40), ALLOWED_CHANNELS, "unknown");
+  const funnel = allowedValue(compactString(input.funnel, 40), ALLOWED_FUNNELS, "other");
+  const status = allowedValue(compactString(input.status, 40), ALLOWED_STATUSES, "active");
+  const responseStatus = allowedValue(
+    compactString(input.responseStatus, 40),
+    ALLOWED_RESPONSE_STATUSES,
+    "pending"
+  );
+
   const db = supabaseServer();
   const { data, error } = await db.rpc("upsert_canonical_lead", {
     _contact_key: contactKey,
@@ -93,11 +120,11 @@ export async function upsertCanonicalLead(input: CanonicalLeadInput) {
     _email: compactString(input.email, 180)?.toLowerCase() || null,
     _phone: phone,
     _instagram: instagram,
-    _channel: compactString(input.channel, 40) || "unknown",
+    _channel: channel,
     _source: compactString(input.source, 80) || "manual",
-    _funnel: compactString(input.funnel, 40) || "manual",
-    _status: compactString(input.status, 40) || "active",
-    _response_status: compactString(input.responseStatus, 40) || "pending",
+    _funnel: funnel,
+    _status: status,
+    _response_status: responseStatus,
     _current_step: Number.isFinite(input.currentStep) ? Number(input.currentStep) : 0,
     _next_follow_up_at: normalizeDate(input.nextFollowUpAt),
     _last_contacted_at: normalizeDate(input.lastContactedAt),

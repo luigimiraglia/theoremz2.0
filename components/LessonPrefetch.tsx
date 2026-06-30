@@ -8,14 +8,12 @@ interface LessonPrefetchProps {
     slug: string;
     title: string;
   }>;
-  formularioUrl?: string;
   videolezioneUrl?: string;
 }
 
 export default function LessonPrefetch({ 
   currentLessonId, 
   relatedLessons, 
-  formularioUrl, 
   videolezioneUrl 
 }: LessonPrefetchProps) {
   const router = useRouter();
@@ -27,14 +25,6 @@ export default function LessonPrefetch({
       relatedLessons?.slice(0, 3).forEach(lesson => {
         router.prefetch(`/${lesson.slug}`);
       });
-
-      // Prefetch formulario se presente
-      if (formularioUrl) {
-        const link = document.createElement('link');
-        link.rel = 'prefetch';
-        link.href = formularioUrl;
-        document.head.appendChild(link);
-      }
 
       // Preload video se presente (priorità più alta)
       if (videolezioneUrl) {
@@ -52,7 +42,7 @@ export default function LessonPrefetch({
     // Esegui prefetch dopo 2 secondi per non interferire con il caricamento iniziale
     const timer = setTimeout(prefetchResources, 2000);
     return () => clearTimeout(timer);
-  }, [currentLessonId, relatedLessons, formularioUrl, videolezioneUrl, router]);
+  }, [currentLessonId, relatedLessons, videolezioneUrl, router]);
 
   return null; // Component invisibile
 }

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { groq } from "next-sanity";
 import { notFound } from "next/navigation";
+import { existsSync } from "fs";
+import path from "path";
 import { sanityFetch } from "@/lib/sanityFetch";
 import type { PortableTextBlock } from "sanity";
 import LessonClient from "./LessonClient"; // client wrapper for interactive UI
@@ -313,6 +315,13 @@ export default async function Page({
     }
   }
 
+  // Verifica presenza cartella appunti (con e senza trattini per compatibilità nomi storici)
+  const notesSlug = lesson.slug.current;
+  const notesBase = path.join(process.cwd(), "public", "notes");
+  const hasNotes =
+    existsSync(path.join(notesBase, notesSlug)) ||
+    existsSync(path.join(notesBase, notesSlug.replace(/-/g, "")));
+
   // JSON-LD: aggiungi anche le sezioni come hasPart con ancore (#)
   const sectionHasPart = sectionItems.map((s) => ({
     name: s.shortTitle,
@@ -408,6 +417,7 @@ export default async function Page({
           // ⬇️ passa le sotto-lezioni
           lezioniFiglie: lesson.lezioniFiglie ?? [],
         }}
+        hasNotes={hasNotes}
         sectionItems={sectionItems}
         contentSlot={<LessonContentServer value={lesson.content} lessonTitle={lesson.title} />}
       />
@@ -425,7 +435,6 @@ export default async function Page({
             title: l.title
           }))
         ].filter(l => l.slug)}
-        formularioUrl={lesson.resources?.formulario || undefined}
         videolezioneUrl={lesson.resources?.videolezione || undefined}
       />
     </>

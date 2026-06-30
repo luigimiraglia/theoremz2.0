@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { groq } from "next-sanity";
 import katex from "katex";
 import puppeteer from "puppeteer";
-import { Resend } from "resend";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -123,7 +122,7 @@ export async function POST(req: Request) {
       phone,
       channel: "email",
       source: "free_exercises_pdf",
-      funnel: "lesson_pdf",
+      funnel: "other",
       status: "active",
       responseStatus: "pending",
       pageUrl,
@@ -137,11 +136,16 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("[exercises-pdf] lead save failed", error);
-    return NextResponse.json(
-      { ok: false, error: "Non riesco ad attivare il download. Riprova tra poco." },
-      { status: 500 }
-    );
   }
+
+  await sendLeadAlertEmail({
+    email,
+    phone,
+    pageUrl,
+    lesson: validLesson,
+  }).catch((error) => {
+    console.error("[exercises-pdf] lead alert email failed", error);
+  });
 
   return generatePdfResponse(validLesson, email);
 }
@@ -219,30 +223,167 @@ async function sendPdfCopyEmail({
     process.env.RESEND_FROM_EMAIL ||
     "Theoremz <noreply@theoremz.com>";
 
-  const resend = new Resend(apiKey);
   const subject = `Il tuo PDF di esercizi - ${lesson.title}`;
 
-  const result = await resend.emails.send({
-    from,
-    to,
-    subject,
-    html: buildPdfCopyEmailHtml(lesson),
-    text: `Ciao, trovi in allegato il PDF gratuito con gli esercizi della lezione "${lesson.title}".\n\nTheoremz`,
-    attachments: [
-      {
-        filename,
-        content: Buffer.from(pdf),
-        contentType: "application/pdf",
-      },
-    ],
-    tags: [
-      { name: "source", value: "free_exercises_pdf" },
-      { name: "lesson", value: safeFilename(lesson.slug || lesson.title).slice(0, 50) },
-    ],
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      html: buildPdfCopyEmailHtml(lesson),
+      text: `Ciao, trovi in allegato il PDF gratuito con gli esercizi della lezione "${lesson.title}".\n\nTheoremz`,
+      attachments: [
+        {
+          filename,
+          content: Buffer.from(pdf).toString("base64"),
+          content_type: "application/pdf",
+        },
+      ],
+      tags: [
+        { name: "source", value: "free_exercises_pdf" },
+        { name: "lesson", value: safeFilename(lesson.slug || lesson.title).slice(0, 50) },
+      ],
+    }),
   });
 
-  if (result.error) {
-    throw result.error;
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Resend email failed (${response.status}): ${errorText}`);
+  }
+}
+
+async function sendLeadAlertEmail({
+  email,
+  phone,
+  pageUrl,
+  lesson,
+}: {
+  email: string;
+  phone: string;
+  pageUrl?: string | null;
+  lesson: LessonPayload;
+}) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const to =
+    process.env.EXERCISES_PDF_LEADS_TO ||
+    process.env.CONTACT_TO ||
+    process.env.ILMETODOLEADS_TO ||
+    process.env.GMAIL_USER;
+
+  if (!apiKey || !to) {
+    console.warn("[exercises-pdf] lead alert skipped: missing mail config", {
+      hasApiKey: Boolean(apiKey),
+      hasTo: Boolean(to),
+    });
+    return;
+  }
+
+  const from =
+    process.env.RESEND_FROM ||
+    process.env.RESEND_FROM_EMAIL ||
+    "Theoremz <noreply@theoremz.com>";
+  const safeLessonTitle = escapeHtml(lesson.title);
+  const safeEmail = escapeHtml(email);
+  const safePhone = escapeHtml(phone);
+  const safePageUrl = pageUrl ? escapeHtml(pageUrl) : null;
+  const subject = `Nuovo lead PDF esercizi - ${lesson.title}`;
+
+  const html = `<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Nuovo lead Theoremz</title>
+  </head>
+  <body style="margin:0;background:#f4f7fb;font-family:Montserrat,Arial,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;overflow:hidden;border-radius:20px;background:#ffffff;border:1px solid #dbeafe;box-shadow:0 18px 50px rgba(15,23,42,0.12);">
+            <tr>
+              <td style="padding:22px 24px;background:#0f172a;color:#ffffff;">
+                <div style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#7dd3fc;">Theoremz Lead</div>
+                <h1 style="margin:8px 0 0;font-size:24px;line-height:1.16;font-weight:900;">Nuovo download PDF esercizi</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;">
+                <div style="border:1px solid #dbeafe;border-left:5px solid #2b7fff;border-radius:14px;background:#f8fbff;padding:16px;margin:0 0 18px;">
+                  <div style="font-size:12px;font-weight:800;color:#2b7fff;text-transform:uppercase;letter-spacing:0.08em;">Lezione</div>
+                  <div style="margin-top:6px;font-size:18px;line-height:1.35;font-weight:900;color:#0f172a;">${safeLessonTitle}</div>
+                  <div style="margin-top:8px;font-size:13px;font-weight:700;color:#64748b;">${lesson.exercises.length} esercizi nel PDF</div>
+                </div>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                  <tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:13px;font-weight:800;">Email</td>
+                    <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;text-align:right;font-size:14px;font-weight:800;"><a href="mailto:${safeEmail}" style="color:#0f172a;text-decoration:none;">${safeEmail}</a></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:13px;font-weight:800;">Telefono</td>
+                    <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;text-align:right;font-size:14px;font-weight:800;"><a href="tel:${safePhone}" style="color:#0f172a;text-decoration:none;">${safePhone}</a></td>
+                  </tr>
+                  ${
+                    safePageUrl
+                      ? `<tr>
+                          <td style="padding:10px 0;color:#64748b;font-size:13px;font-weight:800;">Pagina</td>
+                          <td style="padding:10px 0;text-align:right;font-size:13px;font-weight:700;"><a href="${safePageUrl}" style="color:#2563eb;text-decoration:none;">Apri pagina</a></td>
+                        </tr>`
+                      : ""
+                  }
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:15px 24px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px;font-weight:700;">
+                Source: free_exercises_pdf
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+  const text = [
+    `Nuovo lead PDF esercizi`,
+    `Lezione: ${lesson.title}`,
+    `Email: ${email}`,
+    `Telefono: ${phone}`,
+    `Esercizi: ${lesson.exercises.length}`,
+    pageUrl ? `Pagina: ${pageUrl}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      html,
+      text,
+      reply_to: email,
+      tags: [
+        { name: "source", value: "free_exercises_pdf" },
+        { name: "type", value: "lead_alert" },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Resend lead alert failed (${response.status}): ${errorText}`);
   }
 }
 

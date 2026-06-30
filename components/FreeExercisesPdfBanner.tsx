@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
@@ -9,6 +9,7 @@ import Icon from "./Icon";
 
 const HEADER_SELECTOR = "#site-header";
 const HEADER_GAP_PX = 14;
+const PRIORITY_BANNER_EVENT = "theoremz:priority-banner";
 
 type Props = {
   lessonId: string;
@@ -43,6 +44,16 @@ export default function FreeExercisesPdfBanner({
   const formValid = isValidEmail(email) && normalizePhone(phone).length >= 8;
   const shouldShow = authReady && isAnonymous && !dismissed && visible;
 
+  const setPriorityBannerActive = useCallback((active: boolean) => {
+    try {
+      window.dispatchEvent(
+        new CustomEvent(PRIORITY_BANNER_EVENT, {
+          detail: { source: "free-exercises-pdf", active },
+        })
+      );
+    } catch {}
+  }, []);
+
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
@@ -72,8 +83,9 @@ export default function FreeExercisesPdfBanner({
     if (user) {
       setIsAnonymous(false);
       setVisible(false);
+      setPriorityBannerActive(false);
     }
-  }, [user]);
+  }, [setPriorityBannerActive, user]);
 
   useEffect(() => {
     try {
@@ -117,12 +129,15 @@ export default function FreeExercisesPdfBanner({
 
   useEffect(() => {
     if (dismissed) return;
+    let showTimer: ReturnType<typeof setTimeout> | null = null;
 
     const onScroll = () => {
+      if (!authReady || !isAnonymous) return;
       const threshold = Math.min(520, Math.max(260, window.innerHeight * 0.42));
       if (window.scrollY > threshold) {
-        setVisible(true);
         window.removeEventListener("scroll", onScroll);
+        setPriorityBannerActive(true);
+        showTimer = setTimeout(() => setVisible(true), 180);
         try {
           track("free_exercises_pdf_banner_view", {
             lesson_id: lessonId,
@@ -134,12 +149,20 @@ export default function FreeExercisesPdfBanner({
 
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [dismissed, lessonId, lessonSlug]);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (showTimer) clearTimeout(showTimer);
+    };
+  }, [authReady, dismissed, isAnonymous, lessonId, lessonSlug, setPriorityBannerActive]);
+
+  useEffect(() => {
+    return () => setPriorityBannerActive(false);
+  }, [setPriorityBannerActive]);
 
   const closeBanner = () => {
     setDismissed(true);
     setVisible(false);
+    setPriorityBannerActive(false);
     try {
       sessionStorage.setItem(storageKey, "1");
       track("free_exercises_pdf_banner_dismiss", {
@@ -213,6 +236,7 @@ export default function FreeExercisesPdfBanner({
       setOpen(false);
       setDismissed(true);
       setVisible(false);
+      setPriorityBannerActive(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore durante il download.");
     } finally {

@@ -195,18 +195,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Booking già segnato come effettuato" }, { status: 409 });
     }
 
-    // Update tutor hours_due
-    const { data: tutorRow, error: tutorErr } = await db
-      .from("tutors")
-      .select("hours_due")
-      .eq("id", booking.tutor_id)
-      .maybeSingle();
-    if (tutorErr) return NextResponse.json({ error: tutorErr.message }, { status: 500 });
-    const currentDue = Number(tutorRow?.hours_due ?? 0);
-    const { error: tutorUpdateErr } = await db
-      .from("tutors")
-      .update({ hours_due: currentDue + hoursToDeduct })
-      .eq("id", booking.tutor_id);
+    // Update tutor hours_due atomically to avoid race conditions
+    const { error: tutorUpdateErr } = await db.rpc("increment_tutor_hours_due", {
+      p_tutor_id: booking.tutor_id,
+      p_delta: hoursToDeduct,
+    });
     if (tutorUpdateErr) return NextResponse.json({ error: tutorUpdateErr.message }, { status: 500 });
 
     // Scala ore allo studente

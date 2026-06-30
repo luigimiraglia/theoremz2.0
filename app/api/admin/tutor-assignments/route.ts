@@ -198,6 +198,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Studente non trovato" }, { status: 404 });
     }
 
+    // Remove any assignment to a different tutor so the student doesn't appear in two lists
+    await db
+      .from("tutor_assignments")
+      .delete()
+      .eq("student_id", student.id)
+      .neq("tutor_id", tutorId);
+
     const { error: assignErr } = await db
       .from("tutor_assignments")
       .upsert(
@@ -205,7 +212,7 @@ export async function POST(request: NextRequest) {
           tutor_id: tutorId,
           student_id: student.id,
           role: (body.role as string) || "videolezione",
-          },
+        },
         { onConflict: "tutor_id,student_id" }
       );
     if (assignErr) return NextResponse.json({ error: assignErr.message }, { status: 500 });

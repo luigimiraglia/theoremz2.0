@@ -115,6 +115,7 @@ type LessonClientProps = {
     lezioniPropedeuticheOpzionali?: LinkedLessonRaw[];
     lezioniFiglie?: LinkedLessonRaw[];
   };
+  hasNotes?: boolean;
   sectionItems: { heading: string; shortTitle: string }[];
   contentSlot?: ReactNode; // server-rendered content to improve LCP
 };
@@ -209,6 +210,7 @@ function PrereqList({
 export default function LessonClient({
   lezione,
   lesson,
+  hasNotes = false,
   sectionItems,
   contentSlot,
 }: LessonClientProps) {
@@ -324,17 +326,29 @@ export default function LessonClient({
           <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto overflow-y-hidden min-w-max scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
             <FlashcardsSmallButton />
             <EserciziSmallButton />
-            <LessonNotesClient
+            {hasNotes && (
+              <LessonNotesClient
+                lessonTitle={lesson.title}
+                lessonSlug={lesson.slug}
+              />
+            )}
+            <FormularioSection
+              lessonId={lesson.id || lezione}
               lessonTitle={lesson.title}
-              lessonSlug={lesson.slug}
+              lessonSlug={lesson.slug || lezione}
             />
-            <FormularioSection url={lesson.resources?.formulario ?? null} />
           </div>
           <details className="w-full max-w-3xl rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm [.dark_&]:border-slate-700 [.dark_&]:bg-slate-800/80">
             <summary className="cursor-pointer select-none text-center font-semibold text-slate-700 [.dark_&]:text-slate-100">
               Altre opzioni
             </summary>
             <div className="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+              <Link
+                href={`/simula-verifica?lessonId=${encodeURIComponent(lesson.id || lezione)}&slug=${encodeURIComponent(lesson.slug || lezione)}&title=${encodeURIComponent(lesson.title)}`}
+                className="min-w-0 flex-shrink px-3 py-2 text-xs sm:text-sm font-semibold sm:font-bold shadow-md bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white rounded-lg hover:brightness-110 hover:scale-105 transition-all duration-500 whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"
+              >
+                Simula verifica
+              </Link>
               <Link
                 href={`/interrogazione?topic=${encodeURIComponent(lesson.title)}`}
                 className="min-w-0 flex-shrink px-3 py-2 text-xs sm:text-sm font-semibold sm:font-bold shadow-md bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:brightness-110 hover:scale-105 transition-all duration-500 whitespace-nowrap inline-flex items-center gap-0.5 sm:gap-1"

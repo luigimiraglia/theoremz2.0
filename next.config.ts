@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.resolve(process.cwd()),
   experimental: {
     // Reduce bundle size by optimizing common package imports
     optimizePackageImports: [
@@ -95,6 +97,39 @@ const nextConfig: NextConfig = {
         destination: "https://theoremz.com/:path*",
         permanent: true,
       },
+      // ── Redirect categorie rinominate/accorpate ──────────────────────────
+      // Matematica
+      { source: "/matematica/algebra-medie",      destination: "/matematica/algebra",                  permanent: true },
+      { source: "/matematica/aritmetica-medie",   destination: "/matematica/aritmetica",               permanent: true },
+      { source: "/matematica/geometria-medie",    destination: "/matematica/geometria-euclidea",       permanent: true },
+      { source: "/matematica/triangoli",          destination: "/matematica/geometria-euclidea",       permanent: true },
+      { source: "/matematica/quadrilateri",       destination: "/matematica/geometria-euclidea",       permanent: true },
+      { source: "/matematica/poligoni-regolari",  destination: "/matematica/geometria-euclidea",       permanent: true },
+      { source: "/matematica/circonferenza",      destination: "/matematica/geometria-euclidea",       permanent: true },
+      { source: "/matematica/analisi",            destination: "/matematica/analisi-matematica",       permanent: true },
+      { source: "/matematica/integrali",          destination: "/matematica/analisi-matematica",       permanent: true },
+      { source: "/matematica/funzioni",           destination: "/matematica/analisi-matematica",       permanent: true },
+      { source: "/matematica/derivate",           destination: "/matematica/studio-di-funzione",       permanent: true },
+      { source: "/matematica/probabilita",        destination: "/matematica/probabilita-e-statistica", permanent: true },
+      { source: "/matematica/statistica",         destination: "/matematica/probabilita-e-statistica", permanent: true },
+      { source: "/matematica/equazioni",          destination: "/matematica/equazioni-e-disequazioni", permanent: true },
+      { source: "/matematica/disequazioni",       destination: "/matematica/equazioni-e-disequazioni", permanent: true },
+      { source: "/matematica/esponenziali",       destination: "/matematica/esponenziali-e-logaritmi", permanent: true },
+      // Fisica
+      { source: "/fisica/elettronica",            destination: "/fisica/circuiti-elettrici",           permanent: true },
+      { source: "/fisica/fluidi",                 destination: "/fisica/meccanica-dei-fluidi",         permanent: true },
+      { source: "/fisica/notazioni",              destination: "/fisica/grandezze-e-misure",           permanent: true },
+      { source: "/fisica/metrologia",             destination: "/fisica/grandezze-e-misure",           permanent: true },
+      { source: "/fisica/grandezze-fisiche",      destination: "/fisica/grandezze-e-misure",           permanent: true },
+      { source: "/fisica/moti",                   destination: "/fisica/cinematica",                   permanent: true },
+      { source: "/fisica/moto-circolare",         destination: "/fisica/cinematica",                   permanent: true },
+      { source: "/fisica/meccanica",              destination: "/fisica/dinamica",                     permanent: true },
+      { source: "/fisica/moto-armonico",          destination: "/fisica/dinamica",                     permanent: true },
+      { source: "/fisica/acustica",               destination: "/fisica/onde",                         permanent: true },
+      { source: "/fisica/ottica-fisica",          destination: "/fisica/ottica",                       permanent: true },
+      { source: "/fisica/fisica-atomica",         destination: "/fisica/fisica-moderna",               permanent: true },
+      { source: "/fisica/termologia",             destination: "/fisica/termodinamica",                permanent: true },
+      { source: "/fisica/induzione",              destination: "/fisica/elettromagnetismo",             permanent: true },
     ];
   },
 };

@@ -8,12 +8,15 @@ import { useAuth } from "@/lib/AuthContext";
 const LS_KEY = "black-sticky-banner:closed:v1";
 const HEADER_SELECTOR = "#site-header";
 const GAP_PX = 8; // ⬅️ gap ridotto a 4px
+const PRIORITY_BANNER_EVENT = "theoremz:priority-banner";
 
 export default function BlackStickyPromo() {
   const { isSubscribed } = useAuth();
   const pathname = usePathname();
 
   const [closed, setClosed] = useState(true);
+  const [entered, setEntered] = useState(false);
+  const [hiddenByPriorityBanner, setHiddenByPriorityBanner] = useState(false);
   const [topOffset, setTopOffset] = useState<number | null>(null);
 
   const shouldShow = useMemo(() => {
@@ -25,7 +28,7 @@ export default function BlackStickyPromo() {
       p.startsWith("/contatto-rapido")
     )
       return false;
-    return isSubscribed !== true;
+    return isSubscribed === false;
   }, [pathname, isSubscribed]);
 
   useEffect(() => {
@@ -70,18 +73,47 @@ export default function BlackStickyPromo() {
     }
   }, [shouldShow]);
 
+  useEffect(() => {
+    const onPriorityBanner = (event: Event) => {
+      const detail = (event as CustomEvent<{ active?: boolean }>).detail;
+      setHiddenByPriorityBanner(detail?.active === true);
+    };
+
+    window.addEventListener(PRIORITY_BANNER_EVENT, onPriorityBanner);
+    return () => window.removeEventListener(PRIORITY_BANNER_EVENT, onPriorityBanner);
+  }, []);
+
+  useEffect(() => {
+    if (closed) {
+      setEntered(false);
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(frame);
+  }, [closed]);
+
   // Render nothing until we know the offset to avoid jumping
   if (closed || topOffset == null) return null;
+
+  const visible = entered && !hiddenByPriorityBanner;
 
   return (
     // Fixed overlay to avoid layout shifts (CLS) when the banner mounts
     <div
       role="region"
       aria-label="Promozione Theoremz Black"
-      className="fixed left-0 right-0 z-40 pointer-events-none"
+      className={`fixed left-0 right-0 z-40 pointer-events-none transition-all duration-500 ease-out ${
+        visible ? "translate-y-0 opacity-100" : "-translate-y-5 opacity-0"
+      }`}
       style={{ top: topOffset }}
+      aria-hidden={!visible}
     >
-      <div className="mx-2 xl:mx-auto w-[min(95vw,56rem)] pointer-events-auto">
+      <div
+        className={`mx-2 xl:mx-auto w-[min(95vw,56rem)] transition-transform duration-500 ease-out ${
+          visible ? "pointer-events-auto scale-100" : "pointer-events-none scale-[0.98]"
+        }`}
+      >
         <div
           className={[
             "rounded-2xl border border-white/20",
