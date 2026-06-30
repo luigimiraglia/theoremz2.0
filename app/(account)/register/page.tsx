@@ -72,11 +72,14 @@ export default function Register() {
         }
         if (subscribeNewsletter && createdUser) {
           try {
+            const newsletterToken = await createdUser.getIdToken();
             await fetch("/api/newsletter", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${newsletterToken}`,
+              },
               body: JSON.stringify({
-                user_id: createdUser.uid,
                 email,
                 subscribed: true,
                 source: "signup_form",

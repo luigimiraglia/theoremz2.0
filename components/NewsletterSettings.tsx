@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getAuth } from "firebase/auth";
 import { useAuth } from "@/lib/AuthContext";
 import { useToast } from "./Toast";
 
@@ -36,7 +37,11 @@ export default function NewsletterSettings({
 
     const fetchStatus = async () => {
       try {
-        const response = await fetch(`/api/newsletter?user_id=${user.uid}`);
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) return;
+        const response = await fetch("/api/newsletter", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (response.ok) {
           const result = await response.json();
           if (result.subscribed && result.subscription) {
@@ -73,8 +78,10 @@ export default function NewsletterSettings({
         scuola: "",
       };
 
+      const token = await getAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("not_authenticated");
+
       const payload = {
-        user_id: user.uid,
         email: user.email,
         subscribed,
         frequenza: data.frequenza,
@@ -86,7 +93,10 @@ export default function NewsletterSettings({
 
       const response = await fetch("/api/newsletter", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
 

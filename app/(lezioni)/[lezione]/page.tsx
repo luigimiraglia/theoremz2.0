@@ -50,6 +50,7 @@ type LessonDoc = {
   lezioniFiglie?: LinkedLesson[];
   // reverse lookup: lezioni che referenziano questa (padre/i)
   parents?: LinkedLesson[];
+  exerciseCount?: number;
 };
 type IndexItem = { heading: string; shortTitle: string };
 
@@ -76,7 +77,8 @@ const fullLessonQuery = groq`
     lezioniPropedeuticheObbligatorie[]->{ title, "slug": slug },
     lezioniPropedeuticheOpzionali[]->{ title, "slug": slug },
     lezioniFiglie[]->{ title, "slug": slug, thumbnailUrl },
-    "parents": *[_type == "lesson" && references(^._id)][0..2]{ title, "slug": slug }
+    "parents": *[_type == "lesson" && references(^._id)][0..2]{ title, "slug": slug },
+    "exerciseCount": count(*[_type=="exercise" && references(^._id)])
   }
 `;
 
@@ -397,6 +399,7 @@ export default async function Page({
           materia: (lesson as any).materia ?? null,
           categoria: (lesson as any).categoria ?? [],
           classe: (lesson as any).classe ?? [],
+          exerciseCount: lesson.exerciseCount ?? 0,
           // ⬇️ passa i prerequisiti
           lezioniPropedeuticheObbligatorie:
             lesson.lezioniPropedeuticheObbligatorie ?? [],

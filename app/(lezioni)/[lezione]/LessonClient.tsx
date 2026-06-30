@@ -14,6 +14,7 @@ import WhatsappButton from "@/components/WhatsappButton";
 import AiChatLauncher from "@/components/AiChatLauncher";
 import LessonAnalytics from "@/components/LessonAnalytics";
 import LessonReview from "@/components/LessonReview";
+import FreeExercisesPdfBanner from "@/components/FreeExercisesPdfBanner";
 
 // Lazy load dei componenti dell'header per performance
 const FormularioSection = dynamic(
@@ -79,6 +80,7 @@ const FlashcardsSmallButton = dynamic(
     ),
   }
 );
+
 /* ---------- Tipi ---------- */
 type UnknownSlug = string | { current?: string | null } | null | undefined;
 type LinkedLessonRaw =
@@ -103,6 +105,7 @@ type LessonClientProps = {
     materia?: string | null;
     categoria?: string[];
     classe?: string[];
+    exerciseCount?: number;
     formule?: {
       formula: string;
       explanation: string;
@@ -276,7 +279,7 @@ export default function LessonClient({
   }, []);
 
   return (
-    <article className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert overflow-x-hidden">
+    <article className="mx-auto max-w-6xl px-4 pb-12 prose prose-slate dark:prose-invert max-w-full overflow-x-hidden overscroll-x-none">
       {/* Analytics for lesson view (client-only) */}
       <LessonAnalytics
         id={lesson.id}
@@ -285,6 +288,14 @@ export default function LessonClient({
         materia={lesson.materia || null}
         categoria={lesson.categoria || null}
       />
+      {!!lesson.exerciseCount && (
+        <FreeExercisesPdfBanner
+          lessonId={lesson.id || lezione}
+          lessonTitle={lesson.title}
+          lessonSlug={lesson.slug || lezione}
+          exerciseCount={lesson.exerciseCount}
+        />
+      )}
       {/* Header */}
       <header className="rounded-2xl [.dark_&]:bg-slate-800/80 space-y-2 bg-gray-50 text-center pt-3 pb-3">
         <div className="flex justify-between mx-3 items-center gap-2">

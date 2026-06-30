@@ -15,6 +15,7 @@ import Footer from "@/components/Footer";
 import BlackPromoBanner from "@/components/BlackPromoBanner";
 import CookieBanner from "@/components/CookieBanner";
 import KatexFonts from "@/components/KatexFonts";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: {
@@ -170,7 +171,7 @@ export default async function RootLayout({
                   <Header />
                 </Suspense>
 
-                <div className="mt-24 md:mt-24">
+                <div className="page-x-clip mt-24 max-w-full overflow-x-hidden md:mt-24">
                   {/* Banner Black (client) — mostra solo se non abbonato; escluso /black, /ilmetodotheoremz e /contatto-rapido */}
                   <Suspense fallback={null}>
                     <BlackPromoBanner />
@@ -188,6 +189,7 @@ export default async function RootLayout({
                   </Suspense>
                 </div>
               </Providers>
+              <Analytics />
             </Suspense>
           </AuthProvider>
         </ToastProvider>

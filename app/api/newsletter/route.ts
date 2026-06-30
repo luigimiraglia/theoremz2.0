@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { track } from "@/lib/analytics";
 import { syncLiteProfilePatch } from "@/lib/studentLiteSync";
+import { adminAuth } from "@/lib/firebaseAdmin";
 
 // Crea client Supabase per operazioni newsletter
 function getSupabaseClient() {
@@ -18,11 +19,26 @@ function getSupabaseClient() {
   );
 }
 
+async function verifyToken(request: NextRequest) {
+  const header = request.headers.get("authorization") || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return null;
+  try {
+    return await adminAuth.verifyIdToken(token);
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
+  const claims = await verifyToken(request);
+  if (!claims?.uid) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const {
-      user_id,
       email,
       subscribed,
       frequenza = "weekly",
@@ -37,10 +53,13 @@ export async function POST(request: NextRequest) {
       scuola,
     } = body;
 
+    // user_id sempre dal token verificato, non dal body
+    const user_id = claims.uid;
+
     // Validazione base
-    if (!user_id || !email) {
+    if (!email) {
       return NextResponse.json(
-        { error: "User ID e email sono richiesti" },
+        { error: "Email è richiesta" },
         { status: 400 }
       );
     }
@@ -160,14 +179,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const claims = await verifyToken(request);
+  if (!claims?.uid) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   try {
-    const { searchParams } = new URL(request.url);
-    const user_id = searchParams.get("user_id");
-
-    if (!user_id) {
-      return NextResponse.json({ error: "User ID richiesto" }, { status: 400 });
-    }
-
+    const user_id = claims.uid;
     const supabase = getSupabaseClient();
 
     // Ottieni stato iscrizione corrente

@@ -295,7 +295,7 @@ export async function upsertSavedLessonLite({
 }: {
   userId: string;
   slug: string;
-  status: "saved" | "completed";
+  status: "saved" | "completed" | "viewed";
   savedAt?: number;
 }) {
   if (!slug) return;
