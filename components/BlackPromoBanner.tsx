@@ -25,6 +25,7 @@ export default function BlackStickyPromo() {
     if (
       p.startsWith("/black") ||
       p.startsWith("/ilmetodotheoremz") ||
+      p.startsWith("/metodo-theoremz-pdf") ||
       p.startsWith("/contatto-rapido")
     )
       return false;
