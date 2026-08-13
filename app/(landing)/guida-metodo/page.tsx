@@ -94,13 +94,13 @@ export default function GuidaMetodoPage() {
               Guida gratuita in PDF · 12 pagine
             </span>
             <h1 className="text-[2.15rem] font-black leading-[1.08] tracking-tight sm:text-[2.9rem] lg:text-[3.3rem]">
-              Il metodo per il tuo primo{" "}
-              <span className="text-sky-300">9</span> in matematica e fisica
+              Il metodo per il tuo primo <span className="text-sky-300">9</span>{" "}
+              in matematica e fisica
             </h1>
             <p className="max-w-xl text-[1.05rem] leading-relaxed text-white/75 sm:text-lg">
-              Il sistema completo usato ogni giorno da migliaia di studenti
-              per cambiare metodo di studio — e media — in 30 giorni. Passo
-              dopo passo, senza studiare più ore.
+              Il sistema completo usato ogni giorno da migliaia di studenti per
+              cambiare metodo di studio — e media — in 30 giorni. Passo dopo
+              passo, senza studiare più ore.
             </p>
             <div className="hidden flex-wrap items-center gap-x-6 gap-y-2 pt-2 text-sm font-semibold text-white/55 lg:flex">
               <span>45.000+ studenti</span>
@@ -128,10 +128,9 @@ export default function GuidaMetodoPage() {
             Studi tanto ma la media non si muove?
           </h2>
           <p className="mt-5 text-base leading-relaxed text-slate-600 sm:text-lg">
-            Non sei negato. Chi prende 9 non è più intelligente di te — ha
-            solo scoperto prima come si studia la matematica. Spesso studia
-            anche meno ore. La differenza non è la quantità di studio: è il
-            metodo. E il metodo si impara in 30 giorni.
+            Non sei negato. Chi prende 9 non è più intelligente di te, ha solo
+            scoperto prima come si studia la matematica. Spesso studia anche
+            meno ore. La differenza non è la quantità di studio: è il metodo.
           </p>
           <a
             href="#ottieni-guida"
@@ -230,8 +229,8 @@ function CoverMockup() {
             La guida definitiva
           </div>
           <div className="mt-3 text-[1.2rem] font-black leading-[1.12] tracking-tight sm:text-[1.35rem]">
-            Il Metodo per il tuo primo{" "}
-            <span className="text-sky-300">9</span> in matematica e fisica
+            Il Metodo per il tuo primo <span className="text-sky-300">9</span>{" "}
+            in matematica e fisica
           </div>
           <div className="mt-auto flex flex-wrap gap-1.5 pt-4">
             {["6 pilastri", "Piano 30 giorni", "Checklist"].map((tag) => (
