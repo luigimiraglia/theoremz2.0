@@ -15,6 +15,7 @@ const PDF_PATH = path.join(
 const PDF_FILENAME = "il-metodo-theoremz.pdf";
 
 type LeadPayload = {
+  role?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
@@ -31,6 +32,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Dati non validi" }, { status: 400 });
   }
 
+  const role: "genitore" | "studente" = body.role === "genitore" ? "genitore" : "studente";
+  const roleLabel = role === "genitore" ? "Genitore" : "Studente";
   const firstName = compact(body.firstName, 80);
   const lastName = compact(body.lastName, 80);
   const email = compact(body.email, 160)?.toLowerCase();
@@ -70,8 +73,9 @@ export async function POST(req: Request) {
       funnel: "other",
       pageUrl,
       contactPreference: "call",
-      subjectLabel: "Lead Guida Metodo PDF",
-      metadata: { firstName, lastName },
+      subjectLabel: `Lead Guida Metodo PDF — ${roleLabel}`,
+      note: `Ruolo: ${roleLabel}`,
+      metadata: { firstName, lastName, role },
       fallbackKey: `guida-metodo:${email}`,
     });
   } catch (error) {

@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertCircle, Loader2, Mail } from "lucide-react";
+import { AlertCircle, GraduationCap, Loader2, Mail, Users } from "lucide-react";
+
+type Ruolo = "studente" | "genitore";
 
 export default function GuidaMetodoForm() {
-  const [nome, setNome] = useState("");
-  const [cognome, setCognome] = useState("");
+  const [ruolo, setRuolo] = useState<Ruolo>("studente");
+  const [nomeCompleto, setNomeCompleto] = useState("");
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
   const [consenso, setConsenso] = useState(false);
@@ -16,14 +18,15 @@ export default function GuidaMetodoForm() {
   const canSubmit = useMemo(() => {
     const cleanPhone = telefono.replace(/[^\d+]/g, "");
     const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+    const nameParts = nomeCompleto.trim().split(/\s+/).filter(Boolean);
     return (
-      nome.trim().length >= 2 &&
-      cognome.trim().length >= 2 &&
+      nameParts.length >= 2 &&
+      nameParts.every((part) => part.length >= 2) &&
       validEmail &&
       cleanPhone.length >= 8 &&
       consenso
     );
-  }, [nome, cognome, email, telefono, consenso]);
+  }, [nomeCompleto, email, telefono, consenso]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -31,13 +34,18 @@ export default function GuidaMetodoForm() {
     setSending(true);
     setError(null);
 
+    const nameParts = nomeCompleto.trim().split(/\s+/).filter(Boolean);
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(" ");
+
     try {
       const res = await fetch("/api/guida-metodo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          firstName: nome.trim(),
-          lastName: cognome.trim(),
+          role: ruolo,
+          firstName,
+          lastName,
           email: email.trim(),
           phone: telefono.trim(),
           consent: consenso,
@@ -80,40 +88,55 @@ export default function GuidaMetodoForm() {
 
   return (
     <form onSubmit={handleSubmit} aria-busy={sending} className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="nome" className="text-sm font-semibold text-slate-700">
-            Nome
-          </label>
-          <input
-            id="nome"
-            name="nome"
-            type="text"
-            required
-            autoComplete="given-name"
-            placeholder="Mario"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
-          />
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold text-slate-700">Chi sei?</span>
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Chi sei?">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={ruolo === "studente"}
+            onClick={() => setRuolo("studente")}
+            className={`flex h-11 items-center justify-center gap-2 rounded-2xl border text-[14px] font-bold transition ${
+              ruolo === "studente"
+                ? "border-blue-500 bg-blue-50 text-blue-700 ring-4 ring-blue-500/10"
+                : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
+            }`}
+          >
+            <GraduationCap className="h-4 w-4" />
+            Studente
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={ruolo === "genitore"}
+            onClick={() => setRuolo("genitore")}
+            className={`flex h-11 items-center justify-center gap-2 rounded-2xl border text-[14px] font-bold transition ${
+              ruolo === "genitore"
+                ? "border-blue-500 bg-blue-50 text-blue-700 ring-4 ring-blue-500/10"
+                : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            Genitore
+          </button>
         </div>
+      </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="cognome" className="text-sm font-semibold text-slate-700">
-            Cognome
-          </label>
-          <input
-            id="cognome"
-            name="cognome"
-            type="text"
-            required
-            autoComplete="family-name"
-            placeholder="Rossi"
-            value={cognome}
-            onChange={(e) => setCognome(e.target.value)}
-            className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
-          />
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="nomeCompleto" className="text-sm font-semibold text-slate-700">
+          Nome e cognome
+        </label>
+        <input
+          id="nomeCompleto"
+          name="nomeCompleto"
+          type="text"
+          required
+          autoComplete="name"
+          placeholder="Mario Rossi"
+          value={nomeCompleto}
+          onChange={(e) => setNomeCompleto(e.target.value)}
+          className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">
