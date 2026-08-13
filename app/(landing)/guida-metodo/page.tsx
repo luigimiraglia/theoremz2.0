@@ -99,7 +99,7 @@ export default function GuidaMetodoPage() {
             </h1>
             <p className="max-w-xl text-[1.05rem] leading-relaxed text-white/75 sm:text-lg">
               Il sistema completo usato ogni giorno da migliaia di studenti per
-              cambiare metodo di studio — e media — in 30 giorni. Passo dopo
+              cambiare metodo di studio, e media, in 30 giorni. Passo dopo
               passo, senza studiare più ore.
             </p>
             <div className="hidden flex-wrap items-center gap-x-6 gap-y-2 pt-2 text-sm font-semibold text-white/55 lg:flex">
