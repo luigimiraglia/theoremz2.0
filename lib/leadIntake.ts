@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { upsertCanonicalLead } from "@/lib/canonicalLeads";
+import { buildWhatsAppLink } from "@/lib/whatsappLink";
 
 type LeadContactPreference = "call" | "whatsapp";
 
@@ -112,6 +113,7 @@ export async function storeLeadAndNotify(input: LeadIntakeInput) {
   const safeNote = note ? escapeHtml(note) : null;
   const safeSlot = slot ? escapeHtml(slot) : null;
   const safePage = pageUrl ? escapeHtml(pageUrl) : null;
+  const whatsappLink = buildWhatsAppLink(phone);
 
   const html = `
     <div style="font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;line-height:1.5;max-width:560px">
@@ -123,6 +125,11 @@ export async function storeLeadAndNotify(input: LeadIntakeInput) {
       ${safeSlot ? `<p style="margin:0 0 12px"><strong>Slot:</strong> ${safeSlot}</p>` : ""}
       ${safeNote ? `<p style="margin:0 0 12px"><strong>Note:</strong> ${safeNote}</p>` : ""}
       ${safePage ? `<p style="margin:0 0 12px"><strong>Pagina:</strong> <a href="${safePage}">${safePage}</a></p>` : ""}
+      ${
+        whatsappLink
+          ? `<a href="${whatsappLink}" style="display:inline-block;margin-top:8px;padding:12px 18px;background:#25D366;color:#fff;text-decoration:none;border-radius:999px;font-weight:700">Apri WhatsApp</a>`
+          : ""
+      }
     </div>
   `.trim();
 
@@ -135,6 +142,7 @@ export async function storeLeadAndNotify(input: LeadIntakeInput) {
     slot ? `Slot: ${slot}` : null,
     note ? `Note: ${note}` : null,
     pageUrl ? `Pagina: ${pageUrl}` : null,
+    whatsappLink ? `WhatsApp: ${whatsappLink}` : null,
   ]
     .filter(Boolean)
     .join("\n");

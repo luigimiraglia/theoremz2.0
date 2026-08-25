@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import { client as base } from "@/sanity/lib/client";
 import { requirePremium } from "@/lib/premium-access";
 import { upsertCanonicalLead } from "@/lib/canonicalLeads";
+import { buildWhatsAppLink } from "@/lib/whatsappLink";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,6 +85,7 @@ export async function POST(req: Request) {
     email?: string;
     phone?: string;
     pageUrl?: string;
+    role?: string;
   };
 
   try {
@@ -97,6 +99,8 @@ export async function POST(req: Request) {
   const phone = compact(body.phone);
   const lessonSlug = compact(body.lessonSlug);
   const pageUrl = compact(body.pageUrl, 500);
+  const role: "genitore" | "studente" = body.role === "genitore" ? "genitore" : "studente";
+  const roleLabel = role === "genitore" ? "Genitore" : "Studente";
 
   if (!lessonId) {
     return NextResponse.json({ ok: false, error: "Missing lessonId" }, { status: 400 });
@@ -126,8 +130,9 @@ export async function POST(req: Request) {
       status: "active",
       responseStatus: "pending",
       pageUrl,
-      note: `Download PDF esercizi: ${validLesson.title}`,
+      note: `Ruolo: ${roleLabel} — Download PDF esercizi: ${validLesson.title}`,
       metadata: {
+        role,
         lessonId: validLesson._id,
         lessonSlug: validLesson.slug || lessonSlug,
         lessonTitle: validLesson.title,
@@ -142,6 +147,7 @@ export async function POST(req: Request) {
     email,
     phone,
     pageUrl,
+    roleLabel,
     lesson: validLesson,
   }).catch((error) => {
     console.error("[exercises-pdf] lead alert email failed", error);
@@ -261,11 +267,13 @@ async function sendLeadAlertEmail({
   email,
   phone,
   pageUrl,
+  roleLabel,
   lesson,
 }: {
   email: string;
   phone: string;
   pageUrl?: string | null;
+  roleLabel: string;
   lesson: LessonPayload;
 }) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -291,7 +299,9 @@ async function sendLeadAlertEmail({
   const safeEmail = escapeHtml(email);
   const safePhone = escapeHtml(phone);
   const safePageUrl = pageUrl ? escapeHtml(pageUrl) : null;
-  const subject = `Nuovo lead PDF esercizi - ${lesson.title}`;
+  const safeRoleLabel = escapeHtml(roleLabel);
+  const whatsappLink = buildWhatsAppLink(phone);
+  const subject = `Nuovo lead PDF esercizi (${roleLabel}) - ${lesson.title}`;
 
   const html = `<!doctype html>
 <html lang="it">
@@ -320,6 +330,10 @@ async function sendLeadAlertEmail({
                 </div>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                   <tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:13px;font-weight:800;">Chi è</td>
+                    <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;text-align:right;font-size:14px;font-weight:800;color:#0f172a;">${safeRoleLabel}</td>
+                  </tr>
+                  <tr>
                     <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:13px;font-weight:800;">Email</td>
                     <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;text-align:right;font-size:14px;font-weight:800;"><a href="mailto:${safeEmail}" style="color:#0f172a;text-decoration:none;">${safeEmail}</a></td>
                   </tr>
@@ -336,6 +350,11 @@ async function sendLeadAlertEmail({
                       : ""
                   }
                 </table>
+                ${
+                  whatsappLink
+                    ? `<a href="${whatsappLink}" style="display:inline-block;margin-top:16px;padding:12px 18px;background:#25D366;color:#fff;text-decoration:none;border-radius:999px;font-weight:700;font-size:14px;">Apri WhatsApp</a>`
+                    : ""
+                }
               </td>
             </tr>
             <tr>
@@ -352,11 +371,13 @@ async function sendLeadAlertEmail({
 
   const text = [
     `Nuovo lead PDF esercizi`,
+    `Chi è: ${roleLabel}`,
     `Lezione: ${lesson.title}`,
     `Email: ${email}`,
     `Telefono: ${phone}`,
     `Esercizi: ${lesson.exercises.length}`,
     pageUrl ? `Pagina: ${pageUrl}` : null,
+    whatsappLink ? `WhatsApp: ${whatsappLink}` : null,
   ]
     .filter(Boolean)
     .join("\n");

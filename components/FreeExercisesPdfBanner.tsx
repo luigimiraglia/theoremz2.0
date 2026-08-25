@@ -30,6 +30,7 @@ export default function FreeExercisesPdfBanner({
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [open, setOpen] = useState(false);
+  const [role, setRole] = useState<"studente" | "genitore">("studente");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -202,6 +203,7 @@ export default function FreeExercisesPdfBanner({
           lessonId,
           lessonTitle,
           lessonSlug,
+          role,
           email: email.trim(),
           phone: phone.trim(),
           pageUrl: window.location.href,
@@ -342,6 +344,40 @@ export default function FreeExercisesPdfBanner({
               <p className="m-0 mb-5 text-sm font-semibold leading-relaxed text-slate-600 [.dark_&]:text-slate-300">
                 Inserisci i dati per scaricare. Ti manderemo una copia alla tua email.
               </p>
+
+              <div className="mb-4">
+                <span className="mb-1.5 block text-sm font-bold text-slate-800 [.dark_&]:text-slate-100">
+                  Chi sei?
+                </span>
+                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Chi sei?">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={role === "studente"}
+                    onClick={() => setRole("studente")}
+                    className={`flex h-11 items-center justify-center rounded-xl border-2 text-sm font-bold transition ${
+                      role === "studente"
+                        ? "border-[#2b7fff] bg-blue-50 text-[#1d4ed8] [.dark_&]:bg-blue-950/40 [.dark_&]:text-blue-200"
+                        : "border-slate-200 bg-white text-slate-500 [.dark_&]:border-slate-600 [.dark_&]:bg-slate-950 [.dark_&]:text-slate-400"
+                    }`}
+                  >
+                    Studente
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={role === "genitore"}
+                    onClick={() => setRole("genitore")}
+                    className={`flex h-11 items-center justify-center rounded-xl border-2 text-sm font-bold transition ${
+                      role === "genitore"
+                        ? "border-[#2b7fff] bg-blue-50 text-[#1d4ed8] [.dark_&]:bg-blue-950/40 [.dark_&]:text-blue-200"
+                        : "border-slate-200 bg-white text-slate-500 [.dark_&]:border-slate-600 [.dark_&]:bg-slate-950 [.dark_&]:text-slate-400"
+                    }`}
+                  >
+                    Genitore
+                  </button>
+                </div>
+              </div>
 
               <label className="mb-3 block">
                 <span className="mb-1.5 block text-sm font-bold text-slate-800 [.dark_&]:text-slate-100">
