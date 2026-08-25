@@ -94,15 +94,30 @@ function buildContactKey(input: CanonicalLeadInput, phone: string | null, instag
   return fallback || null;
 }
 
-export async function upsertCanonicalLead(input: CanonicalLeadInput) {
+export type UpsertCanonicalLeadResult = { id: string | null; isNew: boolean };
+
+/**
+ * Crea o aggiorna un lead canonico. Prima di inserire, controlla se esiste già
+ * un lead con lo stesso telefono o la stessa email (anche se non coincide la
+ * "contact_key" primaria, es. stessa email ma numero riscritto con un refuso):
+ * in quel caso NON crea una riga duplicata, aggiorna solo la recency del lead
+ * esistente (la temperatura si ricalcola da sola dal trigger sulla data).
+ * `isNew` indica se è stata creata una riga nuova (utile per non rimandare
+ * l'email di notifica interna quando è solo un reinvio dello stesso lead).
+ */
+export async function upsertCanonicalLead(
+  input: CanonicalLeadInput
+): Promise<UpsertCanonicalLeadResult> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return null;
+    return { id: null, isNew: false };
   }
 
   const phone = normalizeCanonicalLeadPhone(input.phone);
+  const phoneDigits = normalizePhoneDigits(input.phone);
   const instagram = normalizeInstagram(input.instagramHandle);
+  const email = compactString(input.email, 180)?.toLowerCase() || null;
   const contactKey = buildContactKey(input, phone, instagram);
-  if (!contactKey) return null;
+  if (!contactKey) return { id: null, isNew: false };
 
   const channel = allowedValue(compactString(input.channel, 40), ALLOWED_CHANNELS, "unknown");
   const funnel = allowedValue(compactString(input.funnel, 40), ALLOWED_FUNNELS, "other");
@@ -114,10 +129,41 @@ export async function upsertCanonicalLead(input: CanonicalLeadInput) {
   );
 
   const db = supabaseServer();
+
+  let existingId: string | null = null;
+  if (phoneDigits) {
+    const { data: byPhone } = await db
+      .from("leads")
+      .select("id")
+      .eq("phone_normalized", phoneDigits)
+      .order("first_seen_at", { ascending: true })
+      .limit(1);
+    if (byPhone && byPhone.length) existingId = byPhone[0].id;
+  }
+  if (!existingId && email) {
+    const { data: byEmail } = await db
+      .from("leads")
+      .select("id")
+      .eq("email", email)
+      .order("first_seen_at", { ascending: true })
+      .limit(1);
+    if (byEmail && byEmail.length) existingId = byEmail[0].id;
+  }
+
+  if (existingId) {
+    const now = new Date().toISOString();
+    const { error: updateError } = await db
+      .from("leads")
+      .update({ last_seen_at: now, updated_at: now })
+      .eq("id", existingId);
+    if (updateError) throw updateError;
+    return { id: existingId, isNew: false };
+  }
+
   const { data, error } = await db.rpc("upsert_canonical_lead", {
     _contact_key: contactKey,
     _full_name: compactString(input.fullName, 180),
-    _email: compactString(input.email, 180)?.toLowerCase() || null,
+    _email: email,
     _phone: phone,
     _instagram: instagram,
     _channel: channel,
@@ -142,5 +188,5 @@ export async function upsertCanonicalLead(input: CanonicalLeadInput) {
   });
 
   if (error) throw error;
-  return typeof data === "string" ? data : null;
+  return { id: typeof data === "string" ? data : null, isNew: true };
 }

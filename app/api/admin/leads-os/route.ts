@@ -72,6 +72,24 @@ function diffDaysFromNow(iso?: string | null) {
   return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
 }
 
+function normalizeLeadRole(row: any): "genitore" | "studente" | null {
+  const raw = row?.metadata?.role;
+  return raw === "genitore" || raw === "studente" ? raw : null;
+}
+
+// Priorità di calore "manuale" per pareggiare i lead con data/temperatura simili:
+// la guida PDF è un impegno più forte del download di un esercizio, e un genitore
+// che compila il form è un segnale più caldo di uno studente.
+function effectiveHeat(row: any) {
+  let bonus = 0;
+  if (row.source === "guida_metodo_pdf") bonus += 12;
+  else if (row.source === "free_exercises_pdf") bonus += 6;
+  const role = normalizeLeadRole(row);
+  if (role === "genitore") bonus += 8;
+  else if (role === "studente") bonus += 3;
+  return (row.temperature_score ?? 0) + bonus;
+}
+
 function mapLead(row: any) {
   const firstSeenAt = row.first_seen_at || row.created_at || null;
   return {
@@ -80,6 +98,7 @@ function mapLead(row: any) {
     email: row.email || null,
     phone: row.phone || null,
     instagramHandle: row.instagram_handle || null,
+    role: normalizeLeadRole(row),
     channel: row.channel || "unknown",
     source: row.source || null,
     funnel: row.funnel || null,
@@ -227,9 +246,9 @@ export async function GET(request: NextRequest) {
   if (dateTo) query = query.lt("first_seen_at", addDays(new Date(`${dateTo}T00:00:00.000Z`), 1).toISOString());
 
   const { data: filteredRowsRaw, error: filteredErr } = await query
-    .order("temperature_score", { ascending: false })
-    .order("next_follow_up_at", { ascending: true, nullsFirst: false })
     .order("first_seen_at", { ascending: false })
+    .order("next_follow_up_at", { ascending: true, nullsFirst: false })
+    .order("temperature_score", { ascending: false })
     .limit(800);
 
   if (filteredErr) {
@@ -237,7 +256,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: filteredErr.message }, { status: 500 });
   }
 
-  const filteredRows = applyTextFilter(filteredRowsRaw || [], q).slice(0, limit);
+  const textFilteredRows = applyTextFilter(filteredRowsRaw || [], q);
+  const filteredRows = [...textFilteredRows]
+    .sort((a, b) => {
+      const dayA = ymdInReportTimeZone(a.first_seen_at || a.created_at || new Date());
+      const dayB = ymdInReportTimeZone(b.first_seen_at || b.created_at || new Date());
+      if (dayA !== dayB) return dayA < dayB ? 1 : -1;
+      return effectiveHeat(b) - effectiveHeat(a);
+    })
+    .slice(0, limit);
   const todayKey = ymdInReportTimeZone(new Date());
   const tomorrowKey = addDaysToDateKey(todayKey, 1);
   const yesterdayKey = addDaysToDateKey(todayKey, -1);

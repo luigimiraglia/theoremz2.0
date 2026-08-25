@@ -70,7 +70,7 @@ export async function storeLeadAndNotify(input: LeadIntakeInput) {
     return { ok: false as const, error: "missing_fields" };
   }
 
-  const leadId = await upsertCanonicalLead({
+  const { id: leadId, isNew } = await upsertCanonicalLead({
     fullName,
     email,
     phone,
@@ -91,6 +91,12 @@ export async function storeLeadAndNotify(input: LeadIntakeInput) {
     },
     fallbackKey: input.fallbackKey,
   });
+
+  if (!isNew) {
+    // Stesso telefono/email di un lead già esistente: evitiamo di rimandare
+    // la notifica interna, il lead in DB ha già la recency aggiornata.
+    return { ok: true as const, leadId, emailStatus: "skipped_duplicate" as const };
+  }
 
   const mailer = getMailer();
   const contactTo =

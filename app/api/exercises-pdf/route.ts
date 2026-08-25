@@ -120,8 +120,9 @@ export async function POST(req: Request) {
   if (unavailable) return unavailable;
   const validLesson = lesson as LessonPayload;
 
+  let isNewLead = true;
   try {
-    await upsertCanonicalLead({
+    const result = await upsertCanonicalLead({
       email,
       phone,
       channel: "email",
@@ -139,19 +140,22 @@ export async function POST(req: Request) {
         exerciseCount: validLesson.exercises.length,
       },
     });
+    isNewLead = result.isNew;
   } catch (error) {
     console.error("[exercises-pdf] lead save failed", error);
   }
 
-  await sendLeadAlertEmail({
-    email,
-    phone,
-    pageUrl,
-    roleLabel,
-    lesson: validLesson,
-  }).catch((error) => {
-    console.error("[exercises-pdf] lead alert email failed", error);
-  });
+  if (isNewLead) {
+    await sendLeadAlertEmail({
+      email,
+      phone,
+      pageUrl,
+      roleLabel,
+      lesson: validLesson,
+    }).catch((error) => {
+      console.error("[exercises-pdf] lead alert email failed", error);
+    });
+  }
 
   return generatePdfResponse(validLesson, email);
 }

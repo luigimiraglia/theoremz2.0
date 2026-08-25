@@ -78,6 +78,12 @@ function diffDaysFromNow(iso?: string | null) {
   return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
 }
 
+function normalizeLeadRole(row: any): "genitore" | "studente" | null {
+  const raw = row?.metadata?.role;
+  if (raw === "genitore" || raw === "studente") return raw;
+  return null;
+}
+
 function mapLead(row: any) {
   if (!row) return null;
   const channel = normalizeLeadChannel(row);
@@ -88,6 +94,8 @@ function mapLead(row: any) {
     instagramHandle: row.instagram_handle || null,
     whatsappPhone: row.phone || null,
     note: row.note || null,
+    role: normalizeLeadRole(row),
+    source: row.source || null,
     channel,
     status: row.status || "active",
     currentStep: typeof row.current_step === "number" ? row.current_step : 0,
@@ -219,7 +227,7 @@ export async function POST(request: NextRequest) {
 
   let leadId: string | null = null;
   try {
-    leadId = await upsertCanonicalLead({
+    ({ id: leadId } = await upsertCanonicalLead({
       fullName: name,
       note,
       instagramHandle,
@@ -234,7 +242,7 @@ export async function POST(request: NextRequest) {
       createdAt: now,
       updatedAt: now,
       fallbackKey: `admin_manual:${now.getTime()}`,
-    });
+    }));
   } catch (error: any) {
     console.error("[admin/leads] upsert error", error);
     return NextResponse.json({ error: error?.message || "insert_failed" }, { status: 500 });
