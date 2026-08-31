@@ -5,11 +5,11 @@ import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { track, trackConversion } from "@/lib/analytics";
+import { useHeaderOffset } from "@/lib/useHeaderOffset";
+import { setPriorityBannerActive as dispatchPriorityBannerActive } from "@/lib/priorityBanner";
 import Icon from "./Icon";
 
-const HEADER_SELECTOR = "#site-header";
 const HEADER_GAP_PX = 14;
-const PRIORITY_BANNER_EVENT = "theoremz:priority-banner";
 
 type Props = {
   lessonId: string;
@@ -35,7 +35,7 @@ export default function FreeExercisesPdfBanner({
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [topOffset, setTopOffset] = useState<number | null>(null);
+  const topOffset = useHeaderOffset(HEADER_GAP_PX, 96);
 
   const storageKey = useMemo(
     () => `free-exercises-pdf-dismissed:${lessonSlug}`,
@@ -45,15 +45,10 @@ export default function FreeExercisesPdfBanner({
   const formValid = isValidEmail(email) && normalizePhone(phone).length >= 8;
   const shouldShow = authReady && isAnonymous && !dismissed && visible;
 
-  const setPriorityBannerActive = useCallback((active: boolean) => {
-    try {
-      window.dispatchEvent(
-        new CustomEvent(PRIORITY_BANNER_EVENT, {
-          detail: { source: "free-exercises-pdf", active },
-        })
-      );
-    } catch {}
-  }, []);
+  const setPriorityBannerActive = useCallback(
+    (active: boolean) => dispatchPriorityBannerActive("free-exercises-pdf", active),
+    []
+  );
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -96,37 +91,6 @@ export default function FreeExercisesPdfBanner({
     } catch {}
   }, [storageKey]);
 
-  useEffect(() => {
-    const header = document.querySelector(HEADER_SELECTOR) as HTMLElement | null;
-
-    const computeTop = () => {
-      if (!header) {
-        setTopOffset(96);
-        return;
-      }
-
-      const css = getComputedStyle(header);
-      const stickyTop = parseFloat(css.top || "0") || 0;
-      const height = header.offsetHeight || 0;
-      setTopOffset(Math.max(0, Math.round(stickyTop + height + HEADER_GAP_PX)));
-    };
-
-    computeTop();
-
-    let resizeObserver: ResizeObserver | null = null;
-    if (header && "ResizeObserver" in window) {
-      resizeObserver = new ResizeObserver(() => requestAnimationFrame(computeTop));
-      resizeObserver.observe(header);
-    }
-
-    const onResize = () => requestAnimationFrame(computeTop);
-    window.addEventListener("resize", onResize, { passive: true });
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-      resizeObserver?.disconnect();
-    };
-  }, []);
 
   useEffect(() => {
     if (dismissed) return;
