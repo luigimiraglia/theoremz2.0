@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { upsertCanonicalLead } from "@/lib/canonicalLeads";
-import { buildWhatsAppLink } from "@/lib/whatsappLink";
+import { buildLeadWhatsAppMessage, buildWhatsAppLink } from "@/lib/whatsappLink";
 
 type LeadContactPreference = "call" | "whatsapp";
 
@@ -119,7 +119,7 @@ export async function storeLeadAndNotify(input: LeadIntakeInput) {
   const safeNote = note ? escapeHtml(note) : null;
   const safeSlot = slot ? escapeHtml(slot) : null;
   const safePage = pageUrl ? escapeHtml(pageUrl) : null;
-  const whatsappLink = buildWhatsAppLink(phone);
+  const whatsappLink = buildWhatsAppLink(phone, buildLeadWhatsAppMessage({ fullName, source }));
 
   const html = `
     <div style="font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;line-height:1.5;max-width:560px">

@@ -27,6 +27,7 @@ import {
   YAxis,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { buildLeadWhatsAppMessage } from "@/lib/whatsappLink";
 import { useAuth } from "@/lib/AuthContext";
 
 type Lead = {
@@ -166,9 +167,10 @@ function buildContactHref(lead: Lead, preferWebWhatsApp: boolean) {
   if (phone.includes("@")) return `mailto:${phone}`;
   const digits = phone.replace(/[^\d]/g, "");
   if (digits) {
+    const text = buildLeadWhatsAppMessage({ fullName: lead.fullName, source: lead.source });
     return preferWebWhatsApp
-      ? `https://web.whatsapp.com/send?phone=${digits}`
-      : `https://wa.me/${digits}`;
+      ? `https://web.whatsapp.com/send?phone=${digits}&text=${encodeURIComponent(text)}`
+      : `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
   }
   if (lead.email) return `mailto:${lead.email}`;
   if (lead.instagramHandle) return `https://instagram.com/${lead.instagramHandle.replace(/^@/, "")}`;

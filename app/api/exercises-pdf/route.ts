@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 import { client as base } from "@/sanity/lib/client";
 import { requirePremium } from "@/lib/premium-access";
 import { upsertCanonicalLead } from "@/lib/canonicalLeads";
-import { buildWhatsAppLink } from "@/lib/whatsappLink";
+import { buildLeadWhatsAppMessage, buildWhatsAppLink } from "@/lib/whatsappLink";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -304,7 +304,10 @@ async function sendLeadAlertEmail({
   const safePhone = escapeHtml(phone);
   const safePageUrl = pageUrl ? escapeHtml(pageUrl) : null;
   const safeRoleLabel = escapeHtml(roleLabel);
-  const whatsappLink = buildWhatsAppLink(phone);
+  const whatsappLink = buildWhatsAppLink(
+    phone,
+    buildLeadWhatsAppMessage({ source: "free_exercises_pdf" })
+  );
   const subject = `Nuovo lead PDF esercizi (${roleLabel}) - ${lesson.title}`;
 
   const html = `<!doctype html>

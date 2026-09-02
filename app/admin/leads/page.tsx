@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { buildLeadWhatsAppMessage } from "@/lib/whatsappLink";
 import Link from "next/link";
 
 type Lead = {
@@ -80,12 +81,13 @@ function formatLeadAge(days?: number | null) {
   return `${days} giorni`;
 }
 
-function buildWhatsAppLink(phone?: string | null, preferWeb?: boolean) {
+function buildWhatsAppLink(phone?: string | null, preferWeb?: boolean, text?: string) {
   if (!phone) return null;
   const digits = phone.replace(/[^\d]/g, "");
   if (!digits) return null;
-  if (preferWeb) return `https://web.whatsapp.com/send?phone=${digits}`;
-  return `https://wa.me/${digits}`;
+  const query = text ? `?text=${encodeURIComponent(text)}` : "";
+  if (preferWeb) return `https://web.whatsapp.com/send?phone=${digits}${text ? `&text=${encodeURIComponent(text)}` : ""}`;
+  return `https://wa.me/${digits}${query}`;
 }
 
 function LeadBadge({ channel }: { channel: Lead["channel"] }) {
@@ -644,7 +646,11 @@ export default function LeadsAdminPage() {
             const instagramLink = lead.instagramHandle
               ? `https://instagram.com/${lead.instagramHandle.replace(/^@/, "")}`
               : null;
-            const whatsappLink = buildWhatsAppLink(lead.whatsappPhone, preferWebWhatsApp);
+            const whatsappMessage = buildLeadWhatsAppMessage({
+              fullName: lead.name,
+              source: lead.source,
+            });
+            const whatsappLink = buildWhatsAppLink(lead.whatsappPhone, preferWebWhatsApp, whatsappMessage);
             const isEditingPhone = editingPhoneId === lead.id;
             const phoneDraft = phoneDrafts[lead.id] ?? lead.whatsappPhone ?? "";
             const isSavingPhone = savingPhoneId === lead.id;
