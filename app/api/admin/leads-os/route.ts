@@ -199,9 +199,13 @@ export async function GET(request: NextRequest) {
   const source = searchParams.get("source") || "all";
   const funnel = searchParams.get("funnel") || "all";
   const status = searchParams.get("status") || "active";
-  const responseStatus = searchParams.get("responseStatus") || "all";
   const temperature = searchParams.get("temperature") || "all";
-  const queue = searchParams.get("queue") || "due";
+  // Tre "switch" indipendenti sullo stato della chiamata — combinabili tra
+  // loro (OR). Di default in pagina principale restano solo i mai chiamati.
+  const calledNever = searchParams.get("calledNever") !== "0";
+  const calledNoResponse = searchParams.get("calledNoResponse") === "1";
+  const calledNotClosed = searchParams.get("calledNotClosed") === "1";
+  const role = searchParams.get("role") || "all"; // all | genitore | studente
   const dateFrom = searchParams.get("dateFrom") || "";
   const dateTo = searchParams.get("dateTo") || "";
   const days = Math.max(7, Math.min(90, Number(searchParams.get("days") || 30)));
@@ -234,14 +238,22 @@ export async function GET(request: NextRequest) {
   if (source !== "all") query = query.eq("source", source);
   if (funnel !== "all") query = query.eq("funnel", funnel);
   if (status !== "all") query = query.eq("status", status);
-  if (responseStatus !== "all") query = query.eq("response_status", responseStatus);
-  else query = query.neq("response_status", "paused");
   if (temperature !== "all") query = query.eq("temperature_label", temperature);
-  if (queue === "due") {
-    query = query.or(`next_follow_up_at.is.null,next_follow_up_at.lte.${new Date().toISOString()}`);
-  } else if (queue === "scheduled") {
-    query = query.gt("next_follow_up_at", new Date().toISOString());
+  if (role === "genitore" || role === "studente") {
+    query = query.eq("metadata->>role", role);
   }
+
+  const calledConditions: string[] = [];
+  if (calledNever) calledConditions.push("last_contacted_at.is.null");
+  if (calledNoResponse) calledConditions.push("response_status.eq.no_response");
+  if (calledNotClosed) calledConditions.push("and(response_status.eq.responded,status.eq.active)");
+  if (calledConditions.length > 0) {
+    query = query.or(calledConditions.join(","));
+  } else {
+    // Nessuno switch attivo: meglio una lista vuota che una lista non filtrata.
+    query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+  }
+
   if (dateFrom) query = query.gte("first_seen_at", new Date(`${dateFrom}T00:00:00.000Z`).toISOString());
   if (dateTo) query = query.lt("first_seen_at", addDays(new Date(`${dateTo}T00:00:00.000Z`), 1).toISOString());
 
@@ -274,6 +286,41 @@ export async function GET(request: NextRequest) {
   const todayCount = countRowsBetweenDateKeys(allRows || [], todayKey, tomorrowKey);
   const yesterdayCount = countRowsBetweenDateKeys(allRows || [], yesterdayKey, todayKey);
   const last7 = countRowsBetweenDateKeys(allRows || [], last7StartKey, tomorrowKey);
+
+  // Quanti mai chiamati sono ancora in attesa e sono arrivati nell'ultima settimana.
+  const neverCalledLast7Days = (allRows || []).filter((row) => {
+    if (row.last_contacted_at) return false;
+    if (row.status !== "active") return false;
+    const seenKey = ymdInReportTimeZone(row.first_seen_at || row.created_at);
+    return seenKey >= last7StartKey && seenKey < tomorrowKey;
+  }).length;
+
+  // Chiamate fatte oggi: query dedicata, "allRows" è filtrato per data di
+  // primo contatto, non per data di ultima chiamata.
+  const { data: contactedRows, error: contactedErr } = await db
+    .from("leads")
+    .select("last_contacted_at")
+    .gte("last_contacted_at", addDays(startOfUtcDay(new Date()), -2).toISOString())
+    .limit(2000);
+  if (contactedErr) {
+    console.error("[admin/leads-os] contacted-today fetch error", contactedErr);
+  }
+  const calledToday = (contactedRows || []).filter(
+    (row) => row.last_contacted_at && ymdInReportTimeZone(row.last_contacted_at) === todayKey,
+  ).length;
+
+  // Non risposto negli ultimi 7 giorni: da richiamare a breve.
+  const { data: noResponseRows, error: noResponseErr } = await db
+    .from("leads")
+    .select("id")
+    .eq("response_status", "no_response")
+    .eq("status", "active")
+    .gte("no_response_at", addDays(startOfUtcDay(new Date()), -6).toISOString())
+    .limit(2000);
+  if (noResponseErr) {
+    console.error("[admin/leads-os] no-response-last-7d fetch error", noResponseErr);
+  }
+  const noResponseLast7Days = (noResponseRows || []).length;
   const previous7 = countRowsBetweenDateKeys(allRows || [], previous7StartKey, previous7EndKey);
   const delta = todayCount - yesterdayCount;
   const deltaPct = yesterdayCount > 0 ? Math.round((delta / yesterdayCount) * 100) : todayCount > 0 ? 100 : 0;
@@ -294,6 +341,9 @@ export async function GET(request: NextRequest) {
       previous7,
       weekDelta,
       weekDeltaPct,
+      calledToday,
+      neverCalledLast7Days,
+      noResponseLast7Days,
       active: (filterRows || []).filter(
         (row) => row.status === "active" && row.response_status !== "paused",
       ).length,

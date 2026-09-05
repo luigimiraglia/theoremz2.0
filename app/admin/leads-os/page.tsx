@@ -36,6 +36,7 @@ type Lead = {
   email: string | null;
   phone: string | null;
   instagramHandle: string | null;
+  role: "genitore" | "studente" | null;
   channel: string;
   source: string | null;
   funnel: string | null;
@@ -69,6 +70,9 @@ type DashboardData = {
     weekDeltaPct: number;
     active: number;
     hot: number;
+    calledToday: number;
+    neverCalledLast7Days: number;
+    noResponseLast7Days: number;
   };
   chart: Array<{ date: string; total: number; hot: number; warm: number; cold: number }>;
   leads: Lead[];
@@ -177,6 +181,39 @@ function buildContactHref(lead: Lead, preferWebWhatsApp: boolean) {
   return null;
 }
 
+function ToggleSwitch({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
+      onClick={onClick}
+      className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+        active
+          ? "border-slate-900 bg-slate-900 text-white"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+      }`}
+    >
+      <span
+        className={`inline-flex h-4 w-7 shrink-0 items-center rounded-full transition ${
+          active ? "justify-end bg-emerald-400" : "justify-start bg-slate-300"
+        }`}
+      >
+        <span className="mx-0.5 h-3 w-3 rounded-full bg-white" />
+      </span>
+      {label}
+    </button>
+  );
+}
+
 function KpiCard({
   label,
   value,
@@ -213,9 +250,11 @@ export default function LeadsOperatingSystemPage() {
     source: "all",
     funnel: "all",
     status: "active",
-    responseStatus: "all",
     temperature: "all",
-    queue: "due",
+    role: "all" as "all" | "genitore" | "studente",
+    calledNever: true,
+    calledNoResponse: false,
+    calledNotClosed: false,
     dateFrom: "",
     dateTo: "",
     days: "30",
@@ -226,11 +265,24 @@ export default function LeadsOperatingSystemPage() {
     [user?.email],
   );
 
+  const patchFilters = useCallback((patch: Partial<typeof filters>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
+  }, []);
+
   const params = useMemo(() => {
     const next = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) next.set(key, value);
-    });
+    if (filters.q) next.set("q", filters.q);
+    if (filters.source !== "all") next.set("source", filters.source);
+    if (filters.funnel !== "all") next.set("funnel", filters.funnel);
+    if (filters.status) next.set("status", filters.status);
+    if (filters.temperature !== "all") next.set("temperature", filters.temperature);
+    if (filters.role !== "all") next.set("role", filters.role);
+    next.set("calledNever", filters.calledNever ? "1" : "0");
+    next.set("calledNoResponse", filters.calledNoResponse ? "1" : "0");
+    next.set("calledNotClosed", filters.calledNotClosed ? "1" : "0");
+    if (filters.dateFrom) next.set("dateFrom", filters.dateFrom);
+    if (filters.dateTo) next.set("dateTo", filters.dateTo);
+    if (filters.days) next.set("days", filters.days);
     return next;
   }, [filters]);
 
@@ -313,6 +365,13 @@ export default function LeadsOperatingSystemPage() {
   const kpis = data?.kpis;
   const dayDeltaTone = (kpis?.delta || 0) >= 0 ? "good" : "bad";
   const weekDeltaTone = (kpis?.weekDelta || 0) >= 0 ? "good" : "bad";
+  const activeCalledLabels = [
+    filters.calledNever ? "Mai chiamati" : null,
+    filters.calledNoResponse ? "Non risposto" : null,
+    filters.calledNotClosed ? "Non chiuso" : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50">
@@ -441,12 +500,74 @@ export default function LeadsOperatingSystemPage() {
         </div>
       </section>
 
+      <section className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-700">
+              Da chiamare
+            </p>
+            <p className="mt-1 text-3xl font-black tabular-nums text-amber-900">
+              {kpis?.neverCalledLast7Days ?? "-"}
+            </p>
+            <p className="text-xs font-medium text-amber-700">
+              mai chiamati, arrivati negli ultimi 7 giorni
+            </p>
+            <p className="mt-1 text-[11px] font-medium text-amber-600">
+              + {kpis?.noResponseLast7Days ?? "-"} non risposti da richiamare (ultimi 7 giorni)
+            </p>
+          </div>
+          <div className="rounded-md border border-emerald-200 bg-white px-4 py-3 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+              Chiamate oggi
+            </p>
+            <p className="mt-1 text-2xl font-black tabular-nums text-emerald-800">
+              {kpis?.calledToday ?? "-"}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+        <div className="mb-3">
+          <h2 className="text-sm font-bold text-slate-950">Chi mostrare</h2>
+          <p className="text-xs font-medium text-slate-500">
+            Switch combinabili: puoi tenerne più di uno acceso.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <ToggleSwitch
+            label="Mai chiamati"
+            active={filters.calledNever}
+            onClick={() => patchFilters({ calledNever: !filters.calledNever })}
+          />
+          <ToggleSwitch
+            label="Non risposto"
+            active={filters.calledNoResponse}
+            onClick={() => patchFilters({ calledNoResponse: !filters.calledNoResponse })}
+          />
+          <ToggleSwitch
+            label="Non chiuso"
+            active={filters.calledNotClosed}
+            onClick={() => patchFilters({ calledNotClosed: !filters.calledNotClosed })}
+          />
+          <span className="mx-1 h-6 w-px bg-slate-200" aria-hidden="true" />
+          {(["all", "genitore", "studente"] as const).map((value) => (
+            <ToggleSwitch
+              key={value}
+              label={value === "all" ? "Tutti" : value === "genitore" ? "Genitore" : "Studente"}
+              active={filters.role === value}
+              onClick={() => patchFilters({ role: value })}
+            />
+          ))}
+        </div>
+      </section>
+
       <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-bold text-slate-950">Filtri</h2>
             <p className="text-xs font-medium text-slate-500">
-              Coda, source, funnel, stato e periodo.
+              Source, funnel, stato, temperatura e periodo.
             </p>
           </div>
         </div>
@@ -495,26 +616,6 @@ export default function LeadsOperatingSystemPage() {
             <option value="dropped">Scartati</option>
           </select>
           <select
-            value={filters.queue}
-            onChange={(e) => updateFilter("queue", e.target.value)}
-            className={controlClass}
-          >
-            <option value="due">Da chiamare ora</option>
-            <option value="scheduled">Programmato</option>
-            <option value="all">Tutta la coda</option>
-          </select>
-          <select
-            value={filters.responseStatus}
-            onChange={(e) => updateFilter("responseStatus", e.target.value)}
-            className={controlClass}
-          >
-            <option value="all">Tutte le risposte</option>
-            <option value="pending">Da contattare</option>
-            <option value="responded">Ha risposto</option>
-            <option value="no_response">Non risponde</option>
-            <option value="paused">In pausa</option>
-          </select>
-          <select
             value={filters.temperature}
             onChange={(e) => updateFilter("temperature", e.target.value)}
             className={controlClass}
@@ -544,7 +645,7 @@ export default function LeadsOperatingSystemPage() {
           <div>
             <h2 className="text-base font-bold text-slate-950">Coda per temperatura</h2>
             <p className="text-xs font-medium text-slate-500">
-              {data?.totalFiltered ?? 0} lead filtrati - {filters.queue === "due" ? "pronti da chiamare" : filters.queue === "scheduled" ? "programmati" : "tutta la coda"}
+              {data?.totalFiltered ?? 0} lead filtrati - {activeCalledLabels || "nessuno switch acceso"}
             </p>
           </div>
           {loading ? (
@@ -581,6 +682,17 @@ export default function LeadsOperatingSystemPage() {
                         <span className="max-w-full truncate rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700">
                           {funnelLabel(lead.funnel)}
                         </span>
+                        {lead.role ? (
+                          <span
+                            className={`rounded-md border px-2 py-1 text-xs font-semibold ${
+                              lead.role === "genitore"
+                                ? "border-violet-200 bg-violet-50 text-violet-700"
+                                : "border-sky-200 bg-sky-50 text-sky-700"
+                            }`}
+                          >
+                            {lead.role === "genitore" ? "Genitore" : "Studente"}
+                          </span>
+                        ) : null}
                       </div>
                       <p className="truncate text-base font-bold text-slate-950">
                         {lead.fullName || lead.email || lead.phone || lead.instagramHandle || "Lead"}
